@@ -195,14 +195,12 @@ Planos:
 3. `./mvnw dependency:tree -pl mekano-application` não contém `quarkus-hibernate-orm`, `quarkus-rest-jackson` nem qualquer artefato `jakarta.persistence`
 4. Código fonte de `CreateUserUseCase` não contém a string `@Transactional` (verificável por grep)
 
-**Plans**: 5 planos
+**Plans**: 3 planos
 
 Planos:
-- [ ] 02-01-PLAN.md — Hierarquia de exceções de domínio (DomainException + 3 subclasses)
-- [ ] 02-02-PLAN.md — Value Object Email com validação por regex
-- [ ] 02-03-PLAN.md — Entidade User — POJO puro com factory method
-- [ ] 02-04-PLAN.md — Interfaces de Port (UserRepositoryPort + CreateUserInputPort)
-- [ ] 02-05-PLAN.md — JUnit 5 no POM + testes unitários (EmailTest, UserTest)
+- [ ] 03-01-PLAN.md — Contratos de domínio: CreateUserCommand (record), InvalidUserDataException e refactoring de CreateUserInputPort (mekano-domain)
+- [ ] 03-02-PLAN.md — pom.xml de mekano-application (bcrypt + test deps) + implementação de CreateUserUseCase (@ApplicationScoped, constructor injection, BCrypt, validações)
+- [ ] 03-03-PLAN.md — CreateUserUseCaseTest: 4 cenários Mockito puro (sucesso, email duplicado, email inválido, nome nulo)
 
 ---
 
