@@ -2,9 +2,9 @@
 
 **Milestone ativo:** v1 — Clean Architecture Quarkus API  
 **Fase atual:** Fase 2 — Domain  
-**Última atualização:** 2025-07-15  
-**Último plano concluído:** 02-03 (Entidade User)  
-**Sessão parada em:** Completed 02-03-PLAN.md
+**Última atualização:** 2026-05-27  
+**Último plano concluído:** 02-04 (Interfaces de Porta — Ports)  
+**Sessão parada em:** Completed 02-04-PLAN.md
 
 ---
 
@@ -13,7 +13,7 @@
 | Fase | Status | Notas |
 |------|--------|-------|
 | 1 — Esqueleto Maven | ✅ Concluída | BUILD SUCCESS — 5 módulos compilando |
-| 2 — Domain | 🔄 Em progresso | Planos 02-01, 02-02 e 02-03 concluídos (exceções de domínio + Email VO + entidade User) |
+| 2 — Domain | 🔄 Em progresso | Planos 02-01, 02-02, 02-03 e 02-04 concluídos (exceções + Email VO + entidade User + ports) |
 | 3 — Application | ⬜ Não iniciada | Depende da Fase 2 |
 | 4 — Infrastructure | ⬜ Não iniciada | Depende da Fase 2 |
 | 5 — Adapter | ⬜ Não iniciada | Depende das Fases 3 e 4 |
@@ -47,4 +47,6 @@
 11. Locale.ROOT na normalização garante comportamento determinístico no servidor
 12. @Builder(access = PRIVATE) em User força toda construção via factory method User.create()
 13. Campo email de User é tipo Email (VO), não String — validação garantida em build time
-14. @ToString.Exclude em passwordHash impede vazamento de hash de senha em logs (mitigação T-02-03-01)
+15. Interfaces UserRepositoryPort/CreateUserInputPort sem anotações — domínio agnóstico de framework
+16. findById/findByEmail retornam Optional<User> — responsabilidade do use case tratar ausência sem exceção
+17. CreateUserInputPort.execute() usa String primitivos (não CreateUserCommand) — evita dependência cíclica domain→application
