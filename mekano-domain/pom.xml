@@ -21,5 +21,14 @@
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>
+
+        <!-- JUnit 5: testes unitários puros — zero Quarkus, zero container startup -->
+        <!-- Versão gerenciada pelo Quarkus BOM 3.36.0 importado no root pom.xml -->
+        <!-- NÃO usar io.quarkus:quarkus-junit5 aqui — esse artefato inicializa o container -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>
