@@ -3,8 +3,8 @@
 **Milestone ativo:** v1 — Clean Architecture Quarkus API  
 **Fase atual:** Fase 2 — Domain  
 **Última atualização:** 2025-07-15  
-**Último plano concluído:** 02-02 (Email Value Object)  
-**Sessão parada em:** Completed 02-02-PLAN.md
+**Último plano concluído:** 02-03 (Entidade User)  
+**Sessão parada em:** Completed 02-03-PLAN.md
 
 ---
 
@@ -13,7 +13,7 @@
 | Fase | Status | Notas |
 |------|--------|-------|
 | 1 — Esqueleto Maven | ✅ Concluída | BUILD SUCCESS — 5 módulos compilando |
-| 2 — Domain | 🔄 Em progresso | Planos 02-01 e 02-02 concluídos (exceções de domínio + Email VO) |
+| 2 — Domain | 🔄 Em progresso | Planos 02-01, 02-02 e 02-03 concluídos (exceções de domínio + Email VO + entidade User) |
 | 3 — Application | ⬜ Não iniciada | Depende da Fase 2 |
 | 4 — Infrastructure | ⬜ Não iniciada | Depende da Fase 2 |
 | 5 — Adapter | ⬜ Não iniciada | Depende das Fases 3 e 4 |
@@ -45,3 +45,6 @@
 9. Sem método fábrica Email.of() — construtor público é o único ponto de entrada do VO
 10. Null-check antes do regex no Email evita NPE silencioso no matcher
 11. Locale.ROOT na normalização garante comportamento determinístico no servidor
+12. @Builder(access = PRIVATE) em User força toda construção via factory method User.create()
+13. Campo email de User é tipo Email (VO), não String — validação garantida em build time
+14. @ToString.Exclude em passwordHash impede vazamento de hash de senha em logs (mitigação T-02-03-01)
