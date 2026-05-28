@@ -1,4 +1,4 @@
-# Mekano — Roadmap
+﻿# Mekano — Roadmap
 
 **Milestone:** v1 — Clean Architecture Quarkus API  
 **Granularidade:** Standard (8 fases)  
@@ -142,7 +142,14 @@
 3. `new Email("invalido")` lança `InvalidEmailException` com mensagem `"Invalid email format: invalido"`
 4. `./mvnw compile -pl mekano-domain` — `grep -r "jakarta.persistence\|jakarta.ws.rs\|io.quarkus" mekano-domain/src/main/java` retorna **zero resultados**
 
-**Plans**: TBD
+**Plans**: 5 planos
+
+Planos:
+- [ ] 02-01-PLAN.md — Hierarquia de exceções de domínio (DomainException + 3 subclasses)
+- [ ] 02-02-PLAN.md — Value Object Email com validação por regex
+- [ ] 02-03-PLAN.md — Entidade User — POJO puro com factory method
+- [ ] 02-04-PLAN.md — Interfaces de Port (UserRepositoryPort + CreateUserInputPort)
+- [ ] 02-05-PLAN.md — JUnit 5 no POM + testes unitários (EmailTest, UserTest)
 
 ---
 
@@ -188,7 +195,14 @@
 3. `./mvnw dependency:tree -pl mekano-application` não contém `quarkus-hibernate-orm`, `quarkus-rest-jackson` nem qualquer artefato `jakarta.persistence`
 4. Código fonte de `CreateUserUseCase` não contém a string `@Transactional` (verificável por grep)
 
-**Plans**: TBD
+**Plans**: 5 planos
+
+Planos:
+- [ ] 02-01-PLAN.md — Hierarquia de exceções de domínio (DomainException + 3 subclasses)
+- [ ] 02-02-PLAN.md — Value Object Email com validação por regex
+- [ ] 02-03-PLAN.md — Entidade User — POJO puro com factory method
+- [ ] 02-04-PLAN.md — Interfaces de Port (UserRepositoryPort + CreateUserInputPort)
+- [ ] 02-05-PLAN.md — JUnit 5 no POM + testes unitários (EmailTest, UserTest)
 
 ---
 
@@ -258,7 +272,14 @@
 4. `./mvnw dependency:tree -pl mekano-infrastructure` **não** contém artefatos `quarkus-rest-jackson` nem `jakarta.ws.rs`
 5. `grep -r "@Transactional" mekano-application/src/main/java` retorna zero resultados (confirmar que a anotação não vazou para application)
 
-**Plans**: TBD
+**Plans**: 5 planos
+
+Planos:
+- [ ] 02-01-PLAN.md — Hierarquia de exceções de domínio (DomainException + 3 subclasses)
+- [ ] 02-02-PLAN.md — Value Object Email com validação por regex
+- [ ] 02-03-PLAN.md — Entidade User — POJO puro com factory method
+- [ ] 02-04-PLAN.md — Interfaces de Port (UserRepositoryPort + CreateUserInputPort)
+- [ ] 02-05-PLAN.md — JUnit 5 no POM + testes unitários (EmailTest, UserTest)
 
 ---
 
@@ -320,7 +341,14 @@
 4. `GET http://localhost:8080/q/swagger-ui` retorna HTML completo com documentação do endpoint `POST /users`, incluindo schemas de request e responses 201/400/409
 5. `./mvnw test -pl mekano-adapter -am` executa todos os testes REST Assured com `BUILD SUCCESS`
 
-**Plans**: TBD
+**Plans**: 5 planos
+
+Planos:
+- [ ] 02-01-PLAN.md — Hierarquia de exceções de domínio (DomainException + 3 subclasses)
+- [ ] 02-02-PLAN.md — Value Object Email com validação por regex
+- [ ] 02-03-PLAN.md — Entidade User — POJO puro com factory method
+- [ ] 02-04-PLAN.md — Interfaces de Port (UserRepositoryPort + CreateUserInputPort)
+- [ ] 02-05-PLAN.md — JUnit 5 no POM + testes unitários (EmailTest, UserTest)
 
 ---
 
@@ -363,7 +391,14 @@
 3. `GET http://localhost:8080/q/metrics` retorna corpo texto com linhas `# HELP` e `# TYPE` no formato Prometheus (Content-Type: `text/plain`)
 4. `GET http://localhost:8080/q/swagger-ui` exibe documentação completa com tags, summary, description e schemas de request/response para todos os endpoints
 
-**Plans**: TBD
+**Plans**: 5 planos
+
+Planos:
+- [ ] 02-01-PLAN.md — Hierarquia de exceções de domínio (DomainException + 3 subclasses)
+- [ ] 02-02-PLAN.md — Value Object Email com validação por regex
+- [ ] 02-03-PLAN.md — Entidade User — POJO puro com factory method
+- [ ] 02-04-PLAN.md — Interfaces de Port (UserRepositoryPort + CreateUserInputPort)
+- [ ] 02-05-PLAN.md — JUnit 5 no POM + testes unitários (EmailTest, UserTest)
 
 ---
 
@@ -401,7 +436,14 @@
 3. Log de startup **não** exibe `WARN` relacionado a conflito de interceptores CDI entre `@Transactional` e anotações de fault tolerance
 4. `./mvnw dependency:tree -pl mekano-adapter` confirma presença de `quarkus-smallrye-fault-tolerance` no classpath
 
-**Plans**: TBD
+**Plans**: 5 planos
+
+Planos:
+- [ ] 02-01-PLAN.md — Hierarquia de exceções de domínio (DomainException + 3 subclasses)
+- [ ] 02-02-PLAN.md — Value Object Email com validação por regex
+- [ ] 02-03-PLAN.md — Entidade User — POJO puro com factory method
+- [ ] 02-04-PLAN.md — Interfaces de Port (UserRepositoryPort + CreateUserInputPort)
+- [ ] 02-05-PLAN.md — JUnit 5 no POM + testes unitários (EmailTest, UserTest)
 
 ---
 
@@ -451,7 +493,14 @@
 3. `grep "mp.jwt.verify.publickey.location" mekano-adapter/src/main/resources/application.properties` retorna resultado — e `grep "quarkus.smallrye-jwt" application.properties` retorna **zero** resultados
 4. `./mvnw test -pl mekano-adapter -am` continua passando com `BUILD SUCCESS` — testes existentes usam `@TestSecurity` para bypassar auth
 
-**Plans**: TBD
+**Plans**: 5 planos
+
+Planos:
+- [ ] 02-01-PLAN.md — Hierarquia de exceções de domínio (DomainException + 3 subclasses)
+- [ ] 02-02-PLAN.md — Value Object Email com validação por regex
+- [ ] 02-03-PLAN.md — Entidade User — POJO puro com factory method
+- [ ] 02-04-PLAN.md — Interfaces de Port (UserRepositoryPort + CreateUserInputPort)
+- [ ] 02-05-PLAN.md — JUnit 5 no POM + testes unitários (EmailTest, UserTest)
 
 ---
 
