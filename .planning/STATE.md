@@ -3,8 +3,8 @@
 **Milestone ativo:** v1 — Clean Architecture Quarkus API  
 **Fase atual:** Fase 2 — Domain  
 **Última atualização:** 2025-07-15  
-**Último plano concluído:** 02-01 (Exceções de Domínio)  
-**Sessão parada em:** Completed 02-01-PLAN.md
+**Último plano concluído:** 02-02 (Email Value Object)  
+**Sessão parada em:** Completed 02-02-PLAN.md
 
 ---
 
@@ -13,7 +13,7 @@
 | Fase | Status | Notas |
 |------|--------|-------|
 | 1 — Esqueleto Maven | ✅ Concluída | BUILD SUCCESS — 5 módulos compilando |
-| 2 — Domain | 🔄 Em progresso | Plano 02-01 concluído (exceções de domínio) |
+| 2 — Domain | 🔄 Em progresso | Planos 02-01 e 02-02 concluídos (exceções de domínio + Email VO) |
 | 3 — Application | ⬜ Não iniciada | Depende da Fase 2 |
 | 4 — Infrastructure | ⬜ Não iniciada | Depende da Fase 2 |
 | 5 — Adapter | ⬜ Não iniciada | Depende das Fases 3 e 4 |
@@ -42,4 +42,6 @@
 5. `@Transactional` SOMENTE na camada infrastructure
 6. JWT: namespace `mp.jwt.*` (não `quarkus.smallrye-jwt.*`)
 7. PostgreSQL via docker-compose; DevServices para dev/test
-8. Exceções de domínio estendem RuntimeException — sem checked exceptions, sem imports de framework
+9. Sem método fábrica Email.of() — construtor público é o único ponto de entrada do VO
+10. Null-check antes do regex no Email evita NPE silencioso no matcher
+11. Locale.ROOT na normalização garante comportamento determinístico no servidor
