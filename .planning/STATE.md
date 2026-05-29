@@ -15,7 +15,7 @@
 | 1 — Esqueleto Maven | ✅ Concluída | BUILD SUCCESS — 5 módulos compilando |
 | 2 — Domain | ✅ Concluída | 6/6 critérios, 22 testes, BUILD SUCCESS, zero imports proibidos |
 | 3 — Application | ✅ Concluída | 3/3 planos, 4 testes, BUILD SUCCESS, zero imports proibidos |
-| 4 — Infrastructure | ⬜ Não iniciada | Depende da Fase 2 |
+| 4 — Infrastructure | 📋 Planejada (5 planos, 4 waves) | Pronto para `/gsd-execute-phase 4` |
 | 5 — Adapter | ⬜ Não iniciada | Depende das Fases 3 e 4 |
 | 6 — Observabilidade | ⬜ Não iniciada | Depende da Fase 5 |
 | 7 — Fault Tolerance | ⬜ Não iniciada | Depende da Fase 5 |
