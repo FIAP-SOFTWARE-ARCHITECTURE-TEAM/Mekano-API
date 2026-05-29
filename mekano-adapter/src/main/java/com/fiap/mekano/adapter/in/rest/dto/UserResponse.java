@@ -18,8 +18,8 @@ import java.util.UUID;
  */
 @Schema(description = "Dados do usuário criado")
 public record UserResponse(
-        @Schema(description = "Identificador único do usuário") UUID id,
-        @Schema(description = "Nome do usuário") String name,
-        @Schema(description = "Email do usuário") String email,
-        @Schema(description = "Data e hora de criação") LocalDateTime createdAt
+        @Schema(description = "Identificador único do usuário", example = "550e8400-e29b-41d4-a716-446655440000") UUID id,
+        @Schema(description = "Nome do usuário", example = "Ana Lima") String name,
+        @Schema(description = "Email do usuário", example = "ana@fiap.br") String email,
+        @Schema(description = "Data e hora de criação (ISO-8601)", example = "2026-05-29T14:30:00") LocalDateTime createdAt
 ) {}
