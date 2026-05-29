@@ -63,6 +63,19 @@
             <artifactId>quarkus-jdbc-postgresql</artifactId>
         </dependency>
 
+        <!-- MapStruct — API de mapeamento (versão gerenciada pelo root BOM) -->
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
+        </dependency>
+        <!-- Lombok — geração de getters/setters para CreateUserRequest -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Testes -->
         <dependency>
             <groupId>io.quarkus</groupId>
@@ -106,6 +119,32 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+
+            <!-- ORDEM OBRIGATÓRIA: lombok → lombok-mapstruct-binding → mapstruct-processor -->
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <parameters>true</parameters>
+                    <annotationProcessorPaths>
+                        <!-- ORDEM OBRIGATÓRIA -->
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok-mapstruct-binding</artifactId>
+                            <version>0.2.0</version>
+                        </path>
+                        <path>
+                            <groupId>org.mapstruct</groupId>
+                            <artifactId>mapstruct-processor</artifactId>
+                            <version>${mapstruct.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
             </plugin>
         </plugins>
     </build>
