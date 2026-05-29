@@ -2,6 +2,7 @@ package com.fiap.mekano.adapter.in.rest;
 
 import com.fiap.mekano.adapter.in.rest.dto.CreateUserRequest;
 import com.fiap.mekano.adapter.in.rest.dto.UserResponse;
+import com.fiap.mekano.adapter.in.rest.exception.ErrorResponse;
 import com.fiap.mekano.adapter.in.rest.mapper.UserDtoMapper;
 import com.fiap.mekano.domain.port.in.CreateUserInputPort;
 import jakarta.enterprise.context.RequestScoped;
@@ -16,6 +17,10 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.ExampleObject;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
@@ -72,10 +77,26 @@ public class UserResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(summary = "Criar novo usuário", description = "Cria um novo usuário no sistema. Retorna 409 se o email já estiver cadastrado.")
-    @APIResponse(responseCode = "201", description = "Usuário criado com sucesso")
-    @APIResponse(responseCode = "400", description = "Dados de entrada inválidos")
-    @APIResponse(responseCode = "409", description = "Email já cadastrado no sistema")
-    public Response create(@Valid CreateUserRequest request, @Context UriInfo uriInfo) {
+    @APIResponse(responseCode = "201",
+            description = "Usuário criado com sucesso",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON,
+                    schema = @Schema(implementation = UserResponse.class)))
+    @APIResponse(responseCode = "400",
+            description = "Dados de entrada inválidos (Bean Validation falhou)",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON,
+                    schema = @Schema(implementation = ErrorResponse.class)))
+    @APIResponse(responseCode = "409",
+            description = "Email já cadastrado no sistema",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON,
+                    schema = @Schema(implementation = ErrorResponse.class)))
+    public Response create(
+            @RequestBody(required = true,
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(implementation = CreateUserRequest.class),
+                            examples = @ExampleObject(name = "valido",
+                                    value = "{\"name\":\"Ana Lima\",\"email\":\"ana@fiap.br\",\"password\":\"abc123\"}")))
+            @Valid CreateUserRequest request,
+            @Context UriInfo uriInfo) {
         var command = userDtoMapper.toCommand(request);
         var user = createUserInputPort.execute(command);
         UserResponse response = userDtoMapper.toResponse(user);
