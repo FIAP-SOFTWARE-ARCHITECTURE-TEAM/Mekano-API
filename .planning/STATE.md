@@ -1,10 +1,10 @@
 # Mekano — State
 
 **Milestone ativo:** v1 — Clean Architecture Quarkus API  
-**Fase atual:** Fase 4 — Infrastructure  
-**Última atualização:** 2026-05-28  
-**Último plano concluído:** 03-03 (Testes Mockito puro — CreateUserUseCaseTest)  
-**Sessão parada em:** Fase 3 CONCLUÍDA (3/3 planos, 26 testes totais, BUILD SUCCESS)
+**Fase atual:** Fase 5 — Adapter  
+**Última atualização:** 2026-05-29  
+**Último plano concluído:** 04-05 (Testes @QuarkusTest DevServices + application.properties)  
+**Sessão parada em:** Fase 4 CONCLUÍDA (5/5 planos, 26 testes domain+application, BUILD SUCCESS, 7/7 requisitos verificados)
 
 ---
 
@@ -15,7 +15,7 @@
 | 1 — Esqueleto Maven | ✅ Concluída | BUILD SUCCESS — 5 módulos compilando |
 | 2 — Domain | ✅ Concluída | 6/6 critérios, 22 testes, BUILD SUCCESS, zero imports proibidos |
 | 3 — Application | ✅ Concluída | 3/3 planos, 4 testes, BUILD SUCCESS, zero imports proibidos |
-| 4 — Infrastructure | 📋 Planejada (5 planos, 4 waves) | Pronto para `/gsd-execute-phase 4` |
+| 4 — Infrastructure | ✅ Concluída | 5/5 planos, 7/7 requisitos, BUILD SUCCESS, desvio two-class pattern aceito |
 | 5 — Adapter | ⬜ Não iniciada | Depende das Fases 3 e 4 |
 | 6 — Observabilidade | ⬜ Não iniciada | Depende da Fase 5 |
 | 7 — Fault Tolerance | ⬜ Não iniciada | Depende da Fase 5 |

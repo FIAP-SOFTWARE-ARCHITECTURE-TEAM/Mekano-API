@@ -13,7 +13,7 @@
 - [ ] **Phase 1: Esqueleto Maven Multi-Módulo** — Converte scaffold Quarkus em projeto multi-módulo com 4 sub-módulos, BOM, Jandex, docker-compose e application.properties base
 - [ ] **Phase 2: Módulo Domain** — Entidades puras, Value Objects, interfaces de Port e exceções de domínio; zero dependências de framework
 - [ ] **Phase 3: Módulo Application** — Caso de uso `CreateUserUseCase` orquestrando via ports; testável sem container
-- [ ] **Phase 4: Módulo Infrastructure** — Entidade JPA Panache, `UserRepositoryImpl`, MapStruct CDI, migrations Flyway e datasource PostgreSQL configurado
+- [x] **Phase 4: Módulo Infrastructure** — Entidade JPA Panache, `UserRepositoryImpl`, MapStruct CDI, migrations Flyway e datasource PostgreSQL configurado
 - [ ] **Phase 5: Módulo Adapter** — REST Resource, DTOs Request/Response, MapStruct, ExceptionMappers HTTP, testes REST Assured — fluxo end-to-end completo
 - [ ] **Phase 6: Observabilidade** — Health checks liveness/readiness, métricas Prometheus e OpenAPI completamente documentado
 - [ ] **Phase 7: Tolerância a Falhas** — Anotações SmallRye Fault Tolerance (`@Retry`, `@Timeout`, `@CircuitBreaker`) na camada de infraestrutura
@@ -273,11 +273,11 @@ Planos:
 **Plans**: 5 planos
 
 Planos:
-- [ ] 04-01-PLAN.md — mekano-infrastructure/pom.xml: dependências JPA/Panache/MapStruct + annotationProcessorPaths (INF-06)
-- [ ] 04-02-PLAN.md — User.reconstitute() no domain + UserEntity.java (PanacheEntityBase, @Id UUID sem @GeneratedValue) (INF-01)
-- [ ] 04-03-PLAN.md — V1__create_users_table.sql (Flyway migration) + UserEntityMapper.java (MapStruct CDI, default methods) (INF-03, INF-04, INF-05)
-- [ ] 04-04-PLAN.md — UserRepositoryImpl.java (@ApplicationScoped, PanacheRepositoryBase<UserEntity,UUID>, @Transactional em save()) (INF-02)
-- [ ] 04-05-PLAN.md — application.properties de testes (DevServices) + UserRepositoryImplTest.java (@QuarkusTest, @TestTransaction) (INF-05, INF-07)
+- [x] 04-01-PLAN.md — mekano-infrastructure/pom.xml: dependências JPA/Panache/MapStruct + annotationProcessorPaths (INF-06)
+- [x] 04-02-PLAN.md — User.reconstitute() no domain + UserEntity.java (PanacheEntityBase, @Id UUID sem @GeneratedValue) (INF-01)
+- [x] 04-03-PLAN.md — V1__create_users_table.sql (Flyway migration) + UserEntityMapper.java (MapStruct CDI, default methods) (INF-03, INF-04, INF-05)
+- [x] 04-04-PLAN.md — UserRepositoryImpl.java (@ApplicationScoped, PanacheRepositoryBase<UserEntity,UUID>, @Transactional em save()) (INF-02)
+- [x] 04-05-PLAN.md — application.properties de testes (DevServices) + UserRepositoryImplTest.java (@QuarkusTest, @TestTransaction) (INF-05, INF-07)
 
 ---
 
@@ -509,7 +509,7 @@ Planos:
 | 1. Esqueleto Maven Multi-Módulo | 0/7 | Não iniciada | — |
 | 2. Módulo Domain | 0/5 | Não iniciada | — |
 | 3. Módulo Application | 0/4 | Não iniciada | — |
-| 4. Módulo Infrastructure | 0/7 | Não iniciada | — |
+| 4. Módulo Infrastructure | 5/5 | ✅ Concluída | 2026-05-29 |
 | 5. Módulo Adapter | 0/7 | Não iniciada | — |
 | 6. Observabilidade | 0/4 | Não iniciada | — |
 | 7. Tolerância a Falhas | 0/3 | Não iniciada | — |
@@ -539,13 +539,13 @@ Planos:
 | APP-02 | Use case orquestra: duplicidade → criação → persistência | Fase 3 | Pending |
 | APP-03 | `CreateUserCommand` sem anotações Jakarta | Fase 3 | Pending |
 | APP-04 | Sem imports `jakarta.persistence`, `ws.rs` ou Quarkus-específicos | Fase 3 | Pending |
-| INF-01 | `UserEntity` JPA (`@Entity`, `@Table`, `@Id`) | Fase 4 | Pending |
-| INF-02 | `UserRepositoryImpl` via Panache | Fase 4 | Pending |
-| INF-03 | `UserEntityMapper` MapStruct com `componentModel="cdi"` | Fase 4 | Pending |
-| INF-04 | Migration `V1__create_users_table.sql` | Fase 4 | Pending |
-| INF-05 | `quarkus.flyway.migrate-at-start=true` | Fase 4 | Pending |
-| INF-06 | `lombok-mapstruct-binding:0.2.0` + ordem correta annotationProcessorPaths | Fase 4 | Pending |
-| INF-07 | PostgreSQL em `application.properties` (perfis `%dev`, `%prod`) | Fase 4 | Pending |
+| INF-01 | `UserEntity` JPA (`@Entity`, `@Table`, `@Id`) | Fase 4 | ✅ Done |
+| INF-02 | `UserRepositoryImpl` via Panache | Fase 4 | ✅ Done |
+| INF-03 | `UserEntityMapper` MapStruct com `componentModel="cdi"` | Fase 4 | ✅ Done |
+| INF-04 | Migration `V1__create_users_table.sql` | Fase 4 | ✅ Done |
+| INF-05 | `quarkus.flyway.migrate-at-start=true` | Fase 4 | ✅ Done |
+| INF-06 | `lombok-mapstruct-binding:0.2.0` + ordem correta annotationProcessorPaths | Fase 4 | ✅ Done |
+| INF-07 | PostgreSQL em `application.properties` (perfis `%dev`, `%prod`) | Fase 4 | ✅ Done |
 | ADP-01 | `UserResource` `@Path("/users")` com `POST /users` | Fase 5 | Pending |
 | ADP-02 | `CreateUserRequest` com validações Bean Validation | Fase 5 | Pending |
 | ADP-03 | `UserResponse` sem `passwordHash` | Fase 5 | Pending |
