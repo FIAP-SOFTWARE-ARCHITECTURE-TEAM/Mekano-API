@@ -339,14 +339,16 @@ Planos:
 4. `GET http://localhost:8080/q/swagger-ui` retorna HTML completo com documentação do endpoint `POST /users`, incluindo schemas de request e responses 201/400/409
 5. `./mvnw test -pl mekano-adapter -am` executa todos os testes REST Assured com `BUILD SUCCESS`
 
-**Plans**: 5 planos
+**Plans**: 7 planos
 
 Planos:
-- [ ] 02-01-PLAN.md — Hierarquia de exceções de domínio (DomainException + 3 subclasses)
-- [ ] 02-02-PLAN.md — Value Object Email com validação por regex
-- [ ] 02-03-PLAN.md — Entidade User — POJO puro com factory method
-- [ ] 02-04-PLAN.md — Interfaces de Port (UserRepositoryPort + CreateUserInputPort)
-- [ ] 02-05-PLAN.md — JUnit 5 no POM + testes unitários (EmailTest, UserTest)
+- [ ] 05-01-PLAN.md — mekano-adapter/pom.xml: mapstruct dependency + maven-compiler-plugin annotationProcessorPaths (Wave 1)
+- [ ] 05-02-PLAN.md — DTOs: CreateUserRequest (Bean Validation) + UserResponse record sem passwordHash (Wave 1)
+- [ ] 05-03-PLAN.md — UserDtoMapper @Mapper(componentModel="cdi"): toCommand() + toResponse() com Email VO unwrapping (Wave 1)
+- [ ] 05-04-PLAN.md — ExceptionMappers: ErrorResponse record + DuplicateUser(409) + UserNotFound(404) + ConstraintViolation(400) (Wave 1)
+- [ ] 05-05-PLAN.md — UserResource @Path("/users") @RequestScoped: POST com @Valid + @Context UriInfo + Response.created() (Wave 2)
+- [ ] 05-06-PLAN.md — OpenAPI: mp.openapi.info.* em application.properties (Wave 2)
+- [ ] 05-07-PLAN.md — UserResourceTest @QuarkusTest 4 cenários REST Assured + verificar docker-compose.yml (Wave 3)
 
 ---
 
