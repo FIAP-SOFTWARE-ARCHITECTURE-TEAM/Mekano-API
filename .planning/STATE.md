@@ -1,10 +1,10 @@
 # Mekano — State
 
 **Milestone ativo:** v1 — Clean Architecture Quarkus API  
-**Fase atual:** Fase 2 — Domain  
-**Última atualização:** 2026-05-27  
-**Último plano concluído:** 02-04 (Interfaces de Porta — Ports)  
-**Sessão parada em:** Completed 02-04-PLAN.md
+**Fase atual:** Fase 4 — Infrastructure  
+**Última atualização:** 2026-05-28  
+**Último plano concluído:** 03-03 (Testes Mockito puro — CreateUserUseCaseTest)  
+**Sessão parada em:** Fase 3 CONCLUÍDA (3/3 planos, 26 testes totais, BUILD SUCCESS)
 
 ---
 
@@ -13,8 +13,8 @@
 | Fase | Status | Notas |
 |------|--------|-------|
 | 1 — Esqueleto Maven | ✅ Concluída | BUILD SUCCESS — 5 módulos compilando |
-| 2 — Domain | 🔄 Em progresso | Planos 02-01, 02-02, 02-03 e 02-04 concluídos (exceções + Email VO + entidade User + ports) |
-| 3 — Application | ⬜ Não iniciada | Depende da Fase 2 |
+| 2 — Domain | ✅ Concluída | 6/6 critérios, 22 testes, BUILD SUCCESS, zero imports proibidos |
+| 3 — Application | ✅ Concluída | 3/3 planos, 4 testes, BUILD SUCCESS, zero imports proibidos |
 | 4 — Infrastructure | ⬜ Não iniciada | Depende da Fase 2 |
 | 5 — Adapter | ⬜ Não iniciada | Depende das Fases 3 e 4 |
 | 6 — Observabilidade | ⬜ Não iniciada | Depende da Fase 5 |
