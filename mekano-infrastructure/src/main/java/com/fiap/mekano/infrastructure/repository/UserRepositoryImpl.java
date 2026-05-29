@@ -6,7 +6,10 @@ import com.fiap.mekano.infrastructure.mapper.UserEntityMapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import org.eclipse.microprofile.faulttolerance.Retry;
+import org.eclipse.microprofile.faulttolerance.Timeout;
 
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -26,6 +29,22 @@ import java.util.UUID;
  *   <li>Métodos de leitura — sem {@code @Transactional}: Quarkus/JPA gerencia automaticamente
  *       se houver transação ativa no chamador</li>
  * </ul>
+ *
+ * <p>Tolerância a falhas (Fase 7):
+ * <ul>
+ *   <li>{@code findByEmail} e {@code findById} têm {@code @Retry} (3 tentativas) — leituras são
+ *       idempotentes e seguras para retry; falhas transientes (conexão derrubada, deadlock) são
+ *       absorvidas sem propagar ao caller.</li>
+ *   <li>{@code save} tem {@code @Timeout(5s)} mas <strong>não</strong> {@code @Retry} (D-03):
+ *       retry em escrita arrisca duplicate INSERT (caso a primeira tentativa tenha persistido
+ *       a linha mas falhado pós-flush) e é antipattern com {@code @Transactional} — a TX abre
+ *       UMA vez (interceptor mais externo), então retries operariam dentro da mesma TX já
+ *       marcada para rollback.</li>
+ *   <li><strong>Sem {@code @CircuitBreaker}</strong> (D-02): o PostgreSQL local
+ *       (DevServices/docker-compose) não é um serviço externo flaky. Circuit breaker
+ *       introduziria estado adicional e novo ponto de falha sem benefício neste contexto.
+ *       A omissão é deliberada, não esquecimento.</li>
+ * </ul>
  */
 @ApplicationScoped
 public class UserRepositoryImpl implements UserRepositoryPort {
@@ -43,11 +62,19 @@ public class UserRepositoryImpl implements UserRepositoryPort {
      * capturando violações de constraint (ex: email duplicado) dentro da transação
      * antes de retornar ao chamador (D-02).
      *
+     * <p><strong>Nota sobre {@code @Timeout} + JDBC (D-04):</strong> a {@code TimeoutException}
+     * é lançada no momento correto pelo interceptor MP-FT, mas o driver pgjdbc só checa o flag
+     * de interrupt da thread em pontos de I/O — a query no servidor PostgreSQL pode continuar
+     * executando até completar ou falhar naturalmente. Para um INSERT simples como este, o
+     * impacto é desprezível; para queries longas (não é o caso aqui), considerar configurar
+     * {@code statement_timeout} no datasource para cancelamento server-side.
+     *
      * @param user entidade de domínio a ser salva
      * @return entidade de domínio reconstruída após persistência
      */
     @Override
     @Transactional
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     public User save(User user) {
         var entity = mapper.toEntity(user);
         panacheRepository.persist(entity);
@@ -62,6 +89,7 @@ public class UserRepositoryImpl implements UserRepositoryPort {
      * @return Optional com o User se encontrado, ou Optional.empty()
      */
     @Override
+    @Retry(maxRetries = 3)
     public Optional<User> findById(UUID id) {
         return panacheRepository.findByIdOptional(id).map(mapper::toDomain);
     }
@@ -76,6 +104,7 @@ public class UserRepositoryImpl implements UserRepositoryPort {
      * @return Optional com o User se encontrado, ou Optional.empty()
      */
     @Override
+    @Retry(maxRetries = 3, delay = 200, delayUnit = ChronoUnit.MILLIS)
     public Optional<User> findByEmail(String email) {
         return panacheRepository.find("email", email).firstResultOptional().map(mapper::toDomain);
     }
