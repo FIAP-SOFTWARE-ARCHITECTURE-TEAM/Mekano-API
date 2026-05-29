@@ -273,11 +273,11 @@ Planos:
 **Plans**: 5 planos
 
 Planos:
-- [ ] 02-01-PLAN.md — Hierarquia de exceções de domínio (DomainException + 3 subclasses)
-- [ ] 02-02-PLAN.md — Value Object Email com validação por regex
-- [ ] 02-03-PLAN.md — Entidade User — POJO puro com factory method
-- [ ] 02-04-PLAN.md — Interfaces de Port (UserRepositoryPort + CreateUserInputPort)
-- [ ] 02-05-PLAN.md — JUnit 5 no POM + testes unitários (EmailTest, UserTest)
+- [ ] 04-01-PLAN.md — mekano-infrastructure/pom.xml: dependências JPA/Panache/MapStruct + annotationProcessorPaths (INF-06)
+- [ ] 04-02-PLAN.md — User.reconstitute() no domain + UserEntity.java (PanacheEntityBase, @Id UUID sem @GeneratedValue) (INF-01)
+- [ ] 04-03-PLAN.md — V1__create_users_table.sql (Flyway migration) + UserEntityMapper.java (MapStruct CDI, default methods) (INF-03, INF-04, INF-05)
+- [ ] 04-04-PLAN.md — UserRepositoryImpl.java (@ApplicationScoped, PanacheRepositoryBase<UserEntity,UUID>, @Transactional em save()) (INF-02)
+- [ ] 04-05-PLAN.md — application.properties de testes (DevServices) + UserRepositoryImplTest.java (@QuarkusTest, @TestTransaction) (INF-05, INF-07)
 
 ---
 
