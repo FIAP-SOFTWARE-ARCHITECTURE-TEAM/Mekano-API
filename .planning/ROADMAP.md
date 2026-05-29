@@ -1,4 +1,4 @@
-﻿# Mekano — Roadmap
+# Mekano — Roadmap
 
 **Milestone:** v1 — Clean Architecture Quarkus API  
 **Granularidade:** Standard (8 fases)  
@@ -14,7 +14,7 @@
 - [ ] **Phase 2: Módulo Domain** — Entidades puras, Value Objects, interfaces de Port e exceções de domínio; zero dependências de framework
 - [ ] **Phase 3: Módulo Application** — Caso de uso `CreateUserUseCase` orquestrando via ports; testável sem container
 - [x] **Phase 4: Módulo Infrastructure** — Entidade JPA Panache, `UserRepositoryImpl`, MapStruct CDI, migrations Flyway e datasource PostgreSQL configurado
-- [ ] **Phase 5: Módulo Adapter** — REST Resource, DTOs Request/Response, MapStruct, ExceptionMappers HTTP, testes REST Assured — fluxo end-to-end completo
+- [x] **Phase 5: Módulo Adapter** — REST Resource, DTOs Request/Response, MapStruct, ExceptionMappers HTTP, testes REST Assured — fluxo end-to-end completo
 - [ ] **Phase 6: Observabilidade** — Health checks liveness/readiness, métricas Prometheus e OpenAPI completamente documentado
 - [ ] **Phase 7: Tolerância a Falhas** — Anotações SmallRye Fault Tolerance (`@Retry`, `@Timeout`, `@CircuitBreaker`) na camada de infraestrutura
 - [ ] **Phase 8: Fundação JWT** — SmallRye JWT configurado com `mp.jwt.*`, chave PKCS#8 e `@RolesAllowed` placeholder no `UserResource`
@@ -342,13 +342,13 @@ Planos:
 **Plans**: 7 planos
 
 Planos:
-- [ ] 05-01-PLAN.md — mekano-adapter/pom.xml: mapstruct dependency + maven-compiler-plugin annotationProcessorPaths (Wave 1)
-- [ ] 05-02-PLAN.md — DTOs: CreateUserRequest (Bean Validation) + UserResponse record sem passwordHash (Wave 1)
-- [ ] 05-03-PLAN.md — UserDtoMapper @Mapper(componentModel="cdi"): toCommand() + toResponse() com Email VO unwrapping (Wave 1)
-- [ ] 05-04-PLAN.md — ExceptionMappers: ErrorResponse record + DuplicateUser(409) + UserNotFound(404) + ConstraintViolation(400) (Wave 1)
-- [ ] 05-05-PLAN.md — UserResource @Path("/users") @RequestScoped: POST com @Valid + @Context UriInfo + Response.created() (Wave 2)
-- [ ] 05-06-PLAN.md — OpenAPI: mp.openapi.info.* em application.properties (Wave 2)
-- [ ] 05-07-PLAN.md — UserResourceTest @QuarkusTest 4 cenários REST Assured + verificar docker-compose.yml (Wave 3)
+- [x] 05-01-PLAN.md — mekano-adapter/pom.xml: mapstruct dependency + maven-compiler-plugin annotationProcessorPaths (Wave 1)
+- [x] 05-02-PLAN.md — DTOs: CreateUserRequest (Bean Validation) + UserResponse record sem passwordHash (Wave 1)
+- [x] 05-03-PLAN.md — UserDtoMapper @Mapper(componentModel="cdi"): toCommand() + toResponse() com Email VO unwrapping (Wave 1)
+- [x] 05-04-PLAN.md — ExceptionMappers: ErrorResponse record + DuplicateUser(409) + UserNotFound(404) + ConstraintViolation(400) (Wave 1)
+- [x] 05-05-PLAN.md — UserResource @Path("/users") @RequestScoped: POST com @Valid + @Context UriInfo + Response.created() (Wave 2)
+- [x] 05-06-PLAN.md — OpenAPI: mp.openapi.info.* em application.properties (Wave 2)
+- [x] 05-07-PLAN.md — UserResourceTest @QuarkusTest 4 cenários REST Assured + verificar docker-compose.yml (Wave 3)
 
 ---
 
@@ -391,18 +391,13 @@ Planos:
 3. `GET http://localhost:8080/q/metrics` retorna corpo texto com linhas `# HELP` e `# TYPE` no formato Prometheus (Content-Type: `text/plain`)
 4. `GET http://localhost:8080/q/swagger-ui` exibe documentação completa com tags, summary, description e schemas de request/response para todos os endpoints
 
-**Plans**: 5 planos
+**Plans**: 4 planos
 
 Planos:
-- [ ] 02-01-PLAN.md — Hierarquia de exceções de domínio (DomainException + 3 subclasses)
-- [ ] 02-02-PLAN.md — Value Object Email com validação por regex
-- [ ] 02-03-PLAN.md — Entidade User — POJO puro com factory method
-- [ ] 02-04-PLAN.md — Interfaces de Port (UserRepositoryPort + CreateUserInputPort)
-- [ ] 02-05-PLAN.md — JUnit 5 no POM + testes unitários (EmailTest, UserTest)
-
----
-
-### Phase 7: Tolerância a Falhas
+- [ ] 06-01-PLAN.md — Adicionar quarkus-smallrye-health (EXT-06) e quarkus-micrometer-registry-prometheus (EXT-07) ao mekano-adapter/pom.xml (Wave 1)
+- [ ] 06-02-PLAN.md — OpenAPI polish: @APIResponse content+schema em UserResource + @Schema example= nos DTOs (Wave 1)
+- [ ] 06-03-PLAN.md — ApplicationLivenessCheck customizado (@Liveness @ApplicationScoped) em mekano-adapter/observability (Wave 2)
+- [ ] 06-04-PLAN.md — ObservabilityEndpointsTest @QuarkusTest com 5 cenários REST Assured cobrindo UATs 1-4 (Wave 3)
 
 **Goal**: Operações de leitura em `UserRepositoryImpl` são protegidas por `@Retry`; timeout configurado para operações potencialmente lentas; build continua passando sem conflitos entre anotações de fault tolerance e `@Transactional`.
 
@@ -548,14 +543,14 @@ Planos:
 | INF-05 | `quarkus.flyway.migrate-at-start=true` | Fase 4 | ✅ Done |
 | INF-06 | `lombok-mapstruct-binding:0.2.0` + ordem correta annotationProcessorPaths | Fase 4 | ✅ Done |
 | INF-07 | PostgreSQL em `application.properties` (perfis `%dev`, `%prod`) | Fase 4 | ✅ Done |
-| ADP-01 | `UserResource` `@Path("/users")` com `POST /users` | Fase 5 | Pending |
-| ADP-02 | `CreateUserRequest` com validações Bean Validation | Fase 5 | Pending |
-| ADP-03 | `UserResponse` sem `passwordHash` | Fase 5 | Pending |
-| ADP-04 | `UserDtoMapper` MapStruct Request→Command e User→Response | Fase 5 | Pending |
-| ADP-05 | `UserAlreadyExistsExceptionMapper` → HTTP 409 | Fase 5 | Pending |
-| ADP-06 | `UserNotFoundExceptionMapper` → HTTP 404 | Fase 5 | Pending |
-| ADP-07 | OpenAPI/Swagger funcional em `/q/swagger-ui` | Fase 5 | Pending |
-| ADP-08 | `@QuarkusTest` REST Assured: 201 e 409 | Fase 5 | Pending |
+| ADP-01 | `UserResource` `@Path("/users")` com `POST /users` | Fase 5 | ✅ Done |
+| ADP-02 | `CreateUserRequest` com validações Bean Validation | Fase 5 | ✅ Done |
+| ADP-03 | `UserResponse` sem `passwordHash` | Fase 5 | ✅ Done |
+| ADP-04 | `UserDtoMapper` MapStruct Request→Command e User→Response | Fase 5 | ✅ Done |
+| ADP-05 | `UserAlreadyExistsExceptionMapper` → HTTP 409 | Fase 5 | ✅ Done |
+| ADP-06 | `UserNotFoundExceptionMapper` → HTTP 404 | Fase 5 | ✅ Done |
+| ADP-07 | OpenAPI/Swagger funcional em `/q/swagger-ui` | Fase 5 | ✅ Done |
+| ADP-08 | `@QuarkusTest` REST Assured: 201 e 409 | Fase 5 | ✅ Done |
 | DEV-01 | `docker-compose.yml` com serviço PostgreSQL | Fase 1 | Pending |
 | DEV-02 | `application.properties` com perfis `%dev` → docker-compose | Fase 1 | Pending |
 | DEV-03 | `./mvnw quarkus:dev -pl adapter -am` funcional | Fase 1 | Pending |
