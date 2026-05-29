@@ -4,6 +4,7 @@ import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
@@ -66,7 +67,10 @@ class ObservabilityEndpointsTest {
                 .when().get("/q/metrics")
                 .then()
                 .statusCode(200)
-                .contentType(containsString("text/plain"))
+                // Micrometer Quarkus 3.36 expõe Prometheus em OpenMetrics 1.0 por padrão
+                // (application/openmetrics-text), mantendo compatibilidade com scrapers que
+                // ainda aceitam text/plain do formato Prometheus clássico.
+                .contentType(anyOf(containsString("text/plain"), containsString("openmetrics-text")))
                 .body(containsString("# HELP"))
                 .body(containsString("# TYPE"))
                 .body(containsString("jvm_memory_used_bytes"));
