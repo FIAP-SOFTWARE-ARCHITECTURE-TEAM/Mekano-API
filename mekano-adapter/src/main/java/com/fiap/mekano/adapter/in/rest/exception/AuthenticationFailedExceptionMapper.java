@@ -1,5 +1,6 @@
 package com.fiap.mekano.adapter.in.rest.exception;
 
+import io.quarkus.logging.Log;
 import io.quarkus.security.AuthenticationFailedException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.ws.rs.core.MediaType;
@@ -26,10 +27,13 @@ import jakarta.ws.rs.ext.Provider;
  * este provider e devolvendo um corpo HTML/texto não-uniforme. Ver 08-RESEARCH.md
  * para o racional completo da decisão.
  *
- * Null-guard: a mensagem de {@link AuthenticationFailedException} é frequentemente null
- * (token ausente / inválido sem detalhe). Quando null ou em branco, devolve a string
- * literal "Unauthorized" para evitar `"message": null` no JSON e não vazar detalhes
- * internos (T-08-07 / Information Disclosure).
+ * Mensagem mascarada (T-08-07 / Information Disclosure): a {@code message}
+ * de {@link AuthenticationFailedException} é gerada por SmallRye-JWT/Quarkus
+ * Security e frequentemente expõe internals do pipeline de verificação
+ * (ex.: {@code SRJWT07000}, "Failed to verify a token", "No claim exists at
+ * path …"). Para evitar vazar esses detalhes a callers anônimos, devolvemos
+ * sempre o literal {@code "Unauthorized"} no body, e logamos a exceção
+ * original em {@code DEBUG} para troubleshooting interno.
  */
 @Provider
 @ApplicationScoped
@@ -37,10 +41,10 @@ public class AuthenticationFailedExceptionMapper implements ExceptionMapper<Auth
 
     @Override
     public Response toResponse(AuthenticationFailedException exception) {
-        String raw = exception.getMessage();
-        String message = (raw == null || raw.isBlank()) ? "Unauthorized" : raw;
+        // T-08-07: nunca ecoar mensagens internas do SmallRye/Quarkus para o cliente.
+        Log.debugf(exception, "Authentication failed");
         return Response.status(Response.Status.UNAUTHORIZED)
-                .entity(new ErrorResponse(message))
+                .entity(new ErrorResponse("Unauthorized"))
                 .type(MediaType.APPLICATION_JSON)
                 .build();
     }

@@ -1,5 +1,6 @@
 package com.fiap.mekano.adapter.in.rest.exception;
 
+import io.quarkus.logging.Log;
 import io.quarkus.security.UnauthorizedException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.ws.rs.core.MediaType;
@@ -26,8 +27,10 @@ import jakarta.ws.rs.ext.Provider;
  * o mesmo formato canonical de erro.
  *
  * Mesmo padrão (Pattern A — PATTERNS.md / G8):
- * @Provider + @ApplicationScoped, body via ErrorResponse, null-guard que
- * evita expor detalhes internos (T-08-07).
+ * @Provider + @ApplicationScoped, body via ErrorResponse, mensagem mascarada
+ * para "Unauthorized" (T-08-07): exceções de Quarkus Security podem expor
+ * internals do pipeline de auth, então nunca ecoamos {@code getMessage()}
+ * para o cliente — apenas logamos em DEBUG.
  */
 @Provider
 @ApplicationScoped
@@ -35,10 +38,10 @@ public class UnauthorizedExceptionMapper implements ExceptionMapper<Unauthorized
 
     @Override
     public Response toResponse(UnauthorizedException exception) {
-        String raw = exception.getMessage();
-        String message = (raw == null || raw.isBlank()) ? "Unauthorized" : raw;
+        // T-08-07: nunca ecoar mensagens internas do SmallRye/Quarkus para o cliente.
+        Log.debugf(exception, "Unauthorized request");
         return Response.status(Response.Status.UNAUTHORIZED)
-                .entity(new ErrorResponse(message))
+                .entity(new ErrorResponse("Unauthorized"))
                 .type(MediaType.APPLICATION_JSON)
                 .build();
     }
