@@ -111,6 +111,13 @@
             <artifactId>quarkus-smallrye-jwt-build</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Phase 8 (08-04): @TestSecurity annotation para sintetizar SecurityIdentity em testes
+             sem emitir JWT real. Necessário para manter UserResourceTest verde após @Authenticated. -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-test-security</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
