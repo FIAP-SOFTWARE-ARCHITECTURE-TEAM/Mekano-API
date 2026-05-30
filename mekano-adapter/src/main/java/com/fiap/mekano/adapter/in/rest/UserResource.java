@@ -5,6 +5,8 @@ import com.fiap.mekano.adapter.in.rest.dto.UserResponse;
 import com.fiap.mekano.adapter.in.rest.exception.ErrorResponse;
 import com.fiap.mekano.adapter.in.rest.mapper.UserDtoMapper;
 import com.fiap.mekano.domain.port.in.CreateUserInputPort;
+import io.quarkus.security.Authenticated;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -35,6 +37,8 @@ import java.net.URI;
  * - Converter DTO → Command → User → DTO via UserDtoMapper
  * - Invocar CreateUserInputPort (nunca CreateUserUseCase diretamente — INH-04)
  * - Construir resposta 201 Created com Location header (D-01)
+ * - Exige autenticação JWT em todos os endpoints (`@Authenticated`, D-01).
+ * - POST /users requer role `user` (`@RolesAllowed`, D-01).
  *
  * Exceções de domínio são propagadas — ExceptionMappers registrados (Plans 04)
  * interceptam e convertem para 409/404/400.
@@ -46,6 +50,7 @@ import java.net.URI;
 @Path("/users")
 @RequestScoped
 @Tag(name = "Users", description = "User management")
+@Authenticated
 public class UserResource {
 
     @Inject
@@ -74,6 +79,7 @@ public class UserResource {
      * @return 201 Created com UserResponse no body e Location header
      */
     @POST
+    @RolesAllowed("user")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(summary = "Criar novo usuário", description = "Cria um novo usuário no sistema. Retorna 409 se o email já estiver cadastrado.")
@@ -83,6 +89,10 @@ public class UserResource {
                     schema = @Schema(implementation = UserResponse.class)))
     @APIResponse(responseCode = "400",
             description = "Dados de entrada inválidos (Bean Validation falhou)",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON,
+                    schema = @Schema(implementation = ErrorResponse.class)))
+    @APIResponse(responseCode = "401",
+            description = "Token JWT ausente ou inválido",
             content = @Content(mediaType = MediaType.APPLICATION_JSON,
                     schema = @Schema(implementation = ErrorResponse.class)))
     @APIResponse(responseCode = "409",
