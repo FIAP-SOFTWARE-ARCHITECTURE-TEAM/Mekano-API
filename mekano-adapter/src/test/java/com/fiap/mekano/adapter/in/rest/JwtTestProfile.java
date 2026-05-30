@@ -2,6 +2,7 @@ package com.fiap.mekano.adapter.in.rest;
 
 import io.quarkus.test.junit.QuarkusTestProfile;
 
+import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -33,6 +34,29 @@ import java.util.Map;
  * JVM-wide, atravessando classloaders. {@link #privateKey()} reconstrói
  * a {@link PrivateKey} no classloader do teste.
  *
+ * <p><b>WR-05 (Code Review 08) — atenção operacional:</b> a chave privada
+ * de teste é publicada como System property ({@link #PRIVATE_KEY_PROP}) e
+ * portanto fica acessível a qualquer código no mesmo JVM. Embora seja uma
+ * chave gerada apenas para a vida do JVM de teste (nunca tocando disco
+ * persistente, nunca commitada), <b>NÃO logue {@code System.getProperties()}
+ * em testes nem em código que rode na mesma JVM</b> — isso despejaria a
+ * chave em logs de CI. Para diagnósticos, prefira logar chaves específicas
+ * e mascarar {@code mekano.test.jwt.*}. A reestruturação para evitar o
+ * canal System.properties (ex.: stash em singleton no bootstrap classpath)
+ * é trabalho de v2 — depende de inversão do bridge launcher↔application.
+ *
+ * <p><b>WR-04 (Code Review 08) — choice of monitor:</b> a sincronização
+ * cross-classloader é feita em {@code System.getProperties()} (objeto
+ * único na JVM, alcançável dos dois classloaders) em vez de
+ * {@code String.class}. {@code String.class} também funcionaria como
+ * monitor JVM-wide, mas é compartilhado com JDK internals (intern table,
+ * formatter caches, serialization shims) e qualquer biblioteca que use
+ * o mesmo "truque", criando risco de contenção/deadlock sob runners
+ * paralelos. {@code System.getProperties()} é exatamente o recurso que
+ * estamos mutando, então é o monitor natural — não "simplifique" de volta
+ * para {@code String.class} ou para um {@code private static Object LOCK}
+ * (este último não atravessa classloaders e quebra o bridge).
+ *
  * Referência: D-10 — chave gerada em memória, sem chave em disco para testes.
  */
 public class JwtTestProfile implements QuarkusTestProfile {
@@ -43,15 +67,28 @@ public class JwtTestProfile implements QuarkusTestProfile {
 
     private static final String PUBLIC_KEY_PEM;
 
+    /**
+     * Arquivo PEM de chave pública cacheado em nível de classloader (IN-04 —
+     * Code Review 08). Cada invocação de {@link #getConfigOverrides()} antes
+     * criava um novo temp file e dependia de {@code deleteOnExit()}; com vários
+     * test classes JWT-enabled rodando no mesmo surefire JVM (planejado para v2),
+     * isso acumularia arquivos em {@code %TEMP%} até o fim do JVM. Cache em
+     * nível de classe garante: um arquivo por classloader, ainda
+     * {@code deleteOnExit()} para limpar em shutdown.
+     */
+    private static final String PUB_PEM_FILE_PATH;
+
     static {
         try {
             // Quarkus carrega QuarkusTestProfile no launcher classloader e o test class
             // no application classloader; ambos rodam ESTE static block independentemente.
             // Para garantir que pub e priv sejam matched pair, primeiro classloader a
             // chegar gera o KP e publica via System properties (JVM-wide); o segundo
-            // detecta e reusa. Sincronização via classe `String.class` (sempre carregada
-            // no bootstrap classloader, único entre todos os filhos).
-            synchronized (String.class) {
+            // detecta e reusa. Sincronização em System.getProperties() (WR-04): é o
+            // único objeto JVM-wide alcançável dos dois classloaders SEM colidir
+            // com monitores usados por JDK internals (como String.class). Ver
+            // Javadoc da classe para o racional completo.
+            synchronized (System.getProperties()) {
                 String existingPem = System.getProperty(PUBLIC_KEY_PEM_PROP);
                 String existingPriv = System.getProperty(PRIVATE_KEY_PROP);
                 if (existingPem != null && existingPriv != null) {
@@ -62,7 +99,11 @@ public class JwtTestProfile implements QuarkusTestProfile {
                     KeyPair kp = generator.generateKeyPair();
 
                     byte[] pubEncoded = kp.getPublic().getEncoded();
-                    String pubBase64 = Base64.getMimeEncoder(64, "\n".getBytes()).encodeToString(pubEncoded);
+                    // IN-01: charset explícito (US_ASCII) — "\n".getBytes() resolveria ao
+                    // default da JVM, anti-pattern flagged por SonarQube/PMD mesmo sendo
+                    // benigno para ASCII puro.
+                    String pubBase64 = Base64.getMimeEncoder(64, "\n".getBytes(StandardCharsets.US_ASCII))
+                            .encodeToString(pubEncoded);
                     PUBLIC_KEY_PEM = "-----BEGIN PUBLIC KEY-----\n" + pubBase64 + "\n-----END PUBLIC KEY-----";
 
                     String privB64 = Base64.getEncoder().encodeToString(kp.getPrivate().getEncoded());
@@ -70,6 +111,15 @@ public class JwtTestProfile implements QuarkusTestProfile {
                     System.setProperty(PRIVATE_KEY_PROP, privB64);
                 }
             }
+
+            // IN-04: materializa a chave pública em UM temp file por classloader.
+            // smallrye-jwt resolve `mp.jwt.verify.publickey.location` como URI/file path,
+            // então precisamos de um arquivo real (não basta inline). deleteOnExit
+            // continua valendo para garantir limpeza em shutdown.
+            java.nio.file.Path pem = java.nio.file.Files.createTempFile("jwt-test-pub", ".pem");
+            java.nio.file.Files.writeString(pem, PUBLIC_KEY_PEM);
+            pem.toFile().deleteOnExit();
+            PUB_PEM_FILE_PATH = pem.toAbsolutePath().toString().replace('\\', '/');
         } catch (Exception e) {
             throw new RuntimeException("Falha ao gerar par RSA para JwtTestProfile", e);
         }
@@ -98,24 +148,19 @@ public class JwtTestProfile implements QuarkusTestProfile {
 
     @Override
     public Map<String, String> getConfigOverrides() {
-        try {
-            // Write the test public key to a temp file and point the runtime config there.
-            // Inline `mp.jwt.verify.publickey` SHOULD take precedence over `.location`,
-            // but Quarkus 3.36 emits SRJWT03007 ("Public key is configured but either
-            // the secret key or key location are also configured and will be ignored")
-            // and in practice falls back to the static publicKey.pem on classpath —
-            // signature verify then fails for tokens we sign here. Overriding
-            // `.location` with the temp file is unambiguous.
-            java.nio.file.Path pem = java.nio.file.Files.createTempFile("jwt-test-pub", ".pem");
-            java.nio.file.Files.writeString(pem, PUBLIC_KEY_PEM);
-            pem.toFile().deleteOnExit();
-            return Map.of(
-                    "smallrye.jwt.verify.key.location", pem.toAbsolutePath().toString().replace('\\', '/'),
-                    "mp.jwt.verify.publickey.location", pem.toAbsolutePath().toString().replace('\\', '/')
-            );
-        } catch (Exception e) {
-            throw new RuntimeException("Falha ao publicar chave pública de teste", e);
-        }
+        // IN-02: apenas a propriedade canônica MicroProfile JWT é necessária.
+        // A entrada anterior `smallrye.jwt.verify.key.location` era um nome incorreto
+        // (a propriedade SmallRye real seria `smallrye.jwt.verify.publickey.location`),
+        // ignorada silenciosamente pelo runtime — removida para não dar a impressão
+        // de override duplo intencional.
+        //
+        // Inline `mp.jwt.verify.publickey` SHOULD take precedence over `.location`,
+        // but Quarkus 3.36 emits SRJWT03007 ("Public key is configured but either
+        // the secret key or key location are also configured and will be ignored")
+        // and in practice falls back to the static publicKey.pem on classpath —
+        // signature verify then fails for tokens we sign here. Overriding `.location`
+        // com o temp file (cacheado em PUB_PEM_FILE_PATH — IN-04) é inequívoco.
+        return Map.of("mp.jwt.verify.publickey.location", PUB_PEM_FILE_PATH);
     }
 }
 
