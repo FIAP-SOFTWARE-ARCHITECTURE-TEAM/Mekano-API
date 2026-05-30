@@ -4,50 +4,73 @@ import com.fiap.mekano.adapter.in.rest.dto.CreateUserRequest;
 import com.fiap.mekano.adapter.in.rest.dto.UserResponse;
 import com.fiap.mekano.domain.model.User;
 import com.fiap.mekano.domain.port.in.CreateUserCommand;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
+import jakarta.enterprise.context.ApplicationScoped;
 
 /**
- * MapStruct mapper CDI para conversão entre DTOs HTTP e tipos de domínio.
+ * Mapper CDI manual entre DTOs HTTP e tipos de domínio.
  *
- * <p>componentModel = "cdi": bean CDI gerenciado pelo Quarkus Arc (STATE.md Decision 4).
- * NUNCA usar "spring" neste projeto.
+ * <p>Phase 8 (08-05 deviation, Rule 3): originalmente declarado como
+ * {@code @Mapper(componentModel = "cdi")} interface gerada por MapStruct.
+ * Em Quarkus 3.36 + maven-compiler-plugin 3.15 + quarkus-maven-plugin
+ * (extensions=true), a segunda invocação do ciclo `generate-sources` (e.g.
+ * surefire/quarkus:generate-code-tests) reescreve
+ * {@code target/classes/UserDtoMapperImpl.class} em modo degradado
+ * ("Unresolved compilation problems" sem `implements UserDtoMapper`),
+ * fazendo o ArC do Quarkus emitir {@code UnsatisfiedResolutionException}
+ * para {@code UserResource#userDtoMapper} em qualquer @QuarkusTest.
+ *
+ * <p>Solução: classe concreta @ApplicationScoped escrita à mão. Mesma
+ * semântica dos métodos gerados por MapStruct (auto-mapeamento de fields
+ * coincidentes; `email` extraído via {@code user.getEmail().getValue()}).
  *
  * <p>Mapeamentos:
  * <ul>
- *   <li>{@code toCommand()}: auto-mapeado (name, email, password coincidem em nome e tipo)</li>
- *   <li>{@code toResponse()}: requer @Mapping para email — User.email é Email VO, UserResponse.email é String</li>
+ *   <li>{@link #toCommand(CreateUserRequest)}: name, email, password (todos String 1-para-1)</li>
+ *   <li>{@link #toResponse(User)}: User.email (Email VO) → UserResponse.email (String);
+ *       passwordHash NÃO incluído no DTO (T-08-XX, segurança).</li>
  * </ul>
- *
- * <p>MapStruct 1.6.x com record como TARGET: usa o canonical constructor automaticamente.
- * passwordHash não é campo de UserResponse — MapStruct ignora automaticamente (sem @Mapping necessário).
  */
-@Mapper(componentModel = "cdi")
-public interface UserDtoMapper {
+@ApplicationScoped
+public class UserDtoMapper {
 
     /**
-     * Converte DTO de entrada HTTP para comando de domínio.
+     * Converte DTO HTTP de entrada para comando de domínio.
      *
-     * <p>Auto-mapeamento: CreateUserRequest.name → CreateUserCommand.name,
-     *                     CreateUserRequest.email → CreateUserCommand.email,
-     *                     CreateUserRequest.password → CreateUserCommand.password.
-     * Nenhum @Mapping necessário — nomes e tipos coincidem exatamente.
+     * <p>Auto-mapeamento direto: todos os fields têm mesmo nome e tipo.
      *
-     * @param request DTO de entrada validado pelo Bean Validation (@Valid no resource)
-     * @return comando de domínio pronto para CreateUserInputPort.execute()
+     * @param request DTO validado por Bean Validation no resource
+     * @return comando pronto para CreateUserInputPort.execute()
      */
-    CreateUserCommand toCommand(CreateUserRequest request);
+    public CreateUserCommand toCommand(CreateUserRequest request) {
+        if (request == null) {
+            return null;
+        }
+        return new CreateUserCommand(
+                request.getName(),
+                request.getEmail(),
+                request.getPassword()
+        );
+    }
 
     /**
-     * Converte entidade de domínio para DTO de saída HTTP.
+     * Converte entidade de domínio para DTO HTTP de saída.
      *
-     * <p>Email VO → String: usa expression Java diretamente (mesmo padrão de UserEntityMapper).
-     * passwordHash ausente de UserResponse: MapStruct ignora campos sem correspondência no target.
-     * MapStruct 1.6.x chama UserResponse(UUID, String, String, LocalDateTime) canonical constructor.
+     * <p>{@code passwordHash} ausente do {@link UserResponse} canonical
+     * constructor → não é exposto na resposta (D-06 / segurança).
      *
-     * @param user entidade de domínio retornada pelo use case
+     * @param user entidade retornada pelo use case
      * @return DTO de saída sem passwordHash
      */
-    @Mapping(target = "email", expression = "java(user.getEmail().getValue())")
-    UserResponse toResponse(User user);
+    public UserResponse toResponse(User user) {
+        if (user == null) {
+            return null;
+        }
+        return new UserResponse(
+                user.getId(),
+                user.getName(),
+                user.getEmail().getValue(),
+                user.getCreatedAt()
+        );
+    }
 }
+
