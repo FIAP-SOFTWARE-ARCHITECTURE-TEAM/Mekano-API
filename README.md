@@ -60,3 +60,48 @@ If you want to learn more about building native executables, please consult <htt
 Easily start your REST Web Services
 
 [Related guide section...](https://quarkus.io/guides/getting-started-reactive#reactive-jax-rs-resources)
+
+## Geração de chaves JWT (Phase 8)
+
+Esta seção descreve como gerar localmente o par de chaves RSA usado pelo SmallRye JWT
+para verificar tokens MicroProfile JWT (EXT-09). A chave privada é estritamente
+dev-local — **nunca** deve ser commitada (D-08, `.gitignore` veta `privateKey*.pem`).
+
+### 1. Comandos `openssl` (gerar par RSA em PKCS#8)
+
+A ordem abaixo é obrigatória — o SmallRye JWT exige a chave privada em formato
+PKCS#8 (G7):
+
+```bash
+# 1) Gera chave privada RSA 2048 bits (formato PKCS#1)
+openssl genrsa -out privateKey.pem 2048
+
+# 2) Converte para PKCS#8 sem cifragem — formato aceito pelo SmallRye JWT
+openssl pkcs8 -topk8 -nocrypt -inform pem -in privateKey.pem -outform pem -out privateKey_pkcs8.pem
+
+# 3) Extrai a chave pública correspondente para o classpath do adapter
+openssl rsa -pubout -in privateKey.pem -out mekano-adapter/src/main/resources/publicKey.pem
+```
+
+### 2. Onde cada arquivo vive (e por quê)
+
+- `mekano-adapter/src/main/resources/publicKey.pem` — **rastreado** no git
+  (D-09). É empacotado no artefato e usado pelo Quarkus para verificar tokens em
+  runtime via `mp.jwt.verify.publickey.location`.
+- `privateKey.pem` e `privateKey_pkcs8.pem` — **fora** do controle de versão
+  (D-08). O `.gitignore` raiz veta o padrão `privateKey*.pem`. Use a chave
+  PKCS#8 apenas no seu fluxo local de emissão de tokens (curl/Postman).
+- Os testes automatizados **não** dependem desses arquivos: o
+  `JwtTestProfile` (plano 08-05) gera um par RSA em memória programaticamente,
+  o que torna a suíte CI-friendly e reprodutível.
+
+### 3. Variável de ambiente `MP_JWT_ISSUER`
+
+O issuer default configurado em `application.properties` é
+`https://mekano.fiap.com.br/auth`. Para sobrescrever em runtime (D-05),
+exporte `MP_JWT_ISSUER` antes de subir a aplicação:
+
+```bash
+export MP_JWT_ISSUER=https://meu-issuer-local/auth
+./mvnw -pl mekano-adapter quarkus:dev
+```
