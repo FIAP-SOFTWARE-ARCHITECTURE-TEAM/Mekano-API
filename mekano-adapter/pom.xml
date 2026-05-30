@@ -75,6 +75,11 @@
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-micrometer-registry-prometheus</artifactId>
         </dependency>
+        <!-- EXT-09: SmallRye JWT — verifica tokens MicroProfile JWT (namespace mp.jwt.* — G6) -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-jwt</artifactId>
+        </dependency>
 
         <!-- MapStruct — API de mapeamento (versão gerenciada pelo root BOM) -->
         <dependency>
@@ -98,6 +103,12 @@
         <dependency>
             <groupId>io.rest-assured</groupId>
             <artifactId>rest-assured</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Phase 8: SmallRyeJwtBuildApi para emitir tokens em testes (UserResourceJwtTest / JwtTestProfile) -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-jwt-build</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
