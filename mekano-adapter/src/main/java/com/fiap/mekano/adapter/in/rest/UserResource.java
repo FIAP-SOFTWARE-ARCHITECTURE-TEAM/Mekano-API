@@ -53,6 +53,13 @@ import java.net.URI;
 @Authenticated
 public class UserResource {
 
+    /**
+     * Exemplo de password usado em {@code @APIResponse}/{@code @ExampleObject}.
+     * Mantido como constante para evitar drift entre o exemplo OpenAPI e os
+     * literais usados nos testes (IN-03 — Code Review 08).
+     */
+    static final String EXAMPLE_PASSWORD = "abc123";
+
     @Inject
     CreateUserInputPort createUserInputPort;
 
@@ -95,6 +102,10 @@ public class UserResource {
             description = "Token JWT ausente ou inválido",
             content = @Content(mediaType = MediaType.APPLICATION_JSON,
                     schema = @Schema(implementation = ErrorResponse.class)))
+    @APIResponse(responseCode = "403",
+            description = "JWT válido mas sem o role exigido (groups != 'user')",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON,
+                    schema = @Schema(implementation = ErrorResponse.class)))
     @APIResponse(responseCode = "409",
             description = "Email já cadastrado no sistema",
             content = @Content(mediaType = MediaType.APPLICATION_JSON,
@@ -104,7 +115,7 @@ public class UserResource {
                     content = @Content(mediaType = MediaType.APPLICATION_JSON,
                             schema = @Schema(implementation = CreateUserRequest.class),
                             examples = @ExampleObject(name = "valido",
-                                    value = "{\"name\":\"Ana Lima\",\"email\":\"ana@fiap.br\",\"password\":\"abc123\"}")))
+                                    value = "{\"name\":\"Ana Lima\",\"email\":\"ana@fiap.br\",\"password\":\"" + EXAMPLE_PASSWORD + "\"}")))
             @Valid CreateUserRequest request,
             @Context UriInfo uriInfo) {
         var command = userDtoMapper.toCommand(request);

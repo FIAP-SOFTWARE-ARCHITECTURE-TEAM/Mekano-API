@@ -97,4 +97,27 @@ class UserResourceJwtTest {
                 .statusCode(401)
                 .body("message", notNullValue());
     }
+
+    /**
+     * WR-02 (Code Review 08): JWT de assinatura válida cuja claim {@code groups}
+     * não contém {@code "user"} deve disparar {@link jakarta.ws.rs.ForbiddenException}
+     * pelo interceptor JAX-RS, traduzido em 403 + body {@link com.fiap.mekano.adapter.in.rest.exception.ErrorResponse}
+     * pelo {@code ForbiddenExceptionMapper} (D-06: toda resposta de erro é JSON canônico).
+     */
+    @Test
+    void test_wrongRole_returns403() {
+        String token = issueToken(DEFAULT_ISSUER, Set.of("guest"), Duration.ofMinutes(5));
+
+        given()
+                .contentType(ContentType.JSON)
+                .header("Authorization", "Bearer " + token)
+                .body("""
+                        {"name":"Ana","email":"ana.uat-role@fiap.br","password":"abc123"}
+                        """)
+                .when()
+                .post("/users")
+                .then()
+                .statusCode(403)
+                .body("message", notNullValue());
+    }
 }
