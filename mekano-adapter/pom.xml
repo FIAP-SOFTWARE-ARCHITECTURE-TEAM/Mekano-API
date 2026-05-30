@@ -81,11 +81,6 @@
             <artifactId>quarkus-smallrye-jwt</artifactId>
         </dependency>
 
-        <!-- MapStruct — API de mapeamento (versão gerenciada pelo root BOM) -->
-        <dependency>
-            <groupId>org.mapstruct</groupId>
-            <artifactId>mapstruct</artifactId>
-        </dependency>
         <!-- Lombok — geração de getters/setters para CreateUserRequest -->
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -152,27 +147,22 @@
                 </executions>
             </plugin>
 
-            <!-- ORDEM OBRIGATÓRIA: lombok → lombok-mapstruct-binding → mapstruct-processor -->
+            <!-- 08-05 deviation: MapStruct foi removido do pipeline (UserDtoMapper é
+                 hand-written CDI bean) por causa de race entre quarkus-maven-plugin e
+                 mapstruct-processor. Mantemos apenas o processor do Lombok aqui;
+                 lombok-mapstruct-binding e mapstruct-processor foram removidos junto
+                 com a dependência runtime org.mapstruct:mapstruct. Se MapStruct for
+                 reintroduzido em v2, restaurar a tripla `lombok → lombok-mapstruct-binding →
+                 mapstruct-processor` nesta ordem (ver 08-05-SUMMARY.md). -->
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
                     <parameters>true</parameters>
                     <annotationProcessorPaths>
-                        <!-- ORDEM OBRIGATÓRIA -->
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
                             <version>${lombok.version}</version>
-                        </path>
-                        <path>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok-mapstruct-binding</artifactId>
-                            <version>0.2.0</version>
-                        </path>
-                        <path>
-                            <groupId>org.mapstruct</groupId>
-                            <artifactId>mapstruct-processor</artifactId>
-                            <version>${mapstruct.version}</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
