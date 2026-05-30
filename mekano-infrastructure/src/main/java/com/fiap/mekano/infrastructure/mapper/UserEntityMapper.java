@@ -3,47 +3,59 @@ package com.fiap.mekano.infrastructure.mapper;
 import com.fiap.mekano.domain.model.User;
 import com.fiap.mekano.domain.valueobject.Email;
 import com.fiap.mekano.infrastructure.entity.UserEntity;
-import org.mapstruct.Mapper;
+import jakarta.enterprise.context.ApplicationScoped;
 
 /**
- * MapStruct mapper CDI para conversão entre {@link UserEntity} (JPA) e {@link User} (domain).
+ * Mapper CDI para conversão entre {@link UserEntity} (JPA) e {@link User} (domínio).
  *
- * <p>Estratégia de conversão:
- * <ul>
- *   <li>{@code toEntity(User)} — gerado automaticamente pelo MapStruct (UserEntity tem @NoArgsConstructor + @Setter)</li>
- *   <li>{@code toDomain(UserEntity)} — implementado manualmente como default method porque
- *       {@code User} usa {@code @Builder(access = PRIVATE)} — MapStruct não consegue usar o builder diretamente (D-04)</li>
- *   <li>{@code emailToString(Email)} — conversão Email VO → String; detectada automaticamente por MapStruct ao gerar toEntity()</li>
- *   <li>{@code emailFromString(String)} — conversão inversa; não usada diretamente (toDomain é manual), mantida por completude</li>
- * </ul>
+ * <p><b>Histórico:</b> originalmente uma interface MapStruct ({@code @Mapper(componentModel = "cdi")}).
+ * Substituído por bean concreto {@code @ApplicationScoped} em razão do mesmo bug que motivou
+ * o swap do {@code UserDtoMapper} no módulo adapter durante a Fase 8 (08-05): o mojo
+ * {@code generate-code} do Quarkus 3.36 corrompe silenciosamente o bytecode gerado pelo
+ * processador MapStruct quando o build agregado executa múltiplos {@code @QuarkusTest} em
+ * sequência, causando {@code UnsatisfiedResolutionException} no scanner CDI ao subir o
+ * {@code UserRepositoryImplTest}. Per-class o teste passava; agregado falhava (UAT-4).
+ * Implementação manual elimina a dependência do annotation processor.
  *
- * <p>componentModel = "cdi": bean CDI gerenciado pelo Quarkus Arc (STATE.md Decision 4).
- * NUNCA usar "spring" neste projeto.
+ * <p>API pública preservada: {@link #toEntity(User)} e {@link #toDomain(UserEntity)}.
+ * Métodos auxiliares de conversão {@code Email <-> String} estão inline (não eram chamados
+ * externamente).
  */
-@Mapper(componentModel = "cdi")
-public interface UserEntityMapper {
+@ApplicationScoped
+public class UserEntityMapper {
 
     /**
      * Converte entidade de domínio para entidade JPA.
-     * Gerado pelo MapStruct: usa @NoArgsConstructor + setters de UserEntity.
-     * MapStruct detecta emailToString() automaticamente para mapear User.email (Email) → UserEntity.email (String).
      *
      * @param user entidade de domínio
      * @return entidade JPA pronta para persistência
      */
-    UserEntity toEntity(User user);
+    public UserEntity toEntity(User user) {
+        if (user == null) {
+            return null;
+        }
+        UserEntity entity = new UserEntity();
+        entity.setId(user.getId());
+        entity.setName(user.getName());
+        entity.setEmail(user.getEmail() != null ? user.getEmail().getValue() : null);
+        entity.setPasswordHash(user.getPasswordHash());
+        entity.setCreatedAt(user.getCreatedAt());
+        return entity;
+    }
 
     /**
      * Reconstrói entidade de domínio a partir da entidade JPA.
      *
-     * Implementado como default method porque User.@Builder(access = PRIVATE) impede
-     * que MapStruct use o builder externamente. User.reconstitute() tem acesso interno
-     * ao builder privado e preserva os valores originais de id e createdAt (D-03, D-04).
+     * <p>Usa {@link User#reconstitute} porque {@code User.@Builder(access = PRIVATE)} impede
+     * uso externo do builder (D-03, D-04).
      *
      * @param entity entidade JPA vinda do banco
      * @return instância de User com valores exatos do banco
      */
-    default User toDomain(UserEntity entity) {
+    public User toDomain(UserEntity entity) {
+        if (entity == null) {
+            return null;
+        }
         return User.reconstitute(
                 entity.getId(),
                 entity.getName(),
@@ -51,27 +63,5 @@ public interface UserEntityMapper {
                 entity.getPasswordHash(),
                 entity.getCreatedAt()
         );
-    }
-
-    /**
-     * Conversão auxiliar: Email VO → String.
-     * Detectada automaticamente pelo MapStruct ao gerar toEntity().
-     *
-     * @param email Value Object Email
-     * @return string do email normalizada (lowercase)
-     */
-    default String emailToString(Email email) {
-        return email.getValue();
-    }
-
-    /**
-     * Conversão auxiliar: String → Email VO.
-     * Mantida para completude; não usada diretamente pois toDomain() é implementado manualmente.
-     *
-     * @param value string do email
-     * @return Email VO validado
-     */
-    default Email emailFromString(String value) {
-        return new Email(value);
     }
 }

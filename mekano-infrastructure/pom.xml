@@ -54,11 +54,10 @@
             <artifactId>quarkus-smallrye-fault-tolerance</artifactId>
         </dependency>
 
-        <!-- MapStruct — API de mapeamento (versão gerenciada pelo root BOM) -->
-        <dependency>
-            <groupId>org.mapstruct</groupId>
-            <artifactId>mapstruct</artifactId>
-        </dependency>
+        <!-- MapStruct removido na Fase 8 (08-fix UAT-4): UserEntityMapper foi reescrito
+             como bean concreto @ApplicationScoped (mesma motivação documentada em
+             mekano-adapter/pom.xml para UserDtoMapper — Quarkus 3.36 generate-code corrompe
+             bytecode gerado pelo annotation processor durante builds agregados). -->
 
         <!-- Quarkus JUnit5 — escopo test -->
         <dependency>
@@ -90,27 +89,20 @@
                 </executions>
             </plugin>
 
-            <!-- ORDEM OBRIGATÓRIA: lombok → lombok-mapstruct-binding → mapstruct-processor -->
+            <!-- Apenas o processor do Lombok permanece. lombok-mapstruct-binding e
+                 mapstruct-processor foram removidos junto com a dependência runtime
+                 org.mapstruct:mapstruct (ver comentário acima). Se MapStruct retornar
+                 em v2, restaurar a tripla `lombok → lombok-mapstruct-binding →
+                 mapstruct-processor` nesta ordem obrigatória. -->
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
                     <parameters>true</parameters>
                     <annotationProcessorPaths>
-                        <!-- ORDEM OBRIGATÓRIA -->
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
                             <version>${lombok.version}</version>
-                        </path>
-                        <path>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok-mapstruct-binding</artifactId>
-                            <version>0.2.0</version>
-                        </path>
-                        <path>
-                            <groupId>org.mapstruct</groupId>
-                            <artifactId>mapstruct-processor</artifactId>
-                            <version>${mapstruct.version}</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
