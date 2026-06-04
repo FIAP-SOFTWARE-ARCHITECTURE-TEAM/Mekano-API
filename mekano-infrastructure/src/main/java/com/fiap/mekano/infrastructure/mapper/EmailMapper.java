@@ -1,6 +1,7 @@
 package com.fiap.mekano.infrastructure.mapper;
 
 import com.fiap.mekano.domain.valueobject.Email;
+import jakarta.enterprise.context.ApplicationScoped;
 import org.mapstruct.Named;
 
 /**
@@ -11,6 +12,7 @@ import org.mapstruct.Named;
  *
  * <p>Null-safe: retorna {@code null} se a entrada for {@code null}.
  */
+@ApplicationScoped
 @Named("EmailMapper")
 public class EmailMapper {
 
