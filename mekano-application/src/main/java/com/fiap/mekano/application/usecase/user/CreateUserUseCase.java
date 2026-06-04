@@ -1,5 +1,6 @@
 package com.fiap.mekano.application.usecase.user;
 
+import com.fiap.mekano.domain.event.UserCreatedEvent;
 import com.fiap.mekano.domain.exception.InvalidUserDataException;
 import com.fiap.mekano.domain.exception.UserAlreadyExistsException;
 import com.fiap.mekano.domain.exception.UserNotFoundException;
@@ -7,6 +8,7 @@ import com.fiap.mekano.domain.model.User;
 import com.fiap.mekano.domain.port.in.CreateUserCommand;
 import com.fiap.mekano.domain.port.in.CreateUserInputPort;
 import com.fiap.mekano.domain.port.in.PasswordHasher;
+import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.UserRepositoryPort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
@@ -34,12 +36,15 @@ public class CreateUserUseCase implements CreateUserInputPort {
 
     private final PasswordHasher passwordHasher;
 
+    private final EventPublisher eventPublisher;
+
     /**
      * Injeção por construtor — necessário para @InjectMocks do Mockito funcionar corretamente.
      */
-    public CreateUserUseCase(UserRepositoryPort userRepository, PasswordHasher passwordHasher) {
+    public CreateUserUseCase(UserRepositoryPort userRepository, PasswordHasher passwordHasher, EventPublisher eventPublisher) {
         this.userRepository = userRepository;
         this.passwordHasher = passwordHasher;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -62,7 +67,12 @@ public class CreateUserUseCase implements CreateUserInputPort {
         User user = User.create(command.name(), command.email(), passwordHash);
 
         // 5. Persistir via output port
-        return userRepository.save(user);
+        User savedUser = userRepository.save(user);
+
+        // 6. Publicar evento de domínio — notifica listeners sobre criação do usuário
+        eventPublisher.publish(UserCreatedEvent.of(savedUser));
+
+        return savedUser;
     }
 
     /**

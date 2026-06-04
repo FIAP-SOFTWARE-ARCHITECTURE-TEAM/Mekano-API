@@ -7,6 +7,7 @@ import com.fiap.mekano.domain.exception.UserNotFoundException;
 import com.fiap.mekano.domain.model.User;
 import com.fiap.mekano.domain.port.in.CreateUserCommand;
 import com.fiap.mekano.domain.port.in.PasswordHasher;
+import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.UserRepositoryPort;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,9 @@ class CreateUserUseCaseTest {
     @Mock
     PasswordHasher passwordHasher;
 
+    @Mock
+    EventPublisher eventPublisher;
+
     @InjectMocks
     CreateUserUseCase useCase;
 
@@ -49,6 +53,7 @@ class CreateUserUseCaseTest {
         assertEquals("João Silva", result.getName());
         assertEquals("joao@fiap.br", result.getEmail().getValue());
         verify(userRepository, times(1)).save(any(User.class));
+        verify(eventPublisher, times(1)).publish(any());
     }
 
     @Test
