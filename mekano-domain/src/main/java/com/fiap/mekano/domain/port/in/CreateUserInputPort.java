@@ -1,5 +1,7 @@
 package com.fiap.mekano.domain.port.in;
 
+import com.fiap.mekano.domain.exception.UserAlreadyExistsException;
+import com.fiap.mekano.domain.exception.UserNotFoundException;
 import com.fiap.mekano.domain.model.User;
 
 import java.util.UUID;
@@ -19,23 +21,24 @@ public interface CreateUserInputPort {
      *
      * @param command objeto contendo name, email (raw) e password (raw)
      * @return User criado e persistido
+     * @throws UserAlreadyExistsException se o email já estiver cadastrado
      */
-    User execute(CreateUserCommand command);
+    User execute(CreateUserCommand command) throws UserAlreadyExistsException;
 
     /**
      * Busca um usuário ativo pelo UUID.
      *
      * @param id UUID do usuário
      * @return User encontrado
-     * @throws com.fiap.mekano.domain.exception.UserNotFoundException se o UUID não existir ou estiver deletado
+     * @throws UserNotFoundException se o UUID não existir ou estiver deletado
      */
-    User findUserById(UUID id);
+    User findUserById(UUID id) throws UserNotFoundException;
 
     /**
      * Exclui logicamente um usuário (soft delete).
      *
      * @param id UUID do usuário a excluir
-     * @throws com.fiap.mekano.domain.exception.UserNotFoundException se o UUID não existir
+     * @throws UserNotFoundException se o UUID não existir
      */
-    void deleteUser(UUID id);
+    void deleteUser(UUID id) throws UserNotFoundException;
 }

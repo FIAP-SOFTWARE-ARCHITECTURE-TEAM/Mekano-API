@@ -3,6 +3,7 @@ package com.fiap.mekano.application.usecase.user;
 import com.fiap.mekano.domain.exception.InvalidEmailException;
 import com.fiap.mekano.domain.exception.InvalidUserDataException;
 import com.fiap.mekano.domain.exception.UserAlreadyExistsException;
+import com.fiap.mekano.domain.exception.UserNotFoundException;
 import com.fiap.mekano.domain.model.User;
 import com.fiap.mekano.domain.port.in.CreateUserCommand;
 import com.fiap.mekano.domain.port.in.PasswordHasher;
@@ -33,7 +34,7 @@ class CreateUserUseCaseTest {
 
     @Test
     @DisplayName("deve criar usuário com dados válidos")
-    void deveCriarUsuarioComDadosValidos() {
+    void deveCriarUsuarioComDadosValidos() throws UserAlreadyExistsException {
         // Arrange
         var command = new CreateUserCommand("João Silva", "joao@fiap.br", "senha123");
         when(userRepository.existsByEmail("joao@fiap.br")).thenReturn(false);

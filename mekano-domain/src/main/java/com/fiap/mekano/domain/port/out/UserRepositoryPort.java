@@ -1,5 +1,6 @@
 package com.fiap.mekano.domain.port.out;
 
+import com.fiap.mekano.domain.exception.UserNotFoundException;
 import com.fiap.mekano.domain.model.User;
 
 import java.util.Optional;
@@ -57,5 +58,5 @@ public interface UserRepositoryPort {
      * @param id UUID do usuário a marcar como deletado
      * @throws com.fiap.mekano.domain.exception.UserNotFoundException se o UUID não existir
      */
-    void markAsDeleted(UUID id);
+    void markAsDeleted(UUID id) throws UserNotFoundException;
 }

@@ -5,6 +5,8 @@ import com.fiap.mekano.adapter.in.rest.dto.UserResponse;
 import com.fiap.mekano.adapter.in.rest.exception.ErrorResponse;
 import com.fiap.mekano.adapter.in.rest.mapper.UserDtoMapper;
 import com.fiap.mekano.application.usecase.user.CreateUserUseCase;
+import com.fiap.mekano.domain.exception.UserAlreadyExistsException;
+import com.fiap.mekano.domain.exception.UserNotFoundException;
 import com.fiap.mekano.domain.port.in.CreateUserInputPort;
 import io.quarkus.security.Authenticated;
 import jakarta.annotation.security.RolesAllowed;
@@ -125,7 +127,7 @@ public class UserResource {
                             examples = @ExampleObject(name = "valido",
                                     value = "{\"name\":\"Ana Lima\",\"email\":\"ana@fiap.br\",\"password\":\"" + EXAMPLE_PASSWORD + "\"}")))
             @Valid CreateUserRequest request,
-            @Context UriInfo uriInfo) {
+            @Context UriInfo uriInfo) throws UserAlreadyExistsException {
         var command = userDtoMapper.toCommand(request);
         var response = createUserUseCase.executeResponse(command);
         UserResponse userResponse = userDtoMapper.toResponse(response);
@@ -159,7 +161,7 @@ public class UserResource {
             description = "Usuário não encontrado ou deletado",
             content = @Content(mediaType = MediaType.APPLICATION_JSON,
                     schema = @Schema(implementation = ErrorResponse.class)))
-    public Response getById(@PathParam("id") UUID id) {
+    public Response getById(@PathParam("id") UUID id) throws UserNotFoundException {
         var user = createUserInputPort.findUserById(id);
         UserResponse response = userDtoMapper.toResponse(user);
         return Response.ok(response).build();
@@ -188,7 +190,7 @@ public class UserResource {
             description = "Usuário não encontrado",
             content = @Content(mediaType = MediaType.APPLICATION_JSON,
                     schema = @Schema(implementation = ErrorResponse.class)))
-    public Response delete(@PathParam("id") UUID id) {
+    public Response delete(@PathParam("id") UUID id) throws UserNotFoundException {
         createUserInputPort.deleteUser(id);
         return Response.noContent().build();
     }

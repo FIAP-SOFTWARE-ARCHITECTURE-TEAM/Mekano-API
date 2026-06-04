@@ -38,7 +38,7 @@ public class AuthenticateUserUseCase implements AuthenticateUserInputPort {
     }
 
     @Override
-    public User execute(AuthenticateUserCommand command) {
+    public User execute(AuthenticateUserCommand command) throws InvalidCredentialsException {
         if (command == null || command.email() == null || command.password() == null) {
             throw new InvalidCredentialsException();
         }

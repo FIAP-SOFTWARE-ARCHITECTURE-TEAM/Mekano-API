@@ -151,7 +151,7 @@ public class UserRepositoryImpl implements UserRepositoryPort {
      */
     @Override
     @Transactional
-    public void markAsDeleted(UUID id) {
+    public void markAsDeleted(UUID id) throws UserNotFoundException {
         UserEntity entity = panacheRepository.findByIdOptional(id)
                 .orElseThrow(() -> new UserNotFoundException(id));
         entity.setDeletedAt(LocalDateTime.now());

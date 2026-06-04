@@ -9,7 +9,7 @@ package com.fiap.mekano.domain.exception;
  * <p>O valor {@code retryAfterSeconds} indica por quantos segundos o cliente
  * deve aguardar antes de tentar novamente.
  */
-public class RateLimitExceededException extends DomainException {
+public class RateLimitExceededException extends BusinessException {
 
     private final long retryAfterSeconds;
 

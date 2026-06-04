@@ -72,7 +72,7 @@ public class RefreshTokenService {
      * @return os dados do token antigo (para referência)
      * @throws InvalidRefreshTokenException se o token for inválido, expirado ou já rotacionado
      */
-    public RefreshTokenData validateAndRotate(String refreshToken) {
+    public RefreshTokenData validateAndRotate(String refreshToken) throws InvalidRefreshTokenException {
         // Extrai jti do payload JWT (sem verificar assinatura)
         String jti = extractJti(refreshToken);
 
@@ -111,7 +111,7 @@ public class RefreshTokenService {
      * @param token JWT compacto (header.payload.signature)
      * @return valor do claim jti
      */
-    private String extractJti(String token) {
+    private String extractJti(String token) throws InvalidRefreshTokenException {
         try {
             String[] parts = token.split("\\.");
             if (parts.length < 2) {
