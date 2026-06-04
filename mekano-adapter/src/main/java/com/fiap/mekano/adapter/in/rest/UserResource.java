@@ -4,6 +4,7 @@ import com.fiap.mekano.adapter.in.rest.dto.CreateUserRequest;
 import com.fiap.mekano.adapter.in.rest.dto.UserResponse;
 import com.fiap.mekano.adapter.in.rest.exception.ErrorResponse;
 import com.fiap.mekano.adapter.in.rest.mapper.UserDtoMapper;
+import com.fiap.mekano.application.usecase.user.CreateUserUseCase;
 import com.fiap.mekano.domain.port.in.CreateUserInputPort;
 import io.quarkus.security.Authenticated;
 import jakarta.annotation.security.RolesAllowed;
@@ -68,6 +69,9 @@ public class UserResource {
     CreateUserInputPort createUserInputPort;
 
     @Inject
+    CreateUserUseCase createUserUseCase;
+
+    @Inject
     UserDtoMapper userDtoMapper;
 
     /**
@@ -76,8 +80,8 @@ public class UserResource {
      * Fluxo:
      * 1. Bean Validation valida CreateUserRequest (@Valid)
      * 2. UserDtoMapper converte request → CreateUserCommand
-     * 3. CreateUserInputPort.execute() orquestra: verifica duplicidade → hash BCrypt → User.create() → save()
-     * 4. UserDtoMapper converte User → UserResponse (Email VO → String)
+     * 3. CreateUserUseCase.executeResponse() orquestra: verifica duplicidade → hash via PasswordHasher → User.create() → save()
+     * 4. UserDtoMapper converte CreateUserResponse → UserResponse
      * 5. UriInfo constrói Location absoluta: http://host/users/{uuid}
      * 6. Response.created(uri).entity(response) retorna 201
      *
@@ -123,10 +127,10 @@ public class UserResource {
             @Valid CreateUserRequest request,
             @Context UriInfo uriInfo) {
         var command = userDtoMapper.toCommand(request);
-        var user = createUserInputPort.execute(command);
-        UserResponse response = userDtoMapper.toResponse(user);
-        URI location = uriInfo.getAbsolutePathBuilder().path(response.id().toString()).build();
-        return Response.created(location).entity(response).build();
+        var response = createUserUseCase.executeResponse(command);
+        UserResponse userResponse = userDtoMapper.toResponse(response);
+        URI location = uriInfo.getAbsolutePathBuilder().path(userResponse.id().toString()).build();
+        return Response.created(location).entity(userResponse).build();
     }
 
     /**

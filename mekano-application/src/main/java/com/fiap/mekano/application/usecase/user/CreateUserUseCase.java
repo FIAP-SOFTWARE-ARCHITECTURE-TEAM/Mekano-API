@@ -66,6 +66,21 @@ public class CreateUserUseCase implements CreateUserInputPort {
     }
 
     /**
+     * Executa o caso de uso de criação e retorna um {@link CreateUserResponse}.
+     *
+     * <p>Diferença em relação a {@link #execute(CreateUserCommand)}: retorna um
+     * record de resposta ({@code id/name/email/createdAt}) em vez da entidade
+     * {@code User} diretamente (D-04).
+     *
+     * @param command comando de criação
+     * @return resposta com dados públicos do usuário criado
+     */
+    public CreateUserResponse executeResponse(CreateUserCommand command) {
+        User user = execute(command);
+        return new CreateUserResponse(user.getId(), user.getName(), user.getEmail().getValue(), user.getCreatedAt());
+    }
+
+    /**
      * Busca um usuário ativo pelo UUID.
      *
      * <p>Delega ao repositório que aplica o filtro de soft delete ({@code isActive = true}).

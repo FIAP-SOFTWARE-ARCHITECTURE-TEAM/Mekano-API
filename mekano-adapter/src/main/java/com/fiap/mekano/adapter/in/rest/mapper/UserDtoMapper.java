@@ -2,6 +2,7 @@ package com.fiap.mekano.adapter.in.rest.mapper;
 
 import com.fiap.mekano.adapter.in.rest.dto.CreateUserRequest;
 import com.fiap.mekano.adapter.in.rest.dto.UserResponse;
+import com.fiap.mekano.application.usecase.user.CreateUserResponse;
 import com.fiap.mekano.domain.model.User;
 import com.fiap.mekano.domain.port.in.CreateUserCommand;
 import org.mapstruct.Mapper;
@@ -18,6 +19,8 @@ import org.mapstruct.Mapping;
  *   <li>{@link #toCommand(CreateUserRequest)}: name, email, password — todos String 1-para-1</li>
  *   <li>{@link #toResponse(User)}: User.email (Email VO) → UserResponse.email (String)
  *       via expressão {@code user.getEmail().getValue()}; passwordHash NÃO incluído no DTO</li>
+ *   <li>{@link #toResponse(CreateUserResponse)}: mapeamento direto entre records de mesmo
+ *       shape (D-04); substitui {@link #toResponse(User)} para o fluxo de criação</li>
  * </ul>
  */
 @Mapper(componentModel = "cdi")
@@ -44,4 +47,14 @@ public interface UserDtoMapper {
      */
     @Mapping(target = "email", expression = "java(user.getEmail().getValue())")
     UserResponse toResponse(User user);
+
+    /**
+     * Converte {@link CreateUserResponse} (application) para {@link UserResponse} (adapter).
+     *
+     * <p>Mapeamento direto: todos os campos têm mesmo nome e tipo.
+     *
+     * @param response resposta do caso de uso de criação
+     * @return DTO de saída para o endpoint REST
+     */
+    UserResponse toResponse(CreateUserResponse response);
 }
