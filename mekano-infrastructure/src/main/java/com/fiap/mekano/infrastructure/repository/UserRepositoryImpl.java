@@ -1,7 +1,9 @@
 package com.fiap.mekano.infrastructure.repository;
 
+import com.fiap.mekano.domain.exception.UserNotFoundException;
 import com.fiap.mekano.domain.model.User;
 import com.fiap.mekano.domain.port.out.UserRepositoryPort;
+import com.fiap.mekano.infrastructure.entity.UserEntity;
 import com.fiap.mekano.infrastructure.mapper.UserEntityMapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -9,6 +11,7 @@ import jakarta.transaction.Transactional;
 import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.faulttolerance.Timeout;
 
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.UUID;
@@ -83,42 +86,71 @@ public class UserRepositoryImpl implements UserRepositoryPort {
     }
 
     /**
-     * Busca usuário pelo UUID.
+     * Busca usuário ativo pelo UUID (isActive = true).
+     *
+     * <p>Usa HQL explícito com filtro de soft delete para garantir que registros
+     * deletados logicamente não sejam retornados. O built-in {@code findByIdOptional}
+     * do Panache não aplica filtros — por isso usamos HQL customizado.
      *
      * @param id UUID do usuário
-     * @return Optional com o User se encontrado, ou Optional.empty()
+     * @return Optional com o User se encontrado e ativo, ou Optional.empty()
      */
     @Override
     @Retry(maxRetries = 3)
     public Optional<User> findById(UUID id) {
-        return panacheRepository.findByIdOptional(id).map(mapper::toDomain);
+        return panacheRepository.find("id = ?1 AND isActive = ?2", id, true)
+                .firstResultOptional().map(mapper::toDomain);
     }
 
     /**
-     * Busca usuário pelo email.
+     * Busca usuário ativo pelo email (isActive = true).
      *
-     * <p>Usa Panache HQL abreviado: {@code find("email", email)} equivale a
-     * {@code SELECT u FROM UserEntity u WHERE u.email = ?1}.
+     * <p>Usa HQL com filtro de soft delete: {@code email = ?1 AND isActive = ?2}.
+     * Registros deletados logicamente são excluídos dos resultados.
      *
      * @param email string do email (normalizada)
-     * @return Optional com o User se encontrado, ou Optional.empty()
+     * @return Optional com o User se encontrado e ativo, ou Optional.empty()
      */
     @Override
     @Retry(maxRetries = 3, delay = 200, delayUnit = ChronoUnit.MILLIS)
     public Optional<User> findByEmail(String email) {
-        return panacheRepository.find("email", email).firstResultOptional().map(mapper::toDomain);
+        return panacheRepository.find("email = ?1 AND isActive = ?2", email, true)
+                .firstResultOptional().map(mapper::toDomain);
     }
 
     /**
-     * Verifica existência de usuário pelo email usando COUNT.
+     * Verifica existência de usuário ativo pelo email usando COUNT.
      *
      * <p>Mais eficiente que {@code findByEmail().isPresent()} — não carrega a entidade completa.
+     * Inclui filtro de soft delete ({@code isActive = true}) para consistência.
      *
      * @param email string do email
-     * @return true se existe usuário com esse email, false caso contrário
+     * @return true se existe usuário ativo com esse email, false caso contrário
      */
     @Override
     public boolean existsByEmail(String email) {
-        return panacheRepository.count("email", email) > 0;
+        return panacheRepository.count("email = ?1 AND isActive = ?2", email, true) > 0;
+    }
+
+    /**
+     * Marca um usuário como deletado (soft delete).
+     *
+     * <p>Define {@code deletedAt = now()} e {@code isActive = false} no registro.
+     * O registro permanece no banco mas é excluído de todas as queries de
+     * leitura que usam {@code isActive = true}.
+     *
+     * <p>Usa {@code findByIdOptional()} do Panache (busca sem filtro de soft delete)
+     * para localizar o registro independentemente do estado atual.
+     *
+     * @param id UUID do usuário a marcar como deletado
+     * @throws UserNotFoundException se o UUID não existir
+     */
+    @Override
+    @Transactional
+    public void markAsDeleted(UUID id) {
+        UserEntity entity = panacheRepository.findByIdOptional(id)
+                .orElseThrow(() -> new UserNotFoundException(id));
+        entity.setDeletedAt(LocalDateTime.now());
+        entity.setIsActive(false);
     }
 }

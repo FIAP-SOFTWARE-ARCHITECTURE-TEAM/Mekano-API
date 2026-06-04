@@ -47,4 +47,15 @@ public interface UserRepositoryPort {
      * @return true se existe, false caso contrário
      */
     boolean existsByEmail(String email);
+
+    /**
+     * Marca um usuário como deletado (soft delete).
+     *
+     * Define deleted_at e is_active=false. O registro permanece no banco
+     * mas é excluído de todas as queries de listagem/busca padrão.
+     *
+     * @param id UUID do usuário a marcar como deletado
+     * @throws com.fiap.mekano.domain.exception.UserNotFoundException se o UUID não existir
+     */
+    void markAsDeleted(UUID id);
 }
