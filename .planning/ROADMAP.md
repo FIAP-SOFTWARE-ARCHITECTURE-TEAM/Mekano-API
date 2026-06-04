@@ -15,9 +15,11 @@
 - [ ] **Phase 3: Módulo Application** — Caso de uso `CreateUserUseCase` orquestrando via ports; testável sem container
 - [x] **Phase 4: Módulo Infrastructure** — Entidade JPA Panache, `UserRepositoryImpl`, MapStruct CDI, migrations Flyway e datasource PostgreSQL configurado
 - [x] **Phase 5: Módulo Adapter** — REST Resource, DTOs Request/Response, MapStruct, ExceptionMappers HTTP, testes REST Assured — fluxo end-to-end completo
-- [ ] **Phase 6: Observabilidade** — Health checks liveness/readiness, métricas Prometheus e OpenAPI completamente documentado
+- [x] **Phase 6: Observabilidade** — Health checks liveness/readiness, métricas Prometheus e OpenAPI completamente documentado
 - [ ] **Phase 7: Tolerância a Falhas** — Anotações SmallRye Fault Tolerance (`@Retry`, `@Timeout`, `@CircuitBreaker`) na camada de infraestrutura
-- [ ] **Phase 8: Fundação JWT** — SmallRye JWT configurado com `mp.jwt.*`, chave PKCS#8 e `@RolesAllowed` placeholder no `UserResource`
+- [x] **Phase 8: Fundação JWT** — SmallRye JWT configurado com `mp.jwt.*`, chave PKCS#8 e `@RolesAllowed` placeholder no `UserResource`
+ (completed 2026-05-30)
+- [ ] **Phase 9: Segurança e Completude da API** — Refresh Token JWT (infra), rate limiting (CDI filter, 10/min, IP+email), externalização de secrets JWT (ES256, `~/.mekano/secrets/`), soft delete de usuários e reabilitação do MapStruct
 
 ---
 
@@ -399,6 +401,10 @@ Planos:
 - [ ] 06-03-PLAN.md — ApplicationLivenessCheck customizado (@Liveness @ApplicationScoped) em mekano-adapter/observability (Wave 2)
 - [ ] 06-04-PLAN.md — ObservabilityEndpointsTest @QuarkusTest com 5 cenários REST Assured cobrindo UATs 1-4 (Wave 3)
 
+---
+
+### Phase 7: Tolerância a Falhas
+
 **Goal**: Operações de leitura em `UserRepositoryImpl` são protegidas por `@Retry`; timeout configurado para operações potencialmente lentas; build continua passando sem conflitos entre anotações de fault tolerance e `@Transactional`.
 
 **Motivo**: SmallRye Fault Tolerance demonstra o padrão de resiliência na camada arquitetural correta (infrastructure) — não no domain nem no application. Isolar nesta fase permite adicionar as anotações sem risco de introduzir regressões nas camadas já validadas.
@@ -431,14 +437,12 @@ Planos:
 3. Log de startup **não** exibe `WARN` relacionado a conflito de interceptores CDI entre `@Transactional` e anotações de fault tolerance
 4. `./mvnw dependency:tree -pl mekano-adapter` confirma presença de `quarkus-smallrye-fault-tolerance` no classpath
 
-**Plans**: 5 planos
+**Plans**: 3 planos
 
 Planos:
-- [ ] 02-01-PLAN.md — Hierarquia de exceções de domínio (DomainException + 3 subclasses)
-- [ ] 02-02-PLAN.md — Value Object Email com validação por regex
-- [ ] 02-03-PLAN.md — Entidade User — POJO puro com factory method
-- [ ] 02-04-PLAN.md — Interfaces de Port (UserRepositoryPort + CreateUserInputPort)
-- [ ] 02-05-PLAN.md — JUnit 5 no POM + testes unitários (EmailTest, UserTest)
+- [ ] 07-01-PLAN.md — Adicionar `quarkus-smallrye-fault-tolerance` ao `mekano-adapter/pom.xml`
+- [ ] 07-02-PLAN.md — Anotar `UserRepositoryImpl` com `@Retry`/`@Timeout` e documentar decisão sobre `@CircuitBreaker`
+- [ ] 07-03-PLAN.md — Verificar ausência de regressões (testes do adapter + ausência de warnings de interceptor CDI)
 
 ---
 
@@ -491,11 +495,48 @@ Planos:
 **Plans**: 5 planos
 
 Planos:
-- [ ] 02-01-PLAN.md — Hierarquia de exceções de domínio (DomainException + 3 subclasses)
-- [ ] 02-02-PLAN.md — Value Object Email com validação por regex
-- [ ] 02-03-PLAN.md — Entidade User — POJO puro com factory method
-- [ ] 02-04-PLAN.md — Interfaces de Port (UserRepositoryPort + CreateUserInputPort)
-- [ ] 02-05-PLAN.md — JUnit 5 no POM + testes unitários (EmailTest, UserTest)
+- [x] 08-01-PLAN.md — Dependências SmallRye JWT + .gitignore + README (geração de chaves)
+- [x] 08-02-PLAN.md — publicKey.pem + bloco mp.jwt.* + proactive=false em application.properties
+- [x] 08-03-PLAN.md — UserResource @Authenticated/@RolesAllowed + AuthenticationFailedExceptionMapper
+- [x] 08-04-PLAN.md — Retrofit UserResourceTest com @TestSecurity
+- [x] 08-05-PLAN.md — JwtTestProfile + UserResourceUnauthorizedTest + UserResourceJwtTest (UAT-1..4 + D-04)
+
+---
+
+### Phase 9: Segurança e Completude da API
+
+**Goal:** Refresh token JWT funcional, rate limiting no login, secrets externalizados, CRUD completo de usuários, e MapStruct reabilitado — eliminando os 5 gaps de segurança e completude identificados na revisão de arquitetura.
+
+**Motivo:** As 8 fases iniciais entregaram a fundação Clean Architecture. Esta fase cobre os gaps críticos de segurança (refresh token, rate limiting, secrets) e funcionalidade (CRUD, mappers automáticos) necessários para um sistema pronto para produção/demostração.
+
+**Depende de:** Fase 8 (JWT Foundation)
+
+**Requirements:** (novos — a definir)
+
+**Planos:**
+
+1. **Refresh Token JWT** — Tabela `refresh_tokens` no PostgreSQL com hash + jti + expiry + rotated_at; rotação completa (token anterior invalidado); expiry 24h; claims mínimos (jti, sub, exp). Apenas infraestrutura — endpoint POST /auth/refresh é v3.
+2. **Rate Limiting no Login** — Proteger endpoint de auth contra brute-force via filtro CDI `ContainerRequestFilter` com token bucket; escopo IP+email combinados; 10 tentativas/minuto; resposta 429 com `Retry-After`
+3. **Externalizar Secrets JWT** — Mover chave privada PKCS#8 para `~/.mekano/secrets/privatekey.pem`; algoritmo ES256 (Ed25519/EdDSA); caminho configurável via `application.properties`; `.gitignore` na raiz
+4. **Soft Delete de Usuários** — Campos `deleted_at TIMESTAMP` + `is_active BOOLEAN` na entidade `User`; filter padrão no repositório para excluir logicamente registros deletados
+5. **Reabilitar MapStruct** — Isolar bug do `quarkus-maven-plugin generate-code` e corrigir mappers existentes harmonizando patterns
+
+**Critérios UAT (o que deve ser VERDADE ao fim desta fase):**
+
+1. Tabela `refresh_tokens` existe no PostgreSQL com colunas jti, token_hash, user_id, expires_at, rotated_at; rotação completa funcional em teste de unidade
+2. `POST /auth/login` com 11+ tentativas em 1 minuto (mesmo IP+email) retorna 429 Too Many Requests com header `Retry-After`
+3. `git grep -l "privatekey.pem"` não retorna resultados versionados (chave movida para `~/.mekano/secrets/`)
+4. `DELETE /users/{id}` marca `deleted_at` e `is_active=false`; `GET /users/{id}` retorna 404 para usuário deletado logicamente
+5. Mappers são interfaces MapStruct (não classes manuais) — verificado por grep de `@Mapper`
+
+**Plans**: 5 planos
+
+Planos:
+- [x] 09-01-PLAN.md — Refresh Token JWT
+- [x] 09-02-PLAN.md — Rate Limiting no Login
+- [ ] 09-03-PLAN.md — Externalizar Secrets JWT
+- [ ] 09-04-PLAN.md — Soft Delete de Usuários
+- [ ] 09-05-PLAN.md — Reabilitar MapStruct
 
 ---
 
@@ -510,7 +551,8 @@ Planos:
 | 5. Módulo Adapter | 0/7 | Não iniciada | — |
 | 6. Observabilidade | 0/4 | Não iniciada | — |
 | 7. Tolerância a Falhas | 0/3 | Não iniciada | — |
-| 8. Fundação JWT | 0/5 | Não iniciada | — |
+| 8. Fundação JWT | 5/5 | Complete   | 2026-05-30 |
+| 9. Segurança e Completude da API | 2/5 | 🟡 Em andamento | 2026-06-03 |
 
 ---
 
@@ -554,15 +596,15 @@ Planos:
 | DEV-01 | `docker-compose.yml` com serviço PostgreSQL | Fase 1 | Pending |
 | DEV-02 | `application.properties` com perfis `%dev` → docker-compose | Fase 1 | Pending |
 | DEV-03 | `./mvnw quarkus:dev -pl adapter -am` funcional | Fase 1 | Pending |
-| DEV-04 | Health check funcional em `/q/health` | Fase 6 | Pending |
-| DEV-05 | Métricas em `/q/metrics` (Micrometer + Prometheus) | Fase 6 | Pending |
+| DEV-04 | Health check funcional em `/q/health` | Fase 6 | ✅ Done |
+| DEV-05 | Métricas em `/q/metrics` (Micrometer + Prometheus) | Fase 6 | ✅ Done |
 | EXT-01 | `quarkus-rest-jackson` no adapter | Fase 1 | Pending |
 | EXT-02 | `quarkus-hibernate-orm-panache` no adapter | Fase 1 | Pending |
 | EXT-03 | `quarkus-flyway` no adapter | Fase 1 | Pending |
 | EXT-04 | `quarkus-smallrye-openapi` no adapter | Fase 1 | Pending |
 | EXT-05 | `quarkus-hibernate-validator` no adapter | Fase 1 | Pending |
-| EXT-06 | `quarkus-smallrye-health` no adapter | Fase 6 | Pending |
-| EXT-07 | `quarkus-micrometer` + `quarkus-micrometer-registry-prometheus` | Fase 6 | Pending |
+| EXT-06 | `quarkus-smallrye-health` no adapter | Fase 6 | ✅ Done |
+| EXT-07 | `quarkus-micrometer` + `quarkus-micrometer-registry-prometheus` | Fase 6 | ✅ Done |
 | EXT-08 | `quarkus-smallrye-fault-tolerance` no adapter | Fase 7 | Pending |
 | EXT-09 | `quarkus-smallrye-jwt` no adapter | Fase 8 | Pending |
 | EXT-10 | `quarkus-jdbc-postgresql` no adapter | Fase 1 | Pending |
