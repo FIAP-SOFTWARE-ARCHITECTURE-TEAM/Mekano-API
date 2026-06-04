@@ -1,58 +1,48 @@
 package com.fiap.mekano.infrastructure.mapper;
 
 import com.fiap.mekano.domain.model.User;
-import com.fiap.mekano.domain.valueobject.Email;
 import com.fiap.mekano.infrastructure.entity.UserEntity;
-import jakarta.enterprise.context.ApplicationScoped;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.Named;
 
 /**
- * Mapper CDI para conversão entre {@link UserEntity} (JPA) e {@link User} (domínio).
+ * Mapper MapStruct entre {@link UserEntity} (JPA) e {@link User} (domínio).
  *
- * <p><b>Histórico:</b> originalmente uma interface MapStruct ({@code @Mapper(componentModel = "cdi")}).
- * Substituído por bean concreto {@code @ApplicationScoped} em razão do mesmo bug que motivou
- * o swap do {@code UserDtoMapper} no módulo adapter durante a Fase 8 (08-05): o mojo
- * {@code generate-code} do Quarkus 3.36 corrompe silenciosamente o bytecode gerado pelo
- * processador MapStruct quando o build agregado executa múltiplos {@code @QuarkusTest} em
- * sequência, causando {@code UnsatisfiedResolutionException} no scanner CDI ao subir o
- * {@code UserRepositoryImplTest}. Per-class o teste passava; agregado falhava (UAT-4).
- * Implementação manual elimina a dependência do annotation processor.
+ * <p>Reabilitado na Phase 9 (09-05) após isolamento do bug
+ * quarkus-maven-plugin generate-code. Estratégia de null: {@code RETURN_DEFAULT}.
  *
- * <p>API pública preservada: {@link #toEntity(User)} e {@link #toDomain(UserEntity)}.
- * Métodos auxiliares de conversão {@code Email <-> String} estão inline (não eram chamados
- * externamente).
+ * <p>O método {@link #toDomain(UserEntity)} usa implementação {@code default}
+ * porque {@link User} tem {@code @Builder(access = PRIVATE)} — MapStruct não
+ * consegue instanciar {@code User} diretamente. A conversão delega a
+ * {@link User#reconstitute}.
+ *
+ * <p>O campo email é convertido entre {@code String} (JPA) e {@code Email} VO
+ * (domínio) via {@link EmailMapper} (declarado em {@code uses}).
  */
-@ApplicationScoped
-public class UserEntityMapper {
+@Mapper(componentModel = "cdi", uses = {EmailMapper.class})
+public interface UserEntityMapper {
 
     /**
      * Converte entidade de domínio para entidade JPA.
      *
-     * @param user entidade de domínio
-     * @return entidade JPA pronta para persistência
+     * @param user entidade de domínio (pode ser {@code null})
+     * @return entidade JPA pronta para persistência, ou {@code null}
      */
-    public UserEntity toEntity(User user) {
-        if (user == null) {
-            return null;
-        }
-        UserEntity entity = new UserEntity();
-        entity.setId(user.getId());
-        entity.setName(user.getName());
-        entity.setEmail(user.getEmail() != null ? user.getEmail().getValue() : null);
-        entity.setPasswordHash(user.getPasswordHash());
-        entity.setCreatedAt(user.getCreatedAt());
-        return entity;
-    }
+    @Mapping(target = "email", source = "email", qualifiedByName = "emailToString")
+    UserEntity toEntity(User user);
 
     /**
      * Reconstrói entidade de domínio a partir da entidade JPA.
      *
-     * <p>Usa {@link User#reconstitute} porque {@code User.@Builder(access = PRIVATE)} impede
-     * uso externo do builder (D-03, D-04).
+     * <p>Implementação default porque {@code User.@Builder(access = PRIVATE)}
+     * impede o MapStruct de gerar o construtor/factory automaticamente.
+     * Delega para {@link User#reconstitute}.
      *
-     * @param entity entidade JPA vinda do banco
-     * @return instância de User com valores exatos do banco
+     * @param entity entidade JPA vinda do banco (pode ser {@code null})
+     * @return instância de User com valores exatos do banco, ou {@code null}
      */
-    public User toDomain(UserEntity entity) {
+    default User toDomain(UserEntity entity) {
         if (entity == null) {
             return null;
         }
