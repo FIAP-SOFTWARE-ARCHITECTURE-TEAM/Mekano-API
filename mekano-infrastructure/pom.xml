@@ -69,6 +69,12 @@
             <artifactId>quarkus-smallrye-jwt-build</artifactId>
         </dependency>
 
+        <!-- Cache Caffeine para leituras de usuário (D-13) -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-cache</artifactId>
+        </dependency>
+
         <!-- MapStruct — geração automática de mappers entre UserEntity ↔ User (Plan 09-05).
              Reabilitado após isolamento do bug quarkus-maven-plugin generate-code. -->
         <dependency>

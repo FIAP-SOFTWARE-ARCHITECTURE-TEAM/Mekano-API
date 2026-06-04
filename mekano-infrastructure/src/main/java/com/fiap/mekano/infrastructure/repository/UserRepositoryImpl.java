@@ -5,6 +5,8 @@ import com.fiap.mekano.domain.model.User;
 import com.fiap.mekano.domain.port.out.UserRepositoryPort;
 import com.fiap.mekano.infrastructure.entity.UserEntity;
 import com.fiap.mekano.infrastructure.mapper.UserEntityMapper;
+import io.quarkus.cache.CacheInvalidate;
+import io.quarkus.cache.CacheResult;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -83,6 +85,7 @@ public class UserRepositoryImpl implements UserRepositoryPort {
      */
     @Override
     @Timeout(value = 5, unit = ChronoUnit.SECONDS)
+    @CacheInvalidate(cacheName = "users")
     public User save(User user) {
         var entity = mapper.toEntity(user);
         panacheRepository.persist(entity);
@@ -102,6 +105,7 @@ public class UserRepositoryImpl implements UserRepositoryPort {
      */
     @Override
     @Retry(maxRetries = 3)
+    @CacheResult(cacheName = "users")
     public Optional<User> findById(UUID id) {
         return panacheRepository.find("id = ?1 AND isActive = ?2", id, true)
                 .firstResultOptional().map(mapper::toDomain);
@@ -118,6 +122,7 @@ public class UserRepositoryImpl implements UserRepositoryPort {
      */
     @Override
     @Retry(maxRetries = 3, delay = 200, delayUnit = ChronoUnit.MILLIS)
+    @CacheResult(cacheName = "users")
     public Optional<User> findByEmail(String email) {
         return panacheRepository.find("email = ?1 AND isActive = ?2", email, true)
                 .firstResultOptional().map(mapper::toDomain);
@@ -187,6 +192,7 @@ public class UserRepositoryImpl implements UserRepositoryPort {
      */
     @Override
     @Transactional
+    @CacheInvalidate(cacheName = "users")
     public void markAsDeleted(UUID id) throws UserNotFoundException {
         UserEntity entity = panacheRepository.findByIdOptional(id)
                 .orElseThrow(() -> new UserNotFoundException(id));
