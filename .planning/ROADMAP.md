@@ -21,7 +21,7 @@
  (completed 2026-05-30)
 
 - [x] **Phase 9: Segurança e Completude da API** — Refresh Token JWT (infra), rate limiting (CDI filter, 10/min, IP+email), externalização de secrets JWT (ES256, `~/.mekano/secrets/`), soft delete de usuários e reabilitação do MapStruct (completed 2026-06-04)
-- [ ] **Phase 10: Melhorias Pós-v1** — Gaps arquiteturais, API & Infra, Production Readiness, Observabilidade & Eventos
+- [x] **Phase 10: Melhorias Pós-v1** — Gaps arquiteturais, API & Infra, Production Readiness, Observabilidade & Eventos
 
 ---
 
@@ -597,7 +597,7 @@ Planos:
 | 7. Tolerância a Falhas | 3/3 | ✅ Concluída | 2026-05-30 |
 | 8. Fundação JWT | 5/5 | ✅ Concluída | 2026-05-30 |
 | 9. Segurança e Completude da API | 5/5 | Complete    | 2026-06-04 |
-| 10. Melhorias Pós-v1 | 3/4 | 🟡 Em Execução | 2026-06-04 |
+| 10. Melhorias Pós-v1 | 4/4 | ✅ Concluída | 2026-06-04 |
 
 ---
 

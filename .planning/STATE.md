@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Executing Phase 10
-last_updated: "2026-06-04T11:53:53.000Z"
+status: Phase 10 Complete
+last_updated: "2026-06-04T12:00:39.000Z"
 progress:
   total_phases: 11
-  completed_phases: 9
+  completed_phases: 10
   total_plans: 44
-  completed_plans: 43
-  percent: 98
+  completed_plans: 44
+  percent: 100
 ---
 
 # Mekano — State
@@ -17,8 +17,8 @@ progress:
 **Milestone ativo:** v1 — Clean Architecture Quarkus API  
 **Fase atual:** Fase 10 — Melhorias Pós-v1  
 **Última atualização:** 2026-06-04  
-**Último plano concluído:** 10-03 (Production Readiness)  
-**Sessão parada em:** Fase 10 — Plano 3 concluído (Production Readiness)
+**Último plano concluído:** 10-04 (Observabilidade & Eventos)  
+**Sessão parada em:** Fase 10 — Completa (4/4 planos)
 
 ---
 
@@ -35,7 +35,7 @@ progress:
 | 7 — Fault Tolerance | 🟡 Estática-PASS | 3/3 planos; UAT-1 + UAT-4 + compile ✅; UAT-2/UAT-3 (test runtime) deferidos ao usuário |
 | 8 — JWT | ✅ Concluída | 5/5 planos, @TestSecurity bypass, mp.jwt.* namespace |
 | 9 — Segurança e Completude | ✅ Concluída | 5/5 planos (Refresh Token, Rate Limiting, Secrets, Soft Delete, MapStruct) |
-| 10 — Melhorias Pós-v1 | 🟡 Em Execução | 3/4 planos — Production Readiness concluído |
+| 10 — Melhorias Pós-v1 | ✅ Concluída | 4/4 planos |
 
 ---
 
@@ -52,16 +52,6 @@ progress:
 ---
 
 ## Accumulated Context
-
-### Pending Todos
-
-**3 pending** — after Plan 10-03 resolved CI/CD, logging JSON, and Caffeine cache items.
-
-| # | Title | Area | Priority |
-|---|-------|------|----------|
-| 1 | Escrever testes de integração para Fault Tolerance | testing | 🟡 medium |
-| 2 | Implementar eventos de domínio (UserCreatedEvent) | domain | 🟡 medium |
-| 3 | Adicionar campos de auditoria na tabela users | database | 🟢 low |
 
 ---
 
@@ -95,3 +85,6 @@ progress:
 28. CI/CD via GitHub Actions: `mvn verify -pl mekano-adapter -am` sem Docker explícito — DevServices do Quarkus auto-gerencia PostgreSQL (D-11, 10-03)
 29. Logging JSON: `quarkus.log.console.json=true` com pretty-print=false — uma linha por JSON para Loki/Datadog; perfil `%dev` = DEBUG, `%prod` = INFO, `%test` = WARN (D-12, 10-03)
 30. Cache Caffeine: `@CacheResult(cacheName="users")` em findById/findByEmail, `@CacheInvalidate(cacheName="users")` em save/markAsDeleted; expire-after-write=60s, max-size=100 (D-13, 10-03)
+31. FT Tests: @Retry/@Timeout testados via integração com UserRepositoryImpl; @CircuitBreaker omitido (PostgreSQL local não requer CB); assertj-core adicionado como test dep no adapter (D-14, 10-04)
+32. UserCreatedEvent é record no pacote domain/event; EventPublisher interface pura no domain/port/out; CdiEventPublisher usa Event<Object> genérico no infrastructure/event (D-15, 10-04)
+33. Audit fields (created_by, updated_by, updated_at) são exclusivos de infrastructure — domain User NÃO tem esses campos; @PreUpdate no UserEntity para updated_at; MapStruct auto-ignora (D-16, 10-04)
