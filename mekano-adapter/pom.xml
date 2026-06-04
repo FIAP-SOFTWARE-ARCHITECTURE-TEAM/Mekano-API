@@ -29,7 +29,9 @@
             <groupId>com.fiap</groupId>
             <artifactId>mekano-infrastructure</artifactId>
             <version>${project.version}</version>
-            <scope>runtime</scope>
+            <!-- compile (default): LoginRateLimiterFilter (09-02) importa TokenBucketRateLimiter
+                 em compile-time. Antes era runtime porque nenhum código do adapter importava
+                 classes de infrastructure diretamente; o filtro CDI mudou isso. -->
         </dependency>
 
         <!-- EXT-01: REST reativo com Jackson JSON — substitui quarkus-rest do scaffold -->
@@ -80,6 +82,13 @@
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-smallrye-jwt</artifactId>
         </dependency>
+        <!-- SmallRye JWT Build — emite tokens em runtime (POST /auth/login no AuthResource).
+             Antes era test-only para o JwtTestProfile; promovido a compile scope na fase
+             de autenticação via Swagger. A dep test-only abaixo foi removida. -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-jwt-build</artifactId>
+        </dependency>
 
         <!-- Lombok — geração de getters/setters para CreateUserRequest -->
         <dependency>
@@ -98,12 +107,6 @@
         <dependency>
             <groupId>io.rest-assured</groupId>
             <artifactId>rest-assured</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <!-- Phase 8: SmallRyeJwtBuildApi para emitir tokens em testes (UserResourceJwtTest / JwtTestProfile) -->
-        <dependency>
-            <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-smallrye-jwt-build</artifactId>
             <scope>test</scope>
         </dependency>
         <!-- Phase 8 (08-04): @TestSecurity annotation para sintetizar SecurityIdentity em testes
