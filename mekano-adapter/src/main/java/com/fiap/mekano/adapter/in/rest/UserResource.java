@@ -11,8 +11,11 @@ import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
@@ -27,6 +30,7 @@ import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 import java.net.URI;
+import java.util.UUID;
 
 /**
  * JAX-RS Resource para operações de usuário.
@@ -123,5 +127,65 @@ public class UserResource {
         UserResponse response = userDtoMapper.toResponse(user);
         URI location = uriInfo.getAbsolutePathBuilder().path(response.id().toString()).build();
         return Response.created(location).entity(response).build();
+    }
+
+    /**
+     * Busca um usuário ativo pelo UUID.
+     *
+     * <p>Usuários deletados logicamente (soft delete) retornam 404.
+     *
+     * @param id UUID do usuário
+     * @return 200 OK com UserResponse no body
+     * @throws com.fiap.mekano.domain.exception.UserNotFoundException se não encontrado ou inativo
+     */
+    @GET
+    @Path("/{id}")
+    @RolesAllowed("user")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(summary = "Buscar usuário por ID", description = "Retorna os dados do usuário ativo. Usuários deletados (soft delete) retornam 404.")
+    @APIResponse(responseCode = "200",
+            description = "Usuário encontrado com sucesso",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON,
+                    schema = @Schema(implementation = UserResponse.class)))
+    @APIResponse(responseCode = "401",
+            description = "Token JWT ausente ou inválido",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON,
+                    schema = @Schema(implementation = ErrorResponse.class)))
+    @APIResponse(responseCode = "404",
+            description = "Usuário não encontrado ou deletado",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON,
+                    schema = @Schema(implementation = ErrorResponse.class)))
+    public Response getById(@PathParam("id") UUID id) {
+        var user = createUserInputPort.findUserById(id);
+        UserResponse response = userDtoMapper.toResponse(user);
+        return Response.ok(response).build();
+    }
+
+    /**
+     * Exclui (soft delete) um usuário pelo UUID.
+     *
+     * <p>Marca o registro como inativo (is_active=false) e registra o timestamp
+     * de exclusão (deleted_at). O registro NÃO é removido fisicamente.
+     *
+     * @param id UUID do usuário a excluir
+     * @return 204 No Content (sem corpo)
+     * @throws com.fiap.mekano.domain.exception.UserNotFoundException se o UUID não existir
+     */
+    @DELETE
+    @Path("/{id}")
+    @RolesAllowed("user")
+    @Operation(summary = "Excluir usuário", description = "Marca o usuário como inativo (soft delete). Retorna 204 se bem-sucedido.")
+    @APIResponse(responseCode = "204", description = "Usuário excluído com sucesso (soft delete)")
+    @APIResponse(responseCode = "401",
+            description = "Token JWT ausente ou inválido",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON,
+                    schema = @Schema(implementation = ErrorResponse.class)))
+    @APIResponse(responseCode = "404",
+            description = "Usuário não encontrado",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON,
+                    schema = @Schema(implementation = ErrorResponse.class)))
+    public Response delete(@PathParam("id") UUID id) {
+        createUserInputPort.deleteUser(id);
+        return Response.noContent().build();
     }
 }
