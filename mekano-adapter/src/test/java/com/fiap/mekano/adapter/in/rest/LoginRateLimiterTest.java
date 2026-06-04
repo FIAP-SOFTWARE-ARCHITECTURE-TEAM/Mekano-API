@@ -50,7 +50,7 @@ class LoginRateLimiterTest {
                         {"name":"Rate Limit User","email":"%s","password":"%s"}
                         """.formatted(EMAIL, PASSWORD))
                 .when()
-                .post("/users")
+                .post("/api/v1/users")
                 .then()
                 .statusCode(201);
     }
@@ -67,7 +67,7 @@ class LoginRateLimiterTest {
                             {"email":"%s","password":"%s"}
                             """.formatted(EMAIL, PASSWORD))
                     .when()
-                    .post("/auth/login")
+                    .post("/api/v1/auth/login")
                     .then()
                     .statusCode(not(429));
         }
@@ -79,7 +79,7 @@ class LoginRateLimiterTest {
                         {"email":"%s","password":"%s"}
                         """.formatted(EMAIL, PASSWORD))
                 .when()
-                .post("/auth/login")
+                .post("/api/v1/auth/login")
                 .then()
                 .statusCode(429)
                 .header("Retry-After", notNullValue());

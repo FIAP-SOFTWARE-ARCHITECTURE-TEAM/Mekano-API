@@ -28,7 +28,7 @@ class UserResourceUnauthorizedTest {
                         {"name": "Ana", "email": "ana.noauth@fiap.br", "password": "abc123"}
                         """)
                 .when()
-                .post("/users")
+                .post("/api/v1/users")
                 .then()
                 .statusCode(401)
                 .contentType(ContentType.JSON)

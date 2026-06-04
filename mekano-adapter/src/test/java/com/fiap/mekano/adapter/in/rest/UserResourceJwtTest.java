@@ -58,7 +58,7 @@ class UserResourceJwtTest {
                         {"name":"Ana","email":"ana.uat2@fiap.br","password":"abc123"}
                         """)
                 .when()
-                .post("/users")
+                .post("/api/v1/users")
                 .then()
                 .statusCode(201)
                 .body("id", notNullValue());
@@ -75,7 +75,7 @@ class UserResourceJwtTest {
                         {"name":"Ana","email":"ana.uat-iss@fiap.br","password":"abc123"}
                         """)
                 .when()
-                .post("/users")
+                .post("/api/v1/users")
                 .then()
                 .statusCode(401)
                 .body("message", notNullValue());
@@ -92,7 +92,7 @@ class UserResourceJwtTest {
                         {"name":"Ana","email":"ana.uat-exp@fiap.br","password":"abc123"}
                         """)
                 .when()
-                .post("/users")
+                .post("/api/v1/users")
                 .then()
                 .statusCode(401)
                 .body("message", notNullValue());
@@ -115,7 +115,7 @@ class UserResourceJwtTest {
                         {"name":"Ana","email":"ana.uat-role@fiap.br","password":"abc123"}
                         """)
                 .when()
-                .post("/users")
+                .post("/api/v1/users")
                 .then()
                 .statusCode(403)
                 .body("message", notNullValue());

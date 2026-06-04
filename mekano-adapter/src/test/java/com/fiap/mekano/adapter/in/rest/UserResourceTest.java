@@ -40,7 +40,7 @@ class UserResourceTest {
                         {"name": "Ana", "email": "%s", "password": "abc123"}
                         """.formatted(VALID_EMAIL))
                 .when()
-                .post("/users")
+                .post("/api/v1/users")
                 .then()
                 .statusCode(201)
                 .body("id", notNullValue())
@@ -61,7 +61,7 @@ class UserResourceTest {
                         {"name": "Ana2", "email": "%s", "password": "abc123"}
                         """.formatted(VALID_EMAIL))
                 .when()
-                .post("/users")
+                .post("/api/v1/users")
                 .then()
                 .statusCode(409)
                 .body("message", notNullValue());
@@ -77,7 +77,7 @@ class UserResourceTest {
                         {"name": "Test", "email": "naoemail", "password": "abc123"}
                         """)
                 .when()
-                .post("/users")
+                .post("/api/v1/users")
                 .then()
                 .statusCode(400)
                 .body("message", notNullValue());
@@ -91,7 +91,7 @@ class UserResourceTest {
                 .contentType(ContentType.JSON)
                 .body("{}")
                 .when()
-                .post("/users")
+                .post("/api/v1/users")
                 .then()
                 .statusCode(400)
                 .body("message", notNullValue());
