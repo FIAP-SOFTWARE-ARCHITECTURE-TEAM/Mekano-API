@@ -12,11 +12,12 @@ import jakarta.ws.rs.ext.Provider;
  * Traduz {@link InvalidRefreshTokenException} em HTTP 401 com corpo
  * {@link ErrorResponse} JSON ({@code {"message":"Invalid or expired refresh token"}}).
  *
- * <p>Mesmo Pattern A dos demais mappers (Phase 5 / G8 / PATTERNS.md) —
- * idêntico a {@link InvalidCredentialsExceptionMapper}.
+ * <p><b>DEPRECATED:</b> Substituído por {@link GenericExceptionMapper} (D-09).
+ * Mantido para rollback rápido — sem {@code @Provider} para não ser descoberto.
+ *
+ * @deprecated desde 10-02-PLAN. Usar {@link GenericExceptionMapper}.
  */
-@Provider
-@ApplicationScoped
+@Deprecated
 public class InvalidRefreshTokenExceptionMapper implements ExceptionMapper<InvalidRefreshTokenException> {
 
     @Override

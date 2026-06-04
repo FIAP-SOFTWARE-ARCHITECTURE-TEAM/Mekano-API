@@ -11,14 +11,12 @@ import jakarta.ws.rs.ext.Provider;
  * Traduz {@link RateLimitExceededException} (domínio) para HTTP 429 Too Many Requests
  * com header {@code Retry-After}.
  *
- * <p>O header {@code Retry-After} informa ao cliente por quantos segundos deve
- * aguardar antes de tentar novamente, permitindo que implemente backoff
- * respeitando a política de rate limit do servidor.
+ * <p><b>DEPRECATED:</b> Substituído por {@link GenericExceptionMapper} (D-09).
+ * Mantido para rollback rápido — sem {@code @Provider} para não ser descoberto.
  *
- * @see <a href="https://datatracker.ietf.org/doc/html/rfc6585#section-4">RFC 6585 §4</a>
+ * @deprecated desde 10-02-PLAN. Usar {@link GenericExceptionMapper}.
  */
-@Provider
-@ApplicationScoped
+@Deprecated
 public class RateLimitExceededExceptionMapper implements ExceptionMapper<RateLimitExceededException> {
 
     @Override

@@ -12,14 +12,12 @@ import java.util.stream.Collectors;
 /**
  * Traduz ConstraintViolationException (Bean Validation) para HTTP 400 Bad Request.
  *
- * CRÍTICO: implementa ExceptionMapper<jakarta.validation.ConstraintViolationException> (Bean Validation).
- * NÃO usar a versão do pacote ws.rs — são tipos diferentes e o mapper não funcionaria!
+ * <p><b>DEPRECATED:</b> Substituído por {@link GenericExceptionMapper} (D-09).
+ * Mantido para rollback rápido — sem {@code @Provider} para não ser descoberto.
  *
- * Formato da mensagem: "create.request.name: não deve estar em branco; create.request.email: deve ser um endereço de e-mail bem formado"
- * Múltiplas violations são concatenadas com "; " (decisão D-02).
+ * @deprecated desde 10-02-PLAN. Usar {@link GenericExceptionMapper}.
  */
-@Provider
-@ApplicationScoped
+@Deprecated
 public class ConstraintViolationExceptionMapper implements ExceptionMapper<ConstraintViolationException> {
 
     @Override

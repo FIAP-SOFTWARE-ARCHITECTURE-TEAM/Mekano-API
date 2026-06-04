@@ -10,12 +10,12 @@ import jakarta.ws.rs.ext.Provider;
 /**
  * Traduz UserNotFoundException (domínio) para HTTP 404 Not Found.
  *
- * Requisito ADP-06: obrigatório para satisfazer comportamento 404 da API.
+ * <p><b>DEPRECATED:</b> Substituído por {@link GenericExceptionMapper} (D-09).
+ * Mantido para rollback rápido — sem {@code @Provider} para não ser descoberto.
  *
- * @Provider @ApplicationScoped: padrão uniforme para todos os ExceptionMappers do projeto.
+ * @deprecated desde 10-02-PLAN. Usar {@link GenericExceptionMapper}.
  */
-@Provider
-@ApplicationScoped
+@Deprecated
 public class UserNotFoundExceptionMapper implements ExceptionMapper<UserNotFoundException> {
 
     @Override

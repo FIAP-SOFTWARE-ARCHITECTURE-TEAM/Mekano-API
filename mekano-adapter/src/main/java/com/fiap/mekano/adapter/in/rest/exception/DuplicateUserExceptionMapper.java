@@ -10,14 +10,13 @@ import jakarta.ws.rs.ext.Provider;
 /**
  * Traduz UserAlreadyExistsException (domínio) para HTTP 409 Conflict.
  *
- * @Provider: JAX-RS descobre este mapper automaticamente via Jandex CDI scan.
- * @ApplicationScoped: garante instância única gerenciada pelo Arc.
+ * <p><b>DEPRECATED:</b> Substituído por {@link GenericExceptionMapper} (D-09).
+ * Mantido para rollback rápido — sem {@code @Provider} para não ser descoberto
+ * pelo JAX-RS.
  *
- * Nome do arquivo: DuplicateUserExceptionMapper (não UserAlreadyExistsExceptionMapper)
- * conforme decisão em CONTEXT.md "Files to Create".
+ * @deprecated desde 10-02-PLAN. Usar {@link GenericExceptionMapper}.
  */
-@Provider
-@ApplicationScoped
+@Deprecated
 public class DuplicateUserExceptionMapper implements ExceptionMapper<UserAlreadyExistsException> {
 
     @Override

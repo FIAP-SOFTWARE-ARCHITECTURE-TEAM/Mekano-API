@@ -1,11 +1,9 @@
 package com.fiap.mekano.adapter.in.rest.exception;
 
 import io.quarkus.logging.Log;
-import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;
-import jakarta.ws.rs.ext.Provider;
 
 /**
  * Traduz {@link io.quarkus.security.ForbiddenException} (Quarkus Security) para HTTP 403
@@ -21,13 +19,12 @@ import jakarta.ws.rs.ext.Provider;
  * (body vazio / HTML), violando o D-06 (toda resposta de erro deve devolver
  * {@link ErrorResponse} canônico em JSON).
  *
- * Mesmo padrão dos demais mappers desta camada (Pattern A — PATTERNS.md / G8):
- * {@code @Provider + @ApplicationScoped}, body via {@link ErrorResponse},
- * mensagem mascarada para o literal {@code "Forbidden"} (T-08-07 — não
- * vazar internals do pipeline de autorização).
+ * <b>DEPRECATED:</b> Substituído por {@link GenericExceptionMapper} (D-09).
+ * Mantido para rollback rápido — sem {@code @Provider} para não ser descoberto.
+ *
+ * @deprecated desde 10-02-PLAN. Usar {@link GenericExceptionMapper}.
  */
-@Provider
-@ApplicationScoped
+@Deprecated
 public class ForbiddenExceptionMapper implements ExceptionMapper<io.quarkus.security.ForbiddenException> {
 
     @Override
