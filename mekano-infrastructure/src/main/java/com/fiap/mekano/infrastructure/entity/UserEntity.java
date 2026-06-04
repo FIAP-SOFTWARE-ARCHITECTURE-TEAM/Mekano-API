@@ -4,6 +4,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -54,4 +55,18 @@ public class UserEntity extends PanacheEntityBase {
 
     @Column(name = "is_active", nullable = false)
     Boolean isActive = true;
+
+    @Column(name = "created_by")
+    UUID createdBy;
+
+    @Column(name = "updated_by")
+    UUID updatedBy;
+
+    @Column(name = "updated_at")
+    LocalDateTime updatedAt;
+
+    @PreUpdate
+    public void preUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
 }
