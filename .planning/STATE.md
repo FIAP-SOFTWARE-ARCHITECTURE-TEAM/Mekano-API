@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Executing Phase 10
-last_updated: "2026-06-04T14:30:16.526Z"
+last_updated: "2026-06-04T11:53:53.000Z"
 progress:
   total_phases: 11
   completed_phases: 9
   total_plans: 44
-  completed_plans: 41
-  percent: 84
+  completed_plans: 43
+  percent: 98
 ---
 
 # Mekano — State
@@ -17,8 +17,8 @@ progress:
 **Milestone ativo:** v1 — Clean Architecture Quarkus API  
 **Fase atual:** Fase 10 — Melhorias Pós-v1  
 **Última atualização:** 2026-06-04  
-**Último plano concluído:** 10-01 (Gaps Arquiteturais)  
-**Sessão parada em:** Fase 10 — Plano 1 concluído (Gaps Arquiteturais)
+**Último plano concluído:** 10-03 (Production Readiness)  
+**Sessão parada em:** Fase 10 — Plano 3 concluído (Production Readiness)
 
 ---
 
@@ -35,7 +35,7 @@ progress:
 | 7 — Fault Tolerance | 🟡 Estática-PASS | 3/3 planos; UAT-1 + UAT-4 + compile ✅; UAT-2/UAT-3 (test runtime) deferidos ao usuário |
 | 8 — JWT | ✅ Concluída | 5/5 planos, @TestSecurity bypass, mp.jwt.* namespace |
 | 9 — Segurança e Completude | ✅ Concluída | 5/5 planos (Refresh Token, Rate Limiting, Secrets, Soft Delete, MapStruct) |
-| 10 — Melhorias Pós-v1 | 🟡 Em Execução | 1/4 planos — Gaps Arquiteturais concluído |
+| 10 — Melhorias Pós-v1 | 🟡 Em Execução | 3/4 planos — Production Readiness concluído |
 
 ---
 
@@ -55,21 +55,13 @@ progress:
 
 ### Pending Todos
 
-**11 pending** — remaining after Plan 10-01 resolved GAP-02/03/04/05 (D-01 was already done in Phase 4).
+**3 pending** — after Plan 10-03 resolved CI/CD, logging JSON, and Caffeine cache items.
 
 | # | Title | Area | Priority |
 |---|-------|------|----------|
 | 1 | Escrever testes de integração para Fault Tolerance | testing | 🟡 medium |
-| 2 | Configurar logging estruturado JSON | observability | 🟡 medium |
-| 3 | Adicionar cache em leituras de usuário (Caffeine) | database | 🟡 medium |
-| 4 | Configurar CORS para frontend web | api | 🟡 medium |
-| 5 | Implementar eventos de domínio (UserCreatedEvent) | domain | 🟡 medium |
-| 6 | Implementar paginação e listagem de usuários | api | 🟡 medium |
-| 7 | Substituir ExceptionMappers múltiplos por um genérico | api | 🟢 low |
-| 8 | Adicionar prefixo de versão na API (/api/v1) | api | 🟢 low |
-| 9 | Adicionar campos de auditoria na tabela users | database | 🟢 low |
-| 10 | Garantir timezone explícito em respostas de data | api | 🟢 low |
-| 11 | Configurar CI/CD pipeline (GitHub Actions) | tooling | 🟡 medium |
+| 2 | Implementar eventos de domínio (UserCreatedEvent) | domain | 🟡 medium |
+| 3 | Adicionar campos de auditoria na tabela users | database | 🟢 low |
 
 ---
 
@@ -96,3 +88,10 @@ progress:
 21. `PasswordHasher` é interface pura no domain — sem imports de framework; use cases injetam a abstração, não `BcryptUtil` concreto (D-02, 10-01)
 22. `CreateUserResponse` record no application — `executeResponse()` retorna id/name/email/createdAt, não expõe entidade `User` (D-04, 10-01)
 23. `BusinessException extends Exception` — checked para regras de negócio recuperáveis; `DomainException extends RuntimeException` mantido para validações (D-05, 10-01)
+24. Paginação pragmática: `UserResource` chama `UserRepositoryPort` diretamente — sem use case para listagem puramente leitura (D-06, 10-02)
+25. `quarkus.rest.path=/api/v1` sobre `@ApplicationPath("/api/v1")` — endpoints /q/health e /q/metrics inalterados (D-08, 10-02)
+26. GenericExceptionMapper com ConcurrentHashMap — dispatching por tipo, fallback 500 com stacktrace; mapeadores antigos preservados com @Deprecated para rollback (D-09, 10-02)
+27. Jackson timezone America/Sao_Paulo faz LocalDateTime serializar com offset ISO-8601 (D-10, 10-02)
+28. CI/CD via GitHub Actions: `mvn verify -pl mekano-adapter -am` sem Docker explícito — DevServices do Quarkus auto-gerencia PostgreSQL (D-11, 10-03)
+29. Logging JSON: `quarkus.log.console.json=true` com pretty-print=false — uma linha por JSON para Loki/Datadog; perfil `%dev` = DEBUG, `%prod` = INFO, `%test` = WARN (D-12, 10-03)
+30. Cache Caffeine: `@CacheResult(cacheName="users")` em findById/findByEmail, `@CacheInvalidate(cacheName="users")` em save/markAsDeleted; expire-after-write=60s, max-size=100 (D-13, 10-03)

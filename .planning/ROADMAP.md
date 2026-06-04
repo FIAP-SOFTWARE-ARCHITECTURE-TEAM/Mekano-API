@@ -578,8 +578,8 @@ Planos:
 
 Planos:
 - [x] 10-01-PLAN.md — Gaps Arquiteturais ✅ Concluído
-- [ ] 10-02-PLAN.md — API & Infra
-- [ ] 10-03-PLAN.md — Production Readiness
+- [x] 10-02-PLAN.md — API & Infra ✅ Concluído (2026-06-04)
+- [x] 10-03-PLAN.md — Production Readiness
 - [ ] 10-04-PLAN.md — Observabilidade & Eventos
 
 ---
@@ -597,7 +597,7 @@ Planos:
 | 7. Tolerância a Falhas | 3/3 | ✅ Concluída | 2026-05-30 |
 | 8. Fundação JWT | 5/5 | ✅ Concluída | 2026-05-30 |
 | 9. Segurança e Completude da API | 5/5 | Complete    | 2026-06-04 |
-| 10. Melhorias Pós-v1 | 1/4 | 🟡 Em Execução | 2026-06-04 |
+| 10. Melhorias Pós-v1 | 3/4 | 🟡 Em Execução | 2026-06-04 |
 
 ---
 
