@@ -27,8 +27,9 @@ import java.util.UUID;
  *
  * <p>Regras de transação:
  * <ul>
- *   <li>{@code save()} — {@code @Transactional}: garante que persist()+flush() executam em uma
- *       transação e que constraint violations são capturadas imediatamente (D-02)</li>
+ *   <li>{@code save()} — sem {@code @Transactional}: a transação é aberta pelo chamador
+ *       ({@code CreateUserUseCase.execute()} via {@code @Transactional}).</li>
+ *   <li>{@code markAsDeleted()} — {@code @Transactional}: necessário para operação de escrita.</li>
  *   <li>Métodos de leitura — sem {@code @Transactional}: Quarkus/JPA gerencia automaticamente
  *       se houver transação ativa no chamador</li>
  * </ul>
@@ -65,6 +66,10 @@ public class UserRepositoryImpl implements UserRepositoryPort {
      * capturando violações de constraint (ex: email duplicado) dentro da transação
      * antes de retornar ao chamador (D-02).
      *
+     * <p><strong>Nota sobre {@code @Transactional} removido (D-03):</strong> A responsabilidade
+     * da transação foi movida para {@code CreateUserUseCase.execute()} — a unidade de trabalho
+     * pertence ao use case, não ao repositório.
+     *
      * <p><strong>Nota sobre {@code @Timeout} + JDBC (D-04):</strong> a {@code TimeoutException}
      * é lançada no momento correto pelo interceptor MP-FT, mas o driver pgjdbc só checa o flag
      * de interrupt da thread em pontos de I/O — a query no servidor PostgreSQL pode continuar
@@ -76,7 +81,6 @@ public class UserRepositoryImpl implements UserRepositoryPort {
      * @return entidade de domínio reconstruída após persistência
      */
     @Override
-    @Transactional
     @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     public User save(User user) {
         var entity = mapper.toEntity(user);

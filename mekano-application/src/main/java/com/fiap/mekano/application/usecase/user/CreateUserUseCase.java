@@ -9,6 +9,7 @@ import com.fiap.mekano.domain.port.in.CreateUserInputPort;
 import com.fiap.mekano.domain.port.in.PasswordHasher;
 import com.fiap.mekano.domain.port.out.UserRepositoryPort;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.transaction.Transactional;
 
 import java.util.UUID;
 
@@ -23,7 +24,8 @@ import java.util.UUID;
  * 5. Persistência via output port
  *
  * @ApplicationScoped: CDI é permitido na camada application (acoplamento consciente).
- * @Transactional: PROIBIDO aqui — transações são responsabilidade de infrastructure.
+ * @Transactional no método execute(): a unidade de trabalho pertence ao use case (D-03),
+ * não ao repositório — garante que persist()+flush() executam em uma transação.
  */
 @ApplicationScoped
 public class CreateUserUseCase implements CreateUserInputPort {
@@ -41,6 +43,7 @@ public class CreateUserUseCase implements CreateUserInputPort {
     }
 
     @Override
+    @Transactional
     public User execute(CreateUserCommand command) {
         // 1. Validação de nome — use case é responsável por esta guarda
         if (command.name() == null || command.name().isBlank()) {
