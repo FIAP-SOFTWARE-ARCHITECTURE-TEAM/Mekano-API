@@ -3,6 +3,7 @@ package com.fiap.mekano.domain.port.out;
 import com.fiap.mekano.domain.exception.UserNotFoundException;
 import com.fiap.mekano.domain.model.User;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -48,6 +49,23 @@ public interface UserRepositoryPort {
      * @return true se existe, false caso contrário
      */
     boolean existsByEmail(String email);
+
+    /**
+     * Retorna todos os usuários ativos de forma paginada e ordenada.
+     *
+     * @param page número da página (0-based)
+     * @param size tamanho da página
+     * @param sort campo e direção (ex: "name,asc")
+     * @return lista de usuários da página
+     */
+    List<User> findAll(int page, int size, String sort);
+
+    /**
+     * Retorna o total de usuários ativos.
+     *
+     * @return total de usuários ativos
+     */
+    long countAll();
 
     /**
      * Marca um usuário como deletado (soft delete).

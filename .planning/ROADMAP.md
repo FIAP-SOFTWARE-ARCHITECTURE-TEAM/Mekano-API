@@ -20,7 +20,8 @@
 - [x] **Phase 8: Fundação JWT** — SmallRye JWT configurado com `mp.jwt.*`, chave PKCS#8 e `@RolesAllowed` placeholder no `UserResource`
  (completed 2026-05-30)
 
-- [ ] **Phase 9: Segurança e Completude da API** — Refresh Token JWT (infra), rate limiting (CDI filter, 10/min, IP+email), externalização de secrets JWT (ES256, `~/.mekano/secrets/`), soft delete de usuários e reabilitação do MapStruct
+- [x] **Phase 9: Segurança e Completude da API** — Refresh Token JWT (infra), rate limiting (CDI filter, 10/min, IP+email), externalização de secrets JWT (ES256, `~/.mekano/secrets/`), soft delete de usuários e reabilitação do MapStruct (completed 2026-06-04)
+- [ ] **Phase 10: Melhorias Pós-v1** — Gaps arquiteturais, API & Infra, Production Readiness, Observabilidade & Eventos
 
 ---
 
@@ -545,7 +546,41 @@ Planos:
 - [x] 09-02-PLAN.md — Rate Limiting no Login
 - [x] 09-03-PLAN.md — Externalizar Secrets JWT
 - [x] 09-04-PLAN.md — Soft Delete de Usuários
-- [ ] 09-05-PLAN.md — Reabilitar MapStruct
+- [x] 09-05-PLAN.md — Reabilitar MapStruct
+
+---
+
+### Phase 10: Melhorias Pós-v1
+
+**Goal:** Fechar os 16 todos pendentes — gaps arquiteturais, melhorias de API/infra, production readiness e observabilidade.
+
+**Motivo:** Fases 1-9 entregaram a base funcional. Esta fase polimento resolve gaps de design (save+PasswordHasher+@Transactional), adiciona recursos de API (paginação+CORS+versionamento), prepara produção (CI/CD+logging+cache) e completa observabilidade (testes FT+eventos+auditoria).
+
+**Depende de:** Fase 9 (JWT + refresh token + secrets)
+
+**Requirements:** (16 todos pendentes em `.planning/todos/pending/`)
+
+**Planos:**
+
+1. **Gaps Arquiteturais** — `save()` retornar User, PasswordHasher no domínio, `@Transactional` no use case, UseCaseResponse, DomainException checked
+2. **API & Infra** — Paginação + listagem, CORS, versionamento `/api/v1`, exception mapper genérico, timezone explícito
+3. **Production Readiness** — CI/CD pipeline (GitHub Actions), logging JSON, cache Caffeine
+4. **Observabilidade & Eventos** — Testes FT, domain events (UserCreatedEvent), auditoria em users table
+
+**Critérios UAT:**
+
+1. `save()` retorna `User` (não `void`); `PasswordHasher` é interface no domínio; `@Transactional` no use case; `UseCaseResponse` não expõe entidades; `DomainException` tem política checked definida
+2. `GET /users` com `?page=0&size=10` retorna paginado; CORS configurado; `/api/v1/users` funcional; exception mapper único; timestamps com timezone
+3. CI/CD executa `mvn verify` no push; logging em JSON; Caffeine cache em leituras de usuário
+4. Testes Fault Tolerance passam; `UserCreatedEvent` publicado; campos `created_by/updated_by` na tabela users
+
+**Plans**: 4 planos
+
+Planos:
+- [x] 10-01-PLAN.md — Gaps Arquiteturais ✅ Concluído
+- [ ] 10-02-PLAN.md — API & Infra
+- [ ] 10-03-PLAN.md — Production Readiness
+- [ ] 10-04-PLAN.md — Observabilidade & Eventos
 
 ---
 
@@ -561,7 +596,8 @@ Planos:
 | 6. Observabilidade | 4/4 | ✅ Concluída | 2026-05-29 |
 | 7. Tolerância a Falhas | 3/3 | ✅ Concluída | 2026-05-30 |
 | 8. Fundação JWT | 5/5 | ✅ Concluída | 2026-05-30 |
-| 9. Segurança e Completude da API | 5/5 | ✅ Concluída | 2026-06-04 |
+| 9. Segurança e Completude da API | 5/5 | Complete    | 2026-06-04 |
+| 10. Melhorias Pós-v1 | 1/4 | 🟡 Em Execução | 2026-06-04 |
 
 ---
 

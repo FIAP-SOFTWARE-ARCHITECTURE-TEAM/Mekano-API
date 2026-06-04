@@ -13,6 +13,7 @@ import org.eclipse.microprofile.faulttolerance.Timeout;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -134,6 +135,41 @@ public class UserRepositoryImpl implements UserRepositoryPort {
     @Override
     public boolean existsByEmail(String email) {
         return panacheRepository.count("email = ?1 AND isActive = ?2", email, true) > 0;
+    }
+
+    /**
+     * Retorna todos os usuários ativos de forma paginada e ordenada.
+     *
+     * <p>Usa {@code Sort.by()} do Panache para ordenação no banco.
+     * Filtra {@code isActive = true} para excluir registros deletados logicamente.
+     *
+     * @param page número da página (0-based)
+     * @param size tamanho da página
+     * @param sort campo e direção (ex: "name,asc")
+     * @return lista de usuários da página
+     */
+    @Override
+    public List<User> findAll(int page, int size, String sort) {
+        String[] sortParts = sort.split(",");
+        String sortField = sortParts[0];
+        boolean ascending = sortParts.length < 2 || "asc".equalsIgnoreCase(sortParts[1]);
+        var direction = ascending ? io.quarkus.panache.common.Sort.Direction.Ascending : io.quarkus.panache.common.Sort.Direction.Descending;
+        var query = panacheRepository.find("isActive = ?1",
+                io.quarkus.panache.common.Sort.by(sortField).direction(direction), true);
+        return query.page(io.quarkus.panache.common.Page.of(page, size)).list()
+                .stream().map(mapper::toDomain).toList();
+    }
+
+    /**
+     * Retorna o total de usuários ativos.
+     *
+     * <p>Usa {@code count()} do Panache com filtro de soft delete.
+     *
+     * @return total de usuários ativos
+     */
+    @Override
+    public long countAll() {
+        return panacheRepository.count("isActive = ?1", true);
     }
 
     /**

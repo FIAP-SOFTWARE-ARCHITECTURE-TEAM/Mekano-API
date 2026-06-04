@@ -1,6 +1,7 @@
 package com.fiap.mekano.adapter.in.rest;
 
 import com.fiap.mekano.adapter.in.rest.dto.CreateUserRequest;
+import com.fiap.mekano.adapter.in.rest.dto.UserPageResponse;
 import com.fiap.mekano.adapter.in.rest.dto.UserResponse;
 import com.fiap.mekano.adapter.in.rest.exception.ErrorResponse;
 import com.fiap.mekano.adapter.in.rest.mapper.UserDtoMapper;
@@ -8,18 +9,21 @@ import com.fiap.mekano.application.usecase.user.CreateUserUseCase;
 import com.fiap.mekano.domain.exception.UserAlreadyExistsException;
 import com.fiap.mekano.domain.exception.UserNotFoundException;
 import com.fiap.mekano.domain.port.in.CreateUserInputPort;
+import com.fiap.mekano.domain.port.out.UserRepositoryPort;
 import io.quarkus.security.Authenticated;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -75,6 +79,9 @@ public class UserResource {
 
     @Inject
     UserDtoMapper userDtoMapper;
+
+    @Inject
+    UserRepositoryPort userRepositoryPort;
 
     /**
      * Cria um novo usuário no sistema.
@@ -133,6 +140,43 @@ public class UserResource {
         UserResponse userResponse = userDtoMapper.toResponse(response);
         URI location = uriInfo.getAbsolutePathBuilder().path(userResponse.id().toString()).build();
         return Response.created(location).entity(userResponse).build();
+    }
+
+    /**
+     * Lista todos os usuários ativos de forma paginada.
+     *
+     * <p>A paginação é 0-based: page=0 retorna a primeira página.
+     * A ordenação padrão é por nome ascendente.
+     *
+     * @param page número da página (0-based, default 0)
+     * @param size tamanho da página (default 10)
+     * @param sort campo e direção de ordenação (ex: "name,asc", default "name,asc")
+     * @return 200 OK com UserPageResponse contendo lista paginada
+     */
+    @GET
+    @RolesAllowed("user")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(summary = "Listar usuários", description = "Retorna usuários ativos de forma paginada e ordenada")
+    @APIResponse(responseCode = "200",
+            description = "Lista paginada de usuários",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON,
+                    schema = @Schema(implementation = UserPageResponse.class)))
+    @APIResponse(responseCode = "401",
+            description = "Token JWT ausente ou inválido",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON,
+                    schema = @Schema(implementation = ErrorResponse.class)))
+    public Response listAll(
+            @QueryParam("page") @DefaultValue("0") int page,
+            @QueryParam("size") @DefaultValue("10") int size,
+            @QueryParam("sort") @DefaultValue("name,asc") String sort) {
+        var content = userRepositoryPort.findAll(page, size, sort)
+                .stream()
+                .map(userDtoMapper::toResponse)
+                .toList();
+        long total = userRepositoryPort.countAll();
+        int totalPages = (int) Math.ceil((double) total / size);
+        var response = new UserPageResponse(content, page, size, total, totalPages);
+        return Response.ok(response).build();
     }
 
     /**
