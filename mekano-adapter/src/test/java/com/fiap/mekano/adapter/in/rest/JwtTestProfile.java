@@ -12,8 +12,8 @@ import java.util.Base64;
 import java.util.Map;
 
 /**
- * QuarkusTestProfile que gera um par de chaves RSA-2048 in-memory para os
- * testes JWT da Phase 8 (D-10 / RESEARCH §D-10).
+ *  QuarkusTestProfile que gera um par de chaves Ed25519 in-memory para os
+ *  testes JWT da Phase 9 (D-10 — ES256/EdDSA).
  *
  * Por que inline (`mp.jwt.verify.publickey`) e não `mp.jwt.verify.publickey.location`:
  *   - O bloco `application.properties` (plano 08-02) aponta para o arquivo
@@ -21,9 +21,8 @@ import java.util.Map;
  *     emitir tokens com uma chave privada conhecida em CI — sem materializar
  *     PEM em disco. A propriedade inline `mp.jwt.verify.publickey` toma
  *     precedência sobre `.location` em runtime (RESEARCH §A3) e nos permite
- *     injetar o PEM correspondente ao `KEY_PAIR` deste profile.
- *   - Resultado: pipeline CI roda sem chave estática commitada (gitignore
- *     do plano 08-01) e sem dependência de filesystem.
+     *  injetar o PEM correspondente ao `KEY_PAIR` deste profile.
+     *   - Ed25519 (Phase 9, D-10): substitui RSA-2048 usado na Phase 8.
  *
  * <p>Bridge classloader (deviation Rule 1, 08-05): Quarkus carrega
  * {@link QuarkusTestProfile} no launcher classloader e o test class no
@@ -78,6 +77,13 @@ public class JwtTestProfile implements QuarkusTestProfile {
      */
     private static final String PUB_PEM_FILE_PATH;
 
+    /**
+     * Arquivo PEM da chave privada (PKCS#8) cacheado para sobrescrever
+     * {@code smallrye.jwt.sign.key.location} nos testes que exercitam o
+     * endpoint POST /auth/login (que assina tokens em runtime).
+     */
+    private static final String PRIV_PEM_FILE_PATH;
+
     static {
         try {
             // Quarkus carrega QuarkusTestProfile no launcher classloader e o test class
@@ -94,8 +100,7 @@ public class JwtTestProfile implements QuarkusTestProfile {
                 if (existingPem != null && existingPriv != null) {
                     PUBLIC_KEY_PEM = existingPem;
                 } else {
-                    KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
-                    generator.initialize(2048);
+                    KeyPairGenerator generator = KeyPairGenerator.getInstance("Ed25519");
                     KeyPair kp = generator.generateKeyPair();
 
                     byte[] pubEncoded = kp.getPublic().getEncoded();
@@ -120,8 +125,21 @@ public class JwtTestProfile implements QuarkusTestProfile {
             java.nio.file.Files.writeString(pem, PUBLIC_KEY_PEM);
             pem.toFile().deleteOnExit();
             PUB_PEM_FILE_PATH = pem.toAbsolutePath().toString().replace('\\', '/');
+
+            // Materializa também a chave privada em PEM PKCS#8 para
+            // smallrye.jwt.sign.key.location — necessário desde que AuthResource
+            // emite tokens em runtime via Jwt.sign() (sem PrivateKey explícita).
+            String privB64 = System.getProperty(PRIVATE_KEY_PROP);
+            byte[] privDer = Base64.getDecoder().decode(privB64);
+            String privPemBody = Base64.getMimeEncoder(64, "\n".getBytes(StandardCharsets.US_ASCII))
+                    .encodeToString(privDer);
+            String privPem = "-----BEGIN PRIVATE KEY-----\n" + privPemBody + "\n-----END PRIVATE KEY-----";
+            java.nio.file.Path privPath = java.nio.file.Files.createTempFile("jwt-test-priv", ".pem");
+            java.nio.file.Files.writeString(privPath, privPem);
+            privPath.toFile().deleteOnExit();
+            PRIV_PEM_FILE_PATH = privPath.toAbsolutePath().toString().replace('\\', '/');
         } catch (Exception e) {
-            throw new RuntimeException("Falha ao gerar par RSA para JwtTestProfile", e);
+            throw new RuntimeException("Falha ao gerar par Ed25519 para JwtTestProfile", e);
         }
     }
 
@@ -138,7 +156,7 @@ public class JwtTestProfile implements QuarkusTestProfile {
                         "JwtTestProfile.PRIVATE_KEY_PROP ausente — @TestProfile(JwtTestProfile.class) não aplicado?");
             }
             byte[] der = Base64.getDecoder().decode(b64);
-            return KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(der));
+            return KeyFactory.getInstance("Ed25519").generatePrivate(new PKCS8EncodedKeySpec(der));
         } catch (RuntimeException re) {
             throw re;
         } catch (Exception e) {
@@ -160,7 +178,10 @@ public class JwtTestProfile implements QuarkusTestProfile {
         // and in practice falls back to the static publicKey.pem on classpath —
         // signature verify then fails for tokens we sign here. Overriding `.location`
         // com o temp file (cacheado em PUB_PEM_FILE_PATH — IN-04) é inequívoco.
-        return Map.of("mp.jwt.verify.publickey.location", PUB_PEM_FILE_PATH);
+        return Map.of(
+                "mp.jwt.verify.publickey.location", PUB_PEM_FILE_PATH,
+                "smallrye.jwt.sign.key.location", PRIV_PEM_FILE_PATH
+        );
     }
 }
 
