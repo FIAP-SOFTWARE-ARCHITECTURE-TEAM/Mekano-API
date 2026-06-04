@@ -6,8 +6,8 @@ import com.fiap.mekano.domain.exception.UserNotFoundException;
 import com.fiap.mekano.domain.model.User;
 import com.fiap.mekano.domain.port.in.CreateUserCommand;
 import com.fiap.mekano.domain.port.in.CreateUserInputPort;
+import com.fiap.mekano.domain.port.in.PasswordHasher;
 import com.fiap.mekano.domain.port.out.UserRepositoryPort;
-import io.quarkus.elytron.security.common.BcryptUtil;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.util.UUID;
@@ -18,7 +18,7 @@ import java.util.UUID;
  * Orquestra:
  * 1. Validação de dados de entrada (nome nulo/vazio)
  * 2. Verificação de duplicidade de email
- * 3. Hash BCrypt da senha (responsabilidade da camada application)
+ * 3. Hash da senha via {@link PasswordHasher} (abstração injetada)
  * 4. Criação da entidade de domínio (User.create valida email via VO)
  * 5. Persistência via output port
  *
@@ -30,11 +30,14 @@ public class CreateUserUseCase implements CreateUserInputPort {
 
     private final UserRepositoryPort userRepository;
 
+    private final PasswordHasher passwordHasher;
+
     /**
      * Injeção por construtor — necessário para @InjectMocks do Mockito funcionar corretamente.
      */
-    public CreateUserUseCase(UserRepositoryPort userRepository) {
+    public CreateUserUseCase(UserRepositoryPort userRepository, PasswordHasher passwordHasher) {
         this.userRepository = userRepository;
+        this.passwordHasher = passwordHasher;
     }
 
     @Override
@@ -50,7 +53,7 @@ public class CreateUserUseCase implements CreateUserInputPort {
         }
 
         // 3. Hash de senha — NÃO repassar senha raw para User.create()
-        String passwordHash = BcryptUtil.bcryptHash(command.password());
+        String passwordHash = passwordHasher.hash(command.password());
 
         // 4. Criar entidade (Email VO valida formato — lança InvalidEmailException se inválido)
         User user = User.create(command.name(), command.email(), passwordHash);

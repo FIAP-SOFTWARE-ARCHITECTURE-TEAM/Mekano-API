@@ -5,6 +5,7 @@ import com.fiap.mekano.domain.exception.InvalidUserDataException;
 import com.fiap.mekano.domain.exception.UserAlreadyExistsException;
 import com.fiap.mekano.domain.model.User;
 import com.fiap.mekano.domain.port.in.CreateUserCommand;
+import com.fiap.mekano.domain.port.in.PasswordHasher;
 import com.fiap.mekano.domain.port.out.UserRepositoryPort;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,6 +25,9 @@ class CreateUserUseCaseTest {
     @Mock
     UserRepositoryPort userRepository;
 
+    @Mock
+    PasswordHasher passwordHasher;
+
     @InjectMocks
     CreateUserUseCase useCase;
 
@@ -33,6 +37,7 @@ class CreateUserUseCaseTest {
         // Arrange
         var command = new CreateUserCommand("João Silva", "joao@fiap.br", "senha123");
         when(userRepository.existsByEmail("joao@fiap.br")).thenReturn(false);
+        when(passwordHasher.hash("senha123")).thenReturn("$2a$10$hashedpassword");
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
