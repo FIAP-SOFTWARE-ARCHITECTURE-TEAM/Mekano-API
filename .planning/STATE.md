@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Executing Phase 09
-last_updated: "2026-06-04T03:15:00.000Z"
+last_updated: "2026-06-04T10:45:00.000Z"
 progress:
   total_phases: 10
   completed_phases: 8
   total_plans: 40
-  completed_plans: 38
-  percent: 95
+  completed_plans: 39
+  percent: 98
 ---
 
 # Mekano — State
@@ -17,8 +17,8 @@ progress:
 **Milestone ativo:** v1 — Clean Architecture Quarkus API  
 **Fase atual:** Fase 9 — Segurança e Completude da API (próxima)  
 **Última atualização:** 2026-06-04  
-**Último plano concluído:** 09-03 (Externalizar Secrets JWT)  
-**Sessão parada em:** Fase 9 — 2 planos restantes (Soft Delete, MapStruct)
+**Último plano concluído:** 09-05 (Reabilitar MapStruct)  
+**Sessão parada em:** Fase 9 — todos os 5 planos concluídos
 
 ---
 
@@ -34,7 +34,7 @@ progress:
 | 6 — Observabilidade | ✅ Concluída | 4/4 planos + 1 fix, 9/9 testes integração, PASS 4/4 UATs |
 | 7 — Fault Tolerance | 🟡 Estática-PASS | 3/3 planos; UAT-1 + UAT-4 + compile ✅; UAT-2/UAT-3 (test runtime) deferidos ao usuário |
 | 8 — JWT | ✅ Concluída | 5/5 planos, @TestSecurity bypass, mp.jwt.* namespace |
-| 9 — Segurança e Completude | 🟡 Em andamento | 2/5 planos (Refresh Token, Rate Limiting), 3 restantes |
+| 9 — Segurança e Completude | ✅ Concluída | 5/5 planos (Refresh Token, Rate Limiting, Secrets, Soft Delete, MapStruct) |
 
 ---
 

@@ -19,6 +19,7 @@
 - [ ] **Phase 7: Tolerância a Falhas** — Anotações SmallRye Fault Tolerance (`@Retry`, `@Timeout`, `@CircuitBreaker`) na camada de infraestrutura
 - [x] **Phase 8: Fundação JWT** — SmallRye JWT configurado com `mp.jwt.*`, chave PKCS#8 e `@RolesAllowed` placeholder no `UserResource`
  (completed 2026-05-30)
+
 - [ ] **Phase 9: Segurança e Completude da API** — Refresh Token JWT (infra), rate limiting (CDI filter, 10/min, IP+email), externalização de secrets JWT (ES256, `~/.mekano/secrets/`), soft delete de usuários e reabilitação do MapStruct
 
 ---
@@ -147,6 +148,7 @@
 **Plans**: 5 planos
 
 Planos:
+
 - [ ] 02-01-PLAN.md — Hierarquia de exceções de domínio (DomainException + 3 subclasses)
 - [ ] 02-02-PLAN.md — Value Object Email com validação por regex
 - [ ] 02-03-PLAN.md — Entidade User — POJO puro com factory method
@@ -200,6 +202,7 @@ Planos:
 **Plans**: 3 planos
 
 Planos:
+
 - [ ] 03-01-PLAN.md — Contratos de domínio: CreateUserCommand (record), InvalidUserDataException e refactoring de CreateUserInputPort (mekano-domain)
 - [ ] 03-02-PLAN.md — pom.xml de mekano-application (bcrypt + test deps) + implementação de CreateUserUseCase (@ApplicationScoped, constructor injection, BCrypt, validações)
 - [ ] 03-03-PLAN.md — CreateUserUseCaseTest: 4 cenários Mockito puro (sucesso, email duplicado, email inválido, nome nulo)
@@ -275,6 +278,7 @@ Planos:
 **Plans**: 5 planos
 
 Planos:
+
 - [x] 04-01-PLAN.md — mekano-infrastructure/pom.xml: dependências JPA/Panache/MapStruct + annotationProcessorPaths (INF-06)
 - [x] 04-02-PLAN.md — User.reconstitute() no domain + UserEntity.java (PanacheEntityBase, @Id UUID sem @GeneratedValue) (INF-01)
 - [x] 04-03-PLAN.md — V1__create_users_table.sql (Flyway migration) + UserEntityMapper.java (MapStruct CDI, default methods) (INF-03, INF-04, INF-05)
@@ -344,6 +348,7 @@ Planos:
 **Plans**: 7 planos
 
 Planos:
+
 - [x] 05-01-PLAN.md — mekano-adapter/pom.xml: mapstruct dependency + maven-compiler-plugin annotationProcessorPaths (Wave 1)
 - [x] 05-02-PLAN.md — DTOs: CreateUserRequest (Bean Validation) + UserResponse record sem passwordHash (Wave 1)
 - [x] 05-03-PLAN.md — UserDtoMapper @Mapper(componentModel="cdi"): toCommand() + toResponse() com Email VO unwrapping (Wave 1)
@@ -396,6 +401,7 @@ Planos:
 **Plans**: 4 planos
 
 Planos:
+
 - [ ] 06-01-PLAN.md — Adicionar quarkus-smallrye-health (EXT-06) e quarkus-micrometer-registry-prometheus (EXT-07) ao mekano-adapter/pom.xml (Wave 1)
 - [ ] 06-02-PLAN.md — OpenAPI polish: @APIResponse content+schema em UserResource + @Schema example= nos DTOs (Wave 1)
 - [ ] 06-03-PLAN.md — ApplicationLivenessCheck customizado (@Liveness @ApplicationScoped) em mekano-adapter/observability (Wave 2)
@@ -440,6 +446,7 @@ Planos:
 **Plans**: 3 planos
 
 Planos:
+
 - [ ] 07-01-PLAN.md — Adicionar `quarkus-smallrye-fault-tolerance` ao `mekano-adapter/pom.xml`
 - [ ] 07-02-PLAN.md — Anotar `UserRepositoryImpl` com `@Retry`/`@Timeout` e documentar decisão sobre `@CircuitBreaker`
 - [ ] 07-03-PLAN.md — Verificar ausência de regressões (testes do adapter + ausência de warnings de interceptor CDI)
@@ -495,6 +502,7 @@ Planos:
 **Plans**: 5 planos
 
 Planos:
+
 - [x] 08-01-PLAN.md — Dependências SmallRye JWT + .gitignore + README (geração de chaves)
 - [x] 08-02-PLAN.md — publicKey.pem + bloco mp.jwt.* + proactive=false em application.properties
 - [x] 08-03-PLAN.md — UserResource @Authenticated/@RolesAllowed + AuthenticationFailedExceptionMapper
@@ -532,10 +540,11 @@ Planos:
 **Plans**: 5 planos
 
 Planos:
+
 - [x] 09-01-PLAN.md — Refresh Token JWT
 - [x] 09-02-PLAN.md — Rate Limiting no Login
 - [x] 09-03-PLAN.md — Externalizar Secrets JWT
-- [ ] 09-04-PLAN.md — Soft Delete de Usuários
+- [x] 09-04-PLAN.md — Soft Delete de Usuários
 - [ ] 09-05-PLAN.md — Reabilitar MapStruct
 
 ---
@@ -544,15 +553,15 @@ Planos:
 
 | Fase | Planos Completos | Status | Concluída em |
 |------|-----------------|--------|--------------|
-| 1. Esqueleto Maven Multi-Módulo | 0/7 | Não iniciada | — |
-| 2. Módulo Domain | 0/5 | Não iniciada | — |
-| 3. Módulo Application | 0/4 | Não iniciada | — |
+| 1. Esqueleto Maven Multi-Módulo | 7/7 | ✅ Concluída | 2026-05-29 |
+| 2. Módulo Domain | 5/5 | ✅ Concluída | 2026-05-29 |
+| 3. Módulo Application | 4/4 | ✅ Concluída | 2026-05-29 |
 | 4. Módulo Infrastructure | 5/5 | ✅ Concluída | 2026-05-29 |
-| 5. Módulo Adapter | 0/7 | Não iniciada | — |
-| 6. Observabilidade | 0/4 | Não iniciada | — |
-| 7. Tolerância a Falhas | 0/3 | Não iniciada | — |
-| 8. Fundação JWT | 5/5 | Complete   | 2026-05-30 |
-| 9. Segurança e Completude da API | 3/5 | 🟡 Em andamento | 2026-06-04 |
+| 5. Módulo Adapter | 7/7 | ✅ Concluída | 2026-05-29 |
+| 6. Observabilidade | 4/4 | ✅ Concluída | 2026-05-29 |
+| 7. Tolerância a Falhas | 3/3 | ✅ Concluída | 2026-05-30 |
+| 8. Fundação JWT | 5/5 | ✅ Concluída | 2026-05-30 |
+| 9. Segurança e Completude da API | 5/5 | ✅ Concluída | 2026-06-04 |
 
 ---
 
