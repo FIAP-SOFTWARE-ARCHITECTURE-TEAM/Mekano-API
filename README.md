@@ -61,47 +61,64 @@ Easily start your REST Web Services
 
 [Related guide section...](https://quarkus.io/guides/getting-started-reactive#reactive-jax-rs-resources)
 
-## Geração de chaves JWT (Phase 8)
+## Geração de chaves JWT (Phase 9)
 
-Esta seção descreve como gerar localmente o par de chaves RSA usado pelo SmallRye JWT
-para verificar tokens MicroProfile JWT (EXT-09). A chave privada é estritamente
-dev-local — **nunca** deve ser commitada (D-08, `.gitignore` veta `privateKey*.pem`).
+Esta seção descreve como gerar localmente o par de chaves Ed25519 (ES256/EdDSA)
+usado pelo SmallRye JWT para verificar tokens MicroProfile JWT (Phase 9, D-10).
+A chave privada é estritamente dev-local — **nunca** deve ser commitada
+(D-09, `.gitignore` veta `privateKey*.pem` e `**/privateKey.pem`).
 
-### 1. Comandos `openssl` (gerar par RSA em PKCS#8)
+A migração de RSA (Phase 8) para Ed25519 foi feita na Phase 9, Plan 09-03:
+algoritmo mais moderno, tamanho de chave fixo (sem necessidade de `initialize(2048)`),
+e suporte nativo no Java 17+ via `KeyPairGenerator.getInstance("Ed25519")`.
 
-A ordem abaixo é obrigatória — o SmallRye JWT exige a chave privada em formato
-PKCS#8 (G7):
+### 1. Criar diretório de secrets (fora do repositório)
+
+A chave privada reside em `~/.mekano/secrets/privatekey.pem`, um diretório
+fora do repositório git — eliminando o risco de versionamento acidental.
 
 ```bash
-# 1) Gera chave privada RSA 2048 bits (formato PKCS#1)
-openssl genrsa -out privateKey.pem 2048
-
-# 2) Converte para PKCS#8 sem cifragem — formato aceito pelo SmallRye JWT
-openssl pkcs8 -topk8 -nocrypt -inform pem -in privateKey.pem -outform pem -out privateKey_pkcs8.pem
-
-# 3) Extrai a chave pública correspondente para o classpath do adapter
-openssl rsa -pubout -in privateKey.pem -out mekano-adapter/src/main/resources/publicKey.pem
+mkdir -p ~/.mekano/secrets
 ```
 
-### 2. Onde cada arquivo vive (e por quê)
+### 2. Gerar par Ed25519 via `openssl`
 
-- `mekano-adapter/src/main/resources/publicKey.pem` — **rastreado** no git
-  (D-09). É empacotado no artefato e usado pelo Quarkus para verificar tokens em
+```bash
+# 1) Gerar chave privada Ed25519 (PKCS#8)
+openssl genpkey -algorithm Ed25519 -out ~/.mekano/secrets/privatekey.pem
+
+# 2) Extrair chave pública para o classpath do adapter
+openssl pkey -in ~/.mekano/secrets/privatekey.pem -pubout -out mekano-adapter/src/main/resources/publicKey.pem
+```
+
+### 3. Onde cada arquivo vive (e por quê)
+
+- `mekano-adapter/src/main/resources/publicKey.pem` — **rastreado** no git.
+  É empacotado no artefato e usado pelo Quarkus para verificar tokens em
   runtime via `mp.jwt.verify.publickey.location`.
-- `privateKey.pem` e `privateKey_pkcs8.pem` — **fora** do controle de versão
-  (D-08). O `.gitignore` raiz veta o padrão `privateKey*.pem`. Use a chave
-  PKCS#8 apenas no seu fluxo local de emissão de tokens (curl/Postman).
+- `~/.mekano/secrets/privatekey.pem` — **fora** do repositório git, em
+  diretório dedicado no perfil do usuário. O caminho é configurado em
+  `application.properties` via `${user.home}/.mekano/secrets/privatekey.pem`.
 - Os testes automatizados **não** dependem desses arquivos: o
-  `JwtTestProfile` (plano 08-05) gera um par RSA em memória programaticamente,
+  `JwtTestProfile` gera um par Ed25519 em memória programaticamente,
   o que torna a suíte CI-friendly e reprodutível.
 
-### 3. Variável de ambiente `MP_JWT_ISSUER`
+### 4. Variável de ambiente `MP_JWT_ISSUER`
 
 O issuer default configurado em `application.properties` é
-`https://mekano.fiap.com.br/auth`. Para sobrescrever em runtime (D-05),
+`https://mekano.fiap.com.br/auth`. Para sobrescrever em runtime,
 exporte `MP_JWT_ISSUER` antes de subir a aplicação:
 
 ```bash
 export MP_JWT_ISSUER=https://meu-issuer-local/auth
 ./mvnw -pl mekano-adapter quarkus:dev
+```
+
+### 5. Personalizar caminho da chave privada (produção)
+
+Em ambientes produtivos, o caminho da chave privada pode ser sobrescrito
+via variável de ambiente `SMALLRYE_JWT_SIGN_KEY_LOCATION`:
+
+```bash
+export SMALLRYE_JWT_SIGN_KEY_LOCATION=/etc/secrets/jwt/privatekey.pem
 ```
