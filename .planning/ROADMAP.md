@@ -534,7 +534,7 @@ Planos:
 Planos:
 - [x] 09-01-PLAN.md — Refresh Token JWT
 - [x] 09-02-PLAN.md — Rate Limiting no Login
-- [ ] 09-03-PLAN.md — Externalizar Secrets JWT
+- [x] 09-03-PLAN.md — Externalizar Secrets JWT
 - [ ] 09-04-PLAN.md — Soft Delete de Usuários
 - [ ] 09-05-PLAN.md — Reabilitar MapStruct
 
@@ -552,7 +552,7 @@ Planos:
 | 6. Observabilidade | 0/4 | Não iniciada | — |
 | 7. Tolerância a Falhas | 0/3 | Não iniciada | — |
 | 8. Fundação JWT | 5/5 | Complete   | 2026-05-30 |
-| 9. Segurança e Completude da API | 2/5 | 🟡 Em andamento | 2026-06-03 |
+| 9. Segurança e Completude da API | 3/5 | 🟡 Em andamento | 2026-06-04 |
 
 ---
 
