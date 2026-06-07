@@ -43,7 +43,7 @@ public class LoginRateLimiterFilter implements ContainerRequestFilter {
     public void filter(ContainerRequestContext requestContext) throws IOException {
         // Aplicar rate limit apenas a POST /auth/login
         if (!"/auth/login".equals(requestContext.getUriInfo().getPath()) ||
-                !\"POST\".equals(requestContext.getMethod())) {
+                !"POST".equals(requestContext.getMethod())) {
             return;
         }
 

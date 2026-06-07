@@ -71,6 +71,15 @@
     <build>
         <pluginManagement>
             <plugins>
+                <!-- Quarkus — pula em módulos que não são quarkus (domain/application/infrastructure) -->
+                <plugin>
+                    <groupId>io.quarkus.platform</groupId>
+                    <artifactId>quarkus-maven-plugin</artifactId>
+                    <version>${quarkus.platform.version}</version>
+                    <configuration>
+                        <skip>true</skip>
+                    </configuration>
+                </plugin>
                 <!-- Jandex — versão gerenciada; sub-módulos adicionam execution (MOD-07) -->
                 <plugin>
                     <groupId>io.smallrye</groupId>

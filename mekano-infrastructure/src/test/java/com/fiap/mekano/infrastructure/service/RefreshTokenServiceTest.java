@@ -52,7 +52,7 @@ class RefreshTokenServiceTest {
 
     @Test
     @TestTransaction
-    void generateAndRotate_shouldInvalidateOldToken() {
+    void generateAndRotate_shouldInvalidateOldToken() throws InvalidRefreshTokenException {
         // Arrange
         User user = criarUsuario();
         TokenPair firstPair = service.generateTokens(user.getId());
@@ -75,7 +75,7 @@ class RefreshTokenServiceTest {
 
     @Test
     @TestTransaction
-    void rotatedToken_shouldBeRejected() {
+    void rotatedToken_shouldBeRejected() throws InvalidRefreshTokenException {
         // Arrange
         User user = criarUsuario();
         TokenPair firstPair = service.generateTokens(user.getId());
