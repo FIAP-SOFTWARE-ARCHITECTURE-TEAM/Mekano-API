@@ -48,7 +48,7 @@
 
         <!-- EXT-08: SmallRye Fault Tolerance — @Retry, @Timeout em UserRepositoryImpl (D-01).
              Declarada AQUI (não em adapter) porque as anotações MP-FT são processadas em
-             compile-time no módulo onde residem. mekano-adapter→mekano-infrastructure é
+             compile-time no módulo onde residem. mekano-rest→mekano-infrastructure é
              runtime-scope; relação inversa não existe. Ver .planning/phases/07-fault-tolerance/07-CONTEXT.md. -->
         <dependency>
             <groupId>io.quarkus</groupId>

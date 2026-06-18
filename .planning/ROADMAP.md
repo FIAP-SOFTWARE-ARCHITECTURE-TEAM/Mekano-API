@@ -29,7 +29,7 @@
 
 ### Phase 1: Esqueleto Maven Multi-Módulo
 
-**Goal**: Estrutura multi-módulo Maven compila sem erros, todas as extensões Quarkus necessárias declaradas no módulo `adapter`, docker-compose disponível e `./mvnw quarkus:dev -pl mekano-adapter -am` sobe a aplicação.
+**Goal**: Estrutura multi-módulo Maven compila sem erros, todas as extensões Quarkus necessárias declaradas no módulo `adapter`, docker-compose disponível e `./mvnw quarkus:dev -pl mekano-rest -am` sobe a aplicação.
 
 **Motivo**: Nenhuma outra fase pode começar sem a estrutura de módulos correta. Erros de configuração no `pom.xml` — packaging errado, `quarkus-maven-plugin` no lugar errado, BOM ausente — silenciosamente quebram CDI, Jandex e o build nativo. Esta fase é a fundação inegociável de tudo.
 
@@ -42,10 +42,10 @@
 1. **[CRÍTICO]** Refatorar `pom.xml` raiz:
    - Alterar `<packaging>quarkus</packaging>` → `<packaging>pom</packaging>`
    - Remover bloco `<build><plugins>` contendo `quarkus-maven-plugin`
-   - Adicionar `<modules>`: `mekano-domain`, `mekano-application`, `mekano-infrastructure`, `mekano-adapter`
+   - Adicionar `<modules>`: `mekano-domain`, `mekano-application`, `mekano-infrastructure`, `mekano-rest`
    - Adicionar `<dependencyManagement>` com `quarkus-bom:3.36.0` (import), `mapstruct:1.6.3`, `lombok:1.18.36`, `lombok-mapstruct-binding:0.2.0`
    - Adicionar `<pluginManagement>` com `jandex-maven-plugin:3.5.3` (io.smallrye) e `maven-compiler-plugin:3.15.0`
-   - Mover `GreetingResource.java` para `mekano-adapter` (ou deletar — é apenas scaffold)
+   - Mover `GreetingResource.java` para `mekano-rest` (ou deletar — é apenas scaffold)
 
 2. Criar `mekano-domain/pom.xml`:
    - `<packaging>jar</packaging>`
@@ -66,7 +66,7 @@
    - `jandex-maven-plugin` configurado (igual ao application)
    - Criar diretórios: `src/main/java/com/fiap/mekano/infrastructure/`
 
-5. Criar `mekano-adapter/pom.xml`:
+5. Criar `mekano-rest/pom.xml`:
    - `<packaging>quarkus</packaging>`
    - `quarkus-maven-plugin` com `<extensions>true</extensions>` — **ÚNICO módulo com este plugin**
    - Dependências: `mekano-domain` (compile), `mekano-application` (compile), `mekano-infrastructure` (compile)
@@ -80,7 +80,7 @@
    - Health check: `pg_isready -U ${POSTGRES_USER}`
    - Volume nomeado para persistência local
 
-7. **[PARALELO com Plano 5]** Criar `mekano-adapter/src/main/resources/application.properties`:
+7. **[PARALELO com Plano 5]** Criar `mekano-rest/src/main/resources/application.properties`:
    - Perfil `%dev`: `quarkus.datasource.jdbc.url=jdbc:postgresql://localhost:5432/mekano`, credenciais hardcoded para dev
    - Perfil `%prod`: datasource via `${DB_URL}`, `${DB_USER}`, `${DB_PASSWORD}`
    - Perfil `%test`: deixar sem URL (ativa DevServices automaticamente)
@@ -89,7 +89,7 @@
 **Critérios UAT (o que deve ser VERDADE ao fim desta fase)**:
 
 1. `./mvnw clean install -DskipTests` na raiz compila todos os 4 módulos sem erros — output final mostra `BUILD SUCCESS` para cada sub-módulo
-2. `./mvnw quarkus:dev -pl mekano-adapter -am` inicia sem `ClassNotFoundException`, `UnsatisfiedResolutionException` ou erros de dependência circular
+2. `./mvnw quarkus:dev -pl mekano-rest -am` inicia sem `ClassNotFoundException`, `UnsatisfiedResolutionException` ou erros de dependência circular
 3. `docker-compose up -d` sobe PostgreSQL na porta 5432 e `docker-compose ps` reporta status `healthy`
 4. `curl http://localhost:8080/q/dev-ui/` retorna página HTML da Dev UI do Quarkus (modo dev ativo)
 
@@ -256,7 +256,7 @@ Planos:
    - Métodos de escrita (`save`) anotados com `@Transactional` — **ÚNICO local válido para esta anotação**
    - `findByEmail`: usa `find("email", email).firstResultOptional()`
 
-6. Atualizar `mekano-adapter/src/main/resources/application.properties`:
+6. Atualizar `mekano-rest/src/main/resources/application.properties`:
    - `quarkus.flyway.migrate-at-start=true`
    - `quarkus.hibernate-orm.schema-management.strategy=validate`
    - `%test.quarkus.flyway.clean-at-start=true`
@@ -300,7 +300,7 @@ Planos:
 
 **Planos**:
 
-1. **[CRÍTICO]** Configurar `maven-compiler-plugin` em `mekano-adapter/pom.xml` com mesmos `annotationProcessorPaths` (lombok → binding → mapstruct-processor) — necessário pois adapter também usa MapStruct
+1. **[CRÍTICO]** Configurar `maven-compiler-plugin` em `mekano-rest/pom.xml` com mesmos `annotationProcessorPaths` (lombok → binding → mapstruct-processor) — necessário pois adapter também usa MapStruct
 
 2. Criar DTOs em `adapter/dto/`:
    - `dto/request/CreateUserRequest.java` — campos com `@NotBlank String name`, `@Email @NotBlank String email`, `@NotNull @Size(min=6) String password`; anotação `@Schema` para OpenAPI
@@ -331,7 +331,7 @@ Planos:
    - `mp.openapi.info.description=Clean Architecture REST API — FIAP Software Architecture`
    - Adicionar `@Operation`, `@APIResponse(responseCode="201")`, `@APIResponse(responseCode="400")`, `@APIResponse(responseCode="409")` em `UserResource`
 
-7. Criar `@QuarkusTest` em `mekano-adapter/src/test/java/`:
+7. Criar `@QuarkusTest` em `mekano-rest/src/test/java/`:
    - `UserResourceTest` — usa REST Assured:
      - `POST /users` com body JSON válido → assert `HTTP 201`, body contém `"id"` e `"email"`, **não** contém `"passwordHash"`
      - Mesmo request repetido → assert `HTTP 409`, body contém `"message"`
@@ -344,13 +344,13 @@ Planos:
 2. Mesmo request repetido imediatamente retorna `HTTP 409 Conflict` com body JSON `{"message": "..."}`
 3. `POST /users` com `"email": "naoemail"` retorna `HTTP 400 Bad Request` com lista de erros de validação
 4. `GET http://localhost:8080/q/swagger-ui` retorna HTML completo com documentação do endpoint `POST /users`, incluindo schemas de request e responses 201/400/409
-5. `./mvnw test -pl mekano-adapter -am` executa todos os testes REST Assured com `BUILD SUCCESS`
+5. `./mvnw test -pl mekano-rest -am` executa todos os testes REST Assured com `BUILD SUCCESS`
 
 **Plans**: 7 planos
 
 Planos:
 
-- [x] 05-01-PLAN.md — mekano-adapter/pom.xml: mapstruct dependency + maven-compiler-plugin annotationProcessorPaths (Wave 1)
+- [x] 05-01-PLAN.md — mekano-rest/pom.xml: mapstruct dependency + maven-compiler-plugin annotationProcessorPaths (Wave 1)
 - [x] 05-02-PLAN.md — DTOs: CreateUserRequest (Bean Validation) + UserResponse record sem passwordHash (Wave 1)
 - [x] 05-03-PLAN.md — UserDtoMapper @Mapper(componentModel="cdi"): toCommand() + toResponse() com Email VO unwrapping (Wave 1)
 - [x] 05-04-PLAN.md — ExceptionMappers: ErrorResponse record + DuplicateUser(409) + UserNotFound(404) + ConstraintViolation(400) (Wave 1)
@@ -372,7 +372,7 @@ Planos:
 
 **Planos**:
 
-1. Adicionar extensões ao `mekano-adapter/pom.xml`:
+1. Adicionar extensões ao `mekano-rest/pom.xml`:
    - `quarkus-smallrye-health` (EXT-06)
    - `quarkus-micrometer-registry-prometheus` (EXT-07)
 
@@ -403,9 +403,9 @@ Planos:
 
 Planos:
 
-- [ ] 06-01-PLAN.md — Adicionar quarkus-smallrye-health (EXT-06) e quarkus-micrometer-registry-prometheus (EXT-07) ao mekano-adapter/pom.xml (Wave 1)
+- [ ] 06-01-PLAN.md — Adicionar quarkus-smallrye-health (EXT-06) e quarkus-micrometer-registry-prometheus (EXT-07) ao mekano-rest/pom.xml (Wave 1)
 - [ ] 06-02-PLAN.md — OpenAPI polish: @APIResponse content+schema em UserResource + @Schema example= nos DTOs (Wave 1)
-- [ ] 06-03-PLAN.md — ApplicationLivenessCheck customizado (@Liveness @ApplicationScoped) em mekano-adapter/observability (Wave 2)
+- [ ] 06-03-PLAN.md — ApplicationLivenessCheck customizado (@Liveness @ApplicationScoped) em mekano-rest/observability (Wave 2)
 - [ ] 06-04-PLAN.md — ObservabilityEndpointsTest @QuarkusTest com 5 cenários REST Assured cobrindo UATs 1-4 (Wave 3)
 
 ---
@@ -422,9 +422,9 @@ Planos:
 
 **Planos**:
 
-1. Adicionar `quarkus-smallrye-fault-tolerance` ao `mekano-adapter/pom.xml`:
+1. Adicionar `quarkus-smallrye-fault-tolerance` ao `mekano-rest/pom.xml`:
    - Confirmar que a extensão não estava declarada anteriormente; adicionar se ausente
-   - Executar `./mvnw compile -pl mekano-adapter -am` para confirmar resolução sem conflitos
+   - Executar `./mvnw compile -pl mekano-rest -am` para confirmar resolução sem conflitos
 
 2. Anotar métodos de `UserRepositoryImpl` com políticas de fault tolerance:
    - `findByEmail(String email)` → `@Retry(maxRetries = 3, delay = 200, delayUnit = ChronoUnit.MILLIS)`
@@ -434,21 +434,21 @@ Planos:
    - **Atenção**: `@Transactional` + `@Retry` em mesmo método requer que `@Transactional` esteja na camada acima (use case) — confirmar que não há conflito, dado que use cases não têm `@Transactional`
 
 3. **[PARALELO com Plano 2]** Verificar ausência de regressões:
-   - `./mvnw test -pl mekano-adapter -am` deve continuar passando com `BUILD SUCCESS`
+   - `./mvnw test -pl mekano-rest -am` deve continuar passando com `BUILD SUCCESS`
    - Verificar logs de startup por warnings de interceptor conflict entre `@Transactional` e fault tolerance
 
 **Critérios UAT (o que deve ser VERDADE ao fim desta fase)**:
 
 1. `UserRepositoryImpl.findByEmail(...)` tem `@Retry(maxRetries = 3)` presente — verificável por `grep -n "@Retry" mekano-infrastructure/src/main/java`
-2. `./mvnw test -pl mekano-adapter -am` continua passando com `BUILD SUCCESS` — nenhuma regressão introduzida
+2. `./mvnw test -pl mekano-rest -am` continua passando com `BUILD SUCCESS` — nenhuma regressão introduzida
 3. Log de startup **não** exibe `WARN` relacionado a conflito de interceptores CDI entre `@Transactional` e anotações de fault tolerance
-4. `./mvnw dependency:tree -pl mekano-adapter` confirma presença de `quarkus-smallrye-fault-tolerance` no classpath
+4. `./mvnw dependency:tree -pl mekano-rest` confirma presença de `quarkus-smallrye-fault-tolerance` no classpath
 
 **Plans**: 3 planos
 
 Planos:
 
-- [ ] 07-01-PLAN.md — Adicionar `quarkus-smallrye-fault-tolerance` ao `mekano-adapter/pom.xml`
+- [ ] 07-01-PLAN.md — Adicionar `quarkus-smallrye-fault-tolerance` ao `mekano-rest/pom.xml`
 - [ ] 07-02-PLAN.md — Anotar `UserRepositoryImpl` com `@Retry`/`@Timeout` e documentar decisão sobre `@CircuitBreaker`
 - [ ] 07-03-PLAN.md — Verificar ausência de regressões (testes do adapter + ausência de warnings de interceptor CDI)
 
@@ -466,14 +466,14 @@ Planos:
 
 **Planos**:
 
-1. Adicionar `quarkus-smallrye-jwt` ao `mekano-adapter/pom.xml`:
+1. Adicionar `quarkus-smallrye-jwt` ao `mekano-rest/pom.xml`:
    - Adicionar também `quarkus-smallrye-jwt-build` em `<scope>test</scope>` para geração de tokens em testes
 
 2. Gerar par de chaves RSA e configurar:
    - `openssl genrsa -out privateKey.pem 2048`
    - `openssl pkcs8 -topk8 -nocrypt -inform pem -in privateKey.pem -outform pem -out privateKey_pkcs8.pem`
    - `openssl rsa -pubout -in privateKey.pem -out publicKey.pem`
-   - Colocar `publicKey.pem` em `mekano-adapter/src/main/resources/`
+   - Colocar `publicKey.pem` em `mekano-rest/src/main/resources/`
    - `privateKey_pkcs8.pem` **não** vai para resources — apenas para uso local em testes/geração
 
 3. Configurar `application.properties` com namespace correto:
@@ -497,8 +497,8 @@ Planos:
 
 1. `POST http://localhost:8080/users` **sem** header `Authorization` retorna `HTTP 401 Unauthorized`
 2. `POST http://localhost:8080/users` com token JWT válido (gerado com `SmallRyeJwtBuildApi` e chave correta) retorna `HTTP 201 Created`
-3. `grep "mp.jwt.verify.publickey.location" mekano-adapter/src/main/resources/application.properties` retorna resultado — e `grep "quarkus.smallrye-jwt" application.properties` retorna **zero** resultados
-4. `./mvnw test -pl mekano-adapter -am` continua passando com `BUILD SUCCESS` — testes existentes usam `@TestSecurity` para bypassar auth
+3. `grep "mp.jwt.verify.publickey.location" mekano-rest/src/main/resources/application.properties` retorna resultado — e `grep "quarkus.smallrye-jwt" application.properties` retorna **zero** resultados
+4. `./mvnw test -pl mekano-rest -am` continua passando com `BUILD SUCCESS` — testes existentes usam `@TestSecurity` para bypassar auth
 
 **Plans**: 5 planos
 
@@ -610,7 +610,7 @@ Planos:
 | MOD-02 | `mekano-domain`: jar, sem deps internas | Fase 1 | Pending |
 | MOD-03 | `mekano-application`: jar, depende de domain | Fase 1 | Pending |
 | MOD-04 | `mekano-infrastructure`: jar, depende de domain | Fase 1 | Pending |
-| MOD-05 | `mekano-adapter`: packaging=quarkus | Fase 1 | Pending |
+| MOD-05 | `mekano-rest`: packaging=quarkus | Fase 1 | Pending |
 | MOD-06 | `quarkus-maven-plugin` apenas no adapter | Fase 1 | Pending |
 | MOD-07 | `jandex-maven-plugin` no application + infrastructure | Fase 1 | Pending |
 | MOD-08 | `quarkus-bom` via dependencyManagement no root | Fase 1 | Pending |
@@ -665,7 +665,7 @@ Planos:
 
 | # | Armadilha | Sintoma | Fase Afetada | Fix |
 |---|-----------|---------|--------------|-----|
-| G1 | `quarkus-maven-plugin` no POM errado | `quarkus:dev` falha ou native profile vaza | Fase 1 | Plugin apenas em `mekano-adapter/pom.xml` |
+| G1 | `quarkus-maven-plugin` no POM errado | `quarkus:dev` falha ou native profile vaza | Fase 1 | Plugin apenas em `mekano-rest/pom.xml` |
 | G2 | Jandex ausente em sub-módulos | `UnsatisfiedResolutionException` no startup | Fases 1, 3 | `jandex-maven-plugin` em `application` e `infrastructure` |
 | G3 | Ordem errada de `annotationProcessorPaths` | Mapper compila mas produz campos `null` | Fases 4, 5 | Lombok → `lombok-mapstruct-binding:0.2.0` → mapstruct-processor |
 | G4 | Flyway naming convention errada | Migrations silenciosamente ignoradas | Fase 4 | `V1__desc.sql` — V maiúsculo + duplo underscore |

@@ -82,7 +82,7 @@ progress:
 25. `quarkus.rest.path=/api/v1` sobre `@ApplicationPath("/api/v1")` — endpoints /q/health e /q/metrics inalterados (D-08, 10-02)
 26. GenericExceptionMapper com ConcurrentHashMap — dispatching por tipo, fallback 500 com stacktrace; mapeadores antigos preservados com @Deprecated para rollback (D-09, 10-02)
 27. Jackson timezone America/Sao_Paulo faz LocalDateTime serializar com offset ISO-8601 (D-10, 10-02)
-28. CI/CD via GitHub Actions: `mvn verify -pl mekano-adapter -am` sem Docker explícito — DevServices do Quarkus auto-gerencia PostgreSQL (D-11, 10-03)
+28. CI/CD via GitHub Actions: `mvn verify -pl mekano-rest -am` sem Docker explícito — DevServices do Quarkus auto-gerencia PostgreSQL (D-11, 10-03)
 29. Logging JSON: `quarkus.log.console.json=true` com pretty-print=false — uma linha por JSON para Loki/Datadog; perfil `%dev` = DEBUG, `%prod` = INFO, `%test` = WARN (D-12, 10-03)
 30. Cache Caffeine: `@CacheResult(cacheName="users")` em findById/findByEmail, `@CacheInvalidate(cacheName="users")` em save/markAsDeleted; expire-after-write=60s, max-size=100 (D-13, 10-03)
 31. FT Tests: @Retry/@Timeout testados via integração com UserRepositoryImpl; @CircuitBreaker omitido (PostgreSQL local não requer CB); assertj-core adicionado como test dep no adapter (D-14, 10-04)

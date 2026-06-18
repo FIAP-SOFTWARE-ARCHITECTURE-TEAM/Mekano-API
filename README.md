@@ -88,12 +88,12 @@ mkdir -p ~/.mekano/secrets
 openssl genpkey -algorithm Ed25519 -out ~/.mekano/secrets/privatekey.pem
 
 # 2) Extrair chave pública para o classpath do adapter
-openssl pkey -in ~/.mekano/secrets/privatekey.pem -pubout -out mekano-adapter/src/main/resources/publicKey.pem
+openssl pkey -in ~/.mekano/secrets/privatekey.pem -pubout -out mekano-rest/src/main/resources/publicKey.pem
 ```
 
 ### 3. Onde cada arquivo vive (e por quê)
 
-- `mekano-adapter/src/main/resources/publicKey.pem` — **rastreado** no git.
+- `mekano-rest/src/main/resources/publicKey.pem` — **rastreado** no git.
   É empacotado no artefato e usado pelo Quarkus para verificar tokens em
   runtime via `mp.jwt.verify.publickey.location`.
 - `~/.mekano/secrets/privatekey.pem` — **fora** do repositório git, em
@@ -111,7 +111,7 @@ exporte `MP_JWT_ISSUER` antes de subir a aplicação:
 
 ```bash
 export MP_JWT_ISSUER=https://meu-issuer-local/auth
-./mvnw -pl mekano-adapter quarkus:dev
+./mvnw -pl mekano-rest quarkus:dev
 ```
 
 ### 5. Personalizar caminho da chave privada (produção)
