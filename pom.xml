@@ -12,7 +12,7 @@
         <module>mekano-domain</module>
         <module>mekano-application</module>
         <module>mekano-infrastructure</module>
-        <module>mekano-adapter</module>
+        <module>mekano-rest</module>
     </modules>
 
     <properties>
