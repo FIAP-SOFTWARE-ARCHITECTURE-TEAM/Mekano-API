@@ -1,6 +1,5 @@
 package com.fiap.mekano.rest.api;
 
-import jakarta.ws.rs.ApplicationPath;
 import jakarta.ws.rs.core.Application;
 import org.eclipse.microprofile.openapi.annotations.OpenAPIDefinition;
 import org.eclipse.microprofile.openapi.annotations.enums.SecuritySchemeType;
@@ -28,7 +27,6 @@ import org.eclipse.microprofile.openapi.annotations.security.SecurityScheme;
  * sobrescrevem com {@code @SecurityRequirement(name = "")} para indicar
  * que não exigem token.
  */
-@ApplicationPath("/")
 @OpenAPIDefinition(
         info = @Info(
                 title = "Mekano API",

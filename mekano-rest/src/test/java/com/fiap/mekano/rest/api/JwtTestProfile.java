@@ -178,9 +178,13 @@ public class JwtTestProfile implements QuarkusTestProfile {
         // and in practice falls back to the static publicKey.pem on classpath —
         // signature verify then fails for tokens we sign here. Overriding `.location`
         // com o temp file (cacheado em PUB_PEM_FILE_PATH — IN-04) é inequívoco.
+        // smallrye.jwt.sign.algorithm explícito: SmallRye JWT precisa do hint
+        // de algoritmo para criar o KeyFactory correto ao ler o PEM Ed25519.
+        // Sem ele, a chave PKCS#8 pode não ser reconhecida para signing (SRJWT05028).
         return Map.of(
                 "mp.jwt.verify.publickey.location", PUB_PEM_FILE_PATH,
-                "smallrye.jwt.sign.key.location", PRIV_PEM_FILE_PATH
+                "smallrye.jwt.sign.key.location", PRIV_PEM_FILE_PATH,
+                "smallrye.jwt.sign.algorithm", "EdDSA"
         );
     }
 }

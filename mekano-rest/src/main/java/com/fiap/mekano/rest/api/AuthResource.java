@@ -11,6 +11,8 @@ import io.smallrye.jwt.build.Jwt;
 import jakarta.annotation.security.PermitAll;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
+
+import java.security.PrivateKey;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
@@ -65,6 +67,9 @@ public class AuthResource {
     @Inject
     AuthenticateUserInputPort authenticateUserInputPort;
 
+    @Inject
+    PrivateKey signingKey;
+
     @ConfigProperty(name = "mp.jwt.verify.issuer")
     String issuer;
 
@@ -108,7 +113,7 @@ public class AuthResource {
                 .upn(user.getEmail().getValue())
                 .groups(Set.of("user"))
                 .expiresIn(ttl)
-                .sign();
+                .sign(signingKey);
 
         LoginResponse response = new LoginResponse(token, "Bearer", ttl.toSeconds());
         return Response.ok(response).build();
