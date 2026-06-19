@@ -80,7 +80,7 @@ class UserResourceTest {
                 .post("/api/v1/users")
                 .then()
                 .statusCode(400)
-                .body("message", notNullValue());
+                .body("violations", notNullValue());
     }
 
     @Test
@@ -94,6 +94,6 @@ class UserResourceTest {
                 .post("/api/v1/users")
                 .then()
                 .statusCode(400)
-                .body("message", notNullValue());
-    }
+                .body("violations", notNullValue());
+}
 }
