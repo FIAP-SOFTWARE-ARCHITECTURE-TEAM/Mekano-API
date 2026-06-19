@@ -102,7 +102,8 @@ public class RefreshTokenService {
         // Gera novo par (chamada recursiva para gerar e persistir)
         generateTokens(stored.userId());
 
-        return stored;
+        // Recarrega dados atualizados do token antigo (agora rotacionado)
+        return refreshTokenRepository.findByJti(jti).orElse(stored);
     }
 
     /**

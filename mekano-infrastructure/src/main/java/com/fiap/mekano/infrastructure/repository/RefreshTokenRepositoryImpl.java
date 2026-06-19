@@ -30,10 +30,10 @@ public class RefreshTokenRepositoryImpl implements RefreshTokenRepositoryPort {
     @Transactional
     public void save(String jti, String tokenHash, UUID userId, Instant expiresAt) {
         RefreshTokenEntity entity = new RefreshTokenEntity();
-        entity.setId(UUID.randomUUID());
+        entity.setUuid(UUID.randomUUID());
         entity.setJti(jti);
         entity.setTokenHash(tokenHash);
-        entity.setUserId(userId);
+        entity.setUserUuid(userId);
         entity.setExpiresAt(expiresAt);
         entity.setCreatedAt(Instant.now());
         panacheRepository.persist(entity);
@@ -42,14 +42,15 @@ public class RefreshTokenRepositoryImpl implements RefreshTokenRepositoryPort {
     @Override
     public Optional<RefreshTokenData> findByJti(String jti) {
         return panacheRepository.find("jti", jti).firstResultOptional()
-                .map(e -> new RefreshTokenData(e.getJti(), e.getTokenHash(), e.getUserId(),
+                .map(e -> new RefreshTokenData(e.getJti(), e.getTokenHash(), e.getUserUuid(),
                         e.getExpiresAt(), e.getRotatedAt(), e.getCreatedAt()));
     }
 
     @Override
     @Transactional
     public void invalidate(String jti) {
-        panacheRepository.update("rotatedAt = ?1 WHERE jti = ?2", Instant.now(), jti);
+        panacheRepository.find("jti", jti).firstResultOptional()
+                .ifPresent(entity -> entity.setRotatedAt(Instant.now()));
     }
 
     @Override

@@ -96,18 +96,17 @@ public class UserRepositoryImpl implements UserRepositoryPort {
     /**
      * Busca usuário ativo pelo UUID (isActive = true).
      *
-     * <p>Usa HQL explícito com filtro de soft delete para garantir que registros
-     * deletados logicamente não sejam retornados. O built-in {@code findByIdOptional}
-     * do Panache não aplica filtros — por isso usamos HQL customizado.
-     *
-     * @param id UUID do usuário
-     * @return Optional com o User se encontrado e ativo, ou Optional.empty()
-     */
+      * <p>Usa HQL explícito com filtro de soft delete — busca pela coluna {@code uuid}
+      * (identidade pública), não pela PK sequencial.
+      *
+      * @param id UUID público do usuário
+      * @return Optional com o User se encontrado e ativo, ou Optional.empty()
+      */
     @Override
     @Retry(maxRetries = 3)
     @CacheResult(cacheName = "users")
     public Optional<User> findById(UUID id) {
-        return panacheRepository.find("id = ?1 AND isActive = ?2", id, true)
+        return panacheRepository.find("uuid = ?1 AND isActive = ?2", id, true)
                 .firstResultOptional().map(mapper::toDomain);
     }
 
@@ -184,17 +183,17 @@ public class UserRepositoryImpl implements UserRepositoryPort {
      * O registro permanece no banco mas é excluído de todas as queries de
      * leitura que usam {@code isActive = true}.
      *
-     * <p>Usa {@code findByIdOptional()} do Panache (busca sem filtro de soft delete)
-     * para localizar o registro independentemente do estado atual.
-     *
-     * @param id UUID do usuário a marcar como deletado
-     * @throws UserNotFoundException se o UUID não existir
-     */
+      * <p>Busca pela coluna {@code uuid} (identidade pública) independentemente
+      * do estado {@code isActive}, permitindo deletar usuários já inativos.
+      *
+      * @param id UUID público do usuário a marcar como deletado
+      * @throws UserNotFoundException se o UUID não existir
+      */
     @Override
     @Transactional
     @CacheInvalidate(cacheName = "users")
     public void markAsDeleted(UUID id) throws UserNotFoundException {
-        UserEntity entity = panacheRepository.findByIdOptional(id)
+        UserEntity entity = panacheRepository.find("uuid", id).firstResultOptional()
                 .orElseThrow(() -> new UserNotFoundException(id));
         entity.setDeletedAt(LocalDateTime.now());
         entity.setIsActive(false);

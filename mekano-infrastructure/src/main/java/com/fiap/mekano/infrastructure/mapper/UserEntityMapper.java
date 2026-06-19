@@ -1,10 +1,11 @@
 package com.fiap.mekano.infrastructure.mapper;
 
-import com.fiap.mekano.domain.model.User;
-import com.fiap.mekano.infrastructure.entity.UserEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.Named;
+import org.mapstruct.ReportingPolicy;
+
+import com.fiap.mekano.domain.model.User;
+import com.fiap.mekano.infrastructure.entity.UserEntity;
 
 /**
  * Mapper MapStruct entre {@link UserEntity} (JPA) e {@link User} (domínio).
@@ -20,15 +21,21 @@ import org.mapstruct.Named;
  * <p>O campo email é convertido entre {@code String} (JPA) e {@code Email} VO
  * (domínio) via {@link EmailMapper} (declarado em {@code uses}).
  */
-@Mapper(componentModel = "cdi", uses = {EmailMapper.class})
+@Mapper(componentModel = "cdi", uses = {EmailMapper.class}, unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface UserEntityMapper {
 
     /**
      * Converte entidade de domínio para entidade JPA.
      *
+     * <p>{@code id} do domínio (UUID) → {@code uuid} da entidade (coluna exposta em APIs).
+     * O campo {@code id} da entidade (Long, PK auto-increment) JAMAIS é mapeado — é gerado
+     * pelo banco via {@code IDENTITY}.
+     *
      * @param user entidade de domínio (pode ser {@code null})
      * @return entidade JPA pronta para persistência, ou {@code null}
      */
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "uuid", source = "id")
     @Mapping(target = "email", source = "email", qualifiedByName = "emailToString")
     UserEntity toEntity(User user);
 
@@ -47,7 +54,7 @@ public interface UserEntityMapper {
             return null;
         }
         return User.reconstitute(
-                entity.getId(),
+                entity.getUuid(),
                 entity.getName(),
                 entity.getEmail(),
                 entity.getPasswordHash(),

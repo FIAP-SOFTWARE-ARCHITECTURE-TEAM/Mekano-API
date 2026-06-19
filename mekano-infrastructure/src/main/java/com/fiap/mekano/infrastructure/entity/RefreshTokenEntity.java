@@ -3,6 +3,8 @@ package com.fiap.mekano.infrastructure.entity;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Getter;
@@ -18,7 +20,8 @@ import java.util.UUID;
  * <p>Separada intencionalmente dos records de domínio (Clean Architecture).
  * Esta classe conhece JPA; os objetos de domínio ({@code RefreshTokenData}) não.
  *
- * <p>Sem {@code @GeneratedValue}: o UUID do token é gerado pelo serviço de infraestrutura.
+ * <p>A PK sequencial ({@code Long id}) é uso interno do banco.
+ * O UUID público ({@code uuid}) é gerado pelo serviço de infraestrutura.
  *
  * <p>Sem {@code @ManyToOne} para {@code UserEntity}: apenas UUID da FK mantém o acoplamento
  * mínimo entre as entidades JPA.
@@ -30,9 +33,14 @@ import java.util.UUID;
 @NoArgsConstructor
 public class RefreshTokenEntity extends PanacheEntityBase {
 
-    /** Chave primária UUID. Sem @GeneratedValue — gerado pelo serviço. */
+    /** PK sequencial — auto-incremento interno. */
     @Id
-    UUID id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    Long id;
+
+    /** UUID público — identidade do token gerada pelo serviço. */
+    @Column(unique = true, nullable = false)
+    UUID uuid;
 
     /** Identificador único do token (UUID v4). */
     @Column(nullable = false, unique = true)
@@ -42,9 +50,9 @@ public class RefreshTokenEntity extends PanacheEntityBase {
     @Column(name = "token_hash", nullable = false, length = 64)
     String tokenHash;
 
-    /** UUID do usuário proprietário (FK para users). */
-    @Column(name = "user_id", nullable = false)
-    UUID userId;
+    /** UUID do usuário proprietário (FK para users.uuid). */
+    @Column(name = "user_uuid", nullable = false)
+    UUID userUuid;
 
     /** Momento em que o token expira. */
     @Column(name = "expires_at", nullable = false)

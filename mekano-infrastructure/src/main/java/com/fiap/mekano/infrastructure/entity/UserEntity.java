@@ -1,10 +1,8 @@
 package com.fiap.mekano.infrastructure.entity;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+import com.fiap.mekano.domain.model.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,23 +17,22 @@ import java.util.UUID;
  * <p>Separada intencionalmente da entidade de domínio {@code User} (Clean Architecture).
  * Esta classe conhece JPA; a entidade de domínio não.
  *
- * <p>Estende {@code PanacheEntityBase} (não {@code PanacheEntity}) porque o ID é UUID,
- * não Long. {@code PanacheEntity} declara {@code @Id @GeneratedValue Long id} internamente,
- * o que conflita com UUID.
+ * <p>Estende {@link BaseEntity} — herda a PK sequencial ({@code Long id}) e os campos
+ * de auditoria ({@code createdAt}, {@code updatedAt}, {@code createdBy}, {@code updatedBy}).
  *
- * <p>Sem {@code @GeneratedValue}: o UUID é gerado pelo domain em {@code User.create()} e
- * repassado aqui via mapper. Adicionar @GeneratedValue quebraria a invariância de identidade. (D-01)
+ * <p>O campo {@code uuid} (UUID) é a identidade pública do usuário exposta nos endpoints.
+ * A PK interna ({@code id}) é auto-incremento para performance em joins.
  */
 @Entity
 @Table(name = "users")
 @Getter
 @Setter
 @NoArgsConstructor
-public class UserEntity extends PanacheEntityBase {
+public class UserEntity extends BaseEntity {
 
-    /** Chave primária UUID. Sem @GeneratedValue — domain gera o UUID (D-01). */
-    @Id
-    UUID id;
+    /** UUID público — identidade exposta em APIs, referenciada por User do domínio. */
+    @Column(unique = true, nullable = false)
+    UUID uuid;
 
     @Column(nullable = false)
     String name;
@@ -46,27 +43,4 @@ public class UserEntity extends PanacheEntityBase {
 
     @Column(name = "password_hash", nullable = false)
     String passwordHash;
-
-    @Column(name = "created_at", nullable = false)
-    LocalDateTime createdAt;
-
-    @Column(name = "deleted_at")
-    LocalDateTime deletedAt;
-
-    @Column(name = "is_active", nullable = false)
-    Boolean isActive = true;
-
-    @Column(name = "created_by")
-    UUID createdBy;
-
-    @Column(name = "updated_by")
-    UUID updatedBy;
-
-    @Column(name = "updated_at")
-    LocalDateTime updatedAt;
-
-    @PreUpdate
-    public void preUpdate() {
-        this.updatedAt = LocalDateTime.now();
-    }
 }
