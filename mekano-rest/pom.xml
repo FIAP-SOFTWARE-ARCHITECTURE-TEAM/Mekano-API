@@ -159,6 +159,9 @@
                             <goal>generate-code</goal>
                             <goal>generate-code-tests</goal>
                         </goals>
+                        <configuration>
+                            <skip>false</skip>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -177,11 +180,16 @@
             </plugin>
 
             <!-- Lombok → lombok-mapstruct-binding → mapstruct-processor (ordem obrigatória — G3).
-                 Reabilitado no Plan 09-05 (Phase 9). -->
+                 Reabilitado no Plan 09-05 (Phase 9).
+                 IMPORTANTE: proc=none desativa APT no compile normal. O MapStruct roda
+                 via maven-processor-plugin em generate-sources (abaixo), e o compilador
+                 compila os Impls como fontes regulares. O quarkus extension interfere
+                 com o APT normal e produz .class corrompidos. -->
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
                     <parameters>true</parameters>
+                    <compilerArgument>-proc:none</compilerArgument>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
@@ -200,6 +208,48 @@
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
+            </plugin>
+
+            <!-- Pre-gera fontes MapStruct antes do quarkus:generate-code e do compile.
+                 O quarkus-maven-plugin extension (extensions=true) corrompe a compilação
+                 dos Impls gerados pelo APT normal. Separando o APT em generate-sources
+                 com proc=none no compile, os Impls viram fontes regulares. -->
+            <plugin>
+                <groupId>org.bsc.maven</groupId>
+                <artifactId>maven-processor-plugin</artifactId>
+                <version>5.2</version>
+                <executions>
+                    <execution>
+                        <id>mapstruct-gen</id>
+                        <goals>
+                            <goal>process</goal>
+                        </goals>
+                        <phase>generate-sources</phase>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/generated-sources/annotations</outputDirectory>
+                            <processors>
+                                <processor>org.mapstruct.ap.MappingProcessor</processor>
+                            </processors>
+                            <annotationProcessorPaths>
+                                <path>
+                                    <groupId>org.projectlombok</groupId>
+                                    <artifactId>lombok</artifactId>
+                                    <version>${lombok.version}</version>
+                                </path>
+                                <path>
+                                    <groupId>org.projectlombok</groupId>
+                                    <artifactId>lombok-mapstruct-binding</artifactId>
+                                    <version>0.2.0</version>
+                                </path>
+                                <path>
+                                    <groupId>org.mapstruct</groupId>
+                                    <artifactId>mapstruct-processor</artifactId>
+                                    <version>${mapstruct.version}</version>
+                                </path>
+                            </annotationProcessorPaths>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
