@@ -4,12 +4,12 @@ import java.util.UUID;
 
 /**
  * Lançada quando um usuário não é encontrado pelo identificador fornecido (id ou email).
- * Usada pelos casos de uso que fazem lookup de usuário.
+ * Status HTTP: {@code 404 Not Found}.
  */
 public class UserNotFoundException extends BusinessException {
 
     public UserNotFoundException(String identifier) {
-        super("Usuário não encontrado: " + identifier);
+        super(404, "Usuário não encontrado: " + identifier);
     }
 
     /**
@@ -18,6 +18,6 @@ public class UserNotFoundException extends BusinessException {
      * @param id UUID do usuário não encontrado
      */
     public UserNotFoundException(UUID id) {
-        super("Usuário não encontrado: " + id);
+        super(404, "Usuário não encontrado: " + id);
     }
 }

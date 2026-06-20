@@ -49,7 +49,7 @@ public class CreateUserUseCase implements CreateUserInputPort {
 
     @Override
     @Transactional
-    public User execute(CreateUserCommand command) throws UserAlreadyExistsException {
+    public User execute(CreateUserCommand command) {
         // 1. Validação de nome — use case é responsável por esta guarda
         if (command.name() == null || command.name().isBlank()) {
             throw new InvalidUserDataException("O nome do usuário não pode ser nulo ou vazio");
@@ -85,7 +85,7 @@ public class CreateUserUseCase implements CreateUserInputPort {
      * @param command comando de criação
      * @return resposta com dados públicos do usuário criado
      */
-    public CreateUserResponse executeResponse(CreateUserCommand command) throws UserAlreadyExistsException {
+    public CreateUserResponse executeResponse(CreateUserCommand command) {
         User user = execute(command);
         return new CreateUserResponse(user.getId(), user.getName(), user.getEmail().getValue(), user.getCreatedAt());
     }
@@ -101,7 +101,7 @@ public class CreateUserUseCase implements CreateUserInputPort {
      * @throws UserNotFoundException se o UUID não existir ou não estiver ativo
      */
     @Override
-    public User findUserById(UUID id) throws UserNotFoundException {
+    public User findUserById(UUID id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException(id));
     }
@@ -116,7 +116,7 @@ public class CreateUserUseCase implements CreateUserInputPort {
      * @throws UserNotFoundException se o UUID não existir
      */
     @Override
-    public void deleteUser(UUID id) throws UserNotFoundException {
+    public void deleteUser(UUID id) {
         userRepository.markAsDeleted(id);
     }
 }

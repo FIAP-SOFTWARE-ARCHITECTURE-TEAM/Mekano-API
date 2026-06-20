@@ -1,20 +1,22 @@
 package com.fiap.mekano.domain.exception;
 
 /**
- * Classe base para todas as exceções de domínio do Mekano.
+ * Base para exceções de validação de domínio (unchecked).
  *
- * Regras:
- * - Esta classe NÃO deve importar nenhuma classe de framework (jakarta, quarkus, hibernate).
- * - A tradução para códigos HTTP é responsabilidade do ExceptionMapper no módulo adapter.
- * - Todas as exceções de regra de negócio devem estender esta classe.
+ * <p>Representa erros dos quais o caller não pode se recuperar — dados inválidos,
+ * formato incorreto, regras estruturais violadas. Status HTTP padrão: {@code 400 Bad Request}.
+ *
+ * <p>Esta classe NÃO deve importar nenhuma classe de framework.
+ *
+ * @see AppException
  */
-public abstract class DomainException extends RuntimeException {
+public abstract class DomainException extends AppException {
 
     protected DomainException(String message) {
-        super(message);
+        super(400, message);
     }
 
     protected DomainException(String message, Throwable cause) {
-        super(message, cause);
+        super(400, message, cause);
     }
 }

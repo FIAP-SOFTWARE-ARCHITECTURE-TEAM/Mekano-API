@@ -1,31 +1,23 @@
 package com.fiap.mekano.domain.exception;
 
 /**
- * Exceção checked para violações de regras de negócio onde o caller
- * pode se recuperar (D-05).
+ * Base para exceções de regras de negócio (unchecked).
  *
- * <p>Diferente de {@link DomainException} (unchecked, para erros de
- * validação dos quais o caller não pode se recuperar), esta exceção
- * força o tratamento explícito nos contratos:
- *
- * <ul>
- *   <li>{@link UserNotFoundException} — recurso não encontrado</li>
- *   <li>{@link UserAlreadyExistsException} — conflito de email</li>
- * </ul>
- *
- * <p>O caller (adapter/use case) é obrigado a declarar {@code throws}
- * ou capturar a exceção, garantindo que cenários de recuperação sejam
- * considerados em tempo de compilação.
+ * <p>Representa violações de regras de negócio recuperáveis — email duplicado,
+ * recurso não encontrado, conflito de estado. O status HTTP é definido por cada
+ * subclasse no construtor.
  *
  * <p>Esta classe NÃO deve importar nenhuma classe de framework.
+ *
+ * @see AppException
  */
-public abstract class BusinessException extends Exception {
+public abstract class BusinessException extends AppException {
 
-    protected BusinessException(String message) {
-        super(message);
+    protected BusinessException(int status, String message) {
+        super(status, message);
     }
 
-    protected BusinessException(String message, Throwable cause) {
-        super(message, cause);
+    protected BusinessException(int status, String message, Throwable cause) {
+        super(status, message, cause);
     }
 }
