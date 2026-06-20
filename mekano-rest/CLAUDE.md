@@ -25,7 +25,7 @@ com.fiap.mekano.rest
 │   ├── filter/
 │   │   └── LoginRateLimiterFilter.java   # Rate limiting via ContainerRequestFilter
 │   └── exception/
-│       ├── ErrorResponse.java            # Record — mensagem de erro
+│       ├── ProblemDetail.java            # Record — RFC 7807 Problem Details
 │       ├── ApiExceptionMapper.java       # ÚNICO mapper ativo (D-09)
 │       └── *ExceptionMapper.java         # 10 mappers @Deprecated mantidos para rollback
 └── observability/
@@ -69,7 +69,9 @@ public record UserPageResponse(List<UserResponse> content, int page, int size, l
 
 **`ApiExceptionMapper.java`** — único mapper ativo (D-09):
 - `@Provider @ApplicationScoped` — obrigatório (G10)
-- Dispatch: `instanceof` → `ConstraintViolationException` (400) → `AppException` (status da exceção) → fallback 500
+- Formato: RFC 7807 Problem Details — `application/problem+json`
+- Dispatch: `instanceof` → `AppException` (status da exceção) → fallback 500
+- `ConstraintViolationException` é tratado pelo Quarkus nativamente (formato `violations`)
 - Fallback: 500 com log de stacktrace
 - Mappers antigos: `@Deprecated` sem `@Provider` — mantidos para rollback
 

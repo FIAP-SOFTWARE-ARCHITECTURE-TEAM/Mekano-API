@@ -3,7 +3,7 @@ package com.fiap.mekano.rest.api;
 import com.fiap.mekano.rest.api.dto.CreateUserRequest;
 import com.fiap.mekano.rest.api.dto.UserPageResponse;
 import com.fiap.mekano.rest.api.dto.UserResponse;
-import com.fiap.mekano.rest.api.exception.ErrorResponse;
+import com.fiap.mekano.rest.api.exception.ProblemDetail;
 import com.fiap.mekano.rest.api.mapper.UserDtoMapper;
 import com.fiap.mekano.application.usecase.user.CreateUserUseCase;
 import com.fiap.mekano.domain.port.in.CreateUserInputPort;
@@ -89,13 +89,13 @@ public class UserResource {
      * 5. UriInfo constrói Location absoluta: http://host/users/{uuid}
      * 6. Response.created(uri).entity(response) retorna 201
      *
-     * Exceções:
-     * - ConstraintViolationException → ConstraintViolationExceptionMapper → 400
-     * - UserAlreadyExistsException → DuplicateUserExceptionMapper → 409
-     *
-     * @param request DTO de entrada validado pelo Bean Validation
-     * @param uriInfo contexto JAX-RS para construção da URI Location (RFC 7231)
-     * @return 201 Created com UserResponse no body e Location header
+ * Exceções:
+ * - ConstraintViolationException → validation handler → 400
+ * - AppException → ApiExceptionMapper → status da exceção
+ *
+ * @param request DTO de entrada validado pelo Bean Validation
+ * @param uriInfo contexto JAX-RS para construção da URI Location (RFC 7231)
+ * @return 201 Created com UserResponse no body e Location header
      */
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
@@ -108,11 +108,11 @@ public class UserResource {
     @APIResponse(responseCode = "400",
             description = "Dados de entrada inválidos (Bean Validation falhou)",
             content = @Content(mediaType = MediaType.APPLICATION_JSON,
-                    schema = @Schema(implementation = ErrorResponse.class)))
+                    schema = @Schema(implementation = ProblemDetail.class)))
     @APIResponse(responseCode = "409",
             description = "Email já cadastrado no sistema",
             content = @Content(mediaType = MediaType.APPLICATION_JSON,
-                    schema = @Schema(implementation = ErrorResponse.class)))
+                    schema = @Schema(implementation = ProblemDetail.class)))
     public Response create(
             @RequestBody(required = true,
                     content = @Content(mediaType = MediaType.APPLICATION_JSON,
@@ -180,7 +180,7 @@ public class UserResource {
     @APIResponse(responseCode = "404",
             description = "Usuário não encontrado ou deletado",
             content = @Content(mediaType = MediaType.APPLICATION_JSON,
-                    schema = @Schema(implementation = ErrorResponse.class)))
+                    schema = @Schema(implementation = ProblemDetail.class)))
     public Response getById(@PathParam("id") UUID id) {
         var user = createUserInputPort.findUserById(id);
         UserResponse response = userDtoMapper.toResponse(user);
@@ -204,7 +204,7 @@ public class UserResource {
     @APIResponse(responseCode = "404",
             description = "Usuário não encontrado",
             content = @Content(mediaType = MediaType.APPLICATION_JSON,
-                    schema = @Schema(implementation = ErrorResponse.class)))
+                    schema = @Schema(implementation = ProblemDetail.class)))
     public Response delete(@PathParam("id") UUID id) {
         createUserInputPort.deleteUser(id);
         return Response.noContent().build();

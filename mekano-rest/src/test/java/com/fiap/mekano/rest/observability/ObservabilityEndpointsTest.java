@@ -86,6 +86,6 @@ class ObservabilityEndpointsTest {
                 .body(containsString("Users"))
                 .body(containsString("/users"))
                 .body(containsString("UserResponse"))
-                .body(containsString("ErrorResponse"));
+                .body(containsString("ProblemDetail"));
     }
 }

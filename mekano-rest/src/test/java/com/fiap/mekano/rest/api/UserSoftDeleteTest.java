@@ -60,6 +60,6 @@ class UserSoftDeleteTest {
                 .get("/api/v1/users/" + createdUserId)
                 .then()
                 .statusCode(404)
-                .body("message", notNullValue());
+                .body("detail", notNullValue());
     }
 }

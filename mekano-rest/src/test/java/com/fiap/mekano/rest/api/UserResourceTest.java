@@ -63,7 +63,7 @@ class UserResourceTest {
                 .post("/api/v1/users")
                 .then()
                 .statusCode(409)
-                .body("message", notNullValue());
+                .body("detail", notNullValue());
     }
 
     @Test

@@ -79,7 +79,7 @@ docker-compose up -d
 - **Resources**: `@RequestScoped` (obrigatório para JWT + `@Context UriInfo`), `@Authenticated`, `@RolesAllowed("user")`
 - **DTOs**: Input = classe Lombok com Bean Validation; Output = record Java
 - **Mappers**: MapStruct `componentModel = "cdi"`, ordem annotationProcessorPaths: `lombok → lombok-mapstruct-binding → mapstruct-processor`
-- **Exception Handling**: `ApiExceptionMapper` único com dispatch por tipo
+- **Exception Handling**: `ApiExceptionMapper` único — RFC 7807 Problem Details (`application/problem+json`)
 
 ### Build
 - `quarkus-maven-plugin` APENAS no `mekano-rest` — nos demais módulos está em `<pluginManagement>` com `<skip>true</skip>`
@@ -138,7 +138,7 @@ docker-compose up -d
 - D-06: `GET /users` sem use case — chamada direta ao repository (leitura pura)
 - D-07: CORS global via `quarkus.http.cors.*`
 - D-08: Prefixo `/api/v1` via `quarkus.rest.path` (não `@ApplicationPath`)
-- D-09: `ApiExceptionMapper` único — captura AppException + ConstraintViolationException
+- D-09: `ApiExceptionMapper` único — RFC 7807 Problem Details
 - D-10: Jackson timezone `America/Sao_Paulo`
 - D-11: CI sem Docker explícito — DevServices auto-gerencia PostgreSQL
 - D-12: Logging JSON (`quarkus.log.console.json=true`)
