@@ -11,9 +11,6 @@ package com.fiap.mekano.domain.exception;
  * <ul>
  *   <li>{@link UserNotFoundException} — recurso não encontrado</li>
  *   <li>{@link UserAlreadyExistsException} — conflito de email</li>
- *   <li>{@link InvalidCredentialsException} — autenticação falhou</li>
- *   <li>{@link RateLimitExceededException} — rate limit excedido</li>
- *   <li>{@link InvalidRefreshTokenException} — refresh token inválido</li>
  * </ul>
  *
  * <p>O caller (adapter/use case) é obrigado a declarar {@code throws}

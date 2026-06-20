@@ -10,8 +10,6 @@ import com.fiap.mekano.domain.exception.UserAlreadyExistsException;
 import com.fiap.mekano.domain.exception.UserNotFoundException;
 import com.fiap.mekano.domain.port.in.CreateUserInputPort;
 import com.fiap.mekano.domain.port.out.UserRepositoryPort;
-import io.quarkus.security.Authenticated;
-import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -61,7 +59,6 @@ import java.util.UUID;
 @Path("/users")
 @RequestScoped
 @Tag(name = "Users", description = "User management")
-@Authenticated
 public class UserResource {
 
     /**
@@ -103,7 +100,6 @@ public class UserResource {
      * @return 201 Created com UserResponse no body e Location header
      */
     @POST
-    @RolesAllowed("user")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(summary = "Criar novo usuário", description = "Cria um novo usuário no sistema. Retorna 409 se o email já estiver cadastrado.")
@@ -113,14 +109,6 @@ public class UserResource {
                     schema = @Schema(implementation = UserResponse.class)))
     @APIResponse(responseCode = "400",
             description = "Dados de entrada inválidos (Bean Validation falhou)",
-            content = @Content(mediaType = MediaType.APPLICATION_JSON,
-                    schema = @Schema(implementation = ErrorResponse.class)))
-    @APIResponse(responseCode = "401",
-            description = "Token JWT ausente ou inválido",
-            content = @Content(mediaType = MediaType.APPLICATION_JSON,
-                    schema = @Schema(implementation = ErrorResponse.class)))
-    @APIResponse(responseCode = "403",
-            description = "JWT válido mas sem o role exigido (groups != 'user')",
             content = @Content(mediaType = MediaType.APPLICATION_JSON,
                     schema = @Schema(implementation = ErrorResponse.class)))
     @APIResponse(responseCode = "409",
@@ -154,17 +142,12 @@ public class UserResource {
      * @return 200 OK com UserPageResponse contendo lista paginada
      */
     @GET
-    @RolesAllowed("user")
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(summary = "Listar usuários", description = "Retorna usuários ativos de forma paginada e ordenada")
     @APIResponse(responseCode = "200",
             description = "Lista paginada de usuários",
             content = @Content(mediaType = MediaType.APPLICATION_JSON,
                     schema = @Schema(implementation = UserPageResponse.class)))
-    @APIResponse(responseCode = "401",
-            description = "Token JWT ausente ou inválido",
-            content = @Content(mediaType = MediaType.APPLICATION_JSON,
-                    schema = @Schema(implementation = ErrorResponse.class)))
     public Response listAll(
             @QueryParam("page") @DefaultValue("0") int page,
             @QueryParam("size") @DefaultValue("10") int size,
@@ -190,17 +173,12 @@ public class UserResource {
      */
     @GET
     @Path("/{id}")
-    @RolesAllowed("user")
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(summary = "Buscar usuário por ID", description = "Retorna os dados do usuário ativo. Usuários deletados (soft delete) retornam 404.")
     @APIResponse(responseCode = "200",
             description = "Usuário encontrado com sucesso",
             content = @Content(mediaType = MediaType.APPLICATION_JSON,
                     schema = @Schema(implementation = UserResponse.class)))
-    @APIResponse(responseCode = "401",
-            description = "Token JWT ausente ou inválido",
-            content = @Content(mediaType = MediaType.APPLICATION_JSON,
-                    schema = @Schema(implementation = ErrorResponse.class)))
     @APIResponse(responseCode = "404",
             description = "Usuário não encontrado ou deletado",
             content = @Content(mediaType = MediaType.APPLICATION_JSON,
@@ -223,13 +201,8 @@ public class UserResource {
      */
     @DELETE
     @Path("/{id}")
-    @RolesAllowed("user")
     @Operation(summary = "Excluir usuário", description = "Marca o usuário como inativo (soft delete). Retorna 204 se bem-sucedido.")
     @APIResponse(responseCode = "204", description = "Usuário excluído com sucesso (soft delete)")
-    @APIResponse(responseCode = "401",
-            description = "Token JWT ausente ou inválido",
-            content = @Content(mediaType = MediaType.APPLICATION_JSON,
-                    schema = @Schema(implementation = ErrorResponse.class)))
     @APIResponse(responseCode = "404",
             description = "Usuário não encontrado",
             content = @Content(mediaType = MediaType.APPLICATION_JSON,

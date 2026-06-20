@@ -1,7 +1,6 @@
 package com.fiap.mekano.rest.api;
 
 import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.security.TestSecurity;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -27,7 +26,7 @@ class UserSoftDeleteTest {
 
     @Test
     @Order(1)
-    @TestSecurity(user = "testuser", roles = {"user"})
+
     void createUser_forSoftDeleteTest() {
         createdUserId = given()
                 .contentType(ContentType.JSON)
@@ -43,7 +42,7 @@ class UserSoftDeleteTest {
 
     @Test
     @Order(2)
-    @TestSecurity(user = "testuser", roles = {"user"})
+
     void delete_softDelete_returns204() {
         given()
                 .when()
@@ -54,7 +53,7 @@ class UserSoftDeleteTest {
 
     @Test
     @Order(3)
-    @TestSecurity(user = "testuser", roles = {"user"})
+
     void get_afterDelete_returns404() {
         given()
                 .when()

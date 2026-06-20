@@ -8,12 +8,11 @@ import org.mapstruct.Named;
  * Mapeamento auxiliar para conversão entre {@link Email} VO e {@link String}.
  *
  * <p>Usado por {@link UserEntityMapper} via atributo {@code uses}.
- * Registrado como bean CDI (MapStruct detecta {@code @Named} e gera referências).
+ * Bean CDI injetado por tipo no {@code UserEntityMapperImpl} gerado pelo MapStruct.
  *
  * <p>Null-safe: retorna {@code null} se a entrada for {@code null}.
  */
 @ApplicationScoped
-@Named("EmailMapper")
 public class EmailMapper {
 
     /**

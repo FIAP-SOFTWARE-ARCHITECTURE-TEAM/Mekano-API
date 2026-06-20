@@ -4,7 +4,6 @@ import com.fiap.mekano.domain.model.User;
 import com.fiap.mekano.domain.port.out.UserRepositoryPort;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.security.TestSecurity;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -28,7 +27,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * apenas confirmando que a anotação não quebra o startup.
  */
 @QuarkusTest
-@TestSecurity(user = "testuser", roles = {"user"})
 class FaultToleranceTest {
 
     @Inject

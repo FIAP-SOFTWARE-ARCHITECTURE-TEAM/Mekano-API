@@ -62,13 +62,6 @@
             <artifactId>quarkus-elytron-security-common</artifactId>
         </dependency>
 
-        <!-- SmallRye JWT Build API — RefreshTokenService gera tokens JWT internos
-             (Plan 09-01; já presente no adapter mas necessário em compile-time aqui). -->
-        <dependency>
-            <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-smallrye-jwt-build</artifactId>
-        </dependency>
-
         <!-- Cache Caffeine para leituras de usuário (D-13) -->
         <dependency>
             <groupId>io.quarkus</groupId>

@@ -1,15 +1,13 @@
 package com.fiap.mekano.infrastructure.entity;
 
-import com.fiap.mekano.domain.model.User;
+import java.util.UUID;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.time.LocalDateTime;
-import java.util.UUID;
 
 /**
  * Entidade JPA representando a tabela {@code users} no banco de dados.

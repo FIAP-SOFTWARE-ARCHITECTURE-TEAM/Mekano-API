@@ -1,7 +1,6 @@
 package com.fiap.mekano.rest.api;
 
 import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.security.TestSecurity;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -32,7 +31,7 @@ class UserResourceTest {
 
     @Test
     @Order(1)
-    @TestSecurity(user = "testuser", roles = {"user"})
+
     void create_validUser_returns201() {
         given()
                 .contentType(ContentType.JSON)
@@ -52,7 +51,7 @@ class UserResourceTest {
 
     @Test
     @Order(2)
-    @TestSecurity(user = "testuser", roles = {"user"})
+
     void create_duplicateEmail_returns409() {
         // VALID_EMAIL foi inserido em Order(1) — este deve falhar com 409
         given()
@@ -69,7 +68,7 @@ class UserResourceTest {
 
     @Test
     @Order(3)
-    @TestSecurity(user = "testuser", roles = {"user"})
+
     void create_invalidEmail_returns400() {
         given()
                 .contentType(ContentType.JSON)
@@ -85,7 +84,7 @@ class UserResourceTest {
 
     @Test
     @Order(4)
-    @TestSecurity(user = "testuser", roles = {"user"})
+
     void create_missingFields_returns400() {
         given()
                 .contentType(ContentType.JSON)
