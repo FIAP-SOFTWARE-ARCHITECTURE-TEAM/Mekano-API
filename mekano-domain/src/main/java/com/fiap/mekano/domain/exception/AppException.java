@@ -11,7 +11,7 @@ package com.fiap.mekano.domain.exception;
  * throw new AppException(Response.Status.NOT_FOUND.getStatusCode(), "Usuário não encontrado");
  * }</pre>
  *
- * <p>O {@code GenericExceptionMapper} converte automaticamente qualquer {@code AppException}
+ * <p>O {@code ApiExceptionMapper} converte automaticamente qualquer {@code AppException}
  * para a resposta HTTP correspondente — sem necessidade de registrar novos mapeamentos.
  *
  * <p>Esta classe NÃO deve importar nenhuma classe de framework. O campo {@code status}

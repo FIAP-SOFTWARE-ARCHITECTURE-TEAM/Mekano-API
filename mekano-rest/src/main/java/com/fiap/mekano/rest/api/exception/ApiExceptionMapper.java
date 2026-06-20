@@ -17,24 +17,15 @@ import java.util.stream.Collectors;
  * <p>Fluxo de tratamento:
  * <ol>
  *   <li>{@link ConstraintViolationException} — Bean Validation falhou; 400 com lista de violações.</li>
- *   <li>{@link AppException} — qualquer exceção que carrega status HTTP; usa {@code getStatus()}
- *       diretamente, incluindo subclasses ({@code UserNotFoundException} → 404,
- *       {@code UserAlreadyExistsException} → 409, {@code DomainException} → 400, etc.).</li>
+ *   <li>{@link AppException} — lê status HTTP direto de {@code getStatus()}.</li>
  *   <li>Fallback — exceção não mapeada; 500 com log de stacktrace.</li>
  * </ol>
- *
- * <p>Para lançar com status customizado de qualquer camada:
- * <pre>{@code
- * throw AppException.notFound("Recurso não encontrado");
- * throw AppException.conflict("Conflito de estado");
- * throw new AppException(429, "Limite de requisições excedido");
- * }</pre>
  *
  * @see AppException
  */
 @Provider
 @ApplicationScoped
-public class GenericExceptionMapper implements ExceptionMapper<Exception> {
+public class ApiExceptionMapper implements ExceptionMapper<Exception> {
 
     @Override
     public Response toResponse(Exception exception) {
