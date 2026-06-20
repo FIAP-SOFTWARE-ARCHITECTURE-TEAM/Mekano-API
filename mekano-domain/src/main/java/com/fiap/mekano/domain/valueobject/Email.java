@@ -1,6 +1,7 @@
 package com.fiap.mekano.domain.valueobject;
 
 import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.exception.Messages;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
@@ -40,11 +41,11 @@ public final class Email {
      */
     public Email(String value) {
         if (value == null || value.isBlank()) {
-            throw new AppException(400, "Formato de email inválido: " + (value == null ? "null" : value.strip()));
+            throw new AppException(400, Messages.get("email.invalid.format", value == null ? "null" : value.strip()));
         }
         String trimmed = value.strip();
         if (!EMAIL_PATTERN.matcher(trimmed).matches()) {
-            throw new AppException(400, "Formato de email inválido: " + trimmed);
+            throw new AppException(400, Messages.get("email.invalid.format", trimmed));
         }
         this.value = trimmed.toLowerCase(Locale.ROOT);
     }

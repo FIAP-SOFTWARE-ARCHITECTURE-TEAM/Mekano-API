@@ -2,6 +2,7 @@ package com.fiap.mekano.application.usecase.user;
 
 import com.fiap.mekano.domain.event.UserCreatedEvent;
 import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.domain.model.User;
 import com.fiap.mekano.domain.port.in.CreateUserCommand;
 import com.fiap.mekano.domain.port.in.CreateUserInputPort;
@@ -50,12 +51,12 @@ public class CreateUserUseCase implements CreateUserInputPort {
     public User execute(CreateUserCommand command) {
         // 1. Validação de nome — use case é responsável por esta guarda
         if (command.name() == null || command.name().isBlank()) {
-            throw new AppException(400, "O nome do usuário não pode ser nulo ou vazio");
+            throw new AppException(400, Messages.get("user.name.required"));
         }
 
         // 2. Verificar duplicidade de email
         if (userRepository.existsByEmail(command.email())) {
-            throw new AppException(409, "Usuário já existe com o email: " + command.email());
+            throw new AppException(409, Messages.get("user.already.exists", command.email()));
         }
 
         // 3. Hash de senha — NÃO repassar senha raw para User.create()
@@ -100,7 +101,7 @@ public class CreateUserUseCase implements CreateUserInputPort {
     @Override
     public User findUserById(UUID id) {
         return userRepository.findById(id)
-                .orElseThrow(() -> new AppException(404, "Usuário não encontrado: " + id));
+                .orElseThrow(() -> new AppException(404, Messages.get("user.not.found", id)));
     }
 
     /**
