@@ -1,6 +1,6 @@
 package com.fiap.mekano.domain.valueobject;
 
-import com.fiap.mekano.domain.exception.InvalidEmailException;
+import com.fiap.mekano.domain.exception.AppException;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
@@ -34,17 +34,17 @@ public final class Email {
 
     /**
      * Construtor com validação.
-     * Lança {@link InvalidEmailException} se o valor for null, blank ou não corresponder ao padrão.
+     * Lança {@link AppException} (400) se o valor for null, blank ou não corresponder ao padrão.
      *
      * @param value endereço de email a ser validado e armazenado
      */
     public Email(String value) {
         if (value == null || value.isBlank()) {
-            throw new InvalidEmailException(value == null ? "null" : value.strip());
+            throw new AppException(400, "Formato de email inválido: " + (value == null ? "null" : value.strip()));
         }
         String trimmed = value.strip();
         if (!EMAIL_PATTERN.matcher(trimmed).matches()) {
-            throw new InvalidEmailException(trimmed);
+            throw new AppException(400, "Formato de email inválido: " + trimmed);
         }
         this.value = trimmed.toLowerCase(Locale.ROOT);
     }

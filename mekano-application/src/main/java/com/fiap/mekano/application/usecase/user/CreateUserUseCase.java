@@ -1,9 +1,7 @@
 package com.fiap.mekano.application.usecase.user;
 
 import com.fiap.mekano.domain.event.UserCreatedEvent;
-import com.fiap.mekano.domain.exception.InvalidUserDataException;
-import com.fiap.mekano.domain.exception.UserAlreadyExistsException;
-import com.fiap.mekano.domain.exception.UserNotFoundException;
+import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.model.User;
 import com.fiap.mekano.domain.port.in.CreateUserCommand;
 import com.fiap.mekano.domain.port.in.CreateUserInputPort;
@@ -52,18 +50,18 @@ public class CreateUserUseCase implements CreateUserInputPort {
     public User execute(CreateUserCommand command) {
         // 1. Validação de nome — use case é responsável por esta guarda
         if (command.name() == null || command.name().isBlank()) {
-            throw new InvalidUserDataException("O nome do usuário não pode ser nulo ou vazio");
+            throw new AppException(400, "O nome do usuário não pode ser nulo ou vazio");
         }
 
         // 2. Verificar duplicidade de email
         if (userRepository.existsByEmail(command.email())) {
-            throw new UserAlreadyExistsException(command.email());
+            throw new AppException(409, "Usuário já existe com o email: " + command.email());
         }
 
         // 3. Hash de senha — NÃO repassar senha raw para User.create()
         String passwordHash = passwordHasher.hash(command.password());
 
-        // 4. Criar entidade (Email VO valida formato — lança InvalidEmailException se inválido)
+        // 4. Criar entidade (Email VO valida formato — lança AppException(400) se inválido)
         User user = User.create(command.name(), command.email(), passwordHash);
 
         // 5. Persistir via output port
@@ -94,16 +92,15 @@ public class CreateUserUseCase implements CreateUserInputPort {
      * Busca um usuário ativo pelo UUID.
      *
      * <p>Delega ao repositório que aplica o filtro de soft delete ({@code isActive = true}).
-     * Se o usuário foi deletado logicamente, {@link UserNotFoundException} é lançada.
+     * Se o usuário foi deletado logicamente, {@code AppException(404)} é lançada.
      *
      * @param id UUID do usuário
      * @return User encontrado e ativo
-     * @throws UserNotFoundException se o UUID não existir ou não estiver ativo
      */
     @Override
     public User findUserById(UUID id) {
         return userRepository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException(id));
+                .orElseThrow(() -> new AppException(404, "Usuário não encontrado: " + id));
     }
 
     /**
@@ -113,7 +110,6 @@ public class CreateUserUseCase implements CreateUserInputPort {
      * de exclusão ({@code deletedAt}). O registro NÃO é removido fisicamente.
      *
      * @param id UUID do usuário a excluir
-     * @throws UserNotFoundException se o UUID não existir
      */
     @Override
     public void deleteUser(UUID id) {

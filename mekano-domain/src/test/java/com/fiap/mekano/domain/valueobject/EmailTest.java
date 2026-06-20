@@ -1,6 +1,6 @@
 package com.fiap.mekano.domain.valueobject;
 
-import com.fiap.mekano.domain.exception.InvalidEmailException;
+import com.fiap.mekano.domain.exception.AppException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -36,15 +36,15 @@ class EmailTest {
 
     @ParameterizedTest
     @NullAndEmptySource
-    @DisplayName("deve lançar InvalidEmailException para null e vazio")
+    @DisplayName("deve lançar AppException(400) para null e vazio")
     void deveLancarExcecaoParaNullEVazio(String valor) {
-        assertThrows(InvalidEmailException.class, () -> new Email(valor));
+        assertThrows(AppException.class, () -> new Email(valor));
     }
 
     @Test
-    @DisplayName("deve lançar InvalidEmailException para string com apenas espaços")
+    @DisplayName("deve lançar AppException(400) para string com apenas espaços")
     void deveLancarExcecaoParaEspacos() {
-        assertThrows(InvalidEmailException.class, () -> new Email("   "));
+        assertThrows(AppException.class, () -> new Email("   "));
     }
 
     @ParameterizedTest
@@ -56,9 +56,9 @@ class EmailTest {
         "usuario @dominio.com",
         "usuario@dominio.c"
     })
-    @DisplayName("deve lançar InvalidEmailException para formatos inválidos")
+    @DisplayName("deve lançar AppException(400) para formatos inválidos")
     void deveLancarExcecaoParaFormatoInvalido(String emailInvalido) {
-        assertThrows(InvalidEmailException.class, () -> new Email(emailInvalido));
+        assertThrows(AppException.class, () -> new Email(emailInvalido));
     }
 
     @Test

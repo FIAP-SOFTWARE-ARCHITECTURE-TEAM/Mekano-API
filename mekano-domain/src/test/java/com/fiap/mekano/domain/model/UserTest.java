@@ -1,6 +1,6 @@
 package com.fiap.mekano.domain.model;
 
-import com.fiap.mekano.domain.exception.InvalidEmailException;
+import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.valueobject.Email;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,16 +36,16 @@ class UserTest {
     }
 
     @Test
-    @DisplayName("deve lançar InvalidEmailException para email inválido")
+    @DisplayName("deve lançar AppException(400) para email inválido")
     void deveLancarExcecaoParaEmailInvalido() {
-        assertThrows(InvalidEmailException.class,
+        assertThrows(AppException.class,
                 () -> User.create(NOME_VALIDO, "email-invalido", HASH_VALIDO));
     }
 
     @Test
-    @DisplayName("deve lançar InvalidEmailException para email null")
+    @DisplayName("deve lançar AppException(400) para email null")
     void deveLancarExcecaoParaEmailNull() {
-        assertThrows(InvalidEmailException.class,
+        assertThrows(AppException.class,
                 () -> User.create(NOME_VALIDO, null, HASH_VALIDO));
     }
 

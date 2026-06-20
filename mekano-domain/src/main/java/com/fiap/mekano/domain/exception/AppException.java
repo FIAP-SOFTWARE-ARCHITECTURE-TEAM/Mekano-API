@@ -3,29 +3,27 @@ package com.fiap.mekano.domain.exception;
 /**
  * Exceção padrão da aplicação — carrega o status HTTP e uma mensagem.
  *
- * <p>Permite que qualquer camada lance uma exceção já com o status de resposta
- * desejado, sem precisar de mapeamento manual no ExceptionMapper:
+ * <p>Use esta classe para lançar erros de qualquer camada com o status HTTP desejado:
  *
  * <pre>{@code
+ * // Direto com código numérico
  * throw new AppException(404, "Usuário não encontrado");
+ *
+ * // Via factory methods (atalhos para os status mais comuns)
  * throw AppException.notFound("Usuário não encontrado");
  * throw AppException.conflict("Email já cadastrado");
+ * throw AppException.badRequest("Nome é obrigatório");
+ *
+ * // Via jakarta.ws.rs.core.Response.Status (módulos que têm JAX-RS no classpath)
+ * throw new AppException(Response.Status.NOT_FOUND.getStatusCode(), "Usuário não encontrado");
  * }</pre>
  *
- * <p>Esta classe NÃO deve importar nenhuma classe de framework (jakarta, quarkus,
- * hibernate). O campo {@code status} usa {@code int} para manter o domínio
- * independente de {@code jakarta.ws.rs.core.Response.Status}.
+ * <p>O {@code GenericExceptionMapper} captura qualquer {@code AppException} e converte
+ * automaticamente para a resposta HTTP com o status e mensagem correspondentes —
+ * sem necessidade de registrar novos mapeamentos.
  *
- * <p>Hierarquia:
- * <pre>
- * AppException (unchecked)
- * ├── DomainException     — erros de validação (400 por padrão)
- * │   ├── InvalidEmailException
- * │   └── InvalidUserDataException
- * └── BusinessException   — regras de negócio (status definido pela subclasse)
- *     ├── UserNotFoundException        (404)
- *     └── UserAlreadyExistsException   (409)
- * </pre>
+ * <p>Esta classe NÃO deve importar nenhuma classe de framework. O campo {@code status}
+ * usa {@code int} para manter o domínio independente de {@code jakarta.ws.rs.core.Response.Status}.
  */
 public class AppException extends RuntimeException {
 

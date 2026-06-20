@@ -1,6 +1,6 @@
 package com.fiap.mekano.infrastructure.repository;
 
-import com.fiap.mekano.domain.exception.UserNotFoundException;
+import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.model.User;
 import com.fiap.mekano.domain.port.out.UserRepositoryPort;
 import com.fiap.mekano.infrastructure.entity.UserEntity;
@@ -192,9 +192,9 @@ public class UserRepositoryImpl implements UserRepositoryPort {
     @Override
     @Transactional
     @CacheInvalidate(cacheName = "users")
-    public void markAsDeleted(UUID id) throws UserNotFoundException {
+    public void markAsDeleted(UUID id) {
         UserEntity entity = panacheRepository.find("uuid", id).firstResultOptional()
-                .orElseThrow(() -> new UserNotFoundException(id));
+                .orElseThrow(() -> new AppException(404, "Usuário não encontrado: " + id));
         entity.setDeletedAt(LocalDateTime.now());
         entity.setIsActive(false);
     }
