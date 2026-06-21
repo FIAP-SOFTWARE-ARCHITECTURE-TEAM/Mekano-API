@@ -3,7 +3,9 @@ package com.fiap.mekano.rest.api.exception;
 import com.fiap.mekano.domain.exception.AppException;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.UriInfo;
 import jakarta.ws.rs.ext.ExceptionMapper;
 import jakarta.ws.rs.ext.Provider;
 
@@ -27,6 +29,9 @@ public class ApiExceptionMapper implements ExceptionMapper<Exception> {
 
     private static final String PROBLEM_JSON = "application/problem+json";
 
+    @Context
+    UriInfo uriInfo;
+
     @Override
     public Response toResponse(Exception exception) {
 
@@ -38,9 +43,10 @@ public class ApiExceptionMapper implements ExceptionMapper<Exception> {
         return build(500, "Erro interno do servidor");
     }
 
-    private static Response build(int status, String detail) {
+    private Response build(int status, String detail) {
+        String instance = uriInfo != null ? uriInfo.getRequestUri().toString() : null;
         return Response.status(status)
-                .entity(ProblemDetail.of(status, detail))
+                .entity(ProblemDetail.of(status, detail, instance))
                 .type(PROBLEM_JSON)
                 .build();
     }
