@@ -10,6 +10,8 @@ quarkus:
   quarkus:
     log:
       level: DEBUG
+      console:
+        json: false
 
 "%prod":
   quarkus:
