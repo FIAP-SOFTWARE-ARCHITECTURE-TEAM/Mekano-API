@@ -113,6 +113,24 @@ docker-compose up -d
 
 `quarkus.rest.path=/api/v1` → endpoints em `/api/v1/users`, `/api/v1/auth`
 
+## Configuration Files
+
+Config split into contextual YAML files via `quarkus.config.locations`:
+
+| File | Context | Perfis |
+|------|---------|--------|
+| `datasource-config.yml` | Datasource, Flyway, Hibernate | `%dev`, `%prod`, `%test` |
+| `api-config.yml` | REST path, Jackson timezone | — |
+| `openapi-config.yml` | Swagger UI, OpenAPI info | — |
+| `logging-config.yml` | JSON logging, log levels | `%dev`, `%prod`, `%test` |
+| `cache-config.yml` | Caffeine caches (infrastructure JAR) | — |
+| `application.properties` | `quarkus.config.locations` + CORS + json.pretty-print | — |
+
+### YAML Quirks
+
+- **Profile prefix**: Use quoted keys: `"%dev": quarkus: datasource: ...` (SnakeYAML trata `%dev` como directive se não estiver entre aspas)
+- **Nesting conflict**: `quarkus.http.cors=true` (boolean) + `cors.origins=*` (sub-key) não coexistem em YAML aninhado. Use `~` (til) como sub-chave nula: `cors: {~: true, origins: "*"}` — o til representa "o valor da própria chave cors", enquanto as demais chaves do mesmo nível são sub-propriedades (`quarkus.http.cors.origins`, etc.). Mesma técnica para `quarkus.log.console.json` + `json.pretty-print`.
+
 ## Gotchas (Armadilhas Críticas)
 
 | # | Problema | Sintoma | Fix |
