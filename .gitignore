@@ -44,9 +44,6 @@ nb-configuration.xml
 # TLS Certificates
 .certs/
 
-# GSD Planning
-.planning/
-
 # JWT keys (Phase 8 / D-08) — chaves privadas são dev-locais; nunca commitar
 privateKey*.pem
 **/privateKey.pem
