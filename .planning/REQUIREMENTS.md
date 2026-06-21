@@ -5,6 +5,13 @@
 
 ## v1 Requirements
 
+### Autenticação e Autorização
+
+- [ ] **AUTH-01**: Sistema oferece roles para cada perfil (admin, atendente, mecânico, almoxarife, financeiro)
+- [ ] **AUTH-02**: Endpoints administrativos são protegidos por `@RolesAllowed` com base no perfil
+- [ ] **AUTH-03**: Cliente pode consultar status da OS via endpoint público sem autenticação
+- [ ] **AUTH-04**: Admin pode gerenciar usuários do sistema (CRUD)
+
 ### Ordem de Serviço
 
 - [ ] **OS-01**: Admin/atendente pode cadastrar cliente com nome, CPF/CNPJ (único, validado), e-mail e telefone
@@ -58,6 +65,8 @@
 - **PAG-04**: Integração real com gateway de pagamento (PIX, boleto)
 - **PAG-05**: Múltiplos métodos de pagamento na cobrança
 - **DOC-04**: Documentação de arquitetura detalhada (C4 model)
+- **AUTH-05**: Autenticação multifator (2FA)
+- **AUTH-06**: OAuth com Google/GitHub
 
 ## Out of Scope
 
@@ -75,43 +84,47 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| OS-01 | Phase 1 — OS Core | Pending |
-| OS-02 | Phase 1 — OS Core | Pending |
-| OS-03 | Phase 1 — OS Core | Pending |
-| OS-04 | Phase 1 — OS Core | Pending |
-| OS-05 | Phase 1 — OS Core | Pending |
-| OS-06 | Phase 1 — OS Core | Pending |
-| OS-07 | Phase 1 — OS Core | Pending |
-| OS-08 | Phase 1 — OS Core | Pending |
-| OS-09 | Phase 1 — OS Core | Pending |
-| OS-10 | Phase 1 — OS Core | Pending |
-| OS-11 | Phase 1 — OS Core | Pending |
-| OS-12 | Phase 1 — OS Core | Pending |
-| OS-13 | Phase 1 — OS Core | Pending |
-| OS-14 | Phase 1 — OS Core | Pending |
-| OS-15 | Phase 1 — OS Core | Pending |
-| OS-16 | Phase 1 — OS Core | Pending |
-| OS-17 | Phase 1 — OS Core | Pending |
-| OS-18 | Phase 2 — Estoque Integration | Pending |
-| EST-01 | Phase 2 — Estoque Integration | Pending |
-| EST-02 | Phase 2 — Estoque Integration | Pending |
-| EST-03 | Phase 2 — Estoque Integration | Pending |
-| EST-04 | Phase 2 — Estoque Integration | Pending |
-| EST-05 | Phase 2 — Estoque Integration | Pending |
-| EST-06 | Phase 2 — Estoque Integration | Pending |
-| EST-07 | Phase 2 — Estoque Integration | Pending |
-| EST-08 | Phase 2 — Estoque Integration | Pending |
-| EST-09 | Phase 2 — Estoque Integration | Pending |
+| AUTH-01 | Phase 1 — Auth & OS Foundation | Pending |
+| AUTH-02 | Phase 1 — Auth & OS Foundation | Pending |
+| AUTH-03 | Phase 1 — Auth & OS Foundation | Pending |
+| AUTH-04 | Phase 2 — OS Continuation & Estoque | Pending |
+| OS-01 | Phase 1 — Auth & OS Foundation | Pending |
+| OS-02 | Phase 1 — Auth & OS Foundation | Pending |
+| OS-03 | Phase 1 — Auth & OS Foundation | Pending |
+| OS-04 | Phase 1 — Auth & OS Foundation | Pending |
+| OS-05 | Phase 1 — Auth & OS Foundation | Pending |
+| OS-06 | Phase 1 — Auth & OS Foundation | Pending |
+| OS-07 | Phase 1 — Auth & OS Foundation | Pending |
+| OS-08 | Phase 1 — Auth & OS Foundation | Pending |
+| OS-09 | Phase 2 — OS Continuation & Estoque | Pending |
+| OS-10 | Phase 2 — OS Continuation & Estoque | Pending |
+| OS-11 | Phase 2 — OS Continuation & Estoque | Pending |
+| OS-12 | Phase 3 — Pagamento & Delivery | Pending |
+| OS-13 | Phase 2 — OS Continuation & Estoque | Pending |
+| OS-14 | Phase 2 — OS Continuation & Estoque | Pending |
+| OS-15 | Phase 1 — Auth & OS Foundation | Pending |
+| OS-16 | Phase 2 — OS Continuation & Estoque | Pending |
+| OS-17 | Phase 2 — OS Continuation & Estoque | Pending |
+| OS-18 | Phase 2 — OS Continuation & Estoque | Pending |
+| EST-01 | Phase 2 — OS Continuation & Estoque | Pending |
+| EST-02 | Phase 2 — OS Continuation & Estoque | Pending |
+| EST-03 | Phase 2 — OS Continuation & Estoque | Pending |
+| EST-04 | Phase 2 — OS Continuation & Estoque | Pending |
+| EST-05 | Phase 2 — OS Continuation & Estoque | Pending |
+| EST-06 | Phase 2 — OS Continuation & Estoque | Pending |
+| EST-07 | Phase 2 — OS Continuation & Estoque | Pending |
+| EST-08 | Phase 2 — OS Continuation & Estoque | Pending |
+| EST-09 | Phase 2 — OS Continuation & Estoque | Pending |
 | PAG-01 | Phase 3 — Pagamento & Delivery | Pending |
 | PAG-02 | Phase 3 — Pagamento & Delivery | Pending |
 | PAG-03 | Phase 3 — Pagamento & Delivery | Pending |
-| DOC-01 | Phase 1 — OS Core | Pending |
-| DOC-02 | Phase 1 — OS Core | Pending |
+| DOC-01 | Phase 1 — Auth & OS Foundation | Pending |
+| DOC-02 | Phase 2 — OS Continuation & Estoque | Pending |
 | DOC-03 | Phase 3 — Pagamento & Delivery | Pending |
 
 **Coverage:**
-- v1 requirements: 33 total
-- Mapped to phases: 33
+- v1 requirements: 37 total
+- Mapped to phases: 37
 - Unmapped: 0 ✅
 
 ---
