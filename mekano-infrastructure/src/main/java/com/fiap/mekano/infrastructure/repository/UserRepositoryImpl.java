@@ -10,14 +10,17 @@ import io.quarkus.cache.CacheInvalidate;
 import io.quarkus.cache.CacheResult;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.persistence.PersistenceException;
 import jakarta.transaction.Transactional;
 import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.faulttolerance.Timeout;
+import org.hibernate.exception.ConstraintViolationException;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -57,6 +60,8 @@ import java.util.UUID;
 @ApplicationScoped
 public class UserRepositoryImpl implements UserRepositoryPort {
 
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("name", "email", "createdAt");
+
     @Inject
     UserPanacheRepository panacheRepository;
 
@@ -88,10 +93,25 @@ public class UserRepositoryImpl implements UserRepositoryPort {
     @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     @CacheInvalidate(cacheName = "users")
     public User save(User user) {
-        var entity = mapper.toEntity(user);
-        panacheRepository.persist(entity);
-        panacheRepository.flush();
-        return mapper.toDomain(entity);
+        try {
+            var entity = mapper.toEntity(user);
+            panacheRepository.persist(entity);
+            panacheRepository.flush();
+            return mapper.toDomain(entity);
+        } catch (PersistenceException e) {
+            throw handleConstraintViolation(e, user.getEmail().getValue());
+        }
+    }
+
+    private static AppException handleConstraintViolation(PersistenceException e, String email) {
+        Throwable cause = e;
+        while (cause != null) {
+            if (cause instanceof ConstraintViolationException) {
+                throw new AppException(409, Messages.get("user.already.exists", email));
+            }
+            cause = cause.getCause();
+        }
+        throw e;
     }
 
     /**
@@ -157,6 +177,9 @@ public class UserRepositoryImpl implements UserRepositoryPort {
     public List<User> findAll(int page, int size, String sort) {
         String[] sortParts = sort.split(",");
         String sortField = sortParts[0];
+        if (!ALLOWED_SORT_FIELDS.contains(sortField)) {
+            sortField = "name";
+        }
         boolean ascending = sortParts.length < 2 || "asc".equalsIgnoreCase(sortParts[1]);
         var direction = ascending ? io.quarkus.panache.common.Sort.Direction.Ascending : io.quarkus.panache.common.Sort.Direction.Descending;
         var query = panacheRepository.find("isActive = ?1",
