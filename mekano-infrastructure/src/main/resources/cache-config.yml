@@ -1,0 +1,8 @@
+# --- Cache Caffeine: users (D-13) ---
+quarkus:
+  cache:
+    caffeine:
+      users:
+        initial-capacity: 10
+        maximum-size: 100
+        expire-after-write: 60s

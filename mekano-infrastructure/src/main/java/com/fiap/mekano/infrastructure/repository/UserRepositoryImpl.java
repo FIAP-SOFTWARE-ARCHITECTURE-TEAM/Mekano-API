@@ -4,6 +4,7 @@ import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.domain.model.User;
 import com.fiap.mekano.domain.port.out.UserRepositoryPort;
+import com.fiap.mekano.infrastructure.cache.CacheNames;
 import com.fiap.mekano.infrastructure.entity.UserEntity;
 import com.fiap.mekano.infrastructure.mapper.UserEntityMapper;
 import io.quarkus.cache.CacheInvalidate;
@@ -91,7 +92,7 @@ public class UserRepositoryImpl implements UserRepositoryPort {
      */
     @Override
     @Timeout(value = 5, unit = ChronoUnit.SECONDS)
-    @CacheInvalidate(cacheName = "users")
+    @CacheInvalidate(cacheName = CacheNames.USERS)
     public User save(User user) {
         try {
             var entity = mapper.toEntity(user);
@@ -125,7 +126,7 @@ public class UserRepositoryImpl implements UserRepositoryPort {
       */
     @Override
     @Retry(maxRetries = 3)
-    @CacheResult(cacheName = "users")
+    @CacheResult(cacheName = CacheNames.USERS)
     public Optional<User> findById(UUID id) {
         return panacheRepository.find("uuid = ?1 AND isActive = ?2", id, true)
                 .firstResultOptional().map(mapper::toDomain);
@@ -142,7 +143,7 @@ public class UserRepositoryImpl implements UserRepositoryPort {
      */
     @Override
     @Retry(maxRetries = 3, delay = 200, delayUnit = ChronoUnit.MILLIS)
-    @CacheResult(cacheName = "users")
+    @CacheResult(cacheName = CacheNames.USERS)
     public Optional<User> findByEmail(String email) {
         return panacheRepository.find("email = ?1 AND isActive = ?2", email, true)
                 .firstResultOptional().map(mapper::toDomain);
@@ -215,7 +216,7 @@ public class UserRepositoryImpl implements UserRepositoryPort {
       */
     @Override
     @Transactional
-    @CacheInvalidate(cacheName = "users")
+    @CacheInvalidate(cacheName = CacheNames.USERS)
     public void markAsDeleted(UUID id) {
         UserEntity entity = panacheRepository.find("uuid", id).firstResultOptional()
                 .orElseThrow(() -> new AppException(404, Messages.get("user.not.found", id)));

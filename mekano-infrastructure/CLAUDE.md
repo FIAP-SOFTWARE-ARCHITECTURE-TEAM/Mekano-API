@@ -10,6 +10,8 @@ Camada de infraestrutura — implementa as interfaces (ports) do domínio usando
 
 ```
 com.fiap.mekano.infrastructure
+├── cache/                     # Cache names centralizados
+│   └── CacheNames.java                # Constantes para anotações @CacheResult
 ├── entity/                    # Entidades JPA
 │   ├── BaseEntity.java                # @MappedSuperclass — campos de auditoria
 │   ├── UserEntity.java                # Estende BaseEntity
@@ -73,9 +75,10 @@ Usamos **duas classes** para clareza:
 
 ### Cache Caffeine
 
-- `@CacheResult(cacheName = "users")` em `findById`, `findByEmail`
-- `@CacheInvalidate(cacheName = "users")` em `save`, `markAsDeleted`
-- Config: `expire-after-write=60s`, `maximum-size=100`
+- Cache names centralizados em `CacheNames.java` (`CacheNames.USERS`)
+- `@CacheResult(cacheName = CacheNames.USERS)` em `findById`, `findByEmail`
+- `@CacheInvalidate(cacheName = CacheNames.USERS)` em `save`, `markAsDeleted`
+- Config: `cache-config.yml` com `expire-after-write=60s`, `maximum-size=100`
 
 ### Flyway Migrations
 
