@@ -67,6 +67,11 @@
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-cache</artifactId>
         </dependency>
+        <!-- Config YAML — lê application.yml com quarkus.cache config -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-config-yaml</artifactId>
+        </dependency>
 
         <!-- MapStruct — geração automática de mappers entre UserEntity ↔ User (Plan 09-05).
              Reabilitado após isolamento do bug quarkus-maven-plugin generate-code. -->

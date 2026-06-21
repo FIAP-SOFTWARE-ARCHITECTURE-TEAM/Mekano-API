@@ -84,6 +84,12 @@
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-micrometer-registry-prometheus</artifactId>
         </dependency>
+        <!-- EXT-XX: Config YAML — lê application.yml de módulos dependentes -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-config-yaml</artifactId>
+        </dependency>
+
         <!-- MapStruct — geração automática de mappers entre DTOs ↔ domínio (Plan 09-05).
              Reabilitado após isolamento do bug quarkus-maven-plugin generate-code. -->
         <dependency>
