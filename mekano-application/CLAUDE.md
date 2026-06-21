@@ -4,7 +4,7 @@
 
 Camada de aplicação — orquestra regras de negócio invocando ports do domínio. Não contém lógica de negócio (essa fica no domain), apenas coordenação: validação → duplicidade → hash → persistência → evento.
 
-**Dependência mínima de framework**: apenas `quarkus-arc` para `@ApplicationScoped` + `quarkus-elytron-security-common` para BCrypt.
+**Dependência mínima de framework**: apenas `quarkus-arc` para `@ApplicationScoped`. O BCrypt fica exclusivamente no módulo `mekano-infrastructure` (via `PasswordHasher` interface no domain).
 
 ## Package Structure
 
@@ -38,7 +38,7 @@ com.fiap.mekano.application
 
 ## Dependencies
 
-- **compile**: `mekano-domain`, `quarkus-arc`, `quarkus-elytron-security-common`
+- **compile**: `mekano-domain`, `quarkus-arc`
 - **provided**: `lombok`
 - **test**: `junit-jupiter`, `mockito-junit-jupiter`
 

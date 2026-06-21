@@ -12,6 +12,7 @@ import com.fiap.mekano.domain.port.out.UserRepositoryPort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @ApplicationScoped
