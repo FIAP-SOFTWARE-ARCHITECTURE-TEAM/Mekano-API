@@ -63,6 +63,16 @@ public class UserService implements UserServicePort {
     }
 
     @Override
+    public List<User> findAllUsers(int page, int size, String sort) {
+        return userRepository.findAll(page, size, sort);
+    }
+
+    @Override
+    public long countAllUsers() {
+        return userRepository.countAll();
+    }
+
+    @Override
     public void deleteUser(UUID id) {
         userRepository.markAsDeleted(id);
     }

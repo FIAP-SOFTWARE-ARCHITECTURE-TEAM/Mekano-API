@@ -2,6 +2,7 @@ package com.fiap.mekano.domain.port.in;
 
 import com.fiap.mekano.domain.model.User;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -14,6 +15,10 @@ public interface UserServicePort {
     User execute(CreateUserCommand command);
 
     User findUserById(UUID id);
+
+    List<User> findAllUsers(int page, int size, String sort);
+
+    long countAllUsers();
 
     void deleteUser(UUID id);
 }

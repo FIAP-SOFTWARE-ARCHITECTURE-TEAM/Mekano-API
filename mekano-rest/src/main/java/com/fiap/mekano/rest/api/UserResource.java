@@ -6,7 +6,6 @@ import com.fiap.mekano.rest.api.dto.UserResponse;
 import com.fiap.mekano.rest.api.exception.ProblemDetail;
 import com.fiap.mekano.rest.api.mapper.UserDtoMapper;
 import com.fiap.mekano.domain.port.in.UserServicePort;
-import com.fiap.mekano.domain.port.out.UserRepositoryPort;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
@@ -59,9 +58,6 @@ public class UserResource {
 
     @Inject
     UserDtoMapper userDtoMapper;
-
-    @Inject
-    UserRepositoryPort userRepositoryPort;
 
     /**
      * Cria um novo usuário no sistema.
@@ -135,11 +131,11 @@ public class UserResource {
             @QueryParam("page") @DefaultValue("0") int page,
             @QueryParam("size") @DefaultValue("10") int size,
             @QueryParam("sort") @DefaultValue("name,asc") String sort) {
-        var content = userRepositoryPort.findAll(page, size, sort)
+        var content = userServicePort.findAllUsers(page, size, sort)
                 .stream()
                 .map(userDtoMapper::toResponse)
                 .toList();
-        long total = userRepositoryPort.countAll();
+        long total = userServicePort.countAllUsers();
         int totalPages = (int) Math.ceil((double) total / size);
         var response = new UserPageResponse(content, page, size, total, totalPages);
         return Response.ok(response).build();
