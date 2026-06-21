@@ -1,0 +1,48 @@
+# --- Datasource, Hibernate, Flyway ---
+quarkus:
+  datasource:
+    db-kind: postgresql
+  flyway:
+    migrate-at-start: true
+    connect-retries: 5
+
+"%dev":
+  quarkus:
+    datasource:
+      username: mekano
+      password: mekano
+      jdbc:
+        url: jdbc:postgresql://localhost:5432/mekano
+    hibernate-orm:
+      log:
+        sql: true
+      schema-management:
+        strategy: validate
+
+"%prod":
+  quarkus:
+    datasource:
+      username: ${DB_USER:mekano}
+      password: ${DB_PASSWORD:mekano}
+      jdbc:
+        url: ${DB_URL:jdbc:postgresql://localhost:5432/mekano}
+    hibernate-orm:
+      log:
+        sql: false
+      schema-management:
+        strategy: validate
+
+"%test":
+  quarkus:
+    datasource:
+      jdbc:
+        url: jdbc:postgresql://localhost:5432/mekano
+      username: mekano
+      password: mekano
+      devservices:
+        reuse: true
+    flyway:
+      clean-at-start: true
+    hibernate-orm:
+      schema-management:
+        strategy: validate

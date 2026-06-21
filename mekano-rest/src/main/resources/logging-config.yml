@@ -1,0 +1,22 @@
+# --- JSON logging and log levels ---
+quarkus:
+  log:
+    console:
+      json:
+        ~: true
+        pretty-print: false
+
+"%dev":
+  quarkus:
+    log:
+      level: DEBUG
+
+"%prod":
+  quarkus:
+    log:
+      level: INFO
+
+"%test":
+  quarkus:
+    log:
+      level: WARN
