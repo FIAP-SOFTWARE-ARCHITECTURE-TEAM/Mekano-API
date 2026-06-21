@@ -75,44 +75,44 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| OS-01 | | Pending |
-| OS-02 | | Pending |
-| OS-03 | | Pending |
-| OS-04 | | Pending |
-| OS-05 | | Pending |
-| OS-06 | | Pending |
-| OS-07 | | Pending |
-| OS-08 | | Pending |
-| OS-09 | | Pending |
-| OS-10 | | Pending |
-| OS-11 | | Pending |
-| OS-12 | | Pending |
-| OS-13 | | Pending |
-| OS-14 | | Pending |
-| OS-15 | | Pending |
-| OS-16 | | Pending |
-| OS-17 | | Pending |
-| OS-18 | | Pending |
-| EST-01 | | Pending |
-| EST-02 | | Pending |
-| EST-03 | | Pending |
-| EST-04 | | Pending |
-| EST-05 | | Pending |
-| EST-06 | | Pending |
-| EST-07 | | Pending |
-| EST-08 | | Pending |
-| EST-09 | | Pending |
-| PAG-01 | | Pending |
-| PAG-02 | | Pending |
-| PAG-03 | | Pending |
-| DOC-01 | | Pending |
-| DOC-02 | | Pending |
-| DOC-03 | | Pending |
+| OS-01 | Phase 1 — OS Core | Pending |
+| OS-02 | Phase 1 — OS Core | Pending |
+| OS-03 | Phase 1 — OS Core | Pending |
+| OS-04 | Phase 1 — OS Core | Pending |
+| OS-05 | Phase 1 — OS Core | Pending |
+| OS-06 | Phase 1 — OS Core | Pending |
+| OS-07 | Phase 1 — OS Core | Pending |
+| OS-08 | Phase 1 — OS Core | Pending |
+| OS-09 | Phase 1 — OS Core | Pending |
+| OS-10 | Phase 1 — OS Core | Pending |
+| OS-11 | Phase 1 — OS Core | Pending |
+| OS-12 | Phase 1 — OS Core | Pending |
+| OS-13 | Phase 1 — OS Core | Pending |
+| OS-14 | Phase 1 — OS Core | Pending |
+| OS-15 | Phase 1 — OS Core | Pending |
+| OS-16 | Phase 1 — OS Core | Pending |
+| OS-17 | Phase 1 — OS Core | Pending |
+| OS-18 | Phase 2 — Estoque Integration | Pending |
+| EST-01 | Phase 2 — Estoque Integration | Pending |
+| EST-02 | Phase 2 — Estoque Integration | Pending |
+| EST-03 | Phase 2 — Estoque Integration | Pending |
+| EST-04 | Phase 2 — Estoque Integration | Pending |
+| EST-05 | Phase 2 — Estoque Integration | Pending |
+| EST-06 | Phase 2 — Estoque Integration | Pending |
+| EST-07 | Phase 2 — Estoque Integration | Pending |
+| EST-08 | Phase 2 — Estoque Integration | Pending |
+| EST-09 | Phase 2 — Estoque Integration | Pending |
+| PAG-01 | Phase 3 — Pagamento & Delivery | Pending |
+| PAG-02 | Phase 3 — Pagamento & Delivery | Pending |
+| PAG-03 | Phase 3 — Pagamento & Delivery | Pending |
+| DOC-01 | Phase 1 — OS Core | Pending |
+| DOC-02 | Phase 1 — OS Core | Pending |
+| DOC-03 | Phase 3 — Pagamento & Delivery | Pending |
 
 **Coverage:**
 - v1 requirements: 33 total
-- Mapped to phases: 0
-- Unmapped: 33 ⚠️
+- Mapped to phases: 33
+- Unmapped: 0 ✅
 
 ---
 *Requirements defined: 2026-06-20*
