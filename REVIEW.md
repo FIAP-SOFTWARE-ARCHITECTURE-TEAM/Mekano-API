@@ -8,12 +8,12 @@ files_reviewed_list:
   - mekano-domain/src/main/java/com/fiap/mekano/domain/exception/Messages.java
   - mekano-domain/src/main/resources/com/fiap/mekano/domain/exception/messages.properties
   - mekano-domain/src/main/java/com/fiap/mekano/domain/valueobject/Email.java
-  - mekano-domain/src/main/java/com/fiap/mekano/domain/port/in/CreateUserInputPort.java
+  - mekano-domain/src/main/java/com/fiap/mekano/domain/port/in/UserServicePort.java
   - mekano-domain/src/main/java/com/fiap/mekano/domain/port/out/UserRepositoryPort.java
   - mekano-domain/src/test/java/com/fiap/mekano/domain/model/UserTest.java
   - mekano-domain/src/test/java/com/fiap/mekano/domain/valueobject/EmailTest.java
-  - mekano-application/src/main/java/com/fiap/mekano/application/usecase/user/CreateUserUseCase.java
-  - mekano-application/src/test/java/com/fiap/mekano/application/usecase/user/CreateUserUseCaseTest.java
+  - mekano-application/src/main/java/com/fiap/mekano/application/service/user/UserService.java
+  - mekano-application/src/test/java/com/fiap/mekano/application/service/user/UserServiceTest.java
   - mekano-infrastructure/src/main/java/com/fiap/mekano/infrastructure/repository/UserRepositoryImpl.java
   - mekano-rest/src/main/java/com/fiap/mekano/rest/api/exception/ApiExceptionMapper.java
   - mekano-rest/src/main/java/com/fiap/mekano/rest/api/exception/ProblemDetail.java
@@ -97,11 +97,11 @@ quarkus.http.auth.proactive=false
 ### WR-01: Race condition in user creation produces 500 error instead of proper 409
 
 **Files:**
-- `mekano-application/src/main/java/com/fiap/mekano/application/usecase/user/CreateUserUseCase.java:58-60` (existsByEmail check)
-- `mekano-application/src/main/java/com/fiap/mekano/application/usecase/user/CreateUserUseCase.java:69` (save)
+- `mekano-application/src/main/java/com/fiap/mekano/application/service/user/UserService.java:58-60` (existsByEmail check)
+- `mekano-application/src/main/java/com/fiap/mekano/application/service/user/UserService.java:69` (save)
 - `mekano-rest/src/main/java/com/fiap/mekano/rest/api/exception/ApiExceptionMapper.java:33-38` (fallback 500)
 
-**Issue:** The `CreateUserUseCase.execute()` method performs a `existsByEmail` check (line 58) and then call `save()` (line 69) in separate steps within a `@Transactional` method. Under concurrent requests with the same email:
+**Issue:** The `UserService.execute()` method performs a `existsByEmail` check (line 58) and then call `save()` (line 69) in separate steps within a `@Transactional` method. Under concurrent requests with the same email:
 
 1. Thread A: `existsByEmail("x@x.com")` → `false`
 2. Thread B: `existsByEmail("x@x.com")` → `false` (Thread A hasn't committed yet under READ_COMMITTED)
@@ -110,7 +110,7 @@ quarkus.http.auth.proactive=false
 
 The `ConstraintViolationException` from Hibernate is **not** an `AppException`, so `ApiExceptionMapper` catches it as a generic exception and returns **500 Internal Server Error** instead of the correct **409 Conflict** response.
 
-The test `CreateUserUseCaseTest.deveLancarExcecaoQuandoEmailDuplicado()` (line 57-63) tests the non-concurrent path (detects duplicate before save) but does **not** test the concurrent race path (save fails despite pre-check passing).
+The test `UserServiceTest.deveLancarExcecaoQuandoEmailDuplicado()` (line 57-63) tests the non-concurrent path (detects duplicate before save) but does **not** test the concurrent race path (save fails despite pre-check passing).
 
 **Fix (option A — catch and convert in use case):**
 ```java
@@ -207,46 +207,46 @@ private String email;
 private String password;
 ```
 
-### WR-04: Resource injects concrete CreateUserUseCase instead of using the interface — violates documented contract and Dependency Inversion
+### WR-04: Resource injects concrete UserService instead of using the interface — violates documented contract and Dependency Inversion
 
 **Files:**
 - `mekano-rest/src/main/java/com/fiap/mekano/rest/api/UserResource.java:69-73`
 - `mekano-rest/src/main/java/com/fiap/mekano/rest/api/UserResource.java:125`
 
-**Issue:** `UserResource` injects **both** the interface `CreateUserInputPort` (line 70) and the concrete implementation `CreateUserUseCase` (line 73). The class Javadoc at line 45 explicitly states:
-> "Invocar CreateUserInputPort (nunca CreateUserUseCase diretamente — INH-04)"
+**Issue:** `UserResource` injects **both** the interface `UserServicePort` (line 70) and the concrete implementation `UserService` (line 73). The class Javadoc at line 45 explicitly states:
+> "Invocar UserServicePort (nunca UserService diretamente — INH-04)"
 
-But `create()` at line 125 directly calls `createUserUseCase.executeResponse(command)` on the **concrete class**, bypassing the port interface entirely:
+But `create()` at line 125 directly calls `UserService.executeResponse(command)` on the **concrete class**, bypassing the port interface entirely:
 
 ```java
 // Line 124-126  — uses concrete class, not the interface
 var command = userDtoMapper.toCommand(request);
-var response = createUserUseCase.executeResponse(command);
+var response = UserService.executeResponse(command);
 ```
 
-Meanwhile, `getById()` and `delete()` at lines 185 and 209 correctly use the `createUserInputPort` interface.
+Meanwhile, `getById()` and `delete()` at lines 185 and 209 correctly use the `UserServicePort` interface.
 
 This violates:
 1. **Dependency Inversion Principle**: the REST layer should depend on domain abstractions (ports), not concrete application classes
-2. **The project's own documented convention**: "never CreateUserUseCase directly — INH-04"
+2. **The project's own documented convention**: "never UserService directly — INH-04"
 
-The root cause: `executeResponse()` is not part of the `CreateUserInputPort` interface. The REST layer needs it to get a `CreateUserResponse` instead of the raw `User` entity, but the interface only exposes `execute(CreateUserCommand)` returning `User`.
+The root cause: `executeResponse()` is not part of the `UserServicePort` interface. The REST layer needs it to get a `CreateUserResponse` instead of the raw `User` entity, but the interface only exposes `execute(CreateUserCommand)` returning `User`.
 
-**Fix (recommended):** Move `executeResponse()` into the `CreateUserInputPort` interface:
+**Fix (recommended):** Move `executeResponse()` into the `UserServicePort` interface:
 ```java
-// In CreateUserInputPort.java
+// In UserServicePort.java
 User execute(CreateUserCommand command);
 ```
 
-Then remove the `CreateUserUseCase` injection from `UserResource` and use the interface:
+Then remove the `UserService` injection from `UserResource` and use the interface:
 ```java
 @Inject
-CreateUserInputPort createUserInputPort;  // single injection, covers all three methods
+UserServicePort UserServicePort;  // single injection, covers all three methods
 ```
 
 And in `UserResource.create()`:
 ```java
-User user = createUserInputPort.execute(command);
+User user = UserServicePort.execute(command);
 UserResponse userResponse = userDtoMapper.toResponse(user);
 // ...
 ```
@@ -258,7 +258,7 @@ This also requires either:
 Fix approach **B** (simpler): just remove `executeResponse()` usage and use `execute()` directly:
 ```java
 var command = userDtoMapper.toCommand(request);
-User user = createUserInputPort.execute(command);
+User user = UserServicePort.execute(command);
 UserResponse userResponse = userDtoMapper.toResponse(user);
 ```
 
@@ -303,7 +303,7 @@ This is misleading for any consumer reading the OpenAPI spec at `/q/openapi` or 
 | File | Critical | Warning | Info |
 |------|----------|---------|------|
 | `UserResource.java` | 1 | 1 | 0 |
-| `CreateUserUseCase.java` | 0 | 1 | 0 |
+| `UserService.java` | 0 | 1 | 0 |
 | `CreateUserRequest.java` | 0 | 1 | 0 |
 | `UserRepositoryImpl.java` | 0 | 1 | 0 |
 | `ProblemDetail.java` | 0 | 0 | 1 |

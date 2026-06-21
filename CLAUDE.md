@@ -43,7 +43,7 @@ com.fiap.mekano.{layer}.{subdomain}
 | Módulo | Package Base | Pacotes |
 |--------|-------------|---------|
 | domain | `com.fiap.mekano.domain` | `model`, `valueobject`, `port/in`, `port/out`, `exception`, `event` |
-| application | `com.fiap.mekano.application` | `usecase/user` |
+| application | `com.fiap.mekano.application` | `service/user` |
 | infrastructure | `com.fiap.mekano.infrastructure` | `entity` (inclui `BaseEntity`), `repository`, `mapper`, `service`, `security`, `event` |
 | rest | `com.fiap.mekano.rest` | `api`, `api/dto`, `api/mapper`, `api/exception`, `api/filter`, `observability` |
 
@@ -75,7 +75,7 @@ docker-compose up -d
 - **Hybrid ID**: PK sequencial (`Long id` auto-increment) no banco + `UUID uuid` (unique) exposto em APIs — previne enumeração de recursos
 - **Value Objects**: Imutáveis, validam no construtor, `@EqualsAndHashCode` por valor
 - **Ports**: Interfaces puras no domain/ — sem anotações de framework
-- **Use Cases**: `@ApplicationScoped`, injetam ports via construtor, `@Transactional` no método execute()
+- **Services**: `@ApplicationScoped`, injetam ports via construtor, `@Transactional` no método execute()
 - **Resources**: `@RequestScoped` (obrigatório para JWT + `@Context UriInfo`), `@Authenticated`, `@RolesAllowed("user")`
 - **DTOs**: Input = classe Lombok com Bean Validation; Output = record Java
 - **Mappers**: MapStruct `componentModel = "cdi"`, ordem annotationProcessorPaths: `lombok → lombok-mapstruct-binding → mapstruct-processor`

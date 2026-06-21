@@ -16,7 +16,7 @@ com.fiap.mekano.domain
 │   └── Email.java
 ├── port/
 │   ├── in/            # Input ports (driving side — chamados por application)
-│   │   ├── CreateUserInputPort.java
+│   │   ├── UserServicePort.java               # Input port — contrato do serviço de usuário
 │   │   ├── AuthenticateUserInputPort.java
 │   │   ├── PasswordHasher.java          # Abstração de hash (impl em infrastructure)
 │   │   ├── CreateUserCommand.java       # Record — dados de entrada
@@ -55,7 +55,7 @@ com.fiap.mekano.domain
 - `@EqualsAndHashCode` — igualdade por valor (dois Emails com mesmo endereço são iguais)
 
 ### Ports (`port/`)
-- **Input ports**: interfaces que o *mundo externo* chama para executar ações no sistema. Ex: `CreateUserInputPort`, `AuthenticateUserInputPort`
+- **Input ports**: interfaces que o *mundo externo* chama para executar ações no sistema. Ex: `UserServicePort`, `AuthenticateUserInputPort`
 - **Output ports**: interfaces que o *domínio* chama para acessar recursos externos. Ex: `UserRepositoryPort`, `EventPublisher`
 - **Commands**: records que carregam dados de entrada para os use cases. Ex: `CreateUserCommand`
 - **Data objects**: records que carregam dados de saída dos repositórios. Ex: `RefreshTokenData`
@@ -75,7 +75,7 @@ com.fiap.mekano.domain
 
 1. Criar `model/NovaEntidade.java` — POJO com `@Builder(access = PRIVATE)`, factory methods `create()` e `reconstitute()`
 2. Criar `valueobject/NovoVO.java` — imutável, valida no construtor, `@EqualsAndHashCode`
-3. Criar `port/in/NovoInputPort.java` — interface do use case
+3. Criar `port/in/NovoServicePort.java` — interface do serviço
 4. Criar `port/out/NovoRepositoryPort.java` — interface do repository
 5. Criar `exception/NovaExcecao.java` — estende `DomainException` ou `BusinessException`
 6. Criar `exception/NovaExcecaoNotFoundException.java` se aplicável

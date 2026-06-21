@@ -84,13 +84,13 @@ enum StatusOS {
 - Make `StatusOS` a value object on the aggregate, not a simple String — guard transitions in the domain entity, not in the service layer
 
 **Warning signs:**
-- `if (status == RECEBIDA)` scattered across use cases instead of centralized
+- `if (status == RECEBIDA)` scattered across Services instead of centralized
 - Switch statements without `default` that throws for illegal states
 - Integration tests that test "happy path" status transitions but never test illegal transition rejection (400 response)
 - Two boolean fields that together encode 4 states but don't map cleanly to the domain
 
 **Phase to address:**
-OS Foundation Phase — build transition matrix before implementing any use case.
+OS Foundation Phase — build transition matrix before implementing any Service.
 
 ---
 
@@ -247,7 +247,7 @@ Brazilian document validation is deceptively simple — the modulo 11 algorithm 
 - No `Documento` value object — CPF and CNPJ stored as raw strings everywhere
 
 **Phase to address:**
-OS Foundation Phase (Cliente aggregate includes Documento value object). Create and test the Documento VO before any use case that accepts CPF/CNPJ.
+OS Foundation Phase (Cliente aggregate includes Documento value object). Create and test the Documento VO before any Service that accepts CPF/CNPJ.
 
 ---
 
@@ -412,7 +412,7 @@ OS Foundation Phase (database schema design). Review all Flyway migrations for p
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
 | **OS → Estoque (reservar peças ao aprovar orçamento)** | OS directly calls Estoque service synchronously in the same `@Transactional` | OS publishes `OrcamentoAprovadoEvent` via EventPublisher. Estoque handler listens, reserves parts, publishes `ReservaEfeturadaEvent` or `EstoqueInsuficienteEvent`. OS reacts to event. |
-| **OS → Pagamento (emitir cobrança ao finalizar)** | Pagamento endpoint called directly from OS use case | OS → FINALIZADA triggers `OSTerminadaEvent`. Pagamento handler emits cobrança. Pagamento doesn't need to know about OS internals. |
+| **OS → Pagamento (emitir cobrança ao finalizar)** | Pagamento endpoint called directly from OS Service | OS → FINALIZADA triggers `OSTerminadaEvent`. Pagamento handler emits cobrança. Pagamento doesn't need to know about OS internals. |
 | **Mock/ServicoBancario (payment gateway)** | No retry logic; assumes bank always responds in < 1 second | Implement `@Retry`, `@Timeout`, and a simulated delay (2-5s) in the mock. Test with network failures. |
 | **Nota Fiscal de Entrada** | Trying to validate NF-e XML locally against SEFAZ | Validate NF-e by verifying the SEFAZ authorization protocol (chave de acesso + protocolo). Do NOT re-implement SEFAZ validation. |
 | **Flyway migrations across contexts** | One monolithic migration file per version (e.g., `V5__create_all_tables.sql`) | One migration per table/feature. Use naming: `V5__create_ordem_servico.sql`, `V6__create_item_os.sql`, `V7__create_estoque.sql`. Makes rollbacks and understanding history possible. |

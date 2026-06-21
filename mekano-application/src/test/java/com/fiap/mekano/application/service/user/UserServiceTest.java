@@ -1,4 +1,4 @@
-package com.fiap.mekano.application.usecase.user;
+package com.fiap.mekano.application.service.user;
 
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.model.User;
@@ -18,8 +18,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("CreateUserUseCase")
-class CreateUserUseCaseTest {
+@DisplayName("UserService")
+class UserServiceTest {
 
     @Mock
     UserRepositoryPort userRepository;
@@ -31,21 +31,18 @@ class CreateUserUseCaseTest {
     EventPublisher eventPublisher;
 
     @InjectMocks
-    CreateUserUseCase useCase;
+    UserService userService;
 
     @Test
     @DisplayName("deve criar usuário com dados válidos")
     void deveCriarUsuarioComDadosValidos() {
-        // Arrange
         var command = new CreateUserCommand("João Silva", "joao@fiap.br", "senha123");
         when(userRepository.existsByEmail("joao@fiap.br")).thenReturn(false);
         when(passwordHasher.hash("senha123")).thenReturn("$2a$10$hashedpassword");
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        // Act
-        User result = useCase.execute(command);
+        User result = userService.execute(command);
 
-        // Assert
         assertNotNull(result);
         assertEquals("João Silva", result.getName());
         assertEquals("joao@fiap.br", result.getEmail().getValue());
@@ -59,7 +56,7 @@ class CreateUserUseCaseTest {
         var command = new CreateUserCommand("João Silva", "joao@fiap.br", "senha123");
         when(userRepository.existsByEmail("joao@fiap.br")).thenReturn(true);
 
-        assertThrows(AppException.class, () -> useCase.execute(command));
+        assertThrows(AppException.class, () -> userService.execute(command));
         verify(userRepository, never()).save(any());
     }
 
@@ -69,7 +66,7 @@ class CreateUserUseCaseTest {
         var command = new CreateUserCommand("João Silva", "email-invalido", "senha123");
         when(userRepository.existsByEmail("email-invalido")).thenReturn(false);
 
-        assertThrows(AppException.class, () -> useCase.execute(command));
+        assertThrows(AppException.class, () -> userService.execute(command));
     }
 
     @Test
@@ -77,7 +74,7 @@ class CreateUserUseCaseTest {
     void deveLancarExcecaoQuandoNomeNulo() {
         var command = new CreateUserCommand(null, "joao@fiap.br", "senha123");
 
-        assertThrows(AppException.class, () -> useCase.execute(command));
+        assertThrows(AppException.class, () -> userService.execute(command));
         verify(userRepository, never()).existsByEmail(any());
         verify(userRepository, never()).save(any());
     }

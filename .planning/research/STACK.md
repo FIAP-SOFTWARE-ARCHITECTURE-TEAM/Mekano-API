@@ -280,7 +280,7 @@ public record OrcamentoAprovadoEvent(
     BigDecimal valorTotal
 ) {}
 
-// Use case fires event after approving budget
+// Service fires event after approving budget
 @ApplicationScoped
 public class AprovarOrcamentoUseCase {
 
@@ -366,7 +366,7 @@ OS Finalizada ──CDI──→ [Pagamento: emite cobrança]
    ╱              ╲    5-10 tests per context
   ╱ INTEGRATION    ╲   @QuarkusTest + REST Assured
  ╱  (HTTP + DB)    ╲  ─────────
-╱                  ╲  10-20 tests per use case
+╱                  ╲  10-20 tests per Service
 ╱ COMPONENT + UNIT  ╲  @QuarkusComponentTest / pure JUnit 5
 ╱ (CDI beans, VOs)  ╲ ─────────
 ╱                   ╲  30-50 tests per value object
@@ -380,7 +380,7 @@ OS Finalizada ──CDI──→ [Pagamento: emite cobrança]
 | Layer | Annotation | What to Test | Mock What |
 |-------|-----------|-------------|-----------|
 | Domain | `@Test` (JUnit 5, no Quarkus) | Value object validation (CPF, CNPJ, Placa, Email), entity state transitions, invariants | Nothing — pure logic |
-| Application | `@ExtendWith(MockitoExtension.class)` | Use case orchestration, port interactions, event firing | All ports (repositories, event bus, hasher) |
+| Application | `@ExtendWith(MockitoExtension.class)` | Service orchestration, port interactions, event firing | All ports (repositories, event bus, hasher) |
 | Infrastructure | `@QuarkusTest` + `@TestTransaction` | Repository CRUD, mapper conversion, event publishing | Nothing (real DB via DevServices) |
 | REST | `@QuarkusTest` + REST Assured | HTTP status codes, DTO validation, security, Problem Details | `@TestSecurity` for JWT bypass |
 | All layers | ArchUnit `@AnalyzeClasses` | Layer isolation, package boundaries, no cycles | Nothing — bytecode analysis |

@@ -2,7 +2,7 @@ package com.fiap.mekano.rest.api.mapper;
 
 import com.fiap.mekano.rest.api.dto.CreateUserRequest;
 import com.fiap.mekano.rest.api.dto.UserResponse;
-import com.fiap.mekano.application.usecase.user.CreateUserResponse;
+import com.fiap.mekano.application.service.user.CreateUserResponse;
 import com.fiap.mekano.domain.model.User;
 import com.fiap.mekano.domain.port.in.CreateUserCommand;
 import org.mapstruct.Mapper;
@@ -32,7 +32,7 @@ public interface UserDtoMapper {
      * <p>Mapeamento direto: todos os campos têm mesmo nome e tipo (String → String).
      *
      * @param request DTO validado por Bean Validation no resource
-     * @return comando pronto para {@code CreateUserInputPort.execute()}
+     * @return comando pronto para {@code UserServicePort.execute()}
      */
     CreateUserCommand toCommand(CreateUserRequest request);
 
@@ -53,7 +53,7 @@ public interface UserDtoMapper {
      *
      * <p>Mapeamento direto: todos os campos têm mesmo nome e tipo.
      *
-     * @param response resposta do caso de uso de criação
+     * @param response resposta do serviço de criação
      * @return DTO de saída para o endpoint REST
      */
     UserResponse toResponse(CreateUserResponse response);

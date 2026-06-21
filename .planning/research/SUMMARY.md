@@ -62,13 +62,13 @@ Plus: Public Client Status Tracking, Minimum Stock Alerts, OS Listing with Filte
 
 ### Architecture Approach
 
-**4-module Clean Architecture** with bounded contexts grouped within each layer. Three new contexts (Ordem de Serviço, Estoque, Pagamento) join the existing User/Auth context. Each context has its own packages in domain/model/, application/usecase/, infrastructure/entity+repository, and rest/api/.
+**4-module Clean Architecture** with bounded contexts grouped within each layer. Three new contexts (Ordem de Serviço, Estoque, Pagamento) join the existing User/Auth context. Each context has its own packages in domain/model/, application/service/, infrastructure/entity+repository, and rest/api/.
 
 **Major architectural patterns:**
 1. **OS State Machine** — 7 statuses with explicit transition methods on the aggregate root (`iniciarDiagnostico()`, `finalizarDiagnostico()`, `aprovarOrcamento()`, etc.). No `setStatus()` — transitions are business methods that validate guards. Transition matrix with `Map<StatusOS, Set<StatusOS>>` as single source of truth.
 2. **Domain Events for Inter-Context Communication** — CDI `Event.fire()` (same transaction) for critical flows (stock reservation must succeed or OS approval rolls back). `Event.fireAsync()` for non-critical flows (payment confirmation → delivery). Integration events are Java records with primitives only.
 3. **Aggregate Design with UUID References** — `Cliente` and `Veiculo` are separate aggregates referenced by UUID from `OrdemDeServico`. `Orcamento` is a separate aggregate root with its own lifecycle. `ReservaEstoque` lives inside `Estoque` aggregate (consistency boundary for reservation).
-4. **Use Case as Consistency Coordinator** — `@Transactional` on use case methods. Event publisher fires after domain state change. Listeners in other contexts run in same/separate transaction depending on `@Observes` vs `@ObservesAsync`.
+4. **Service as Consistency Coordinator** — `@Transactional` on Service methods. Event publisher fires after domain state change. Listeners in other contexts run in same/separate transaction depending on `@Observes` vs `@ObservesAsync`.
 
 **Major components per bounded context:**
 | Component | Responsibility |

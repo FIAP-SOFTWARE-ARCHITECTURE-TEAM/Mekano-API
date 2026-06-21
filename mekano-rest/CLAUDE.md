@@ -38,7 +38,7 @@ com.fiap.mekano.rest
 - `@Path("/users") @RequestScoped @Authenticated`
 - **`@RequestScoped` obrigatório** (G8) — necessário para `@Context UriInfo` e injeção de JWT claims
 - **NUNCA `@Transactional`** — transações são do use case (D-01)
-- Injeta `CreateUserInputPort` (interface) e `UserRepositoryPort` (consulta direta D-06)
+- Injeta `UserServicePort` (interface) e `UserRepositoryPort` (consulta direta D-06)
 - Endpoints: `POST /users` (cria), `GET /users` (lista paginada), `GET /users/{id}` (busca), `DELETE /users/{id}` (soft delete)
 - `@RolesAllowed("user")` — exige role JWT "user"
 - OpenAPI: `@Tag`, `@Operation`, `@APIResponse` em cada método

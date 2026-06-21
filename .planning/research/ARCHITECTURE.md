@@ -17,10 +17,10 @@
 │  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘        │
 │       │            │            │            │            │              │
 ├───────┴────────────┴────────────┴────────────┴────────────┴──────────────┤
-│                     mekano-application  (Use Case Layer)                   │
+│                     mekano-application  (Service Layer)                   │
 │  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐                │
 │  │User       │ │OS Use     │ │Estoque    │ │Pagamento  │                │
-│  │Use Cases  │ │Cases      │ │Use Cases  │ │Use Cases  │                │
+│  │Services  │ │Cases      │ │Services  │ │Services  │                │
 │  └─────┬─────┘ └─────┬─────┘ └─────┬─────┘ └─────┬─────┘                │
 │        │             │             │             │                      │
 │        │     OS → Estoque         │             │                      │
@@ -114,7 +114,7 @@
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-**Key architectural decision**: Bounded contexts communicate via **domain events** only — no direct use case calls across contexts. This preserves autonomy and allows future extraction. Within a monolith, the CDI event bus (`jakarta.enterprise.event.Event.fire()`) provides in-process, synchronous, in-transaction event delivery. For eventual consistency, event listeners that fail do not roll back the publisher's transaction.
+**Key architectural decision**: Bounded contexts communicate via **domain events** only — no direct Service calls across contexts. This preserves autonomy and allows future extraction. Within a monolith, the CDI event bus (`jakarta.enterprise.event.Event.fire()`) provides in-process, synchronous, in-transaction event delivery. For eventual consistency, event listeners that fail do not roll back the publisher's transaction.
 
 ### Component Responsibilities
 
@@ -136,7 +136,7 @@
 | `EntregaVeiculo` (entity) | Vehicle delivery record | Entity inside Pagamento aggregate |
 | `Servico` (AR) | Service catalog (type, description, default value) | Standalone aggregate |
 | `CdiEventPublisher` | Dispatches domain events via CDI Event bus | `jakarta.enterprise.event.Event<Object>.fire()` |
-| `EventConsumer` | Listens for domain events, triggers cross-context reactions | CDI `@Observes` methods in use cases |
+| `EventConsumer` | Listens for domain events, triggers cross-context reactions | CDI `@Observes` methods in Services |
 
 ## Recommended Package Structure (Within Each Module)
 
@@ -317,7 +317,7 @@ public class OrdemDeServico {
         if (status != StatusOS.EM_EXECUCAO) {
             throw new DomainException("Só é possível iniciar execução de OS aprovada");
         }
-        // Estoque já deve ter sido reservado — verificação está no use case
+        // Estoque já deve ter sido reservado — verificação está no Service
     }
 
     public void finalizarExecucao() {
@@ -360,14 +360,14 @@ public class OrdemDeServico {
 | `expirarSLA()` | AGUARDANDO_APROVACAO | CANCELADA | Orçamento expired |
 | `iniciarExecucao()` | EM_EXECUCAO | EM_EXECUCAO | (approval already verified) |
 | `finalizarExecucao()` | EM_EXECUCAO | FINALIZADA | None |
-| `entregar()` | FINALIZADA | ENTREGUE | Pagamento confirmado (checked in use case) |
+| `entregar()` | FINALIZADA | ENTREGUE | Pagamento confirmado (checked in Service) |
 | `cancelar()` | Any except CANCELADA/ENTREGUE | CANCELADA | Not already cancelled/delivered |
 
 ### Pattern 2: Domain Events for Inter-Context Communication
 
 **What:** Bounded contexts communicate exclusively via domain events. When an aggregate executes a state transition that has cross-context effects, it publishes a domain event. Other contexts listen via CDI `@Observes` and react. The event publisher (`CdiEventPublisher`) uses `jakarta.enterprise.event.Event<Object>.fire()` — synchronous, in-process, transactional.
 
-**When to use:** Any cross-context action within the monolith. Preserves bounded context autonomy — the OS context never directly calls Estoque use cases.
+**When to use:** Any cross-context action within the monolith. Preserves bounded context autonomy — the OS context never directly calls Estoque Services.
 
 **Trade-offs:**
 - ++ Contexts remain decoupled — could extract to microservices later
@@ -467,7 +467,7 @@ public record PagamentoConfirmadoEvent(
 
 // === APPLICATION LAYER ===
 
-// OS use case — publishes event after state transition
+// OS Service — publishes event after state transition
 @ApplicationScoped
 public class AprovarOrcamentoUseCase implements AprovarOrcamentoInputPort {
 
@@ -490,7 +490,7 @@ public class AprovarOrcamentoUseCase implements AprovarOrcamentoInputPort {
     }
 }
 
-// Estoque use case — listens for OrcamentoAprovadoEvent
+// Estoque Service — listens for OrcamentoAprovadoEvent
 @ApplicationScoped
 public class ReservarEstoqueUseCase {
 
@@ -558,15 +558,15 @@ public class ReservarEstoqueUseCase {
 - Each reservation modifies `ItemEstoque.reservado` flag
 - A separate Reserva aggregate would allow inconsistent reservations
 
-### Pattern 4: Use Case as Eventual Consistency Coordinator
+### Pattern 4: Service as Eventual Consistency Coordinator
 
-**What:** Use cases in the application layer act as coordinators for eventual consistency between contexts. When a use case in context A completes its primary operation, it publishes a domain event. Use cases in context B listen for that event and perform their own operations.
+**What:** Services in the application layer act as coordinators for eventual consistency between contexts. When a Service in context A completes its primary operation, it publishes a domain event. Services in context B listen for that event and perform their own operations.
 
 **When to use:** Cross-context flows where business rules span multiple aggregates/contexts.
 
 **Trade-offs:**
-- ++ Decoupled contexts — each use case only knows about its own domain
-- ++ Clear transaction boundaries — each use case has its own `@Transactional`
+- ++ Decoupled contexts — each Service only knows about its own domain
+- ++ Clear transaction boundaries — each Service has its own `@Transactional`
 - -- Synchronous within monolith — listener failure affects publisher (acceptable)
 - -- Two-phase operations impossible without distributed tx (not needed for MVP)
 
@@ -797,7 +797,7 @@ CLIENTE / ATENDENTE         SISTEMA                    MECÂNICO
 
 ### Scaling Priorities
 
-1. **First bottleneck — Public OS status queries (RF09):** These are read-only, unauthenticated, and likely high-frequency (clients polling). Mitigation: Cache with short TTL + dedicated read endpoint that bypasses use case layer (same as existing D-06 pattern). Consider read replica if load grows.
+1. **First bottleneck — Public OS status queries (RF09):** These are read-only, unauthenticated, and likely high-frequency (clients polling). Mitigation: Cache with short TTL + dedicated read endpoint that bypasses Service layer (same as existing D-06 pattern). Consider read replica if load grows.
 
 2. **Second bottleneck — Eventual consistency failures in monolith:** If CDI event listeners fail repeatedly, the publisher's transaction rolls back. Mitigation: `@Observes(notifyObserver = Reception.IF_EXISTS)` for non-critical events. For critical events, consider `@ObservesAsync` + retry table (outbox pattern).
 
@@ -813,11 +813,11 @@ CLIENTE / ATENDENTE         SISTEMA                    MECÂNICO
 
 **Do this instead:** Reference Cliente and Veiculo by UUID from OrdemDeServico. Load them separately when needed. Accept the extra repository call — it's negligible compared to the design clarity.
 
-### Anti-Pattern 2: Direct Use Case Call Across Contexts
+### Anti-Pattern 2: Direct Service Call Across Contexts
 
 **What people do:** `AprovarOrcamentoUseCase` directly calling `estoqueUseCase.reservarPecas()` because "we're in a monolith anyway."
 
-**Why it's wrong:** Creates an implicit dependency between bounded contexts. Every time the OS approval flow changes, you must verify Estoque's use case interface hasn't broken. Makes future extraction impossible — you'd have to untangle all the cross-context calls.
+**Why it's wrong:** Creates an implicit dependency between bounded contexts. Every time the OS approval flow changes, you must verify Estoque's Service interface hasn't broken. Makes future extraction impossible — you'd have to untangle all the cross-context calls.
 
 **Do this instead:** Always use domain events for cross-context communication, even within the monolith. The `CdiEventPublisher` + `@Observes` pattern adds negligible overhead and preserves future flexibility.
 
@@ -829,9 +829,9 @@ CLIENTE / ATENDENTE         SISTEMA                    MECÂNICO
 
 **Do this instead:** Maintain the existing two-class pattern — domain entity (`OrdemDeServico.java`) with business methods and factory methods, JPA entity (`OrdemDeServicoEntity.java` that extends `BaseEntity`) with MapStruct mapping between them.
 
-### Anti-Pattern 4: Transaction Across Multiple Use Cases
+### Anti-Pattern 4: Transaction Across Multiple Services
 
-**What people do:** Starting a transaction in the OS use case and trying to extend it into the Estoque event listener to get "atomic" reservation.
+**What people do:** Starting a transaction in the OS Service and trying to extend it into the Estoque event listener to get "atomic" reservation.
 
 **Why it's wrong:** The CDI `@Observes` listener runs in the same transaction as the publisher by default. While this provides atomicity, it means a reservation failure rolls back the OS approval — which IS desired for the approval case. But extending this pattern to all cross-context operations creates a distributed transaction nightmare.
 
@@ -861,7 +861,7 @@ The existing User/Auth context has no domain events that the new contexts need t
 
 **Audit pattern for new contexts:**
 ```java
-// In each use case, inject the current user's identity
+// In each Service, inject the current user's identity
 @ApplicationScoped
 public class CriarOSUseCase implements CriarOSInputPort {
     // inject JWT claims to get current user UUID

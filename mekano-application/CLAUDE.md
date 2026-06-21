@@ -1,4 +1,4 @@
-# mekano-application — Casos de Uso
+# mekano-application — Serviços de Aplicação
 
 ## Overview
 
@@ -10,21 +10,20 @@ Camada de aplicação — orquestra regras de negócio invocando ports do domín
 
 ```
 com.fiap.mekano.application
-└── usecase/
+└── service/
     └── user/
-        ├── CreateUserUseCase.java       # Criação de usuário
-        ├── CreateUserResponse.java      # Record de resposta (não expõe User entity)
-        └── AuthenticateUserUseCase.java # Autenticação
+        ├── UserService.java              # Serviço de usuário (criação, busca, deleção)
+        └── CreateUserResponse.java       # Record de resposta (não expõe User entity)
 ```
 
 ## Key Conventions
 
-### Use Case Structure (`CreateUserUseCase.java:32-122`)
+### Service Structure (`UserService.java`)
 1. `@ApplicationScoped` — CDI permite injeção
 2. **Constructor injection** — necessário para `@InjectMocks` do Mockito
-3. Implementa `CreateUserInputPort` (interface no domain)
+3. Implementa `UserServicePort` (interface no domain)
 4. Injeta ports: `UserRepositoryPort`, `PasswordHasher`, `EventPublisher`
-5. `@Transactional` no método `execute()` — unidade de trabalho do use case
+5. `@Transactional` no método `execute()` — unidade de trabalho do service
 6. Fluxo do `execute()`:
    - Valida dados (nome não-nulo)
    - Verifica duplicidade (`existsByEmail`)
@@ -37,26 +36,21 @@ com.fiap.mekano.application
 - Record Java: `id`, `name`, `email`, `createdAt`
 - **NUNCA expõe** `passwordHash` ou a entidade `User` — D-04
 
-### AuthenticateUserUseCase
-- `@ApplicationScoped`, SEM `@Transactional` (leitura pura)
-- Injeta `UserRepositoryPort` + `PasswordHasher`
-- Fluxo: busca por email → verifica hash → retorna User
-
 ## Dependencies
 
 - **compile**: `mekano-domain`, `quarkus-arc`, `quarkus-elytron-security-common`
 - **provided**: `lombok`
 - **test**: `junit-jupiter`, `mockito-junit-jupiter`
 
-## How to Add New Use Case
+## How to Add New Service
 
-1. Criar interface no domain (`port/in/NovoInputPort.java`)
+1. Criar interface no domain (`port/in/NovoServicePort.java`)
 2. Criar command record no domain (`port/in/NovoCommand.java`) se necessário
-3. Criar use case em `application/usecase/subdominio/NovoUseCase.java`:
-   - `@ApplicationScoped`, implementa `NovoInputPort`
+3. Criar service em `application/service/subdominio/NovoService.java`:
+   - `@ApplicationScoped`, implementa `NovoServicePort`
    - Injeta ports necessários via construtor
    - `@Transactional` se for operação de escrita
-4. Criar response record em `application/usecase/subdominio/NovoResponse.java` se necessário
+4. Criar response record em `application/service/subdominio/NovoResponse.java` se necessário
 
 ## Auditing
 
@@ -74,7 +68,7 @@ grep -n "@Transactional" mekano-application/src/main/java
 
 - **JUnit 5 + Mockito puro** — sem Quarkus
 - `@ExtendWith(MockitoExtension.class)`
-- `@Mock` para ports, `@InjectMocks` para use case
+- `@Mock` para ports, `@InjectMocks` para service
 - Cenários: sucesso, duplicidade, validação, exceções
 
-Exemplo: `CreateUserUseCaseTest.java`
+Exemplo: `UserServiceTest.java`

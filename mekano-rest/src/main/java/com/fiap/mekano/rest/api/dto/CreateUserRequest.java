@@ -17,7 +17,7 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
  * Lombok @Getter gera os getters necessários.
  *
  * A validação de formato de email (@Email) é feita aqui na camada adapter.
- * A senha é enviada em plaintext — o hash BCrypt é responsabilidade de CreateUserUseCase.
+ * A senha é enviada em plaintext — o hash BCrypt é responsabilidade de UserService.
  */
 @Getter
 @Setter

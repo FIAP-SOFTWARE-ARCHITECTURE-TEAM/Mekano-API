@@ -35,7 +35,7 @@ import java.util.UUID;
  * <p>Regras de transação:
  * <ul>
  *   <li>{@code save()} — sem {@code @Transactional}: a transação é aberta pelo chamador
- *       ({@code CreateUserUseCase.execute()} via {@code @Transactional}).</li>
+ *       ({@code UserService.execute()} via {@code @Transactional}).</li>
  *   <li>{@code markAsDeleted()} — {@code @Transactional}: necessário para operação de escrita.</li>
  *   <li>Métodos de leitura — sem {@code @Transactional}: Quarkus/JPA gerencia automaticamente
  *       se houver transação ativa no chamador</li>
@@ -76,8 +76,8 @@ public class UserRepositoryImpl implements UserRepositoryPort {
      * antes de retornar ao chamador (D-02).
      *
      * <p><strong>Nota sobre {@code @Transactional} removido (D-03):</strong> A responsabilidade
-     * da transação foi movida para {@code CreateUserUseCase.execute()} — a unidade de trabalho
-     * pertence ao use case, não ao repositório.
+     * da transação foi movida para {@code UserService.execute()} — a unidade de trabalho
+     * pertence ao service, não ao repositório.
      *
      * <p><strong>Nota sobre {@code @Timeout} + JDBC (D-04):</strong> a {@code TimeoutException}
      * é lançada no momento correto pelo interceptor MP-FT, mas o driver pgjdbc só checa o flag

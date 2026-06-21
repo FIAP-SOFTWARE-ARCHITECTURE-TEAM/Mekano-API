@@ -5,7 +5,7 @@ import com.fiap.mekano.rest.api.dto.UserPageResponse;
 import com.fiap.mekano.rest.api.dto.UserResponse;
 import com.fiap.mekano.rest.api.exception.ProblemDetail;
 import com.fiap.mekano.rest.api.mapper.UserDtoMapper;
-import com.fiap.mekano.domain.port.in.CreateUserInputPort;
+import com.fiap.mekano.domain.port.in.UserServicePort;
 import com.fiap.mekano.domain.port.out.UserRepositoryPort;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.RequestScoped;
@@ -38,20 +38,8 @@ import java.util.UUID;
 /**
  * JAX-RS Resource para operações de usuário.
  *
- * Responsabilidades:
- * - Receber requisições HTTP POST /users
- * - Delegar validação ao Bean Validation (@Valid)
- * - Converter DTO → Command → User → DTO via UserDtoMapper
- * - Invocar CreateUserInputPort
- * - Construir resposta 201 Created com Location header (D-01)
- * - Exige autenticação JWT com role `user` em todos os endpoints (`@RolesAllowed`, D-01).
- *
- * Exceções de domínio são propagadas — ExceptionMappers registrados (Plans 04)
- * interceptam e convertem para 409/404/400.
- *
  * @RequestScoped: ciclo de vida por requisição — necessário para @Context UriInfo funcionar
  *                 corretamente como parâmetro de método em RESTEasy Reactive.
- * @Transactional: PROIBIDO neste resource — transações são responsabilidade de infrastructure (INH-06).
  */
 @Path("/users")
 @RequestScoped
@@ -67,7 +55,7 @@ public class UserResource {
     static final String EXAMPLE_PASSWORD = "abc123";
 
     @Inject
-    CreateUserInputPort createUserInputPort;
+    UserServicePort userServicePort;
 
     @Inject
     UserDtoMapper userDtoMapper;
@@ -81,7 +69,7 @@ public class UserResource {
      * Fluxo:
      * 1. Bean Validation valida CreateUserRequest (@Valid)
      * 2. UserDtoMapper converte request → CreateUserCommand
-     * 3. CreateUserInputPort.execute() orquestra: verifica duplicidade → hash via PasswordHasher → User.create() → save()
+     * 3. UserServicePort.execute() orquestra: verifica duplicidade → hash → User.create() → save()
      * 4. UserDtoMapper converte User → UserResponse
      * 5. UriInfo constrói Location absoluta: http://host/users/{uuid}
      * 6. Response.created(uri).entity(response) retorna 201
@@ -119,7 +107,7 @@ public class UserResource {
             @Valid CreateUserRequest request,
             @Context UriInfo uriInfo) {
         var command = userDtoMapper.toCommand(request);
-        var user = createUserInputPort.execute(command);
+        var user = userServicePort.execute(command);
         UserResponse userResponse = userDtoMapper.toResponse(user);
         URI location = uriInfo.getAbsolutePathBuilder().path(userResponse.id().toString()).build();
         return Response.created(location).entity(userResponse).build();
@@ -179,7 +167,7 @@ public class UserResource {
             content = @Content(mediaType = MediaType.APPLICATION_JSON,
                     schema = @Schema(implementation = ProblemDetail.class)))
     public Response getById(@PathParam("id") UUID id) {
-        var user = createUserInputPort.findUserById(id);
+        var user = userServicePort.findUserById(id);
         UserResponse response = userDtoMapper.toResponse(user);
         return Response.ok(response).build();
     }
@@ -203,7 +191,7 @@ public class UserResource {
             content = @Content(mediaType = MediaType.APPLICATION_JSON,
                     schema = @Schema(implementation = ProblemDetail.class)))
     public Response delete(@PathParam("id") UUID id) {
-        createUserInputPort.deleteUser(id);
+        userServicePort.deleteUser(id);
         return Response.noContent().build();
     }
 }

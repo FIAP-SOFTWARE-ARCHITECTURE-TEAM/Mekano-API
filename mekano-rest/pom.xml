@@ -29,7 +29,6 @@
             <groupId>com.fiap</groupId>
             <artifactId>mekano-infrastructure</artifactId>
             <version>${project.version}</version>
-            <!-- compile (default): necessário para MapStruct e injeção CDI -->
         </dependency>
 
         <!-- EXT-01: REST reativo com Jackson JSON — substitui quarkus-rest do scaffold -->
