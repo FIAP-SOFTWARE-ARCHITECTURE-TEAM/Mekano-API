@@ -5,9 +5,9 @@ import com.fiap.mekano.rest.api.dto.UserPageResponse;
 import com.fiap.mekano.rest.api.dto.UserResponse;
 import com.fiap.mekano.rest.api.exception.ProblemDetail;
 import com.fiap.mekano.rest.api.mapper.UserDtoMapper;
-import com.fiap.mekano.application.usecase.user.CreateUserUseCase;
 import com.fiap.mekano.domain.port.in.CreateUserInputPort;
 import com.fiap.mekano.domain.port.out.UserRepositoryPort;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -42,10 +42,9 @@ import java.util.UUID;
  * - Receber requisições HTTP POST /users
  * - Delegar validação ao Bean Validation (@Valid)
  * - Converter DTO → Command → User → DTO via UserDtoMapper
- * - Invocar CreateUserInputPort (nunca CreateUserUseCase diretamente — INH-04)
+ * - Invocar CreateUserInputPort
  * - Construir resposta 201 Created com Location header (D-01)
- * - Exige autenticação JWT em todos os endpoints (`@Authenticated`, D-01).
- * - POST /users requer role `user` (`@RolesAllowed`, D-01).
+ * - Exige autenticação JWT com role `user` em todos os endpoints (`@RolesAllowed`, D-01).
  *
  * Exceções de domínio são propagadas — ExceptionMappers registrados (Plans 04)
  * interceptam e convertem para 409/404/400.
@@ -56,6 +55,7 @@ import java.util.UUID;
  */
 @Path("/users")
 @RequestScoped
+@RolesAllowed("user")
 @Tag(name = "Users", description = "User management")
 public class UserResource {
 
@@ -70,9 +70,6 @@ public class UserResource {
     CreateUserInputPort createUserInputPort;
 
     @Inject
-    CreateUserUseCase createUserUseCase;
-
-    @Inject
     UserDtoMapper userDtoMapper;
 
     @Inject
@@ -84,8 +81,8 @@ public class UserResource {
      * Fluxo:
      * 1. Bean Validation valida CreateUserRequest (@Valid)
      * 2. UserDtoMapper converte request → CreateUserCommand
-     * 3. CreateUserUseCase.executeResponse() orquestra: verifica duplicidade → hash via PasswordHasher → User.create() → save()
-     * 4. UserDtoMapper converte CreateUserResponse → UserResponse
+     * 3. CreateUserInputPort.execute() orquestra: verifica duplicidade → hash via PasswordHasher → User.create() → save()
+     * 4. UserDtoMapper converte User → UserResponse
      * 5. UriInfo constrói Location absoluta: http://host/users/{uuid}
      * 6. Response.created(uri).entity(response) retorna 201
      *
@@ -122,8 +119,8 @@ public class UserResource {
             @Valid CreateUserRequest request,
             @Context UriInfo uriInfo) {
         var command = userDtoMapper.toCommand(request);
-        var response = createUserUseCase.executeResponse(command);
-        UserResponse userResponse = userDtoMapper.toResponse(response);
+        var user = createUserInputPort.execute(command);
+        UserResponse userResponse = userDtoMapper.toResponse(user);
         URI location = uriInfo.getAbsolutePathBuilder().path(userResponse.id().toString()).build();
         return Response.created(location).entity(userResponse).build();
     }

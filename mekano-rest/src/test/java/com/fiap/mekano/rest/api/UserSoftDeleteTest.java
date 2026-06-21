@@ -1,6 +1,7 @@
 package com.fiap.mekano.rest.api;
 
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.security.TestSecurity;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -8,6 +9,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 
 /**
@@ -20,6 +23,7 @@ import static org.hamcrest.Matchers.notNullValue;
  */
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@TestSecurity(user = "testuser", roles = {"user"})
 class UserSoftDeleteTest {
 
     private static String createdUserId;
@@ -60,6 +64,11 @@ class UserSoftDeleteTest {
                 .get("/api/v1/users/" + createdUserId)
                 .then()
                 .statusCode(404)
-                .body("detail", notNullValue());
+                .contentType(containsString("application/problem+json"))
+                .body("detail", notNullValue())
+                .body("type", equalTo("about:blank"))
+                .body("title", equalTo("Not Found"))
+                .body("status", equalTo(404));
+
     }
 }

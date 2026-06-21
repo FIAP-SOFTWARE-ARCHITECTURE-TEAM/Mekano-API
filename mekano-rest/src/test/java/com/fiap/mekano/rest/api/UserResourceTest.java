@@ -1,6 +1,7 @@
 package com.fiap.mekano.rest.api;
 
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.security.TestSecurity;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
@@ -25,6 +27,7 @@ import static org.hamcrest.Matchers.nullValue;
  */
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@TestSecurity(user = "testuser", roles = {"user"})
 class UserResourceTest {
 
     private static final String VALID_EMAIL = "ana@fiap.br";
@@ -63,7 +66,12 @@ class UserResourceTest {
                 .post("/api/v1/users")
                 .then()
                 .statusCode(409)
-                .body("detail", notNullValue());
+                .contentType(containsString("application/problem+json"))
+                .body("detail", notNullValue())
+                .body("type", equalTo("about:blank"))
+                .body("title", equalTo("Conflict"))
+                .body("status", equalTo(409))
+                .body("instance", notNullValue());
     }
 
     @Test
