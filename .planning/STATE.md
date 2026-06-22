@@ -1,3 +1,17 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: unknown
+last_updated: "2026-06-22T03:27:08.237Z"
+progress:
+  total_phases: 3
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
+---
+
 # STATE: Mekano
 
 **Init:** 2026-06-20
@@ -68,7 +82,7 @@ None yet.
 
 ## Session Continuity
 
-**Last session:** 2026-06-20 — Roadmap restructured (3 phases, 37 reqs mapped, auth como task).
+**Last session:** 2026-06-22T03:27:08.234Z
 **Next action:** `/gsd-plan-phase 1` — Create execution plan for Auth & OS Foundation.
 
 ### Threads
@@ -80,6 +94,7 @@ None yet.
 ### Next Phase Brief
 
 **Phase 1 — Auth & OS Foundation** (Days 1-4, all 5 devs):
+
 1. Implementar auth JWT com roles (admin, atendente, mecanico, almoxarife, financeiro)
 2. CRUD Cliente (CPF/CNPJ validado), Veículo (placa única), Serviço (valor > 0)
 3. OS lifecycle: RECEBIDA → EM_DIAGNOSTICO com state machine
