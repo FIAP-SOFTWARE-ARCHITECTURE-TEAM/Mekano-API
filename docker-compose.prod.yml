@@ -6,34 +6,36 @@ services:
       - "5432:5432"
     environment:
       POSTGRES_DB: mekano
-      POSTGRES_USER: ${POSTGRES_USER:-mekano}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mekano}
+      POSTGRES_USER: ${DB_USER:?DB_USER é obrigatório}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD é obrigatório}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mekano} -d mekano"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:?DB_USER é obrigatório} -d mekano"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
+    restart: unless-stopped
     networks:
       - mekano-net
 
   mekano:
     build:
       context: .
-      dockerfile: mekano-rest/src/main/docker/Dockerfile.jvm
+      dockerfile: mekano-rest/src/main/docker/Dockerfile.prod-jvm
     container_name: mekano-api
     ports:
       - "8080:8080"
     environment:
       QUARKUS_PROFILE: prod
       DB_URL: jdbc:postgresql://postgres:5432/mekano
-      DB_USER: ${POSTGRES_USER:-mekano}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-mekano}
+      DB_USER: ${DB_USER:?DB_USER é obrigatório}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD é obrigatório}
     depends_on:
       postgres:
         condition: service_healthy
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/q/health/live || exit 1"]
       interval: 30s

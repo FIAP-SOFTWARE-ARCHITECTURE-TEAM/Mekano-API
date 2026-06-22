@@ -1,0 +1,30 @@
+# --- Stage 1: Build ---
+FROM registry.access.redhat.com/ubi9/openjdk-17 AS build
+# unzip é necessário: sem ele o mvnw baixa o Maven .tar.gz, mas o
+# distributionSha256Sum no maven-wrapper.properties é o SHA do .zip → validação falha.
+USER root
+RUN microdnf install -y unzip && microdnf clean all
+WORKDIR /app
+COPY --chown=185:0 --chmod=755 . .
+USER 185
+RUN ./mvnw package -pl mekano-rest -am -DskipTests -B -q
+
+# --- Stage 2: Runtime ---
+FROM registry.access.redhat.com/ubi9/openjdk-17-runtime:1.24
+
+ENV LANGUAGE='en_US:en'
+
+COPY --from=build /app/mekano-rest/target/quarkus-app/lib/ /deployments/lib/
+COPY --from=build /app/mekano-rest/target/quarkus-app/*.jar /deployments/
+COPY --from=build /app/mekano-rest/target/quarkus-app/app/ /deployments/app/
+COPY --from=build /app/mekano-rest/target/quarkus-app/quarkus/ /deployments/quarkus/
+
+EXPOSE 8080
+USER 185
+ENV JAVA_OPTS_APPEND="-Dquarkus.http.host=0.0.0.0 -Djava.util.logging.manager=org.jboss.logmanager.LogManager"
+ENV JAVA_APP_JAR="/deployments/quarkus-run.jar"
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=45s --retries=3 \
+  CMD curl --fail http://localhost:8080/q/health/live || exit 1
+
+ENTRYPOINT [ "/opt/jboss/container/java/run/run-java.sh" ]
