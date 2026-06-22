@@ -80,6 +80,13 @@
             <artifactId>mapstruct</artifactId>
         </dependency>
 
+        <!-- H2 in-memory — Para testes -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jdbc-h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <!-- Quarkus JUnit5 — escopo test -->
         <dependency>
             <groupId>io.quarkus</groupId>

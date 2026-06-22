@@ -31,7 +31,11 @@ quarkus:
 "%test":
   quarkus:
     datasource:
-      devservices:
-        reuse: true
+      db-kind: h2
+      jdbc:
+        url: jdbc:h2:mem:mekano;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
     flyway:
-      clean-at-start: true
+      migrate-at-start: false
+    hibernate-orm:
+      database:
+        generation: drop-and-create

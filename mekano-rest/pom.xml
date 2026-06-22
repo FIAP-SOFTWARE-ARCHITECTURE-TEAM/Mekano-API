@@ -105,6 +105,13 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- H2 in-memory — Para testes -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jdbc-h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <!-- Testes -->
         <dependency>
             <groupId>io.quarkus</groupId>
