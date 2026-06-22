@@ -21,49 +21,75 @@
 ## Phase Details
 
 ### Phase 1: Auth & OS Foundation
+
 **Goal:** Sistema com autenticação JWT por perfis; admin gerencia clientes, veículos e serviços; atendente cria OS e mecânico realiza diagnóstico com consulta pública de status
 **Mode:** mvp
 **Depends on:** Nothing (auth construído do zero como parte da fase)
 **Requirements:** AUTH-01, AUTH-02, AUTH-03, OS-01, OS-02, OS-03, OS-04, OS-05, OS-06, OS-07, OS-08, OS-15, DOC-01
 **Time allocation:** Days 1-4, all 5 devs
 **Success Criteria** (what must be TRUE):
+
   1. Sistema tem roles (admin, atendente, mecanico, almoxarife, financeiro) com JWT — endpoints protegidos por `@RolesAllowed`
   2. Admin/atendente pode cadastrar, editar, consultar e excluir clientes (CPF/CNPJ único validado), veículos (placa única, Mercosul+antigo) e serviços (valor > 0)
   3. Atendente pode criar OS (RECEBIDA) identificando cliente e veículo; mecânico inicia diagnóstico (EM_DIAGNOSTICO) com inclusão de serviços e peças
   4. Cliente pode consultar status público da OS via endpoint sem autenticação
   5. Diagramas de sequência dos fluxos principais documentados
-**Plans:** TBD
+
+**Plans:** 6 plansPlans:
+**Wave 1**
+
+- [ ] 01-01-PLAN.md — Auth Foundation: JWT Ed25519, roles, refresh rotation, walking skeleton
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 01-02-PLAN.md — Cliente CRUD: domain, infra, REST com update
+- [ ] 01-03-PLAN.md — Veiculo CRUD: domain, infra, REST com update
+- [ ] 01-04-PLAN.md — Servico CRUD: domain, infra, REST (admin-only)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 01-05-PLAN.md — OrdemDeServico: state machine, child entities, public status
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 01-06-PLAN.md — Sequence diagrams: Mermaid docs dos fluxos da OS
 
 ---
 
 ### Phase 2: OS Continuation & Estoque
+
 **Goal:** Orçamento gerado e aprovado/reprovado pelo cliente, OS executada até finalização; estoque controlado com reserva atômica, requisições de compra e entrada NF
 **Mode:** mvp
 **Depends on:** Phase 1 (OS Aggregate root, Cliente/Veiculo/Servico endpoints)
 **Requirements:** AUTH-04, OS-09, OS-10, OS-11, OS-13, OS-14, OS-16, OS-17, OS-18, EST-01, EST-02, EST-03, EST-04, EST-05, EST-06, EST-07, EST-08, EST-09, DOC-02
 **Time allocation:** Days 5-7, 3 devs on OS + 2 devs on Estoque
 **Success Criteria** (what must be TRUE):
+
   1. Sistema gera orçamento automaticamente ao finalizar diagnóstico (AGUARDANDO_APROVACAO); cliente aprova (EM_EXECUCAO) ou reprova (CANCELADA) via API pública
   2. Mecânico inicia execução (EM_EXECUCAO) e finaliza (FINALIZADA); admin lista/filtra OS com paginação e consulta tempo médio de execução
   3. Admin/almoxarife cadastra peças/insumos com saldo não-negativo; sistema reserva peças atomicamente ao aprovar orçamento (`OrcamentoAprovadoEvent`)
   4. Sistema gera Requisição de Compra para peças indisponíveis; almoxarife registra NF de entrada atualizando saldo; sistema verifica estoque mínimo e gera nova requisição se necessário
   5. Admin gerencia usuários do sistema (CRUD); especificação OpenAPI/Swagger documentada
+
 **Plans:** TBD
 
 ---
 
 ### Phase 3: Pagamento & Delivery
+
 **Goal:** Cobrança emitida ao finalizar OS, pagamento confirmado via banco simulado, veículo entregue — ciclo completo da OS finalizado
 **Mode:** mvp
 **Depends on:** Phase 1 (OS Aggregate root), Phase 2 (OS finalization working, estoque integrado)
 **Requirements:** OS-12, PAG-01, PAG-02, PAG-03, DOC-03
 **Time allocation:** Days 8-10, 3 devs on OS finalization + 2 devs on Pagamento
 **Success Criteria** (what must be TRUE):
+
   1. SLA de orçamento expira automaticamente e cancela OS sem aprovação no prazo
   2. Sistema emite cobrança automaticamente ao finalizar execução (`OSFinalizadaEvent` → OrdemDePagamento Pendente)
   3. Sistema registra pagamento via banco simulado com idempotência (webhooks duplicados não geram efeito colateral)
   4. Admin registra entrega do veículo somente após pagamento confirmado (OS → ENTREGUE); sistema bloqueia entrega se pendente
   5. Guia de contribuição (CONTRIBUTING.md) com setup, padrões e workflow do time
+
 **Plans:** TBD
 
 ---
@@ -72,7 +98,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Auth & OS Foundation | 0/0 | Not started | - |
+| 1. Auth & OS Foundation | 0/6 | Not started | - |
 | 2. OS Continuation & Estoque | 0/0 | Not started | - |
 | 3. Pagamento & Delivery | 0/0 | Not started | - |
 
