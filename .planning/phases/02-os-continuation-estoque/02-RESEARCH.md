@@ -898,7 +898,7 @@ public class PecaRequest {
 | A4 | `entityManager` from PanacheRepository delegates to same TX | RepositoryImpl atomic update | MEDIUM — `@Transactional(MANDATORY)` ensures it fails at startup if wrong. Add integration test. |
 | A5 | JaCoCo 80% LINE coverage gate requires stand-alone plugin not `quarkus-jacoco` extension | Build configuration | LOW — Quarkus docs confirm using both causes double-instrumentation. Verified in official docs §"Using both the extension and the plugin requires special configuration". |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **[OQ-01] Flyway migration numbering conflict with Phase 1**
    - What we know: Phase 1 uses V1-V5. Phase 2 starts at V6+.
