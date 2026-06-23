@@ -182,7 +182,7 @@ Requisitos: AUTH-04, OS-09 a OS-11, OS-13, OS-14, OS-16 a OS-18, EST-01 a EST-09
 - Paginação via query params page, size, sort
 
 ### Integration Points
-- `mekano-infrastructure/src/main/resources/db/migration/` — Migrations Flyway V6+ para novas tabelas (Cliente, Veiculo, ServicoTipo, Peca, OrdemDeServico, Orcamento, RequisicaoCompra, os_audit_log)
+- `mekano-infrastructure/src/main/resources/db/migration/` — Migrations Flyway V11-V17 para novas tabelas (Peca, Orcamento, OrcamentoItem, RequisicaoCompra, NfEntrada, OsAuditLog) + seed role cliente
 - `mekano-rest/pom.xml` — Adicionar quarkus-scheduler para job de SLA, jacoco-maven-plugin, owasp-dependency-check
 - `.github/workflows/ci.yml` — Adicionar etapas de cobertura JaCoCo e scan OWASP
 - `mekano-rest/src/main/resources/cache-config.yml` — Adicionar caches para novas entidades

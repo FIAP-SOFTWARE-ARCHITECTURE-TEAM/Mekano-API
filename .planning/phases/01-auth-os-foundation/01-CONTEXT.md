@@ -37,7 +37,7 @@ Requisitos: AUTH-01, AUTH-02, AUTH-03, OS-01 a OS-08, OS-15, DOC-01 (11 requisit
 - **D-16:** Endpoint público OS status: `@PermitAll` (sem autenticação)
 
 ### Modelo do Cliente
-- **D-17:** Só CPF (pessoa física) na Fase 1. CNPJ (pessoa jurídica) na Fase 2
+- **D-17:** Só CPF (pessoa física). CNPJ (pessoa jurídica) não está no escopo atual do projeto
 - **D-18:** Value Object `Cpf` no domain — valida dígitos verificadores no construtor (padrão `Email` VO)
 - **D-19:** Campos obrigatórios: nome, CPF, email, telefone
 - **D-20:** Endereço completo: logradouro, número, bairro, cidade, UF, CEP (modelado como Value Object `Endereco`)
@@ -135,7 +135,7 @@ Nenhuma referência específica além dos padrões já estabelecidos no codebase
 <deferred>
 ## Deferred Ideas
 
-- **CNPJ (pessoa jurídica)**: Modelagem de cliente PJ com CNPJ fica para Fase 2. A estrutura atual (CPF-only) deve ser desenhada para permitir extensão futura
+- **CNPJ (pessoa jurídica)**: Fora do escopo atual. A estrutura atual (CPF-only) deve ser desenhada para permitir extensão futura
 - **Refresh token pode virar feature opcional em versões futuras** se o modelo de segurança evoluir
 
 None — discussion stayed within phase scope.

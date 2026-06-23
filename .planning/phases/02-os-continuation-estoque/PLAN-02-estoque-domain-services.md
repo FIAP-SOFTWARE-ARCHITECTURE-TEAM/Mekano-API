@@ -4,7 +4,7 @@
 Implement full inventory management: Peca CRUD with non-negative stock validation, RequisicaoCompra lifecycle, NfEntrada registration, atomic stock reservation via native SQL, minimum stock auto-requisition, and all CDI event handling for stock mutations.
 
 ## Dependencies
-- PLAN-01 complete (entities, Flyway V6-V11, Panache repositories, ports, ALL domain events)
+- PLAN-01 complete (entities, Flyway V11-V16, Panache repositories, ports, ALL domain events)
 - Phase 1 OS domain model and StateOS enum (for AGUARDANDO_APROVACAO state check)
 
 ## Requirements Covered

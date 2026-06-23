@@ -54,27 +54,27 @@ No cross-dependency between PLAN-02 and PLAN-03 — both consume events from PLA
 
 ## Execution Waves
 
-| Wave | Plans | Description | Est. Effort |
-|------|-------|-------------|-------------|
-| **1** | PLAN-01 | Infrastructure foundation: entities, VOs, Flyway V6-V11, domain models, repository ports | 3-4h |
-| **2** | PLAN-02, PLAN-03 | Application services: Peca/Req/Nf services + Orcamento/OS services + CDI events + SLA job | 4-5h each |
-| **3** | PLAN-04, PLAN-05, PLAN-06 | OS execution/metrics + Admin user CRUD + Estoque REST | 3-4h each |
-| **4** | PLAN-07, PLAN-08 | Orcamento REST, OS extension REST, audit log, OpenAPI, JaCoCo, OWASP DC, README | 3-4h each |
+| Wave | Plans | Issue | Description | Est. Effort |
+|------|-------|-------|-------------|-------------|
+| **1** | PLAN-01 | #21, #22 | Infrastructure foundation: entities, VOs, Flyway V11-V17, domain models, repository ports | 3-4h |
+| **2** | PLAN-02, PLAN-03 | #23, #24 | Application services: Peca/Req/Nf services + Orcamento/OS services + CDI events + SLA job | 4-5h each |
+| **3** | PLAN-04, PLAN-05, PLAN-06 | #25, #26, #27 | OS execution/metrics + Admin user CRUD + Estoque REST | 3-4h each |
+| **4** | PLAN-07, PLAN-08 | #28, #29 | Orcamento REST, OS extension REST, audit log, OpenAPI, JaCoCo, OWASP DC, README | 3-4h each |
 
 ---
 
 ## Plan Summary
 
-| Plan | Name | Tasks | Files Created | Key Requirements |
-|------|------|-------|--------------|------------------|
-| 01 | Entity Base + Events | 7 | ~42 | EST-01 (foundation), ALL events |
-| 02 | Estoque Domain/Services | 7 | ~23 | EST-01..07, EST-09 |
-| 03 | Orcamento Domain/Services | 6 | ~16 | OS-09, OS-10, OS-11 |
-| 04 | OS Execution/Services | 7 | ~12 | OS-13, OS-14, OS-16, OS-17, OS-18, EST-08 |
-| 05 | Admin Users | 6 | ~8 | AUTH-04 |
-| 06 | Estoque REST | 6 | ~14 | EST-01, EST-02, EST-05, EST-06, EST-09 |
-| 07 | Orcamento REST | 5 | ~12 | OS-09..11, OS-13..14, OS-16..18 |
-| 08 | Audit/OpenAPI/Build | 6 | ~10 | DOC-02, D-73..D-75 |
+| Plan | Name | Tasks | Issue | Files Created | Key Requirements |
+|------|------|-------|-------|--------------|------------------|
+| 01 | Entity Base + Events | 7 | #21 (domain), #22 (events+infra) | ~42 | EST-01 (foundation), ALL events |
+| 02 | Estoque Domain/Services | 7 | #23 | ~23 | EST-01..07, EST-09 |
+| 03 | Orcamento Domain/Services | 6 | #24 | ~16 | OS-09, OS-10, OS-11 |
+| 04 | OS Execution/Services | 7 | #25 | ~12 | OS-13, OS-14, OS-16, OS-17, OS-18, EST-08 |
+| 05 | Admin Users | 6 | #26 | ~8 | AUTH-04 |
+| 06 | Estoque REST | 6 | #27 | ~14 | EST-01, EST-02, EST-05, EST-06, EST-09 |
+| 07 | Orcamento REST | 5 | #28 | ~12 | OS-09..11, OS-13..14, OS-16..18 |
+| 08 | Audit/OpenAPI/Build | 6 | #29 | ~10 | DOC-02, D-73..D-75 |
 
 ---
 
@@ -96,4 +96,4 @@ No cross-dependency between PLAN-02 and PLAN-03 — both consume events from PLA
 | H2/PostgreSQL compat in native SQL | PLAN-02 | Use standard SQL arithmetic UPDATE; H2 MODE=PostgreSQL handles `saldo = saldo - :qtd` |
 | CDI event + TX rollback | PLAN-02, PLAN-03 | Keep observers synchronous (same TX); document TX propagation expectations |
 | JaCoCo double-instrumentation | PLAN-08 | Use stand-alone `jacoco-maven-plugin` (not `quarkus-jacoco` extension) |
-| Flyway version conflict w/ Phase 1 | PLAN-01 | Check `db/migration/` before writing; start at V6 if Phase 1 applied V1-V5 |
+| Flyway version conflict w/ Phase 1 | PLAN-01 | Phase 1 ocupa V6-V10 (user_roles, clientes, veiculos, servicos, ordens_de_servico). Phase 2 usa V11-V16 + V17 (seed role cliente). Ambos convivem no mesmo diretório — Flyway aplica em ordem. |

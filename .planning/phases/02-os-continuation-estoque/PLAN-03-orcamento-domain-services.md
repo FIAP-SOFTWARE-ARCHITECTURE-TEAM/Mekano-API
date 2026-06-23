@@ -17,6 +17,8 @@ OS-09 (auto budget generation), OS-10 (client approval), OS-11 (client rejection
 
 ### Task 1: OS Domain Model Extensions — New State Transitions
 
+> 🚨 **Merge Note (INC-06):** Antes de implementar este plano, o `OrdemDeServico.java` da Phase 1 precisa ser atualizado com: (a) método `reprovarOrcamento(String motivo)`, (b) campo `motivoCancelamento`, (c) modificação de `aprovarOrcamento()` para transitar para `EM_EXECUCAO` (não `APROVADA`). As alterações estão documentadas em `01-auth-os-foundation/01-PATTERNS.md` (linha 218) e `01-auth-os-foundation/01-05-PLAN.md`.
+>
 > Domain events (OrcamentoGeradoEvent, OrcamentoAprovadoEvent, OrcamentoReprovadoEvent, OSFinalizadaEvent) are created in PLAN-01 Task 3.5. This plan consumes them.
 
 **Files modified:**
@@ -26,19 +28,18 @@ OS-09 (auto budget generation), OS-10 (client approval), OS-11 (client rejection
 **Action:**
 Add state transitions to the transition matrix for the new Phase 2 lifecycle:
 
-New transitions (add to `Map<StatusOS, Set<StatusOS>>` matrix):
-- `EM_DIAGNOSTICO → AGUARDANDO_APROVACAO` (budget generated)
-- `AGUARDANDO_APROVACAO → EM_EXECUCAO` (budget approved)
-- `AGUARDANDO_APROVACAO → CANCELADA` (budget rejected OR SLA expired)
-- `EM_EXECUCAO → FINALIZADA` (execution finished)
+> Transitions `EM_DIAGNOSTICO → AGUARDANDO_APROVACAO`, `AGUARDANDO_APROVACAO → EM_EXECUCAO`, `AGUARDANDO_APROVACAO → CANCELADA`, `EM_EXECUCAO → FINALIZADA` JÁ EXISTEM na matriz de Phase 1 (StatusOS enum). Nenhuma transição nova necessária.
 
-New explicit transition methods (no setStatus() — per D-26):
-- `void finalizarDiagnostico()` → sets status to `AGUARDANDO_APROVACAO`. Must be in `EM_DIAGNOSTICO`.
-- `void aprovarOrcamento()` → sets status to `EM_EXECUCAO`. Must be in `AGUARDANDO_APROVACAO`.
-- `void reprovarOrcamento(String motivo)` → sets status to `CANCELADA`. Stores motivo. Must be in `AGUARDANDO_APROVACAO`.
-- `void cancelarPorSLA()` → sets status to `CANCELADA`. Internal method for timer.
-- `void iniciarExecucao(UUID mecanicoId, String observacao)` → sets status to `EM_EXECUCAO`. Must be in `AGUARDANDO_APROVACAO` (post-approval). Stores `execucaoIniciadaEm` + `mecanicoId`.
-- `void finalizarExecucao(String observacao)` → sets status to `FINALIZADA`. Must be in `EM_EXECUCAO`. Stores `execucaoFinalizadaEm`.
+> Transition methods `finalizarDiagnostico()`, `aprovarOrcamento()`, `iniciarExecucao()`, `finalizar()` JÁ EXISTEM em Phase 1. Phase 2 expande os existentes e adiciona os novos abaixo.
+
+**Métodos NOVOS de Phase 2:**
+- `void reprovarOrcamento(String motivo)` → CANCELADA. Armazena motivo.
+- `void cancelarPorSLA()` → CANCELADA. Internal para job agendado.
+
+**Métodos EXISTENTES (Phase 1) que Phase 2 expande:**
+- `iniciarExecucao()` → modificar para receber `UUID mecanicoId, String observacao` e armazenar `execucaoIniciadaEm`, `mecanicoId`, `observacaoExecucao`
+- `finalizar()` → modificar para receber `String observacao` e armazenar `execucaoFinalizadaEm`
+- Não modificar: `finalizarDiagnostico()`, `aprovarOrcamento()`, `cancelar()`, `entregar()`
 
 Add fields to `OrdemDeServico`:
 - `LocalDateTime dataAprovacao`
