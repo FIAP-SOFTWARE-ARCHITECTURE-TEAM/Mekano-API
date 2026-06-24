@@ -53,6 +53,34 @@ class TelefoneTest {
         assertThrows(AppException.class, () -> new Telefone("123456789012"));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"0011999887766", "1011999887766", "2011999887766"})
+    @DisplayName("deve rejeitar DDD invalido")
+    void deveRejeitarDddInvalido(String telefoneComDddInvalido) {
+        assertThrows(AppException.class, () -> new Telefone(telefoneComDddInvalido));
+    }
+
+    @Test
+    @DisplayName("deve rejeitar DDD 00")
+    void deveRejeitarDdd00() {
+        assertThrows(AppException.class, () -> new Telefone("00999887766"));
+    }
+
+    @Test
+    @DisplayName("deve rejeitar DDD 10")
+    void deveRejeitarDdd10() {
+        assertThrows(AppException.class, () -> new Telefone("10999887766"));
+    }
+
+    @Test
+    @DisplayName("deve aceitar DDDs validos conhecidos")
+    void deveAceitarDddsValidos() {
+        assertDoesNotThrow(() -> new Telefone("11999887766"));
+        assertDoesNotThrow(() -> new Telefone("21999887766"));
+        assertDoesNotThrow(() -> new Telefone("61999887766"));
+        assertDoesNotThrow(() -> new Telefone("92999887766"));
+    }
+
     @Test
     @DisplayName("dois Telefones com mesmo valor devem ser iguais por equals")
     void doisTelefonesComMesmoValorDevemSerIguais() {

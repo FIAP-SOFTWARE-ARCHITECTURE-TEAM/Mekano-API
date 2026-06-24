@@ -3,6 +3,7 @@ package com.fiap.mekano.domain.model;
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.valueobject.Cpf;
 import com.fiap.mekano.domain.valueobject.Email;
+import com.fiap.mekano.domain.valueobject.Endereco;
 import com.fiap.mekano.domain.valueobject.Telefone;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -39,12 +40,13 @@ class ClienteTest {
         assertNotNull(cliente.getCpf());
         assertNotNull(cliente.getEmail());
         assertNotNull(cliente.getTelefone());
-        assertEquals(LOGRADOURO, cliente.getEnderecoLogradouro());
-        assertEquals(NUMERO, cliente.getEnderecoNumero());
-        assertEquals(BAIRRO, cliente.getEnderecoBairro());
-        assertEquals(CIDADE, cliente.getEnderecoCidade());
-        assertEquals(UF, cliente.getEnderecoUf());
-        assertEquals(CEP, cliente.getEnderecoCep());
+        assertNotNull(cliente.getEndereco());
+        assertEquals(LOGRADOURO, cliente.getEndereco().getLogradouro());
+        assertEquals(NUMERO, cliente.getEndereco().getNumero());
+        assertEquals(BAIRRO, cliente.getEndereco().getBairro());
+        assertEquals(CIDADE, cliente.getEndereco().getCidade());
+        assertEquals(UF, cliente.getEndereco().getUf());
+        assertEquals(CEP, cliente.getEndereco().getCep());
     }
 
     @Test
@@ -59,6 +61,42 @@ class ClienteTest {
         assertEquals(EMAIL, cliente.getEmail().getValue());
         assertInstanceOf(Telefone.class, cliente.getTelefone());
         assertEquals(TELEFONE, cliente.getTelefone().getValue());
+        assertInstanceOf(Endereco.class, cliente.getEndereco());
+    }
+
+    @Test
+    @DisplayName("deve criar Cliente sem telefone (opcional)")
+    void deveCriarClienteSemTelefone() {
+        Cliente cliente = Cliente.create(NOME, CPF, EMAIL, null,
+                LOGRADOURO, NUMERO, BAIRRO, CIDADE, UF, CEP);
+
+        assertNotNull(cliente);
+        assertNull(cliente.getTelefone());
+    }
+
+    @Test
+    @DisplayName("deve criar Cliente com telefone em branco como null")
+    void deveCriarClienteComTelefoneEmBrancoComoNull() {
+        Cliente cliente = Cliente.create(NOME, CPF, EMAIL, "   ",
+                LOGRADOURO, NUMERO, BAIRRO, CIDADE, UF, CEP);
+
+        assertNull(cliente.getTelefone());
+    }
+
+    @Test
+    @DisplayName("endereco deve validar e normalizar UF para uppercase")
+    void enderecoDeveNormalizarUf() {
+        Cliente cliente = Cliente.create(NOME, CPF, EMAIL, TELEFONE,
+                LOGRADOURO, NUMERO, BAIRRO, CIDADE, "sp", CEP);
+        assertEquals("SP", cliente.getEndereco().getUf());
+    }
+
+    @Test
+    @DisplayName("deve lancar AppException para endereco com logradouro null")
+    void deveLancarExcecaoParaEnderecoInvalido() {
+        assertThrows(AppException.class,
+                () -> Cliente.create(NOME, CPF, EMAIL, TELEFONE,
+                        null, NUMERO, BAIRRO, CIDADE, UF, CEP));
     }
 
     @Test
@@ -126,5 +164,19 @@ class ClienteTest {
         Cliente cliente = Cliente.create(NOME, CPF, "JOAO@EMAIL.COM", TELEFONE,
                 LOGRADOURO, NUMERO, BAIRRO, CIDADE, UF, CEP);
         assertEquals("joao@email.com", cliente.getEmail().getValue());
+    }
+
+    @Test
+    @DisplayName("reconstitute deve funcionar sem telefone")
+    void reconstituteDeveFuncionarSemTelefone() {
+        UUID id = UUID.randomUUID();
+        LocalDateTime createdAt = LocalDateTime.now();
+
+        Cliente cliente = Cliente.reconstitute(id, NOME, CPF, EMAIL, null,
+                LOGRADOURO, NUMERO, BAIRRO, CIDADE, UF, CEP, createdAt);
+
+        assertEquals(id, cliente.getId());
+        assertNull(cliente.getTelefone());
+        assertNotNull(cliente.getEndereco());
     }
 }

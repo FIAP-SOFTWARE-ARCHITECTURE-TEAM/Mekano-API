@@ -6,6 +6,19 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 
+import java.util.Locale;
+
+/**
+ * Value Object que encapsula e valida um endereço brasileiro.
+ *
+ * Invariantes garantidas pelo construtor:
+ * - Logradouro e cidade são obrigatórios (não null/blank)
+ * - UF normalizada para uppercase via Locale.ROOT (2 caracteres)
+ * - CEP normalizado para apenas dígitos (8 dígitos)
+ * - Numero e bairro são opcionais (nullable)
+ *
+ * Imutável por design: campos final, sem setters, @EqualsAndHashCode por valor.
+ */
 @Getter
 @EqualsAndHashCode
 @ToString
@@ -36,7 +49,7 @@ public final class Endereco {
         this.numero = numero == null ? null : numero.strip();
         this.bairro = bairro == null ? null : bairro.strip();
         this.cidade = cidade.strip();
-        this.uf = uf.strip().toUpperCase();
+        this.uf = uf.strip().toUpperCase(Locale.ROOT);
         this.cep = cep.strip().replaceAll("\\D", "");
     }
 }
