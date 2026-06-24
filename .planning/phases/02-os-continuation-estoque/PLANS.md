@@ -54,12 +54,12 @@ No cross-dependency between PLAN-02 and PLAN-03 — both consume events from PLA
 
 ## Execution Waves
 
-| Wave | Plans | Issue | Description | Est. Effort |
-|------|-------|-------|-------------|-------------|
-| **1** | PLAN-01 | #21, #22 | Infrastructure foundation: entities, VOs, Flyway V11-V17, domain models, repository ports | 3-4h |
-| **2** | PLAN-02, PLAN-03 | #23, #24 | Application services: Peca/Req/Nf services + Orcamento/OS services + CDI events + SLA job | 4-5h each |
-| **3** | PLAN-04, PLAN-05, PLAN-06 | #25, #26, #27 | OS execution/metrics + Admin user CRUD + Estoque REST | 3-4h each |
-| **4** | PLAN-07, PLAN-08 | #28, #29 | Orcamento REST, OS extension REST, audit log, OpenAPI, JaCoCo, OWASP DC, README | 3-4h each |
+| Wave | Plans | Issue | Status | Description | Est. Effort |
+|------|-------|-------|--------|-------------|-------------|
+| **1** | PLAN-01 | #21 🔄, #22 🔄 | em andamento | Infrastructure foundation: entities, VOs, Flyway V11-V17, domain models, repository ports | 3-4h |
+| **2** | PLAN-02, PLAN-03 | #23 🔄, #24 🔄 | em andamento | Application services: Peca/Req/Nf services + Orcamento/OS services + CDI events + SLA job | 4-5h each |
+| **3** | PLAN-04, PLAN-05, PLAN-06 | #25 🔄, #26 🔄, #27 🔄 | em andamento | OS execution/metrics + Admin user CRUD + Estoque REST | 3-4h each |
+| **4** | PLAN-07, PLAN-08 | #28 🔄, #29 🔄 | em andamento | Orcamento REST, OS extension REST, audit log, OpenAPI, JaCoCo, OWASP DC, README | 3-4h each |
 
 ---
 
@@ -97,3 +97,9 @@ No cross-dependency between PLAN-02 and PLAN-03 — both consume events from PLA
 | CDI event + TX rollback | PLAN-02, PLAN-03 | Keep observers synchronous (same TX); document TX propagation expectations |
 | JaCoCo double-instrumentation | PLAN-08 | Use stand-alone `jacoco-maven-plugin` (not `quarkus-jacoco` extension) |
 | Flyway version conflict w/ Phase 1 | PLAN-01 | Phase 1 ocupa V6-V10 (user_roles, clientes, veiculos, servicos, ordens_de_servico). Phase 2 usa V11-V16 + V17 (seed role cliente). Ambos convivem no mesmo diretório — Flyway aplica em ordem. |
+
+---
+
+## Sync Log
+
+- 2026-06-23 21:49: sincronizado 9 issues — concluídos: 0, em andamento: 9, pendentes: 0
