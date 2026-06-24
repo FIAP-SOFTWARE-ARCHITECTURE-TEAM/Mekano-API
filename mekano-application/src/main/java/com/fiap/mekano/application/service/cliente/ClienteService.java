@@ -61,7 +61,7 @@ public class ClienteService implements ClienteServicePort {
                 command.nome() != null ? command.nome() : existing.getNome(),
                 existing.getCpf().getValue(),
                 command.email() != null ? command.email() : existing.getEmail().getValue(),
-                command.telefone() != null ? command.telefone() : existing.getTelefone().getValue(),
+                command.telefone() != null ? command.telefone() : (existing.getTelefone() != null ? existing.getTelefone().getValue() : null),
                 command.logradouro() != null ? command.logradouro() : existing.getEnderecoLogradouro(),
                 command.numero() != null ? command.numero() : existing.getEnderecoNumero(),
                 command.bairro() != null ? command.bairro() : existing.getEnderecoBairro(),

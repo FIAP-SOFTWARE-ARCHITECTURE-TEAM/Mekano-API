@@ -19,6 +19,6 @@ public interface ClienteDtoMapper {
     @Mapping(target = "id", source = "id")
     @Mapping(target = "cpf", expression = "java(cliente.getCpf().getValue())")
     @Mapping(target = "email", expression = "java(cliente.getEmail().getValue())")
-    @Mapping(target = "telefone", expression = "java(cliente.getTelefone().getValue())")
+    @Mapping(target = "telefone", expression = "java(cliente.getTelefone() != null ? cliente.getTelefone().getValue() : null)")
     ClienteResponse toResponse(Cliente cliente);
 }

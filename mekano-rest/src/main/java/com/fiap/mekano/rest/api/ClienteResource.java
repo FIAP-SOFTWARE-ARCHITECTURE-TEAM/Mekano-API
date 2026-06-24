@@ -95,6 +95,8 @@ public class ClienteResource {
             @QueryParam("page") @DefaultValue("0") int page,
             @QueryParam("size") @DefaultValue("10") int size,
             @QueryParam("sort") @DefaultValue("nome,asc") String sort) {
+        if (page < 0) page = 0;
+        if (size < 1) size = 10;
         var content = clienteServicePort.findAll(page, size, sort)
                 .stream()
                 .map(clienteDtoMapper::toResponse)

@@ -40,6 +40,24 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
     @CacheInvalidate(cacheName = CacheNames.CLIENTES)
     public Cliente save(Cliente cliente) {
         try {
+            ClienteEntity existing = panacheRepository
+                    .find("uuid", cliente.getId()).firstResultOptional().orElse(null);
+
+            if (existing != null) {
+                existing.setNome(cliente.getNome());
+                existing.setCpf(cliente.getCpf().getValue());
+                existing.setEmail(cliente.getEmail().getValue());
+                existing.setTelefone(cliente.getTelefone() != null ? cliente.getTelefone().getValue() : null);
+                existing.setEnderecoLogradouro(cliente.getEnderecoLogradouro());
+                existing.setEnderecoNumero(cliente.getEnderecoNumero());
+                existing.setEnderecoBairro(cliente.getEnderecoBairro());
+                existing.setEnderecoCidade(cliente.getEnderecoCidade());
+                existing.setEnderecoUf(cliente.getEnderecoUf());
+                existing.setEnderecoCep(cliente.getEnderecoCep());
+                panacheRepository.flush();
+                return mapper.toDomain(existing);
+            }
+
             ClienteEntity entity = mapper.toEntity(cliente);
             panacheRepository.persist(entity);
             panacheRepository.flush();
