@@ -39,17 +39,25 @@ public final class Endereco {
         if (cidade == null || cidade.isBlank()) {
             throw new AppException(400, Messages.get("endereco.cidade.required"));
         }
-        if (uf == null || uf.strip().length() != 2) {
+        if (uf == null) {
             throw new AppException(400, Messages.get("endereco.uf.invalid"));
         }
-        if (cep == null || cep.strip().replaceAll("\\D", "").length() != 8) {
+        String normalizedUf = uf.strip().toUpperCase(Locale.ROOT);
+        if (!normalizedUf.matches("^[A-Z]{2}$")) {
+            throw new AppException(400, Messages.get("endereco.uf.invalid"));
+        }
+        if (cep == null) {
+            throw new AppException(400, Messages.get("endereco.cep.invalid"));
+        }
+        String normalizedCep = cep.strip().replaceAll("\\D", "");
+        if (normalizedCep.length() != 8) {
             throw new AppException(400, Messages.get("endereco.cep.invalid"));
         }
         this.logradouro = logradouro.strip();
         this.numero = numero == null ? null : numero.strip();
         this.bairro = bairro == null ? null : bairro.strip();
         this.cidade = cidade.strip();
-        this.uf = uf.strip().toUpperCase(Locale.ROOT);
-        this.cep = cep.strip().replaceAll("\\D", "");
+        this.uf = normalizedUf;
+        this.cep = normalizedCep
     }
 }
