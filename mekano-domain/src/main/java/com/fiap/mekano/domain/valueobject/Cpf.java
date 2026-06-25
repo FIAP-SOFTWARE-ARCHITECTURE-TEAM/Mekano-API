@@ -6,6 +6,18 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 
+/**
+ * Value Object que encapsula e valida um CPF brasileiro.
+ *
+ * Invariantes garantidas pelo construtor:
+ * - Não aceita null nem blank
+ * - Normalizado para apenas dígitos (remove máscara)
+ * - Exatamente 11 dígitos
+ * - Rejeita sequências com todos os dígitos iguais (ex.: 111.111.111-11)
+ * - Valida dígitos verificadores (módulo 11)
+ *
+ * Imutável por design: campo final, sem setters, @EqualsAndHashCode por valor.
+ */
 @Getter
 @EqualsAndHashCode
 @ToString
