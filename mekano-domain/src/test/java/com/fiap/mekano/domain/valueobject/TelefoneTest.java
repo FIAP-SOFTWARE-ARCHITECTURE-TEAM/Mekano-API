@@ -54,7 +54,7 @@ class TelefoneTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"0011999887766", "1011999887766", "2011999887766"})
+    @ValueSource(strings = {"20999887766", "23999887766", "30999887766"})
     @DisplayName("deve rejeitar DDD invalido")
     void deveRejeitarDddInvalido(String telefoneComDddInvalido) {
         assertThrows(AppException.class, () -> new Telefone(telefoneComDddInvalido));
