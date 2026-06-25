@@ -14,13 +14,13 @@ public interface ClienteServicePort {
 
     Cliente execute(CreateClienteCommand command);
 
-    Cliente update(UUID id, UpdateClienteCommand command);
+    Cliente updateCliente(UUID id, UpdateClienteCommand command);
 
-    Cliente findById(UUID id);
+    Cliente findClienteById(UUID id);
 
-    List<Cliente> findAll(int page, int size, String sort);
+    List<Cliente> findAllClientes(int page, int size, String sort);
 
-    long countAll();
+    long countAllClientes();
 
-    void delete(UUID id);
+    void deleteCliente(UUID id);
 }
