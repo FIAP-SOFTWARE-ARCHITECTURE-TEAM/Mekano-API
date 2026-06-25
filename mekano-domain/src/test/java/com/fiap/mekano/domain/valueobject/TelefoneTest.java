@@ -82,6 +82,12 @@ class TelefoneTest {
     }
 
     @Test
+    @DisplayName("deve rejeitar telefone com DDD invalido")
+    void deveRejeitarDddInvalido() {
+        assertThrows(AppException.class, () -> new Telefone("00999887766"));
+        assertThrows(AppException.class, () -> new Telefone("10999887766"));
+    }
+    @Test
     @DisplayName("dois Telefones com mesmo valor devem ser iguais por equals")
     void doisTelefonesComMesmoValorDevemSerIguais() {
         Telefone tel1 = new Telefone("11999887766");
