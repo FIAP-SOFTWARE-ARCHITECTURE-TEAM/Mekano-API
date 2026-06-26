@@ -3,74 +3,102 @@ package com.fiap.mekano.domain.valueobject;
 import com.fiap.mekano.domain.exception.AppException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("Endereco Value Object")
 class EnderecoTest {
 
     @Test
-    @DisplayName("deve criar endereço válido")
+    @DisplayName("deve criar Endereco com todos os campos validos")
     void deveCriarEnderecoValido() {
-        Endereco endereco = new Endereco("Rua das Flores", "100", "Centro", "São Paulo", "SP", "01234567");
+        Endereco endereco = new Endereco("Rua das Flores", "123", "Centro",
+                "Sao Paulo", "SP", "01001000");
 
-        assertThat(endereco.getLogradouro()).isEqualTo("Rua das Flores");
-        assertThat(endereco.getNumero()).isEqualTo("100");
-        assertThat(endereco.getBairro()).isEqualTo("Centro");
-        assertThat(endereco.getCidade()).isEqualTo("São Paulo");
-        assertThat(endereco.getUf()).isEqualTo("SP");
-        assertThat(endereco.getCep()).isEqualTo("01234567");
+        assertEquals("Rua das Flores", endereco.getLogradouro());
+        assertEquals("123", endereco.getNumero());
+        assertEquals("Centro", endereco.getBairro());
+        assertEquals("Sao Paulo", endereco.getCidade());
+        assertEquals("SP", endereco.getUf());
+        assertEquals("01001000", endereco.getCep());
     }
 
     @Test
     @DisplayName("deve normalizar UF para uppercase")
     void deveNormalizarUfParaUppercase() {
-        Endereco endereco = new Endereco("Rua A", "1", "Bairro", "Cidade", "sp", "12345678");
-
-        assertThat(endereco.getUf()).isEqualTo("SP");
+        Endereco endereco = new Endereco("Rua A", "1", "B", "C", "sp", "01001000");
+        assertEquals("SP", endereco.getUf());
     }
 
     @Test
-    @DisplayName("deve remover formatação do CEP")
-    void deveRemoverFormatacaoDoCep() {
-        Endereco endereco = new Endereco("Rua A", "1", "Bairro", "Cidade", "SP", "01234-567");
-
-        assertThat(endereco.getCep()).isEqualTo("01234567");
+    @DisplayName("deve remover caracteres nao numericos do CEP")
+    void deveRemoverNaoNumericosDoCep() {
+        Endereco endereco = new Endereco("Rua A", "1", "B", "C", "SP", "01001-000");
+        assertEquals("01001000", endereco.getCep());
     }
 
     @Test
-    @DisplayName("deve rejeitar logradouro null ou blank")
-    void deveRejeitarLogradouroInvalido() {
-        assertThatThrownBy(() -> new Endereco(null, "1", "Bairro", "Cidade", "SP", "12345678"))
-                .isInstanceOf(AppException.class);
+    @DisplayName("deve aceitar numero e bairro nulos")
+    void deveAceitarNumeroEBairroNulos() {
+        Endereco endereco = new Endereco("Rua A", null, null, "Cidade", "SP", "01001000");
+        assertNull(endereco.getNumero());
+        assertNull(endereco.getBairro());
+    }
 
-        assertThatThrownBy(() -> new Endereco("   ", "1", "Bairro", "Cidade", "SP", "12345678"))
-                .isInstanceOf(AppException.class);
+    @ParameterizedTest
+    @NullAndEmptySource
+    @DisplayName("deve lancar AppException(400) para logradouro null ou vazio")
+    void deveLancarExcecaoParaLogradouroInvalido(String logradouro) {
+        AppException ex = assertThrows(AppException.class,
+                () -> new Endereco(logradouro, "1", "B", "C", "SP", "01001000"));
+        assertEquals(400, ex.getStatus());
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @DisplayName("deve lancar AppException(400) para cidade null ou vazia")
+    void deveLancarExcecaoParaCidadeInvalida(String cidade) {
+        AppException ex = assertThrows(AppException.class,
+                () -> new Endereco("Rua A", "1", "B", cidade, "SP", "01001000"));
+        assertEquals(400, ex.getStatus());
     }
 
     @Test
-    @DisplayName("deve rejeitar UF inválido")
-    void deveRejeitarUfInvalido() {
-        assertThatThrownBy(() -> new Endereco("Rua", "1", "Bairro", "Cidade", "S", "12345678"))
-                .isInstanceOf(AppException.class);
-
-        assertThatThrownBy(() -> new Endereco("Rua", "1", "Bairro", "Cidade", "SP1", "12345678"))
-                .isInstanceOf(AppException.class);
+    @DisplayName("deve lancar AppException(400) para UF com tamanho diferente de 2")
+    void deveLancarExcecaoParaUfInvalida() {
+        assertThrows(AppException.class,
+                () -> new Endereco("Rua A", "1", "B", "C", "SPP", "01001000"));
     }
 
     @Test
-    @DisplayName("deve rejeitar CEP inválido")
-    void deveRejeitarCepInvalido() {
-        assertThatThrownBy(() -> new Endereco("Rua", "1", "Bairro", "Cidade", "SP", "1234"))
-                .isInstanceOf(AppException.class);
+    @DisplayName("deve lancar AppException(400) para UF null")
+    void deveLancarExcecaoParaUfNull() {
+        assertThrows(AppException.class,
+                () -> new Endereco("Rua A", "1", "B", "C", null, "01001000"));
     }
 
     @Test
-    @DisplayName("deve formatar CEP corretamente")
-    void deveFormatarCepCorretamente() {
-        Endereco endereco = new Endereco("Rua", "1", "Bairro", "Cidade", "SP", "01234567");
+    @DisplayName("deve lancar AppException(400) para CEP com tamanho diferente de 8")
+    void deveLancarExcecaoParaCepInvalido() {
+        assertThrows(AppException.class,
+                () -> new Endereco("Rua A", "1", "B", "C", "SP", "0100100"));
+    }
 
-        assertThat(endereco.cepFormatted()).isEqualTo("01234-567");
+    @Test
+    @DisplayName("deve lancar AppException(400) para CEP null")
+    void deveLancarExcecaoParaCepNull() {
+        assertThrows(AppException.class,
+                () -> new Endereco("Rua A", "1", "B", "C", "SP", null));
+    }
+
+    @Test
+    @DisplayName("dois Enderecos com mesmos valores devem ser iguais por equals")
+    void doisEnderecosComMesmosValoresDevemSerIguais() {
+        Endereco e1 = new Endereco("Rua A", "1", "B", "C", "SP", "01001000");
+        Endereco e2 = new Endereco("Rua A", "1", "B", "C", "SP", "01001000");
+        assertEquals(e1, e2);
+        assertEquals(e1.hashCode(), e2.hashCode());
     }
 }
