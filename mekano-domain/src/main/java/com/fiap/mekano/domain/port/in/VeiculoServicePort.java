@@ -5,6 +5,12 @@ import java.util.UUID;
 
 import com.fiap.mekano.domain.model.Veiculo;
 
+/**
+ * Input port — contrato de serviços para o gerenciamento de veículos.
+ *
+ * Este contrato define as operações de aplicação que o domínio
+ * expõe para criar, atualizar, consultar e remover veículos.
+ */
 public interface VeiculoServicePort {
 
     Veiculo execute(CreateVeiculoCommand command);

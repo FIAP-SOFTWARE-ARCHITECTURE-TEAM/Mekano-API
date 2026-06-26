@@ -6,6 +6,13 @@ import java.util.UUID;
 
 import com.fiap.mekano.domain.model.Veiculo;
 
+/**
+ * Output port — contrato de persistência de veículos.
+ *
+ * Define as operações de leitura, escrita e exclusão lógica
+ * esperadas pelo domínio para o aggregate Veiculo.
+ * A implementação concreta fica no módulo infrastructure.
+ */
 public interface VeiculoRepositoryPort {
 
     Veiculo save(Veiculo veiculo);
