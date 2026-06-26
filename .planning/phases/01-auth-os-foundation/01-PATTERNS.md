@@ -215,7 +215,9 @@ public class OrdemDeServico {
 
     public void finalizarDiagnostico() { transitarPara(StatusOS.AGUARDANDO_APROVACAO); }
 
-    public void aprovarOrcamento() { transitarPara(StatusOS.APROVADA); }
+    public void aprovarOrcamento() { transitarPara(StatusOS.EM_EXECUCAO); }
+
+    public void reprovarOrcamento(String motivo) { this.motivoCancelamento = motivo; transitarPara(StatusOS.CANCELADA); }
 
     public void cancelar() { transitarPara(StatusOS.CANCELADA); }
 
@@ -304,7 +306,6 @@ public enum StatusOS {
     RECEBIDA,
     EM_DIAGNOSTICO,
     AGUARDANDO_APROVACAO,
-    APROVADA,
     EM_EXECUCAO,
     FINALIZADA,
     ENTREGUE,
@@ -313,12 +314,11 @@ public enum StatusOS {
     private static final Map<StatusOS, Set<StatusOS>> TRANSICOES = Map.of(
         RECEBIDA, Set.of(EM_DIAGNOSTICO, CANCELADA),
         EM_DIAGNOSTICO, Set.of(AGUARDANDO_APROVACAO, CANCELADA),
-        AGUARDANDO_APROVACAO, Set.of(APROVADA, CANCELADA),
-        APROVADA, Set.of(EM_EXECUCAO, CANCELADA),
+        AGUARDANDO_APROVACAO, Set.of(EM_EXECUCAO, CANCELADA),
         EM_EXECUCAO, Set.of(FINALIZADA),
         FINALIZADA, Set.of(ENTREGUE),
-        ENTREGUE, Set.of(),   // Estado terminal
-        CANCELADA, Set.of()   // Estado terminal
+        ENTREGUE, Set.of(),
+        CANCELADA, Set.of()
     );
 
     public boolean podeTransitarPara(StatusOS destino) {

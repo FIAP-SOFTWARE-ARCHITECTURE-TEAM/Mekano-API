@@ -65,13 +65,33 @@
 **Time allocation:** Days 5-7, 3 devs on OS + 2 devs on Estoque
 **Success Criteria** (what must be TRUE):
 
-  1. Sistema gera orçamento automaticamente ao finalizar diagnóstico (AGUARDANDO_APROVACAO); cliente aprova (EM_EXECUCAO) ou reprova (CANCELADA) via API pública
-  2. Mecânico inicia execução (EM_EXECUCAO) e finaliza (FINALIZADA); admin lista/filtra OS com paginação e consulta tempo médio de execução
-  3. Admin/almoxarife cadastra peças/insumos com saldo não-negativo; sistema reserva peças atomicamente ao aprovar orçamento (`OrcamentoAprovadoEvent`)
-  4. Sistema gera Requisição de Compra para peças indisponíveis; almoxarife registra NF de entrada atualizando saldo; sistema verifica estoque mínimo e gera nova requisição se necessário
-  5. Admin gerencia usuários do sistema (CRUD); especificação OpenAPI/Swagger documentada
+   1. Sistema gera orçamento automaticamente ao finalizar diagnóstico (AGUARDANDO_APROVACAO); cliente aprova (EM_EXECUCAO) ou reprova (CANCELADA) via API pública
+   2. Mecânico inicia execução (EM_EXECUCAO) e finaliza (FINALIZADA); admin lista/filtra OS com paginação e consulta tempo médio de execução
+   3. Admin/almoxarife cadastra peças/insumos com saldo não-negativo; sistema reserva peças atomicamente ao aprovar orçamento (`OrcamentoAprovadoEvent`)
+   4. Sistema gera Requisição de Compra para peças indisponíveis; almoxarife registra NF de entrada atualizando saldo; sistema verifica estoque mínimo e gera nova requisição se necessário
+   5. Admin gerencia usuários do sistema (CRUD); especificação OpenAPI/Swagger documentada
 
-**Plans:** TBD
+**Plans:** 8 plans
+
+**Wave 1** *(infrastructure foundation)*
+
+- [ ] PLAN-01-entity-base.md — Entities, VOs, Flyway V6-V11, domain models, ports, mappers
+
+**Wave 2** *(application services — parallel: 3 devs OS + 2 devs Estoque)*
+
+- [ ] PLAN-02-estoque-domain-services.md — Peca/Req/Nf domain + services + atomic stock + CDI events
+- [ ] PLAN-03-orcamento-domain-services.md — Orcamento aggregate + OS state machine + SLA job + CDI events
+- [ ] PLAN-05-admin-users.md — Admin user CRUD service + role 'cliente' auth (fits in Wave 2)
+
+**Wave 3** *(services + REST — parallel)*
+
+- [ ] PLAN-04-ordemservico-execucao.md — OS execution start/finish + metrics + detail + list filters
+- [ ] PLAN-06-estoque-rest.md — REST endpoints for Peca, RequisicaoCompra, NfEntrada, Alertas
+
+**Wave 4** *(REST + cross-cutting)*
+
+- [ ] PLAN-07-orcamento-rest.md — REST for Orcamento approval/rejection + OS execution endpoints
+- [ ] PLAN-08-audit-openapi-build.md — Audit log, OpenAPI annotations, JaCoCo 80%, OWASP DC, README
 
 ---
 
@@ -99,7 +119,7 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Auth & OS Foundation | 0/6 | Not started | - |
-| 2. OS Continuation & Estoque | 0/0 | Not started | - |
+| 2. OS Continuation & Estoque | 0/8 | Not started | - |
 | 3. Pagamento & Delivery | 0/0 | Not started | - |
 
 ---
