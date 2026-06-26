@@ -1,0 +1,33 @@
+-- V8__create_veiculos_table.sql
+-- Migration: criação da tabela veiculos
+-- Corresponde ao mapeamento JPA de VeiculoEntity
+
+CREATE TABLE veiculos 
+(
+    id UUID NOT NULL,
+    uuid UUID NOT NULL UNIQUE,
+    cliente_uuid UUID NOT NULL,
+    placa VARCHAR(7) NOT NULL UNIQUE,
+    marca VARCHAR(50) NOT NULL,
+    modelo VARCHAR(50) NOT NULL,
+    ano INTEGER NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP,
+    created_by UUID,
+    updated_by UUID,
+    deleted_at TIMESTAMP,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
+    CONSTRAINT pk_veiculos PRIMARY KEY (id)
+);
+
+CREATE INDEX idx_veiculos_uuid
+    ON veiculos(uuid);
+
+CREATE INDEX idx_veiculos_cliente_uuid
+    ON veiculos(cliente_uuid);
+
+CREATE INDEX idx_veiculos_placa
+    ON veiculos(placa);
+
+CREATE INDEX idx_veiculos_active
+    ON veiculos(is_active);
