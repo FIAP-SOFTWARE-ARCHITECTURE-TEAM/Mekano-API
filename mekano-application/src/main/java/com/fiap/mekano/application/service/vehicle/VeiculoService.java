@@ -1,5 +1,9 @@
 package com.fiap.mekano.application.service.vehicle;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
 import com.fiap.mekano.domain.event.VeiculoCriadoEvent;
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.model.Veiculo;
@@ -13,9 +17,6 @@ import com.fiap.mekano.domain.valueobject.PlacaVeiculo;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
-
-import java.util.List;
-import java.util.UUID;
 
 @ApplicationScoped
 public class VeiculoService
@@ -74,25 +75,30 @@ public class VeiculoService
         Veiculo existingVehicle = veiculoRepository.findById(veiculoId)
                 .orElseThrow(() -> new AppException(404, "Veículo não encontrado"));
 
-        String placaNormalizada = new PlacaVeiculo(
-                command.placa())
-                .getValue();
+        // 1. Tratar a placa do comando de forma segura e normalizada
+        Optional<String> newPlacaNormalized = Optional.ofNullable(command.placa())
+                .filter(placa -> !placa.isBlank())
+                .map(PlacaVeiculo::new) // Assumindo que PlacaVeiculo tem um construtor que aceita String
+                .map(PlacaVeiculo::getValue);
 
-        if (command.placa() != null && !command.placa().isBlank()
-                && !existingVehicle.getPlaca().getValue().equalsIgnoreCase(placaNormalizada)
-                && veiculoRepository.existsByPlaca(placaNormalizada)) {
-            throw new AppException(409, "Veículo já cadastrado");
-        }
+        // 2. Validar se a nova placa (se presente e diferente) já existe
+        newPlacaNormalized.ifPresent(placa -> {
+            if (!placa.equalsIgnoreCase(existingVehicle.getPlaca().getValue())
+                    && veiculoRepository.existsByPlaca(placa)) {
+                throw new AppException(409, "Veículo já cadastrado");
+            }
+        });
 
+        // 3. Reconstituir o veículo com os valores atualizados ou existentes
         Veiculo updatedVehicle = Veiculo.reconstitute(
                 existingVehicle.getId(),
                 existingVehicle.getClienteUuid(),
-                command.placa() != null && !command.placa().isBlank() ? placaNormalizada
-                        : existingVehicle.getPlaca().getValue(),
-                command.marca() != null && !command.marca().isBlank() ? command.marca() : existingVehicle.getMarca(),
-                command.modelo() != null && !command.modelo().isBlank() ? command.modelo()
-                        : existingVehicle.getModelo(),
-                command.ano() != null ? command.ano() : existingVehicle.getAno(),
+                newPlacaNormalized.orElseGet(() -> existingVehicle.getPlaca().getValue()),
+                Optional.ofNullable(command.marca()).filter(marca -> !marca.isBlank())
+                        .orElse(existingVehicle.getMarca()),
+                Optional.ofNullable(command.modelo()).filter(modelo -> !modelo.isBlank())
+                        .orElse(existingVehicle.getModelo()),
+                Optional.ofNullable(command.ano()).orElse(existingVehicle.getAno()),
                 existingVehicle.getCreatedAt());
 
         return veiculoRepository.save(updatedVehicle);
