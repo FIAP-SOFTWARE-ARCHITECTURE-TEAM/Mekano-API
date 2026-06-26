@@ -10,3 +10,15 @@ quarkus:
         initial-capacity: 10
         maximum-size: 100
         expire-after-write: 60s
+      pecas:
+        initial-capacity: 20
+        maximum-size: 200
+        expire-after-write: 60s
+      requisicoes:
+        initial-capacity: 20
+        maximum-size: 200
+        expire-after-write: 60s
+      nf_entradas:
+        initial-capacity: 20
+        maximum-size: 200
+        expire-after-write: 60s
