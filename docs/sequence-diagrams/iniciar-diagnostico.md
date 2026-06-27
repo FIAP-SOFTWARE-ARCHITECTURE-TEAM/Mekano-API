@@ -12,7 +12,7 @@ sequenceDiagram
     participant DB as PostgreSQL
 
     Mecanico->>API: PUT /api/v1/os/{uuid}/iniciar-diagnostico
-    Note over API: roles permitidos mecanico e admin
+    Note over API: roles permitidos mecânico e admin
 
     API->>App: iniciarDiagnostico(uuid)
     App->>Repo: findById(uuid)
