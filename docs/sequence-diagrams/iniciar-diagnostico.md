@@ -11,7 +11,7 @@ sequenceDiagram
     participant Repo as OrdemDeServicoRepositoryImpl
     participant DB as PostgreSQL
 
-    Mecanico->>API: PUT /api/v1/os/{uuid}/iniciar-diagnostico
+    Mecânico->>API: PUT /api/v1/os/{uuid}/iniciar-diagnostico
     Note over API: roles permitidos mecânico e admin
 
     API->>App: iniciarDiagnostico(uuid)
@@ -31,7 +31,7 @@ sequenceDiagram
         DB-->>Repo: 1 row updated
         Repo-->>App: OS atualizada
         App-->>API: OrdemDeServicoResponse
-        API-->>Mecanico: 200 OK
+        API-->>Mecânico: 200 OK
     else Transição inválida (ex.: CANCELADA -> EM_DIAGNOSTICO)
         Domain-->>App: AppException(400)
         App-->>API: exception
