@@ -20,7 +20,7 @@ sequenceDiagram
         API->>App: execute(CreateOrdemDeServicoCommand)
         App->>App: validar clienteUuid e veiculoUuid
 
-        alt Cliente/Veiculo nao encontrado
+        alt Cliente/Veículo não encontrado
             App-->>API: AppException(404)
             API-->>Atendente: 404 Problem Details
         else Dados consistentes
