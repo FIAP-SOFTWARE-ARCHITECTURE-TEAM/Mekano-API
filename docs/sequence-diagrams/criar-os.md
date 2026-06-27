@@ -1,6 +1,6 @@
 # Criar OS
 
-Fluxo de criacao de ordem de servico pela camada REST ate persistencia.
+Fluxo de criação de ordem de serviço pela camada REST até persistência.
 
 ```mermaid
 sequenceDiagram
