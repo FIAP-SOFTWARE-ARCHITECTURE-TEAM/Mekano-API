@@ -38,5 +38,5 @@ sequenceDiagram
         end
     end
 
-    Note over API,Atendente: em conflito de concorrencia ou persistencia retorna 409
+    Note over API,Atendente: em conflito de concorrência ou persistência retorna 409
 ```

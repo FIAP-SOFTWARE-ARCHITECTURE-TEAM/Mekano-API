@@ -1,6 +1,6 @@
-# Consulta publica de status da OS
+# Consulta pública de status da OS
 
-Fluxo publico de consulta sem autenticacao para acompanhar andamento da OS.
+Fluxo público de consulta sem autenticação para acompanhar andamento da OS.
 
 ```mermaid
 sequenceDiagram
@@ -11,7 +11,7 @@ sequenceDiagram
     participant DB as PostgreSQL
 
     Cliente->>API: GET /api/v1/os/{uuid}/status
-    Note over API: @PermitAll (sem JWT obrigatorio)
+    Note over API: @PermitAll (sem JWT obrigatório)
 
     API->>App: consultarStatus(uuid)
     App->>Repo: findById(uuid)
@@ -20,7 +20,7 @@ sequenceDiagram
     Repo-->>App: OrdemDeServico
 
     App-->>API: OrdemDeServicoStatusResponse
-    Note over API: resposta minima: { id, status, dataEntrada }
+    Note over API: resposta mínima: { id, status, dataEntrada }
     API-->>Cliente: 200 OK
 
     alt OS não encontrada
