@@ -1,6 +1,6 @@
-# Iniciar diagnostico
+# Iniciar diagnóstico
 
-Fluxo para transicao da OS de RECEBIDA para EM_DIAGNOSTICO.
+Fluxo para transição da OS de RECEBIDA para EM_DIAGNOSTICO.
 
 ```mermaid
 sequenceDiagram
