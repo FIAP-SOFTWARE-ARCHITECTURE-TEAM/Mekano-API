@@ -56,8 +56,8 @@ No cross-dependency between PLAN-02 and PLAN-03 — both consume events from PLA
 
 | Wave | Plans | Issue | Status | Description | Est. Effort |
 |------|-------|-------|--------|-------------|-------------|
-| **1** | PLAN-01 | #21 🔄, #22 🔄 | em andamento | Infrastructure foundation: entities, VOs, Flyway V11-V17, domain models, repository ports | 3-4h |
-| **2** | PLAN-02, PLAN-03 | #23 🔄, #24 🔄 | em andamento | Application services: Peca/Req/Nf services + Orcamento/OS services + CDI events + SLA job | 4-5h each |
+| **1** | PLAN-01 | #21 ✅, #22 🔄 | em andamento | Infrastructure foundation: entities, VOs, Flyway V11-V17, domain models, repository ports | 3-4h |
+| **2** | PLAN-02, PLAN-03 | #23 ✅, #24 🔄 | em andamento | Application services: Peca/Req/Nf services + Orcamento/OS services + CDI events + SLA job | 4-5h each |
 | **3** | PLAN-04, PLAN-05, PLAN-06 | #25 🔄, #26 🔄, #27 🔄 | em andamento | OS execution/metrics + Admin user CRUD + Estoque REST | 3-4h each |
 | **4** | PLAN-07, PLAN-08 | #28 🔄, #29 🔄 | em andamento | Orcamento REST, OS extension REST, audit log, OpenAPI, JaCoCo, OWASP DC, README | 3-4h each |
 
@@ -103,3 +103,4 @@ No cross-dependency between PLAN-02 and PLAN-03 — both consume events from PLA
 ## Sync Log
 
 - 2026-06-23 21:49: sincronizado 9 issues — concluídos: 0, em andamento: 9, pendentes: 0
+- 2026-06-26 16:59: sincronizado 9 issues — concluídos: 2, em andamento: 7, pendentes: 0
