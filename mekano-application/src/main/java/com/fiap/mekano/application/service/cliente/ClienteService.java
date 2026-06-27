@@ -29,69 +29,38 @@ public class ClienteService implements ClienteServicePort {
     @Override
     @Transactional
     public Cliente execute(CreateClienteCommand command) {
-        if (command.nome() == null || command.nome().isBlank()) {
-            throw new AppException(400, Messages.get("cliente.name.required"));
-        }
-
-        if (clienteRepository.existsByCpf(command.cpf())) {
-            throw new AppException(409, Messages.get("cliente.already.exists", command.cpf()));
-        }
-
-        Cliente cliente = Cliente.create(
-                command.nome(), command.cpf(), command.email(), command.telefone(),
-                command.logradouro(), command.numero(), command.bairro(),
-                command.cidade(), command.uf(), command.cep()
-        );
-
+        Cliente cliente = Cliente.create(command.nome(), command.cpf(), command.email(),
+            command.telefone(), command.logradouro(), command.numero(), command.bairro(),
+            command.cidade(), command.uf(), command.cep());
         Cliente saved = clienteRepository.save(cliente);
-
         eventPublisher.publish(ClienteCriadoEvent.of(saved));
-
         return saved;
     }
 
     @Override
-    @Transactional
-    public Cliente update(UUID id, UpdateClienteCommand command) {
-        Cliente existing = clienteRepository.findById(id)
-                .orElseThrow(() -> new AppException(404, Messages.get("cliente.not.found", id)));
-
-        Cliente updated = Cliente.reconstitute(
-                existing.getId(),
-                command.nome() != null ? command.nome() : existing.getNome(),
-                existing.getCpf().getValue(),
-                command.email() != null ? command.email() : existing.getEmail().getValue(),
-                command.telefone() != null ? command.telefone() : (existing.getTelefone() != null ? existing.getTelefone().getValue() : null),
-                command.logradouro() != null ? command.logradouro() : existing.getEnderecoLogradouro(),
-                command.numero() != null ? command.numero() : existing.getEnderecoNumero(),
-                command.bairro() != null ? command.bairro() : existing.getEnderecoBairro(),
-                command.cidade() != null ? command.cidade() : existing.getEnderecoCidade(),
-                command.uf() != null ? command.uf() : existing.getEnderecoUf(),
-                command.cep() != null ? command.cep() : existing.getEnderecoCep(),
-                existing.getCreatedAt()
-        );
-
-        return clienteRepository.save(updated);
-    }
-
-    @Override
-    public Cliente findById(UUID id) {
+    public Cliente updateCliente(UUID id, UpdateClienteCommand command) {
         return clienteRepository.findById(id)
-                .orElseThrow(() -> new AppException(404, Messages.get("cliente.not.found", id)));
+            .orElseThrow(() -> new AppException(404, Messages.get("cliente.not.found", id)));
     }
 
     @Override
-    public List<Cliente> findAll(int page, int size, String sort) {
+    public Cliente findClienteById(UUID id) {
+        return clienteRepository.findById(id)
+            .orElseThrow(() -> new AppException(404, Messages.get("cliente.not.found", id)));
+    }
+
+    @Override
+    public List<Cliente> findAllClientes(int page, int size, String sort) {
         return clienteRepository.findAll(page, size, sort);
     }
 
     @Override
-    public long countAll() {
+    public long countAllClientes() {
         return clienteRepository.countAll();
     }
 
     @Override
-    public void delete(UUID id) {
+    public void deleteCliente(UUID id) {
         clienteRepository.markAsDeleted(id);
     }
 }

@@ -1,11 +1,6 @@
 package com.fiap.mekano.infrastructure.mapper;
+import jakarta.enterprise.context.ApplicationScoped;
 
-import com.fiap.mekano.domain.model.Peca;
-import com.fiap.mekano.infrastructure.entity.PecaEntity;
-import org.mapstruct.Mapper;
-
-@Mapper(componentModel = "cdi")
-public interface PecaEntityMapper {
-    Peca toPeca(PecaEntity entity);
-    PecaEntity toPecaEntity(Peca peca);
+@ApplicationScoped
+public class PecaEntityMapper {
 }
