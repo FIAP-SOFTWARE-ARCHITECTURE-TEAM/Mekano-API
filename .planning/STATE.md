@@ -73,6 +73,7 @@ progress:
 
 ### Open Todos
 
+- [ ] Criar AGENTS.md para aplicar engenharia de contexto no projeto
 - [ ] PLAN.md: Phase 1 — Auth & OS Foundation
 - [ ] Criar tasks individuais para GitHub Issues
 
