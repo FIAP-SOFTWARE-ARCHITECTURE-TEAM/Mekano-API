@@ -160,6 +160,22 @@ class ServicoResourceTest {
     @Test
     @Order(9)
     @TestSecurity(user = "admin", roles = {"admin"})
+    void listAll_withInvalidPagination_returns200WithSanitizedValues() {
+        given()
+                .queryParam("page", -1)
+                .queryParam("size", 0)
+                .queryParam("sort", " ")
+                .when()
+                .get(BASE_PATH)
+                .then()
+                .statusCode(200)
+                .body("page", equalTo(0))
+                .body("size", equalTo(10));
+    }
+
+    @Test
+    @Order(10)
+    @TestSecurity(user = "admin", roles = {"admin"})
     void update_validData_returns200() {
         given()
                 .contentType(ContentType.JSON)
@@ -176,7 +192,7 @@ class ServicoResourceTest {
     }
 
     @Test
-    @Order(10)
+    @Order(11)
     @TestSecurity(user = "admin", roles = {"admin"})
     void update_nonExisting_returns404() {
         given()
@@ -193,7 +209,7 @@ class ServicoResourceTest {
     // ───────────────── DELETE ─────────────────
 
     @Test
-    @Order(11)
+    @Order(12)
     @TestSecurity(user = "admin", roles = {"admin"})
     void delete_existingServico_returns204() {
         given()
@@ -204,7 +220,7 @@ class ServicoResourceTest {
     }
 
     @Test
-    @Order(12)
+    @Order(13)
     @TestSecurity(user = "admin", roles = {"admin"})
     void getById_afterDelete_returns404() {
         given()
@@ -217,7 +233,7 @@ class ServicoResourceTest {
     // ───────────────── AUTHORIZATION ─────────────────
 
     @Test
-    @Order(13)
+    @Order(14)
     @TestSecurity(user = "atendente", roles = {"user"})
     void create_asAtendente_returns403() {
         given()
@@ -232,7 +248,7 @@ class ServicoResourceTest {
     }
 
     @Test
-    @Order(14)
+    @Order(15)
     @TestSecurity(user = "atendente", roles = {"user"})
     void listAll_asAtendente_returns403() {
         given()
@@ -243,7 +259,7 @@ class ServicoResourceTest {
     }
 
     @Test
-    @Order(15)
+    @Order(16)
     @TestSecurity(user = "atendente", roles = {"user"})
     void delete_asAtendente_returns403() {
         given()
@@ -254,7 +270,7 @@ class ServicoResourceTest {
     }
 
     @Test
-    @Order(16)
+    @Order(17)
     @TestSecurity(user = "atendente", roles = {"user"})
     void update_asAtendente_returns403() {
         given()

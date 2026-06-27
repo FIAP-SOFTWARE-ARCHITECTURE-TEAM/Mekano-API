@@ -22,6 +22,7 @@ import org.hibernate.exception.ConstraintViolationException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -75,27 +76,36 @@ public class UserRepositoryImpl implements UserRepositoryPort {
     @Retry(maxRetries = 3, delay = 200, delayUnit = ChronoUnit.MILLIS)
     @CacheResult(cacheName = CacheNames.USERS)
     public Optional<User> findByEmail(String email) {
-        return panacheRepository.find("email = ?1 AND isActive = ?2", email, true)
+        String normalizedEmail = normalizeEmail(email);
+        if (normalizedEmail == null) {
+            return Optional.empty();
+        }
+        return panacheRepository.find("email = ?1 AND isActive = ?2", normalizedEmail, true)
                 .firstResultOptional()
                 .map(mapper::toDomain);
     }
 
     @Override
     public boolean existsByEmail(String email) {
-        return panacheRepository.count("email = ?1 AND isActive = ?2", email, true) > 0;
+        String normalizedEmail = normalizeEmail(email);
+        if (normalizedEmail == null) {
+            return false;
+        }
+        return panacheRepository.count("email = ?1 AND isActive = ?2", normalizedEmail, true) > 0;
     }
 
     @Override
     public List<User> findAll(int page, int size, String sort) {
-        String[] sortParts = sort.split(",");
-        String sortField = sortParts[0];
+        String sortValue = sort == null || sort.isBlank() ? "name,asc" : sort;
+        String[] sortParts = sortValue.split(",", 2);
+        String sortField = sortParts[0].strip();
         if (!ALLOWED_SORT_FIELDS.contains(sortField)) {
             sortField = "name";
         }
-        boolean ascending = sortParts.length < 2 || "asc".equalsIgnoreCase(sortParts[1]);
+        boolean ascending = sortParts.length < 2 || "asc".equalsIgnoreCase(sortParts[1].strip());
         var direction = ascending ? Sort.Direction.Ascending : Sort.Direction.Descending;
         var query = panacheRepository.find("isActive = ?1", Sort.by(sortField).direction(direction), true);
-        return query.page(Page.of(page, size)).list().stream().map(mapper::toDomain).toList();
+        return query.page(Page.of(Math.max(page, 0), normalizeSize(size))).list().stream().map(mapper::toDomain).toList();
     }
 
     @Override
@@ -112,5 +122,19 @@ public class UserRepositoryImpl implements UserRepositoryPort {
                 .orElseThrow(() -> new AppException(404, Messages.get("user.not.found", id)));
         entity.setDeletedAt(LocalDateTime.now());
         entity.setIsActive(false);
+    }
+
+    private static String normalizeEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return null;
+        }
+        return email.strip().toLowerCase(Locale.ROOT);
+    }
+
+    private static int normalizeSize(int size) {
+        if (size <= 0) {
+            return 10;
+        }
+        return Math.min(size, 100);
     }
 }

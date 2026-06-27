@@ -133,14 +133,25 @@ public class ServicoResource {
             @QueryParam("page") @DefaultValue("0") int page,
             @QueryParam("size") @DefaultValue("10") int size,
             @QueryParam("sort") @DefaultValue("nome,asc") String sort) {
-        var content = servicoServicePort.findAll(page, size, sort)
+        int normalizedPage = Math.max(page, 0);
+        int normalizedSize = normalizeSize(size);
+        String normalizedSort = sort == null || sort.isBlank() ? "nome,asc" : sort;
+
+        var content = servicoServicePort.findAll(normalizedPage, normalizedSize, normalizedSort)
                 .stream()
                 .map(servicoDtoMapper::toResponse)
                 .toList();
         long total = servicoServicePort.countAll();
-        int totalPages = (int) Math.ceil((double) total / size);
-        var response = new ServicoPageResponse(content, page, size, total, totalPages);
+        int totalPages = (int) Math.ceil((double) total / normalizedSize);
+        var response = new ServicoPageResponse(content, normalizedPage, normalizedSize, total, totalPages);
         return Response.ok(response).build();
+    }
+
+    private static int normalizeSize(int size) {
+        if (size <= 0) {
+            return 10;
+        }
+        return Math.min(size, 100);
     }
 
     /**

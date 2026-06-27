@@ -9,6 +9,8 @@ import com.fiap.mekano.infrastructure.entity.ServicoEntity;
 import com.fiap.mekano.infrastructure.mapper.ServicoEntityMapper;
 import io.quarkus.cache.CacheInvalidate;
 import io.quarkus.cache.CacheResult;
+import io.quarkus.panache.common.Page;
+import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.PersistenceException;
@@ -100,18 +102,17 @@ public class ServicoRepositoryImpl implements ServicoRepositoryPort {
 
     @Override
     public List<Servico> findAll(int page, int size, String sort) {
-        String[] sortParts = sort.split(",");
-        String sortField = sortParts[0];
+        String sortValue = sort == null || sort.isBlank() ? "nome,asc" : sort;
+        String[] sortParts = sortValue.split(",", 2);
+        String sortField = sortParts[0].strip();
         if (!ALLOWED_SORT_FIELDS.contains(sortField)) {
             sortField = "nome";
         }
-        boolean ascending = sortParts.length < 2 || "asc".equalsIgnoreCase(sortParts[1]);
-        var direction = ascending
-                ? io.quarkus.panache.common.Sort.Direction.Ascending
-                : io.quarkus.panache.common.Sort.Direction.Descending;
+        boolean ascending = sortParts.length < 2 || "asc".equalsIgnoreCase(sortParts[1].strip());
+        var direction = ascending ? Sort.Direction.Ascending : Sort.Direction.Descending;
         var query = panacheRepository.find("isActive = ?1",
-                io.quarkus.panache.common.Sort.by(sortField).direction(direction), true);
-        return query.page(io.quarkus.panache.common.Page.of(page, size)).list()
+                Sort.by(sortField).direction(direction), true);
+        return query.page(Page.of(Math.max(page, 0), normalizeSize(size))).list()
                 .stream().map(mapper::toDomain).toList();
     }
 
@@ -128,5 +129,12 @@ public class ServicoRepositoryImpl implements ServicoRepositoryPort {
                 .orElseThrow(() -> new AppException(404, Messages.get("servico.not.found", id)));
         entity.setDeletedAt(LocalDateTime.now());
         entity.setIsActive(false);
+    }
+
+    private static int normalizeSize(int size) {
+        if (size <= 0) {
+            return 10;
+        }
+        return Math.min(size, 100);
     }
 }

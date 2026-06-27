@@ -31,11 +31,12 @@ public class ServicoService implements ServicoServicePort {
     @Override
     @Transactional
     public Servico create(CreateServicoCommand command) {
-        if (servicoRepository.existsByNome(command.nome())) {
-            throw new AppException(409, Messages.get("servico.already.exists", command.nome()));
+        String normalizedNome = normalizeNome(command.nome());
+        if (normalizedNome != null && !normalizedNome.isBlank() && servicoRepository.existsByNome(normalizedNome)) {
+            throw new AppException(409, Messages.get("servico.already.exists", normalizedNome));
         }
 
-        Servico servico = Servico.create(command.nome(), command.descricao(), command.valor());
+        Servico servico = Servico.create(normalizedNome, command.descricao(), command.valor());
         return servicoRepository.save(servico);
     }
 
@@ -45,11 +46,12 @@ public class ServicoService implements ServicoServicePort {
         Servico servico = servicoRepository.findById(id)
                 .orElseThrow(() -> new AppException(404, Messages.get("servico.not.found", id)));
 
-        if (servicoRepository.existsByNomeAndIdNot(command.nome(), id)) {
-            throw new AppException(409, Messages.get("servico.already.exists", command.nome()));
+        String normalizedNome = normalizeNome(command.nome());
+        if (normalizedNome != null && !normalizedNome.isBlank() && servicoRepository.existsByNomeAndIdNot(normalizedNome, id)) {
+            throw new AppException(409, Messages.get("servico.already.exists", normalizedNome));
         }
 
-        servico.atualizar(command.nome(), command.descricao(), command.valor());
+        servico.atualizar(normalizedNome, command.descricao(), command.valor());
         return servicoRepository.save(servico);
     }
 
@@ -73,5 +75,9 @@ public class ServicoService implements ServicoServicePort {
     @Transactional
     public void delete(UUID id) {
         servicoRepository.markAsDeleted(id);
+    }
+
+    private static String normalizeNome(String nome) {
+        return nome == null ? null : nome.strip();
     }
 }

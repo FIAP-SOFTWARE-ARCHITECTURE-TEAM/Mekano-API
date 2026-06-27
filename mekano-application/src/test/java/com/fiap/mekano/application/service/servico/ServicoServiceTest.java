@@ -48,7 +48,7 @@ class ServicoServiceTest {
     @Test
     @DisplayName("deve lançar AppException(409) quando nome duplicado")
     void deveLancarExcecaoQuandoNomeDuplicado() {
-        var command = new CreateServicoCommand("Troca de óleo", "desc", new BigDecimal("89.90"));
+        var command = new CreateServicoCommand(" Troca de óleo ", "desc", new BigDecimal("89.90"));
         when(servicoRepository.existsByNome("Troca de óleo")).thenReturn(true);
 
         AppException ex = assertThrows(AppException.class, () -> servicoService.create(command));
@@ -109,7 +109,7 @@ class ServicoServiceTest {
     void deveLancarExcecaoQuandoNomeDuplicadoNoUpdate() {
         UUID id = UUID.randomUUID();
         Servico existing = Servico.create("Troca de óleo", "desc", new BigDecimal("89.90"));
-        var command = new UpdateServicoCommand("Alinhamento", "desc", new BigDecimal("100.00"));
+        var command = new UpdateServicoCommand(" Alinhamento ", "desc", new BigDecimal("100.00"));
 
         when(servicoRepository.findById(id)).thenReturn(Optional.of(existing));
         when(servicoRepository.existsByNomeAndIdNot("Alinhamento", id)).thenReturn(true);
