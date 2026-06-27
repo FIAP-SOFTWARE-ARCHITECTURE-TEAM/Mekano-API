@@ -128,6 +128,13 @@
             <artifactId>rest-assured</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Mockito -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit5-mockito</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <!-- AssertJ — asserções fluentes para testes de Fault Tolerance (Plan 10-04) -->
         <dependency>
             <groupId>org.assertj</groupId>
