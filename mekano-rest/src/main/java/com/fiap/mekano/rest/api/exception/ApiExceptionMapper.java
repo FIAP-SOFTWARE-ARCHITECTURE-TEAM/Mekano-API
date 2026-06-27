@@ -4,6 +4,7 @@ import com.fiap.mekano.domain.exception.AppException;
 import io.quarkus.logging.Log;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
@@ -23,6 +24,16 @@ public class ApiExceptionMapper implements ExceptionMapper<Exception> {
     public Response toResponse(Exception exception) {
         if (exception instanceof AppException ex) {
             return build(ex.getStatus(), ex.getMessage());
+        }
+        if (exception instanceof WebApplicationException ex) {
+            int status = ex.getResponse() != null ? ex.getResponse().getStatus() : 500;
+            String detail = ex.getMessage();
+            if (detail == null || detail.isBlank()) {
+                detail = ex.getResponse() != null && ex.getResponse().getStatusInfo() != null
+                        ? ex.getResponse().getStatusInfo().getReasonPhrase()
+                        : "Erro interno do servidor";
+            }
+            return build(status, detail);
         }
 
         Log.errorf(exception, "Unhandled exception: %s", exception.getMessage());

@@ -7,4 +7,5 @@ public final class CacheNames {
     public static final String PECAS = "pecas";
     public static final String REQUISICOES = "requisicoes";
     public static final String NF_ENTRADAS = "nf_entradas";
+    public static final String SERVICOS = "servicos";
 }

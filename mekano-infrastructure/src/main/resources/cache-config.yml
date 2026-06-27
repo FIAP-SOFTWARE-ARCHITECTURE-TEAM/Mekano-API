@@ -22,3 +22,7 @@ quarkus:
         initial-capacity: 20
         maximum-size: 200
         expire-after-write: 60s
+      servicos:
+        initial-capacity: 10
+        maximum-size: 200
+        expire-after-write: 120s
