@@ -1,88 +1,101 @@
 package com.fiap.mekano.infrastructure.repository;
 
+import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.domain.model.User;
 import com.fiap.mekano.domain.port.out.UserRepositoryPort;
+import com.fiap.mekano.infrastructure.cache.CacheNames;
 import com.fiap.mekano.infrastructure.entity.UserEntity;
+import com.fiap.mekano.infrastructure.mapper.UserEntityMapper;
+import io.quarkus.cache.CacheInvalidate;
+import io.quarkus.cache.CacheResult;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.persistence.PersistenceException;
+import jakarta.transaction.Transactional;
+import org.eclipse.microprofile.faulttolerance.Retry;
+import org.eclipse.microprofile.faulttolerance.Timeout;
+import org.hibernate.exception.ConstraintViolationException;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @ApplicationScoped
 public class UserRepositoryImpl implements UserRepositoryPort {
 
-    private final UserPanacheRepository panacheRepository;
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("name", "email", "createdAt");
 
-    public UserRepositoryImpl(UserPanacheRepository panacheRepository) {
-        this.panacheRepository = panacheRepository;
-    }
+    @Inject
+    UserPanacheRepository panacheRepository;
+
+    @Inject
+    UserEntityMapper mapper;
 
     @Override
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
+    @CacheInvalidate(cacheName = CacheNames.USERS)
     public User save(User user) {
-        UserEntity entity = panacheRepository.find("uuid = ?1", user.getId()).firstResult();
-        if (entity == null) {
-            entity = new UserEntity();
-        }
-
-        entity.setUuid(user.getId());
-        entity.setName(user.getName());
-        entity.setEmail(user.getEmail().getValue());
-        entity.setPasswordHash(user.getPasswordHash());
-        if (entity.getCreatedAt() == null) {
-            entity.setCreatedAt(user.getCreatedAt());
-        }
-        entity.setDeletedAt(null);
-        entity.setIsActive(true);
-
-        if (entity.getId() == null) {
+        try {
+            var entity = mapper.toEntity(user);
             panacheRepository.persist(entity);
+            panacheRepository.flush();
+            return mapper.toDomain(entity);
+        } catch (PersistenceException e) {
+            throw handleConstraintViolation(e, user.getEmail().getValue());
         }
+    }
 
-        return toDomain(entity);
+    private static AppException handleConstraintViolation(PersistenceException e, String email) {
+        Throwable cause = e;
+        while (cause != null) {
+            if (cause instanceof ConstraintViolationException) {
+                throw new AppException(409, Messages.get("user.already.exists", email));
+            }
+            cause = cause.getCause();
+        }
+        throw e;
     }
 
     @Override
+    @Retry(maxRetries = 3)
+    @CacheResult(cacheName = CacheNames.USERS)
     public Optional<User> findById(UUID id) {
-        return panacheRepository.find("uuid = ?1 and isActive = ?2", id, true)
+        return panacheRepository.find("uuid = ?1 AND isActive = ?2", id, true)
                 .firstResultOptional()
-                .map(UserRepositoryImpl::toDomain);
+                .map(mapper::toDomain);
     }
 
     @Override
+    @Retry(maxRetries = 3, delay = 200, delayUnit = ChronoUnit.MILLIS)
+    @CacheResult(cacheName = CacheNames.USERS)
     public Optional<User> findByEmail(String email) {
-        if (email == null || email.isBlank()) {
-            return Optional.empty();
-        }
-
-        String normalizedEmail = email.strip().toLowerCase(Locale.ROOT);
-        return panacheRepository.find("email = ?1 and isActive = ?2", normalizedEmail, true)
+        return panacheRepository.find("email = ?1 AND isActive = ?2", email, true)
                 .firstResultOptional()
-                .map(UserRepositoryImpl::toDomain);
+                .map(mapper::toDomain);
     }
 
     @Override
     public boolean existsByEmail(String email) {
-        if (email == null || email.isBlank()) {
-            return false;
-        }
-
-        String normalizedEmail = email.strip().toLowerCase(Locale.ROOT);
-        return panacheRepository.count("email = ?1 and isActive = ?2", normalizedEmail, true) > 0;
+        return panacheRepository.count("email = ?1 AND isActive = ?2", email, true) > 0;
     }
 
     @Override
     public List<User> findAll(int page, int size, String sort) {
-        return panacheRepository.find("isActive = ?1", parseSort(sort), true)
-                .page(Page.of(Math.max(page, 0), normalizeSize(size)))
-                .list()
-                .stream()
-                .map(UserRepositoryImpl::toDomain)
-                .toList();
+        String[] sortParts = sort.split(",");
+        String sortField = sortParts[0];
+        if (!ALLOWED_SORT_FIELDS.contains(sortField)) {
+            sortField = "name";
+        }
+        boolean ascending = sortParts.length < 2 || "asc".equalsIgnoreCase(sortParts[1]);
+        var direction = ascending ? Sort.Direction.Ascending : Sort.Direction.Descending;
+        var query = panacheRepository.find("isActive = ?1", Sort.by(sortField).direction(direction), true);
+        return query.page(Page.of(page, size)).list().stream().map(mapper::toDomain).toList();
     }
 
     @Override
@@ -91,42 +104,13 @@ public class UserRepositoryImpl implements UserRepositoryPort {
     }
 
     @Override
+    @Transactional
+    @CacheInvalidate(cacheName = CacheNames.USERS)
     public void markAsDeleted(UUID id) {
-        panacheRepository.find("uuid = ?1 and isActive = ?2", id, true)
+        UserEntity entity = panacheRepository.find("uuid", id)
                 .firstResultOptional()
-                .ifPresent(entity -> {
-                    entity.setIsActive(false);
-                    entity.setDeletedAt(LocalDateTime.now());
-                });
-    }
-
-    private static int normalizeSize(int size) {
-        if (size <= 0) {
-            return 10;
-        }
-        return Math.min(size, 100);
-    }
-
-    private static Sort parseSort(String sort) {
-        String sortValue = sort == null || sort.isBlank() ? "name,asc" : sort;
-        String[] sortParts = sortValue.split(",", 2);
-
-        String sortField = switch (sortParts[0].strip()) {
-            case "name", "email", "createdAt" -> sortParts[0].strip();
-            default -> "name";
-        };
-
-        boolean ascending = sortParts.length < 2 || !"desc".equalsIgnoreCase(sortParts[1].strip());
-        return ascending ? Sort.by(sortField).ascending() : Sort.by(sortField).descending();
-    }
-
-    private static User toDomain(UserEntity entity) {
-        return User.reconstitute(
-                entity.getUuid(),
-                entity.getName(),
-                entity.getEmail(),
-                entity.getPasswordHash(),
-                entity.getCreatedAt()
-        );
+                .orElseThrow(() -> new AppException(404, Messages.get("user.not.found", id)));
+        entity.setDeletedAt(LocalDateTime.now());
+        entity.setIsActive(false);
     }
 }
