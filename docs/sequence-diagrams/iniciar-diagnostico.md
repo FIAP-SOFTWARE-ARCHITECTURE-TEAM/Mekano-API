@@ -4,7 +4,7 @@ Fluxo para transição da OS de RECEBIDA para EM_DIAGNOSTICO.
 
 ```mermaid
 sequenceDiagram
-    actor Mecanico
+    actor Mecânico
     participant API as OrdemDeServicoResource
     participant App as OrdemDeServicoService
     participant Domain as OrdemDeServico
@@ -21,7 +21,7 @@ sequenceDiagram
     Repo-->>App: OrdemDeServico
 
     App->>Domain: os.iniciarDiagnostico()
-    Note over Domain: valida matriz de transição (StatusOS.podeTransitarPara)
+    Note over Domain: válida matriz de transição (StatusOS.podeTransitarPara)
 
     alt Transição válida (RECEBIDA -> EM_DIAGNOSTICO)
         Domain-->>App: status atualizado
@@ -32,9 +32,9 @@ sequenceDiagram
         Repo-->>App: OS atualizada
         App-->>API: OrdemDeServicoResponse
         API-->>Mecanico: 200 OK
-    else Transicao invalida (ex.: CANCELADA -> EM_DIAGNOSTICO)
+    else Transição inválida (ex.: CANCELADA -> EM_DIAGNOSTICO)
         Domain-->>App: AppException(400)
         App-->>API: exception
-        API-->>Mecanico: 400 Problem Details
+        API-->>Mecânico: 400 Problem Details
     end
 ```
