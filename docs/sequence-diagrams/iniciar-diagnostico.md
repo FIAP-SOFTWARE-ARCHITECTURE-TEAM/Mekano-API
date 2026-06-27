@@ -21,9 +21,9 @@ sequenceDiagram
     Repo-->>App: OrdemDeServico
 
     App->>Domain: os.iniciarDiagnostico()
-    Note over Domain: valida matriz de transicao (StatusOS.podeTransitarPara)
+    Note over Domain: valida matriz de transição (StatusOS.podeTransitarPara)
 
-    alt Transicao valida (RECEBIDA -> EM_DIAGNOSTICO)
+    alt Transição válida (RECEBIDA -> EM_DIAGNOSTICO)
         Domain-->>App: status atualizado
         App->>Repo: save(os)
         Note over Repo,DB: UPDATE com @Version (optimistic lock)
