@@ -3,6 +3,7 @@ package com.fiap.mekano.infrastructure.repository;
 import com.fiap.mekano.domain.model.Cliente;
 import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;
 import com.fiap.mekano.infrastructure.entity.ClienteEntity;
+import com.fiap.mekano.infrastructure.mapper.ClienteEntityMapper;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -16,9 +17,11 @@ import java.util.UUID;
 public class ClienteRepositoryImpl implements ClienteRepositoryPort {
 
     private final ClientePanacheRepository panacheRepository;
+    private final ClienteEntityMapper clienteEntityMapper;
 
-    public ClienteRepositoryImpl(ClientePanacheRepository panacheRepository) {
+    public ClienteRepositoryImpl(ClientePanacheRepository panacheRepository, ClienteEntityMapper clienteEntityMapper) {
         this.panacheRepository = panacheRepository;
+        this.clienteEntityMapper = clienteEntityMapper;
     }
 
     @Override
@@ -49,14 +52,14 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
             panacheRepository.persist(entity);
         }
 
-        return toDomain(entity);
+        return clienteEntityMapper.toDomain(entity);
     }
 
     @Override
     public Optional<Cliente> findById(UUID id) {
         return panacheRepository.find("uuid = ?1 and isActive = ?2", id, true)
                 .firstResultOptional()
-                .map(ClienteRepositoryImpl::toDomain);
+                .map(clienteEntityMapper::toDomain);
     }
 
     @Override
@@ -68,7 +71,7 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
         String digits = cpf.replaceAll("\\D", "");
         return panacheRepository.find("cpf = ?1 and isActive = ?2", digits, true)
                 .firstResultOptional()
-                .map(ClienteRepositoryImpl::toDomain);
+                .map(clienteEntityMapper::toDomain);
     }
 
     @Override
@@ -87,7 +90,7 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
                 .page(Page.of(Math.max(page, 0), normalizeSize(size)))
                 .list()
                 .stream()
-                .map(ClienteRepositoryImpl::toDomain)
+                .map(clienteEntityMapper::toDomain)
                 .toList();
     }
 
@@ -124,22 +127,5 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
 
         boolean ascending = sortParts.length < 2 || !"desc".equalsIgnoreCase(sortParts[1].strip());
         return ascending ? Sort.by(sortField).ascending() : Sort.by(sortField).descending();
-    }
-
-    private static Cliente toDomain(ClienteEntity entity) {
-        return Cliente.reconstitute(
-                entity.getUuid(),
-                entity.getNome(),
-                entity.getCpf(),
-                entity.getEmail(),
-                entity.getTelefone(),
-                entity.getEnderecoLogradouro(),
-                entity.getEnderecoNumero(),
-                entity.getEnderecoBairro(),
-                entity.getEnderecoCidade(),
-                entity.getEnderecoUf(),
-                entity.getEnderecoCep(),
-                entity.getCreatedAt()
-        );
     }
 }

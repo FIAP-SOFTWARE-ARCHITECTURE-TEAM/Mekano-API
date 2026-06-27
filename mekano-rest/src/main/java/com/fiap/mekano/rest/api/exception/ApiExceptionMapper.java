@@ -36,6 +36,11 @@ public class ApiExceptionMapper implements ExceptionMapper<Exception> {
             return build(status, detail);
         }
 
+        if (exception instanceof WebApplicationException ex) {
+            int status = ex.getResponse().getStatus();
+            return build(status, ex.getMessage());
+        }
+
         Log.errorf(exception, "Unhandled exception: %s", exception.getMessage());
         return build(500, "Erro interno do servidor");
     }
