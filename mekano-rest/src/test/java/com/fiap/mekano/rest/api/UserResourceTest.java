@@ -66,8 +66,12 @@ class UserResourceTest {
                 .post("/api/v1/users")
                 .then()
                 .statusCode(409)
+                .contentType(containsString("application/problem+json"))
+                .body("detail", notNullValue())
+                .body("type", equalTo("about:blank"))
+                .body("title", equalTo("Conflict"))
                 .body("status", equalTo(409))
-                .body("message", notNullValue());
+                .body("instance", notNullValue());
     }
 
     @Test

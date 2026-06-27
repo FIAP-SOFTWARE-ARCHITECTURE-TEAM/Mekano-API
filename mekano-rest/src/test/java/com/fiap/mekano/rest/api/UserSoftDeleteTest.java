@@ -63,6 +63,12 @@ class UserSoftDeleteTest {
                 .when()
                 .get("/api/v1/users/" + createdUserId)
                 .then()
-                .statusCode(404);
+                .statusCode(404)
+                .contentType(containsString("application/problem+json"))
+                .body("detail", notNullValue())
+                .body("type", equalTo("about:blank"))
+                .body("title", equalTo("Not Found"))
+                .body("status", equalTo(404));
+
     }
 }

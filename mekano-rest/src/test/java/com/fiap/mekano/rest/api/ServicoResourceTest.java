@@ -64,8 +64,9 @@ class ServicoResourceTest {
                 .post(BASE_PATH)
                 .then()
                 .statusCode(409)
+                .contentType(containsString("application/problem+json"))
                 .body("status", equalTo(409))
-                .body("message", notNullValue());
+                .body("detail", notNullValue());
     }
 
     @Test
@@ -135,7 +136,7 @@ class ServicoResourceTest {
                 .get(BASE_PATH + "/00000000-0000-0000-0000-000000000000")
                 .then()
                 .statusCode(404)
-                .body("status", equalTo(404));
+                .contentType(containsString("application/problem+json"));
     }
 
     // ───────────────── LIST ─────────────────
