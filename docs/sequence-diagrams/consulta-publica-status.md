@@ -23,7 +23,7 @@ sequenceDiagram
     Note over API: resposta minima: { id, status, dataEntrada }
     API-->>Cliente: 200 OK
 
-    alt OS nao encontrada
+    alt OS não encontrada
         App-->>API: AppException(404)
         API-->>Cliente: 404 Problem Details
     end
