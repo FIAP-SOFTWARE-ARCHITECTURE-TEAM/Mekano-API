@@ -102,7 +102,7 @@ public class UserRepositoryImpl implements UserRepositoryPort {
         if (!ALLOWED_SORT_FIELDS.contains(sortField)) {
             sortField = "name";
         }
-        boolean ascending = sortParts.length < 2 || "asc".equalsIgnoreCase(sortParts[1].strip());
+        boolean ascending = sortParts.length < 2 || !"desc".equalsIgnoreCase(sortParts[1].strip());
         var direction = ascending ? Sort.Direction.Ascending : Sort.Direction.Descending;
         var query = panacheRepository.find("isActive = ?1", Sort.by(sortField).direction(direction), true);
         return query.page(Page.of(Math.max(page, 0), normalizeSize(size))).list().stream().map(mapper::toDomain).toList();
