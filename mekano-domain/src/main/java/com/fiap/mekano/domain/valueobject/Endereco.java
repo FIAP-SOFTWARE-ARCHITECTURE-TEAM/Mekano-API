@@ -58,6 +58,6 @@ public final class Endereco {
         this.bairro = bairro == null ? null : bairro.strip();
         this.cidade = cidade.strip();
         this.uf = normalizedUf;
-        this.cep = normalizedCep
+        this.cep = normalizedCep;
     }
 }
