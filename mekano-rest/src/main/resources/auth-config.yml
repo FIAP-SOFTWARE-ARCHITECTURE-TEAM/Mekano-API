@@ -1,0 +1,23 @@
+mp:
+  jwt:
+    verify:
+      publickey:
+        location: publicKey.pem
+        algorithm: EdDSA
+      issuer: mekano-api
+
+smallrye:
+  jwt:
+    sign:
+      key:
+        location: ${user.home}/.mekano/secrets/privatekey.pem
+    new-token:
+      signature-algorithm: EdDSA
+      issuer: mekano-api
+
+quarkus:
+  http:
+    auth:
+      proactive: false
+  analytics:
+    disabled: true
