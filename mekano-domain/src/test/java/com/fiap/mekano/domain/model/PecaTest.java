@@ -20,7 +20,6 @@ class PecaTest {
         Peca peca = Peca.create(
                 "PEA-001",
                 "Óleo Motor 5W30",
-                UnidadeMedida.LITRO,
                 new BigDecimal("45.50"),
                 100L
         );
@@ -40,7 +39,6 @@ class PecaTest {
                 UUID.randomUUID(),
                 "PEA-001",
                 "Óleo",
-                UnidadeMedida.LITRO,
                 new BigDecimal("45.50"),
                 100L,
                 null,
@@ -59,7 +57,6 @@ class PecaTest {
                 UUID.randomUUID(),
                 "PEA-001",
                 "Óleo",
-                UnidadeMedida.LITRO,
                 new BigDecimal("45.50"),
                 50L,
                 null,
@@ -77,7 +74,6 @@ class PecaTest {
                 UUID.randomUUID(),
                 "PEA-001",
                 "Óleo",
-                UnidadeMedida.LITRO,
                 new BigDecimal("45.50"),
                 50L,
                 null,
@@ -96,7 +92,6 @@ class PecaTest {
                 UUID.randomUUID(),
                 "PEA-001",
                 "Óleo",
-                UnidadeMedida.LITRO,
                 new BigDecimal("45.50"),
                 50L,
                 100L,
@@ -113,7 +108,6 @@ class PecaTest {
                 UUID.randomUUID(),
                 "PEA-001",
                 "Óleo",
-                UnidadeMedida.LITRO,
                 new BigDecimal("45.50"),
                 50L,
                 null,
@@ -126,7 +120,7 @@ class PecaTest {
     @Test
     @DisplayName("deve rejeitar código null ou blank")
     void deveRejeitarCodigoInvalido() {
-        assertThatThrownBy(() -> Peca.create(null, "Descrição", UnidadeMedida.UNIDADE, BigDecimal.ONE, null))
+        assertThatThrownBy(() -> Peca.create(null, "Descrição", BigDecimal.ONE, null))
                 .isInstanceOf(AppException.class);
     }
 }

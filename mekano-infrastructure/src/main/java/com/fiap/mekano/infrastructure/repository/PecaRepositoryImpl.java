@@ -1,13 +1,19 @@
 package com.fiap.mekano.infrastructure.repository;
 
 import com.fiap.mekano.domain.model.Peca;
-import com.fiap.mekano.domain.model.UnidadeMedida;
 import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
+import com.fiap.mekano.infrastructure.cache.CacheNames;
 import com.fiap.mekano.infrastructure.entity.PecaEntity;
+import io.quarkus.cache.CacheInvalidate;
+import io.quarkus.cache.CacheResult;
+import io.quarkus.panache.common.Page;
+import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -15,12 +21,16 @@ import java.util.UUID;
 public class PecaRepositoryImpl implements PecaRepositoryPort {
 
     private final PecaPanacheRepository panacheRepository;
+    private final EntityManager em;
 
-    public PecaRepositoryImpl(PecaPanacheRepository panacheRepository) {
+    public PecaRepositoryImpl(PecaPanacheRepository panacheRepository, EntityManager em) {
         this.panacheRepository = panacheRepository;
+        this.em = em;
     }
 
     @Override
+    @Transactional
+    @CacheInvalidate(cacheName = CacheNames.PECAS)
     public Peca salvar(Peca peca) {
         PecaEntity entity = panacheRepository.find("uuid = ?1", peca.getId()).firstResult();
         if (entity == null) {
@@ -28,7 +38,9 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
         }
 
         entity.uuid = peca.getId();
+        entity.codigo = peca.getCodigo();
         entity.descricao = peca.getDescricao();
+        entity.valorUnitario = peca.getValorUnitario();
         entity.saldo = peca.getSaldoAtual() == null ? 0 : peca.getSaldoAtual().intValue();
         entity.estoqueMinimo = peca.getEstoqueMinimo() == null ? 0 : peca.getEstoqueMinimo().intValue();
         if (entity.getCreatedAt() == null) {
@@ -45,10 +57,35 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
     }
 
     @Override
+    @CacheResult(cacheName = CacheNames.PECAS)
     public Optional<Peca> buscarPorId(UUID id) {
         return panacheRepository.find("uuid = ?1 and isActive = ?2", id, true)
                 .firstResultOptional()
                 .map(PecaRepositoryImpl::toDomain);
+    }
+
+    @Override
+    public List<Peca> findAll(int page, int size) {
+        return panacheRepository.find("isActive = ?1", Sort.by("id"), true)
+                .page(Page.of(page, size))
+                .list()
+                .stream()
+                .map(PecaRepositoryImpl::toDomain)
+                .toList();
+    }
+
+    @Override
+    public long countAll() {
+        return panacheRepository.count("isActive", true);
+    }
+
+    @Override
+    public List<Peca> listarAbaixoEstoqueMinimo() {
+        return panacheRepository.find("isActive = ?1", true).list()
+                .stream()
+                .filter(e -> e.estoqueMinimo > 0 && e.saldo < e.estoqueMinimo)
+                .map(PecaRepositoryImpl::toDomain)
+                .toList();
     }
 
     @Override
@@ -62,13 +99,33 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
                 .map(PecaRepositoryImpl::toDomain);
     }
 
+    @Transactional(Transactional.TxType.MANDATORY)
+    public boolean debitarSaldo(UUID uuid, Integer quantidade) {
+        int rowsUpdated = em.createNativeQuery(
+                "UPDATE pecas SET saldo = saldo - :qtd WHERE uuid = :uuid AND saldo >= :qtd"
+        )
+                .setParameter("uuid", uuid)
+                .setParameter("qtd", quantidade)
+                .executeUpdate();
+        return rowsUpdated > 0;
+    }
+
+    @Transactional(Transactional.TxType.MANDATORY)
+    public void creditarSaldo(UUID uuid, Integer quantidade) {
+        em.createNativeQuery(
+                "UPDATE pecas SET saldo = saldo + :qtd WHERE uuid = :uuid"
+        )
+                .setParameter("uuid", uuid)
+                .setParameter("qtd", quantidade)
+                .executeUpdate();
+    }
+
     private static Peca toDomain(PecaEntity entity) {
         return Peca.reconstitute(
                 entity.uuid,
-                entity.uuid.toString(),
+                entity.codigo,
                 entity.descricao,
-                UnidadeMedida.UNIDADE,
-                BigDecimal.ZERO,
+                entity.valorUnitario,
                 entity.saldo == null ? 0L : entity.saldo.longValue(),
                 entity.estoqueMinimo == null ? 0L : entity.estoqueMinimo.longValue(),
                 entity.getCreatedAt() == null ? LocalDateTime.now() : entity.getCreatedAt()
