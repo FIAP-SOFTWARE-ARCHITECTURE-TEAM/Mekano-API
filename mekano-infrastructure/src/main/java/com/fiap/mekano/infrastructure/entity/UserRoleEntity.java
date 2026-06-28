@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 
 import java.util.UUID;
 
+
 @Entity
 @Table(name = "user_roles")
 public class UserRoleEntity extends BaseEntity {
@@ -12,7 +13,9 @@ public class UserRoleEntity extends BaseEntity {
     @Column(name = "user_uuid", nullable = false)
     public UUID userUuid;
 
+    
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 30)
-    public Role role;
+    public Role role;   
+    
 }

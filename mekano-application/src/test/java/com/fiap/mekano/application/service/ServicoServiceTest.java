@@ -1,5 +1,6 @@
-package com.fiap.mekano.application.service.servico;
+package com.fiap.mekano.application.service;
 
+import com.fiap.mekano.application.service.ServicoService;
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.model.Servico;
 import com.fiap.mekano.domain.port.in.CreateServicoCommand;
