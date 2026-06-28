@@ -1,6 +1,6 @@
 package com.fiap.mekano.rest.api;
 
-import com.fiap.mekano.infrastructure.repository.PecaPanacheRepository;
+import com.fiap.mekano.application.service.peca.PecaService;
 import com.fiap.mekano.rest.api.dto.AlertaResponse;
 import com.fiap.mekano.rest.api.dto.PecaResponse;
 import jakarta.annotation.security.RolesAllowed;
@@ -26,7 +26,7 @@ import java.util.List;
 public class AlertaResource {
 
     @Inject
-    PecaPanacheRepository pecaPanacheRepository;
+    PecaService pecaService;
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -34,11 +34,10 @@ public class AlertaResource {
     @APIResponse(responseCode = "200", description = "Lista de alertas",
             content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = PecaResponse.class)))
     public Response listAlertas() {
-        var entities = pecaPanacheRepository.listAll();
-        var alertas = entities.stream()
-                .filter(e -> e.estoqueMinimo > 0 && e.saldo < e.estoqueMinimo)
-                .map(e -> new AlertaResponse(e.uuid, e.uuid.toString(), e.descricao,
-                        (long) e.saldo, (long) e.estoqueMinimo))
+        var pecas = pecaService.listarAbaixoEstoqueMinimo();
+        var alertas = pecas.stream()
+                .map(p -> new AlertaResponse(p.getId(), p.getCodigo(), p.getDescricao(),
+                        p.getSaldoAtual(), p.getEstoqueMinimo()))
                 .toList();
         return Response.ok(alertas).build();
     }
