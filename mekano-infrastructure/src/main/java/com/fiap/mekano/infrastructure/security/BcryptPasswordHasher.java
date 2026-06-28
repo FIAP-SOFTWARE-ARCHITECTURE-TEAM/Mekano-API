@@ -1,6 +1,8 @@
 package com.fiap.mekano.infrastructure.security;
 
 import com.fiap.mekano.domain.port.in.PasswordHasher;
+import com.fiap.mekano.domain.port.out.PasswordHasherPort;
+
 import io.quarkus.elytron.security.common.BcryptUtil;
 import jakarta.enterprise.context.ApplicationScoped;
 
@@ -12,7 +14,7 @@ import jakarta.enterprise.context.ApplicationScoped;
  * que dependa da interface {@link PasswordHasher}.
  */
 @ApplicationScoped
-public class BcryptPasswordHasher implements PasswordHasher {
+public class BcryptPasswordHasher implements PasswordHasherPort {
 
     @Override
     public String hash(String plainPassword) {

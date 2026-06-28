@@ -29,6 +29,7 @@ public class User {
     private final UUID id;
     private final String name;
     private final Email email;
+    private final boolean active;
 
     /**
      * Excluído do toString() para evitar que hashes de senha apareçam em logs.
@@ -48,11 +49,12 @@ public class User {
      *                     O domínio armazena apenas o resultado; nunca recebe senha em plaintext.
      * @return nova instância de User com id e createdAt populados automaticamente
      */
-    public static User create(String name, String emailValue, String passwordHash) {
+    public static User create(String name, String emailValue, boolean active, String passwordHash) {
         return User.builder()
                 .id(UUID.randomUUID())
                 .name(name)
                 .email(new Email(emailValue))
+                .active(active)
                 .passwordHash(passwordHash)
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -73,14 +75,16 @@ public class User {
      * @param createdAt    data/hora original de criação (vindo do banco)
      * @return instância de User com os valores exatos recebidos
      */
-    public static User reconstitute(UUID id, String name, String emailValue,
+    public static User reconstitute(UUID id, String name, String emailValue,boolean active,
                                      String passwordHash, LocalDateTime createdAt) {
         return User.builder()
                 .id(id)
                 .name(name)
                 .email(new Email(emailValue))
+                .active(active)
                 .passwordHash(passwordHash)
                 .createdAt(createdAt)
                 .build();
     }
+	
 }

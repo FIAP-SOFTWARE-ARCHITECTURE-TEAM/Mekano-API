@@ -79,6 +79,7 @@ class VeiculoServiceTest {
                 clienteUuid,
                 "João Silva",
                 "joao@fiap.br",
+                 true,
                 "$2a$10$hash",
                 LocalDateTime.now());
 
@@ -147,6 +148,7 @@ class VeiculoServiceTest {
                 clienteUuid,
                 "Cliente",
                 "cliente@fiap.br",
+                true,
                 "$2a$10$hash",
                 LocalDateTime.now());
 
