@@ -1,9 +1,8 @@
 package com.fiap.mekano.rest.api.dto;
 
+import com.fiap.mekano.domain.model.MotivoRequisicao;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -26,8 +25,7 @@ public class CreateRequisicaoCompraRequest {
     @Schema(required = true, description = "Quantidade a comprar", examples = "10")
     private Integer quantidade;
 
-    @NotBlank(message = "Motivo é obrigatório")
-    @Size(max = 500, message = "Motivo deve ter no máximo 500 caracteres")
-    @Schema(required = true, description = "Motivo da requisição", examples = "Reposição de estoque mínimo")
-    private String motivo;
+    @NotNull(message = "Motivo é obrigatório")
+    @Schema(required = true, description = "Motivo da requisição", examples = "ESTOQUE_MINIMO")
+    private MotivoRequisicao motivo;
 }

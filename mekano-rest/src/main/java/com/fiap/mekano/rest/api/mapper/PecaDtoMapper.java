@@ -13,6 +13,5 @@ public interface PecaDtoMapper {
     CreatePecaCommand toCreateCommand(CreatePecaRequest request);
 
     @Mapping(target = "id", source = "id")
-    @Mapping(target = "unidadeMedida", expression = "java(peca.getUnidadeMedida().name())")
     PecaResponse toResponse(Peca peca);
 }

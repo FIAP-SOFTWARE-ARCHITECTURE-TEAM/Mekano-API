@@ -27,10 +27,6 @@ public class CreatePecaRequest {
     @Schema(required = true, description = "Descrição da peça", examples = "Óleo do Motor 5W30")
     private String descricao;
 
-    @NotBlank(message = "Unidade de medida é obrigatória")
-    @Schema(required = true, description = "Unidade de medida", examples = "LITRO")
-    private String unidadeMedida;
-
     @NotNull(message = "Valor unitário é obrigatório")
     @DecimalMin(value = "0.00", message = "Valor unitário não pode ser negativo")
     @Schema(required = true, description = "Valor unitário em reais", examples = "45.90")

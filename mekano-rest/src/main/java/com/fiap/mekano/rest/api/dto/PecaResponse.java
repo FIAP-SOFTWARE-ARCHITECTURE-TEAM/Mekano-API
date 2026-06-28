@@ -11,7 +11,6 @@ public record PecaResponse(
                 @Schema(description = "Identificador único da peça", examples = "550e8400-e29b-41d4-a716-446655440000") UUID id,
                 @Schema(description = "Código identificador", examples = "PEA-001") String codigo,
                 @Schema(description = "Descrição da peça", examples = "Óleo do Motor 5W30") String descricao,
-                @Schema(description = "Unidade de medida", examples = "LITRO") String unidadeMedida,
                 @Schema(description = "Valor unitário em reais", examples = "45.90") BigDecimal valorUnitario,
                 @Schema(description = "Saldo atual em estoque", examples = "50") Long saldoAtual,
                 @Schema(description = "Estoque mínimo para alerta", examples = "10") Long estoqueMinimo,
