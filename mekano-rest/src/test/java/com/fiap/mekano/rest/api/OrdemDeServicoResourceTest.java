@@ -47,6 +47,92 @@ class OrdemDeServicoResourceTest {
                 .extract().path("id");
     }
 
+    // ─────────────── UPDATE ───────────────
+
+    @Test
+    @Order(20)
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void update_emRecebida_returns200() {
+        // Criar nova OS para testar update
+        UUID novoCliente = UUID.randomUUID();
+        UUID novoVeiculo = UUID.randomUUID();
+
+        String osId = given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {"clienteId": "%s", "veiculoId": "%s", "descricaoProblema": "Problema original"}
+                        """.formatted(UUID.randomUUID(), UUID.randomUUID()))
+                .when()
+                .post(BASE_PATH)
+                .then().statusCode(201).extract().path("id");
+
+        // Update com novos dados
+        given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {"clienteId": "%s", "veiculoId": "%s", "descricaoProblema": "Problema corrigido"}
+                        """.formatted(novoCliente, novoVeiculo))
+                .when()
+                .put(BASE_PATH + "/" + osId)
+                .then()
+                .statusCode(200)
+                .body("clienteId", equalTo(novoCliente.toString()))
+                .body("veiculoId", equalTo(novoVeiculo.toString()))
+                .body("descricaoProblema", equalTo("Problema corrigido"))
+                .body("status", equalTo("RECEBIDA"));
+
+        // Confirmar persistência via GET
+        given()
+                .when()
+                .get(BASE_PATH + "/" + osId)
+                .then()
+                .statusCode(200)
+                .body("descricaoProblema", equalTo("Problema corrigido"));
+    }
+
+    @Test
+    @Order(21)
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void update_foraDeRecebida_returns422() {
+        // Criar OS e avançar para EM_DIAGNOSTICO
+        String osId = given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {"clienteId": "%s", "veiculoId": "%s", "descricaoProblema": "Problema"}
+                        """.formatted(UUID.randomUUID(), UUID.randomUUID()))
+                .when()
+                .post(BASE_PATH)
+                .then().statusCode(201).extract().path("id");
+
+        given().put(BASE_PATH + "/" + osId + "/iniciar-diagnostico").then().statusCode(200);
+
+        // Tentar update em EM_DIAGNOSTICO — deve falhar
+        given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {"clienteId": "%s", "veiculoId": "%s", "descricaoProblema": "Novo problema"}
+                        """.formatted(UUID.randomUUID(), UUID.randomUUID()))
+                .when()
+                .put(BASE_PATH + "/" + osId)
+                .then()
+                .statusCode(422);
+    }
+
+    @Test
+    @Order(22)
+    @TestSecurity(user = "mecanico", roles = {"mecanico"})
+    void update_asMecanico_returns403() {
+        given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {"clienteId": "%s", "veiculoId": "%s", "descricaoProblema": "teste"}
+                        """.formatted(UUID.randomUUID(), UUID.randomUUID()))
+                .when()
+                .put(BASE_PATH + "/" + UUID.randomUUID())
+                .then()
+                .statusCode(403);
+    }
+
     // ─────────────── INICIAR DIAGNOSTICO ───────────────
 
     @Test
@@ -203,5 +289,70 @@ class OrdemDeServicoResourceTest {
                 .statusCode(200)
                 .body("status", equalTo("CANCELADA"))
                 .body("motivoCancelamento", equalTo("Valor muito alto para o cliente"));
+    }
+
+    @Test
+    @Order(12)
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void cancelar_os_em_execucao_returns_422() {
+        // Criar nova OS e levar até EM_EXECUCAO
+        String osId = given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {"clienteId": "%s", "veiculoId": "%s", "descricaoProblema": "Freio com ruído"}
+                        """.formatted(UUID.randomUUID(), UUID.randomUUID()))
+                .when()
+                .post(BASE_PATH)
+                .then().statusCode(201).extract().path("id");
+
+        given().put(BASE_PATH + "/" + osId + "/iniciar-diagnostico").then().statusCode(200);
+        given().put(BASE_PATH + "/" + osId + "/finalizar-diagnostico").then().statusCode(200);
+        given().put(BASE_PATH + "/" + osId + "/aprovar-orcamento").then().statusCode(200);
+
+        // Reprovar
+        given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {"motivo": "Cliente achou outra oficina mais barata"}
+                        """)
+                .when()
+                .put(BASE_PATH + "/" + osId + "/reprovar-orcamento")
+                .then()
+                .statusCode(200)
+                .body("status", equalTo("CANCELADA"))
+                .body("motivoCancelamento", equalTo("Cliente achou outra oficina mais barata"));
+    }
+
+    @Test
+    @Order(12)
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void cancelar_os_finalizada_returns_422() {
+        // Criar nova OS e levar até FINALIZADA
+        String osId = given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {"clienteId": "%s", "veiculoId": "%s", "descricaoProblema": "Freio com ruído"}
+                        """.formatted(UUID.randomUUID(), UUID.randomUUID()))
+                .when()
+                .post(BASE_PATH)
+                .then().statusCode(201).extract().path("id");
+
+        given().put(BASE_PATH + "/" + osId + "/iniciar-diagnostico").then().statusCode(200);
+        given().put(BASE_PATH + "/" + osId + "/finalizar-diagnostico").then().statusCode(200);
+        given().put(BASE_PATH + "/" + osId + "/aprovar-orcamento").then().statusCode(200);
+        given().put(BASE_PATH + "/" + osId + "/finalizar").then().statusCode(200);
+
+        // Reprovar
+        given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {"motivo": "Cliente achou outra oficina mais barata"}
+                        """)
+                .when()
+                .put(BASE_PATH + "/" + osId + "/reprovar-orcamento")
+                .then()
+                .statusCode(200)
+                .body("status", equalTo("CANCELADA"))
+                .body("motivoCancelamento", equalTo("Cliente achou outra oficina mais barata"));
     }
 }

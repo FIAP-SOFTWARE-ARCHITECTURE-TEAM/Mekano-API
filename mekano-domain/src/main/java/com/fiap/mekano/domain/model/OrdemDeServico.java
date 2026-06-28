@@ -1,14 +1,15 @@
 package com.fiap.mekano.domain.model;
 
+import java.time.LocalDateTime;
+import java.util.UUID;
+
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.exception.Messages;
+
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.ToString;
-
-import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Getter
 @Builder(access = AccessLevel.PRIVATE)
@@ -16,9 +17,9 @@ import java.util.UUID;
 public class OrdemDeServico {
 
     private final UUID id;
-    private final UUID clienteId;
-    private final UUID veiculoId;
-    private final String descricaoProblema;
+    private UUID clienteId;
+    private UUID veiculoId;
+    private String descricaoProblema;
     private StatusOS status;
     private String motivoCancelamento;
     private final LocalDateTime createdAt;
@@ -43,6 +44,22 @@ public class OrdemDeServico {
                 .id(id).clienteId(clienteId).veiculoId(veiculoId)
                 .descricaoProblema(descricaoProblema).status(status)
                 .motivoCancelamento(motivoCancelamento).createdAt(createdAt).version(version).build();
+    }
+
+    /**
+     * Atualiza dados cadastrais da OS. Permitido APENAS em RECEBIDA.
+     */
+    public void atualizar(UUID clienteId, UUID veiculoId, String descricaoProblema) {
+        if (status != StatusOS.RECEBIDA) {
+            throw new AppException(422, Messages.get("os.transicao.invalida", status, "ATUALIZAR"));
+        }
+        if (clienteId == null) throw new AppException(400, Messages.get("os.cliente.required"));
+        if (veiculoId == null) throw new AppException(400, Messages.get("os.veiculo.required"));
+        if (descricaoProblema == null || descricaoProblema.isBlank())
+            throw new AppException(400, Messages.get("os.descricao.required"));
+        this.clienteId = clienteId;
+        this.veiculoId = veiculoId;
+        this.descricaoProblema = descricaoProblema.strip();
     }
 
     public void iniciarDiagnostico() { transicionar(StatusOS.EM_DIAGNOSTICO); }

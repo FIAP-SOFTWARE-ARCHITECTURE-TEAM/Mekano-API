@@ -1,5 +1,8 @@
 package com.fiap.mekano.application.service.ordemdeservico;
 
+import java.util.List;
+import java.util.UUID;
+
 import com.fiap.mekano.domain.event.OrdemDeServicoCriadaEvent;
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.exception.Messages;
@@ -8,11 +11,9 @@ import com.fiap.mekano.domain.port.in.CreateOrdemDeServicoCommand;
 import com.fiap.mekano.domain.port.in.OrdemDeServicoServicePort;
 import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
-
-import java.util.List;
-import java.util.UUID;
 
 /**
  * Use case de OrdemDeServico — orquestra transições chamando métodos explícitos
@@ -42,6 +43,14 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
     public OrdemDeServico findById(UUID id) {
         return repository.findById(id)
                 .orElseThrow(() -> new AppException(404, Messages.get("os.not.found", id)));
+    }
+
+    @Override
+    @Transactional
+    public OrdemDeServico update(UUID id, CreateOrdemDeServicoCommand command) {
+        OrdemDeServico os = findById(id);
+        os.atualizar(command.clienteId(), command.veiculoId(), command.descricaoProblema());
+        return repository.save(os);
     }
 
     @Override

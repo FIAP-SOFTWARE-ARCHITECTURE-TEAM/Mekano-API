@@ -41,6 +41,9 @@ public class OrdemDeServicoRepositoryImpl implements OrdemDeServicoRepositoryPor
         try {
             if (existing.isPresent()) {
                 OrdemDeServicoEntity managed = existing.get();
+                managed.setClienteId(entity.getClienteId());
+                managed.setVeiculoId(entity.getVeiculoId());
+                managed.setDescricaoProblema(entity.getDescricaoProblema());
                 managed.setStatus(entity.getStatus());
                 managed.setMotivoCancelamento(entity.getMotivoCancelamento());
                 managed.setVersion(entity.getVersion());

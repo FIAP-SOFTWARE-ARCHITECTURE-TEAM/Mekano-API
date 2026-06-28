@@ -100,6 +100,19 @@ public class OrdemDeServicoResource {
     }
 
     @PUT
+    @Path("/{id}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @RolesAllowed({"admin", "atendente"})
+    @Operation(summary = "Atualizar dados da OS", description = "Atualiza cliente, veículo e descrição. Permitido apenas em RECEBIDA.")
+    public Response update(@PathParam("id") UUID id, @Valid CreateOrdemDeServicoRequest request, @Context UriInfo uriInfo) {
+        var command = new CreateOrdemDeServicoCommand(
+                request.getClienteId(), request.getVeiculoId(), request.getDescricaoProblema());
+        OrdemDeServico os = osService.update(id, command);
+        return Response.ok(toResponse(os)).build();
+    }
+
+    @PUT
     @Path("/{id}/iniciar-diagnostico")
     @Produces(MediaType.APPLICATION_JSON)
     @RolesAllowed({"mecanico", "admin"})

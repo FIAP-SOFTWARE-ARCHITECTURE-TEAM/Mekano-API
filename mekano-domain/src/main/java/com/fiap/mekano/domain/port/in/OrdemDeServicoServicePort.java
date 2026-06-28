@@ -1,11 +1,13 @@
 package com.fiap.mekano.domain.port.in;
 
-import com.fiap.mekano.domain.model.OrdemDeServico;
 import java.util.List;
 import java.util.UUID;
 
+import com.fiap.mekano.domain.model.OrdemDeServico;
+
 public interface OrdemDeServicoServicePort {
     OrdemDeServico create(CreateOrdemDeServicoCommand command);
+    OrdemDeServico update(UUID id, CreateOrdemDeServicoCommand command);
     OrdemDeServico findById(UUID id);
     List<OrdemDeServico> findAll(int page, int size, String sort);
     long countAll();
