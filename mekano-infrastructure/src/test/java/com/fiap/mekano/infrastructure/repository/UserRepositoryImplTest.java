@@ -47,7 +47,7 @@ class UserRepositoryImplTest {
     @Test
     @TestTransaction
     void findByEmail_deveNormalizarCaseEWhitespace() {
-        User user = User.create("Carlos Souza", "carlos@fiap.br", "$2a$10$hashbcrypt");
+        User user = User.create("Carlos Souza", "carlos@fiap.br", true, "$2a$10$hashbcrypt");
         repository.save(user);
 
         Optional<User> encontrado = repository.findByEmail("  CARLOS@FIAP.BR  ");
@@ -59,7 +59,7 @@ class UserRepositoryImplTest {
     @Test
     @TestTransaction
     void findAll_deveSanitizarPaginacaoESortInvalidos() {
-        User user = User.create("Ana", "ana@fiap.br", "$2a$10$hashbcrypt");
+        User user = User.create("Ana", "ana@fiap.br", true, "$2a$10$hashbcrypt");
         repository.save(user);
 
         var result = repository.findAll(-1, 0, " ");
