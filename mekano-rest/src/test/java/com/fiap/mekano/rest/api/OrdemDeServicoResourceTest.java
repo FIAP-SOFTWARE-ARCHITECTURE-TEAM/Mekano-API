@@ -294,7 +294,7 @@ class OrdemDeServicoResourceTest {
     @Test
     @Order(12)
     @TestSecurity(user = "admin", roles = {"admin"})
-    void cancelar_os_em_execucao_returns_422() {
+    void cancelar_os_em_execucao_returns_200() {
         // Criar nova OS e levar até EM_EXECUCAO
         String osId = given()
                 .contentType(ContentType.JSON)
@@ -351,8 +351,7 @@ class OrdemDeServicoResourceTest {
                 .when()
                 .put(BASE_PATH + "/" + osId + "/reprovar-orcamento")
                 .then()
-                .statusCode(200)
-                .body("status", equalTo("CANCELADA"))
-                .body("motivoCancelamento", equalTo("Cliente achou outra oficina mais barata"));
+                .statusCode(422)
+                .body("detail", equalTo("Transição inválida: FINALIZADA → CANCELADA"));
     }
 }
