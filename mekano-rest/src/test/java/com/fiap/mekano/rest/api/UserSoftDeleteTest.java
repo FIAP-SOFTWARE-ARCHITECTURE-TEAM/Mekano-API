@@ -13,6 +13,8 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 
+import java.util.UUID;
+
 /**
  * Testes de integração REST para soft delete de usuários (Phase 9, UAT-4).
  *
@@ -32,8 +34,10 @@ class UserSoftDeleteTest {
     @Order(1)
 
     void createUser_forSoftDeleteTest() {
-        createdUserId = given()
+    	  String email = "softdelete-" + UUID.randomUUID() + "@mekano.com";
+      /*  createdUserId = given()
                 .contentType(ContentType.JSON)
+              
                 .body("""
                         {"name":"Delete Me","email":"softdelete@fiap.br","password":"abc123"}
                         """)
@@ -41,8 +45,31 @@ class UserSoftDeleteTest {
                 .post("/api/v1/users")
                 .then()
                 .statusCode(201)
-                .extract().path("id").toString();
+                .extract().path("id").toString(); */
+        
+         createdUserId =
+                given()
+                        .contentType("application/json")
+                        .body("""
+                              {
+                                "name": "Delete Me",
+                                "email": "%s",
+                                "password": "123456"
+                              }
+                              """.formatted(email))
+                .when()
+                        .post("/api/v1/users")
+                        .then()
+                        .statusCode(201)
+                        .extract().path("id").toString();
+
+        given()
+        .when()
+                .delete("/api/v1/users/{uuid}", createdUserId)
+        .then()
+                .statusCode(204);
     }
+    
 
     @Test
     @Order(2)
