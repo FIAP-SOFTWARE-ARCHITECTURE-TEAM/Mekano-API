@@ -8,9 +8,9 @@ import com.fiap.mekano.infrastructure.cache.CacheNames;
 import com.fiap.mekano.infrastructure.entity.OrdemDeServicoEntity;
 import com.fiap.mekano.infrastructure.mapper.OrdemDeServicoEntityMapper;
 import io.quarkus.cache.CacheInvalidate;
+import io.quarkus.cache.CacheInvalidateAll;
 import io.quarkus.cache.CacheResult;
 import io.quarkus.panache.common.Page;
-import io.quarkus.panache.common.Parameters;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -38,7 +38,7 @@ public class OrdemDeServicoRepositoryImpl implements OrdemDeServicoRepositoryPor
 
     @Override
     @Transactional
-    @CacheInvalidate(cacheName = CacheNames.ORDENS_SERVICO)
+    @CacheInvalidateAll(cacheName = CacheNames.ORDENS_SERVICO)
     public OrdemDeServico save(OrdemDeServico ordemDeServico) {
         OrdemDeServicoEntity entity = mapper.toEntity(ordemDeServico);
 
@@ -120,20 +120,21 @@ public class OrdemDeServicoRepositoryImpl implements OrdemDeServicoRepositoryPor
 
     @Override
     public Optional<Double> calcularTempoMedioExecucao() {
-        Double result = panacheRepository
-                .find("status = 'FINALIZADA' OR status = 'ENTREGUE'")
-                .stream()
-                .map(e -> {
-                    if (e.getExecucaoIniciadaEm() != null && e.getExecucaoFinalizadaEm() != null) {
-                        return (double) ChronoUnit.HOURS.between(e.getExecucaoIniciadaEm(), e.getExecucaoFinalizadaEm());
-                    }
-                    return null;
-                })
-                .filter(d -> d != null)
-                .mapToDouble(Double::doubleValue)
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = panacheRepository.getEntityManager()
+                .createQuery(
+                        "SELECT e.execucaoIniciadaEm, e.execucaoFinalizadaEm " +
+                        "FROM OrdemDeServicoEntity e " +
+                        "WHERE (e.status = 'FINALIZADA' OR e.status = 'ENTREGUE') " +
+                        "AND e.execucaoIniciadaEm IS NOT NULL " +
+                        "AND e.execucaoFinalizadaEm IS NOT NULL")
+                .getResultList();
+        double avg = rows.stream()
+                .mapToDouble(row -> (double) ChronoUnit.HOURS.between(
+                        (LocalDateTime) row[0], (LocalDateTime) row[1]))
                 .average()
                 .orElse(0.0);
-        return result > 0 ? Optional.of(result) : Optional.empty();
+        return avg > 0 ? Optional.of(avg) : Optional.empty();
     }
 
     @Override

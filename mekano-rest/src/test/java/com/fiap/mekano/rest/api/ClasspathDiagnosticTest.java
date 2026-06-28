@@ -2,7 +2,6 @@ package com.fiap.mekano.rest.api;
 
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
-import com.fiap.mekano.application.service.auth.AuthService;
 import com.fiap.mekano.domain.port.in.AuthServicePort;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertNotNull;

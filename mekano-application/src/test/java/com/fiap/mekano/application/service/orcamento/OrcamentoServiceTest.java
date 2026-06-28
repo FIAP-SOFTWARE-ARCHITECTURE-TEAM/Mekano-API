@@ -43,9 +43,9 @@ class OrcamentoServiceTest {
     @Test
     @DisplayName("gerarOrcamento() deve criar orçamento e transicionar OS para AGUARDANDO_APROVACAO")
     void deveGerarOrcamento() {
-        var osUuid = UUID.randomUUID();
         var os = OrdemDeServico.create(UUID.randomUUID(), UUID.randomUUID(), "Problema no motor");
         os.iniciarDiagnostico();
+        var osUuid = os.getId();
 
         var command = new GerarOrcamentoCommand(osUuid, "Orçamento",
                 List.of(new ItemOrcamento("Serviço", 1L, new BigDecimal("100.00"))));
@@ -92,12 +92,12 @@ class OrcamentoServiceTest {
     @Test
     @DisplayName("aprovar() deve aprovar orçamento e transicionar OS para EM_EXECUCAO")
     void deveAprovarOrcamento() {
-        var osUuid = UUID.randomUUID();
-        var orcamento = Orcamento.create("Teste",
-                List.of(new ItemOrcamento("Item", 1L, BigDecimal.TEN)), osUuid);
         var os = OrdemDeServico.create(UUID.randomUUID(), UUID.randomUUID(), "Problema");
         os.iniciarDiagnostico();
         os.finalizarDiagnostico();
+        var osUuid = os.getId();
+        var orcamento = Orcamento.create("Teste",
+                List.of(new ItemOrcamento("Item", 1L, BigDecimal.TEN)), osUuid);
 
         when(orcamentoRepository.findByUuid(orcamento.getId())).thenReturn(Optional.of(orcamento));
         when(ordemDeServicoRepository.findById(osUuid)).thenReturn(Optional.of(os));
@@ -127,12 +127,12 @@ class OrcamentoServiceTest {
     @Test
     @DisplayName("reprovar() deve reprovar orçamento e transicionar OS para CANCELADA")
     void deveReprovarOrcamento() {
-        var osUuid = UUID.randomUUID();
-        var orcamento = Orcamento.create("Teste",
-                List.of(new ItemOrcamento("Item", 1L, BigDecimal.TEN)), osUuid);
         var os = OrdemDeServico.create(UUID.randomUUID(), UUID.randomUUID(), "Problema");
         os.iniciarDiagnostico();
         os.finalizarDiagnostico();
+        var osUuid = os.getId();
+        var orcamento = Orcamento.create("Teste",
+                List.of(new ItemOrcamento("Item", 1L, BigDecimal.TEN)), osUuid);
 
         when(orcamentoRepository.findByUuid(orcamento.getId())).thenReturn(Optional.of(orcamento));
         when(ordemDeServicoRepository.findById(osUuid)).thenReturn(Optional.of(os));

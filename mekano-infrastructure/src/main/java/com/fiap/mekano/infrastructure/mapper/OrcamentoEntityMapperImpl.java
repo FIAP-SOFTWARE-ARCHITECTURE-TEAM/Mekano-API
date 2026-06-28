@@ -57,7 +57,7 @@ public class OrcamentoEntityMapperImpl implements OrcamentoEntityMapper {
         }
         StringBuilder sb = new StringBuilder();
         for (ItemOrcamento item : itens) {
-            if (!sb.isEmpty()) {
+            if (sb.length() > 0) {
                 sb.append(';');
             }
             sb.append(escape(item.getDescricao()))

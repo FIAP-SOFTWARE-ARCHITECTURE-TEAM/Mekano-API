@@ -5,7 +5,7 @@ import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
 import com.fiap.mekano.infrastructure.cache.CacheNames;
 import com.fiap.mekano.infrastructure.entity.OrcamentoEntity;
 import com.fiap.mekano.infrastructure.mapper.OrcamentoEntityMapper;
-import io.quarkus.cache.CacheInvalidate;
+import io.quarkus.cache.CacheInvalidateAll;
 import io.quarkus.cache.CacheResult;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -27,7 +27,7 @@ public class OrcamentoRepositoryImpl implements OrcamentoRepositoryPort {
 
     @Override
     @Transactional
-    @CacheInvalidate(cacheName = CacheNames.ORCAMENTOS)
+    @CacheInvalidateAll(cacheName = CacheNames.ORCAMENTOS)
     public Orcamento save(Orcamento orcamento) {
         OrcamentoEntity entity = mapper.toEntity(orcamento);
 
@@ -41,6 +41,7 @@ public class OrcamentoRepositoryImpl implements OrcamentoRepositoryPort {
             managed.setValorTotal(entity.getValorTotal());
             managed.setOrdemServicoUuid(entity.getOrdemServicoUuid());
             managed.setDataExpiracao(entity.getDataExpiracao());
+            managed.setItensJson(entity.getItensJson());
             panacheRepository.flush();
             return mapper.toDomain(managed);
         }
