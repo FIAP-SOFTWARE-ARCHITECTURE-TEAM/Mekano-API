@@ -8,4 +8,5 @@ public final class CacheNames {
     public static final String REQUISICOES = "requisicoes";
     public static final String NF_ENTRADAS = "nf_entradas";
     public static final String SERVICOS = "servicos";
+    public static final String ORDENS_DE_SERVICO = "ordens-de-servico";
 }
