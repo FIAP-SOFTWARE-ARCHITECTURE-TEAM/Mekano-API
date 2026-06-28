@@ -11,7 +11,11 @@ com.fiap.mekano.rest
 │   ├── MekanoApiApplication.java         — @OpenAPIDefinition, extends Application (bootstrap)
 │   ├── UserResource.java                 — @Path("/users") @RequestScoped @RolesAllowed("user")
 │   ├── VeiculoResource.java              — @Path("/veiculos") @RequestScoped @RolesAllowed({"admin","atendente"})
-│   ├── ServicoResource.java              — @Path("/servicos") @RequestScoped @RolesAllowed("admin")
+ │   ├── ServicoResource.java              — @Path("/servicos") @RequestScoped @RolesAllowed("admin")
+│   ├── PecaResource.java                 — @Path("/pecas") @RequestScoped @RolesAllowed("admin")
+│   ├── RequisicaoCompraResource.java      — @Path("/requisicoes-compra") @RequestScoped @RolesAllowed("admin")
+│   ├── NfEntradaResource.java             — @Path("/nf-entrada") @RequestScoped @RolesAllowed("admin")
+│   ├── AlertaResource.java               — @Path("/alertas") @RequestScoped @RolesAllowed({"admin","atendente"})
 │   ├── dto/
 │   │   ├── CreateUserRequest.java        — Input Lombok: @NotBlank name, @Email email, @Size(min=6) password
 │   │   ├── UserResponse.java             — Output record
@@ -27,12 +31,25 @@ com.fiap.mekano.rest
 │   │   ├── CreateClienteRequest.java     — Input Lombok: @Pattern("\d{11}") cpf, @Size(min=2,max=2) uf
 │   │   ├── UpdateClienteRequest.java     — Input Lombok (no CPF)
 │   │   ├── ClienteResponse.java          — Output record (flattened address fields)
-│   │   └── ClientePageResponse.java      — Output record
+│   │   ├── ClientePageResponse.java      — Output record
+│   │   ├── CreatePecaRequest.java        — Input Lombok: @NotBlank codigo, descricao, unidadeMedida, @DecimalMin valorUnitario
+│   │   ├── PecaResponse.java             — Output record: id, codigo, descricao, unidadeMedida, valorUnitario, saldoAtual, estoqueMinimo, createdAt
+│   │   ├── PecaPageResponse.java         — Output record (paginated)
+│   │   ├── CreateRequisicaoCompraRequest.java — Input Lombok: @NotNull pecaId, quantidade, @NotBlank motivo
+│   │   ├── RequisicaoCompraResponse.java  — Output record: id, pecaId, quantidade, status, motivo, createdAt
+│   │   ├── RequisicaoCompraPageResponse.java — Output record (paginated)
+│   │   ├── CreateNfEntradaRequest.java   — Input Lombok: @NotBlank numero, serie, cnpjFornecedor, nomeFornecedor, chaveAcesso + @DecimalMin campos NF-e + @NotNull pecaId, requisicaoCompraId, quantidade
+│   │   ├── NfEntradaResponse.java        — Output record: full NF-e fields + id, createdAt
+│   │   ├── NfEntradaPageResponse.java    — Output record (paginated)
+│   │   └── AlertaResponse.java           — Output record: pecaId, codigo, descricao, saldoAtual, estoqueMinimo
 │   ├── mapper/
 │   │   ├── UserDtoMapper.java            — @Mapper(componentModel = "cdi")
 │   │   ├── VeiculoDtoMapper.java         — @Mapper(componentModel = "cdi")
 │   │   ├── ServicoDtoMapper.java         — @Mapper(componentModel = "cdi")
-│   │   └── ClienteDtoMapper.java         — @Mapper(componentModel = "cdi") (7 @Mapping for address flattening)
+│   │   ├── ClienteDtoMapper.java         — @Mapper(componentModel = "cdi") (7 @Mapping for address flattening)
+│   │   ├── PecaDtoMapper.java            — @Mapper(componentModel = "cdi")
+│   │   ├── RequisicaoCompraDtoMapper.java — @Mapper(componentModel = "cdi")
+│   │   └── NfEntradaDtoMapper.java       — @Mapper(componentModel = "cdi")
 │   └── exception/
 │       ├── ProblemDetail.java            — record: type, title, status, detail, instance
 │       └── ApiExceptionMapper.java       — @Provider @ApplicationScoped
@@ -49,6 +66,10 @@ com.fiap.mekano.rest
 | UserResource | ✓ EXISTS — fully implemented |
 | VeiculoResource | ✓ EXISTS — fully implemented |
 | ServicoResource | ✓ EXISTS — fully implemented |
+| PecaResource | ✓ EXISTS — DTOs, mapper, resource, tests |
+| RequisicaoCompraResource | ✓ EXISTS — DTOs, mapper, resource, tests |
+| NfEntradaResource | ✓ EXISTS — DTOs, mapper, resource, tests |
+| AlertaResource | ✓ EXISTS — DTO, resource, tests |
 | Cliente DTOs + Mapper | ✓ EXISTS — but NO ClienteResource (no controller yet) |
 | ApiExceptionMapper | ✓ EXISTS |
 | ProblemDetail | ✓ EXISTS |
@@ -81,6 +102,10 @@ com.fiap.mekano.rest
 | UserResource | user | POST, GET (list+byId), DELETE |
 | VeiculoResource | admin, atendente | POST, PUT, GET (list+byId), DELETE |
 | ServicoResource | admin | POST, PUT, GET (list+byId), DELETE |
+| PecaResource | admin | POST, GET (list+byId) — Peca immutable, no PUT/DELETE |
+| RequisicaoCompraResource | admin | POST, GET (list+byId), PUT enviar/cancelar/receber |
+| NfEntradaResource | admin | POST, GET (list+byId) |
+| AlertaResource | admin, atendente | GET (list) |
 | ClienteResource | NOT YET IMPLEMENTED | DTOs + mapper exist, no controller |
 
 ## Exception Handling
@@ -116,4 +141,4 @@ mekano-domain, mekano-application, mekano-infrastructure, quarkus-rest-jackson, 
 - `@TestMethodOrder(MethodOrderer.OrderAnnotation.class)` + `@Order(N)` for sequential tests
 - `@InjectMock` for mocking repository deps (Quarkus Mockito)
 - `@TestTransaction` for automatic rollback
-- 7 test files: UserResourceTest, UserSoftDeleteTest, VeiculoResourceTest, VeiculoFaultToleranceTest, ServicoResourceTest, FaultToleranceTest, ObservabilityEndpointsTest
+- 11 test files: UserResourceTest, UserSoftDeleteTest, VeiculoResourceTest, VeiculoFaultToleranceTest, ServicoResourceTest, FaultToleranceTest, ObservabilityEndpointsTest, PecaResourceTest, RequisicaoCompraResourceTest, NfEntradaResourceTest, AlertaResourceTest
