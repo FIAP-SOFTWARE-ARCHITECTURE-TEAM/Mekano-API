@@ -3,7 +3,7 @@ mp:
     verify:
       publickey:
         location: publicKey.pem
-        algorithm: EdDSA
+        algorithm: eddsa
       issuer: mekano-api
 
 smallrye:
@@ -12,7 +12,7 @@ smallrye:
       key:
         location: ${user.home}/.mekano/secrets/privatekey.pem
     new-token:
-      signature-algorithm: EdDSA
+      signature-algorithm: eddsa
       issuer: mekano-api
 
 quarkus:
