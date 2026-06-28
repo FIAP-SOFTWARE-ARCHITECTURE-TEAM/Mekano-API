@@ -1,7 +1,10 @@
 package com.fiap.mekano.domain.port.in;
 
+import java.math.BigDecimal;
+
 public record CreatePecaCommand(
+    String codigo,
     String descricao,
-    Integer saldo,
-    Integer estoqueMinimo
+    BigDecimal valorUnitario,
+    Long estoqueMinimo
 ) {}

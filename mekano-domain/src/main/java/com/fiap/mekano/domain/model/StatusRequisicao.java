@@ -11,8 +11,8 @@ package com.fiap.mekano.domain.model;
 public enum StatusRequisicao {
     ABERTA("Aberta", "Aguardando aprovação de compra"),
     ENVIADA("Enviada", "Pedido enviado ao fornecedor"),
-    COMPRADA("Comprada", "Compra já aprovada/processada"),
-    RECEBIDA("Recebida", "Mercadoria recebida no estoque"),
+    COMPRA_APROVADA("Compra Aprovada", "Compra já aprovada/processada"),
+    PRODUTO_RECEBIDO("Produto Recebido", "Mercadoria recebida no estoque"),
     CANCELADA("Cancelada", "Requisição cancelada");
 
     private final String descricao;
