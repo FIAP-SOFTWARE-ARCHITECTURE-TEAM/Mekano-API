@@ -28,7 +28,6 @@ public class UserRoleRepositoryImpl implements UserRoleRepositoryPort {
         if (userUuid == null) {
             return Optional.empty();
         }
-
         return repository.findByUserUuid(userUuid)
         		.map(entity -> entity.role);
     }
@@ -37,7 +36,7 @@ public class UserRoleRepositoryImpl implements UserRoleRepositoryPort {
     @Transactional
     public void save(UUID userUuid, Role role) {
         boolean alreadyExists = repository
-                .count("userUuid = ?1 and role = ?2 and isActive = true", userUuid, role.name()) > 0;
+                .count("userUuid = ?1 and role = ?2 and isActive = true", userUuid, role) > 0;
 
         if (alreadyExists) {
             return;
