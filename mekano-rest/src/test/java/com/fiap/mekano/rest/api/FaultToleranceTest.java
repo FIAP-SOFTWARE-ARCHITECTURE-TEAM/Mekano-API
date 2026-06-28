@@ -29,9 +29,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @QuarkusTest
 class FaultToleranceTest {
 
+        
     @Inject
     UserRepositoryPort userRepository;
 
+    private static final boolean ACTIVE = true;
+    
     @Test
     @TestTransaction
     @DisplayName("findById com @Retry deve retornar Optional.empty para ID inexistente")
@@ -59,7 +62,7 @@ class FaultToleranceTest {
     @DisplayName("save com @Timeout deve persistir sem lançar TimeoutException para dados válidos")
     void save_comTimeout_persisteComSucesso() {
         // Arrange
-        User user = User.create("Teste FT", "ft@fiap.br", "$2a$10$hash");
+        User user = User.create("Teste FT", "ft@fiap.br",ACTIVE,  "$2a$10$hash");
 
         // Act + Assert — não deve lançar TimeoutException
         assertDoesNotThrow(() -> {
@@ -75,10 +78,10 @@ class FaultToleranceTest {
     void save_duplicateEmail_lancaExcecao() {
         // Arrange
         String email = "dup-ft@fiap.br";
-        userRepository.save(User.create("Primeiro", email, "$2a$10$hash"));
+        userRepository.save(User.create("Primeiro", email, ACTIVE, "$2a$10$hash"));
 
         // Act
-        User segundo = User.create("Segundo", email, "$2a$10$hash");
+        User segundo = User.create("Segundo", email, ACTIVE, "$2a$10$hash");
 
         // Assert — deve lançar RuntimeException (constraint violation), não TimeoutException
         assertThrows(Exception.class, () -> userRepository.save(segundo));
@@ -89,7 +92,7 @@ class FaultToleranceTest {
     @DisplayName("findById e findByEmail com @CacheResult devem retornar mesmo valor em chamadas repetidas")
     void cacheResult_mesmoValorEmChamadasRepetidas() {
         // Arrange — criar usuário
-        User user = User.create("Cache Test", "cache@fiap.br", "$2a$10$hash");
+        User user = User.create("Cache Test", "cache@fiap.br", ACTIVE, "$2a$10$hash");
         User saved = userRepository.save(user);
         UUID id = saved.getId();
 

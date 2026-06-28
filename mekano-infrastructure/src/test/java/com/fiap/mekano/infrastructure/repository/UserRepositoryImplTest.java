@@ -32,7 +32,7 @@ class UserRepositoryImplTest {
     @TestTransaction
     void save_devePersistirERetornarUserComEmailCorreto() {
         // Arrange
-        User user = User.create("João Silva", "joao@fiap.br", "$2a$10$hashbcrypt");
+        User user = User.create("João Silva", "joao@fiap.br", true, "$2a$10$hashbcrypt");
 
         // Act
         User salvo = repository.save(user);
@@ -81,7 +81,7 @@ class UserRepositoryImplTest {
     @TestTransaction
     void save_deveRetornarUserSemCamposNull_roundTrip() {
         // Arrange
-        User original = User.create("Maria Oliveira", "maria@fiap.br", "$2a$10$hash");
+        User original = User.create("Maria Oliveira", "maria@fiap.br", true, "$2a$10$hash");
 
         // Act
         User salvo = repository.save(original);
@@ -91,7 +91,7 @@ class UserRepositoryImplTest {
         assertThat(salvo.getId()).isEqualTo(original.getId());
         assertThat(salvo.getName()).isEqualTo("Maria Oliveira");
         assertThat(salvo.getEmail()).isNotNull();
-        assertThat(salvo.getEmail().getValue()).isEqualTo("maria@fiap.br");
+        assertThat(salvo.getEmail().getValue()).isEqualTo("maria@fiap.br"); 
         assertThat(salvo.getPasswordHash()).isNotNull();
         assertThat(salvo.getPasswordHash()).isEqualTo("$2a$10$hash");
         assertThat(salvo.getCreatedAt()).isNotNull();

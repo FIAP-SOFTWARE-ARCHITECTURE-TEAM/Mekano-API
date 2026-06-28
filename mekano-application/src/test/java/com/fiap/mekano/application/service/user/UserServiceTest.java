@@ -36,7 +36,7 @@ class UserServiceTest {
     @Test
     @DisplayName("deve criar usuário com dados válidos")
     void deveCriarUsuarioComDadosValidos() {
-        var command = new CreateUserCommand("João Silva", "joao@fiap.br", "senha123");
+        var command = new CreateUserCommand("João Silva", "joao@fiap.br",true, "senha123");
         when(userRepository.existsByEmail("joao@fiap.br")).thenReturn(false);
         when(passwordHasher.hash("senha123")).thenReturn("$2a$10$hashedpassword");
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -53,7 +53,7 @@ class UserServiceTest {
     @Test
     @DisplayName("deve lançar AppException(409) quando email duplicado")
     void deveLancarExcecaoQuandoEmailDuplicado() {
-        var command = new CreateUserCommand("João Silva", "joao@fiap.br", "senha123");
+        var command = new CreateUserCommand("João Silva", "joao@fiap.br",true, "senha123");
         when(userRepository.existsByEmail("joao@fiap.br")).thenReturn(true);
 
         assertThrows(AppException.class, () -> userService.execute(command));
@@ -63,7 +63,7 @@ class UserServiceTest {
     @Test
     @DisplayName("deve lançar AppException(400) quando email é inválido")
     void devePropagardInvalidEmailExceptionQuandoEmailInvalido() {
-        var command = new CreateUserCommand("João Silva", "email-invalido", "senha123");
+        var command = new CreateUserCommand("João Silva", "email-invalido",false, "senha123");
         when(userRepository.existsByEmail("email-invalido")).thenReturn(false);
 
         assertThrows(AppException.class, () -> userService.execute(command));
@@ -72,7 +72,7 @@ class UserServiceTest {
     @Test
     @DisplayName("deve lançar AppException(400) quando nome é nulo")
     void deveLancarExcecaoQuandoNomeNulo() {
-        var command = new CreateUserCommand(null, "joao@fiap.br", "senha123");
+        var command = new CreateUserCommand(null, "joao@fiap.br",false, "senha123");
 
         assertThrows(AppException.class, () -> userService.execute(command));
         verify(userRepository, never()).existsByEmail(any());

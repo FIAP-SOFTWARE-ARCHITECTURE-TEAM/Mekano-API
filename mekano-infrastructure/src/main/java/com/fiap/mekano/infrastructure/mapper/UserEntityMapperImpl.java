@@ -20,6 +20,7 @@ public class UserEntityMapperImpl implements UserEntityMapper {
         entity.setUuid(user.getId());
         entity.setName(user.getName());
         entity.setEmail(emailMapper.emailToString(user.getEmail()));
+        entity.setActive(user.isActive());
         entity.setPasswordHash(user.getPasswordHash());
         entity.setCreatedAt(user.getCreatedAt());
         return entity;
@@ -34,6 +35,7 @@ public class UserEntityMapperImpl implements UserEntityMapper {
                 entity.getUuid(),
                 entity.getName(),
                 entity.getEmail(),
+                entity.getIsActive(),
                 entity.getPasswordHash(),
                 entity.getCreatedAt()
         );

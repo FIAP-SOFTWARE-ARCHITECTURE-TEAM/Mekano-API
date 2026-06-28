@@ -13,11 +13,12 @@ class UserTest {
     private static final String NOME_VALIDO = "João Silva";
     private static final String EMAIL_VALIDO = "joao@fiap.br";
     private static final String HASH_VALIDO = "bcrypt:$2a$12$hashdummy";
+    private static final boolean ACTIVE = true;
 
     @Test
     @DisplayName("deve criar User com todos os campos populados")
     void deveCriarUserComCamposPopulados() {
-        User user = User.create(NOME_VALIDO, EMAIL_VALIDO, HASH_VALIDO);
+        User user = User.create(NOME_VALIDO, EMAIL_VALIDO, ACTIVE, HASH_VALIDO);
 
         assertNotNull(user);
         assertNotNull(user.getId(), "id deve ser não nulo");
@@ -30,7 +31,7 @@ class UserTest {
     @Test
     @DisplayName("campo email deve ser do tipo Email VO")
     void campoEmailDeveSerVO() {
-        User user = User.create(NOME_VALIDO, EMAIL_VALIDO, HASH_VALIDO);
+        User user = User.create(NOME_VALIDO, EMAIL_VALIDO, ACTIVE, HASH_VALIDO);
         assertInstanceOf(Email.class, user.getEmail());
         assertEquals(EMAIL_VALIDO, user.getEmail().getValue());
     }
@@ -39,21 +40,21 @@ class UserTest {
     @DisplayName("deve lançar AppException(400) para email inválido")
     void deveLancarExcecaoParaEmailInvalido() {
         assertThrows(AppException.class,
-                () -> User.create(NOME_VALIDO, "email-invalido", HASH_VALIDO));
+                () -> User.create(NOME_VALIDO, "email-invalido", ACTIVE, HASH_VALIDO));
     }
 
     @Test
     @DisplayName("deve lançar AppException(400) para email null")
     void deveLancarExcecaoParaEmailNull() {
         assertThrows(AppException.class,
-                () -> User.create(NOME_VALIDO, null, HASH_VALIDO));
+                () -> User.create(NOME_VALIDO, null, ACTIVE, HASH_VALIDO));
     }
 
     @Test
     @DisplayName("toString não deve conter o passwordHash")
     void toStringNaoDeveConterPasswordHash() {
         String hashSecreto = "mySuperSecretHash$$$";
-        User user = User.create(NOME_VALIDO, EMAIL_VALIDO, hashSecreto);
+        User user = User.create(NOME_VALIDO, EMAIL_VALIDO, ACTIVE,  hashSecreto);
 
         String representacao = user.toString();
         assertFalse(representacao.contains(hashSecreto),
@@ -63,8 +64,8 @@ class UserTest {
     @Test
     @DisplayName("duas chamadas a create devem gerar IDs distintos")
     void duasChamadasDevemGerarIdDistintos() {
-        User user1 = User.create(NOME_VALIDO, EMAIL_VALIDO, HASH_VALIDO);
-        User user2 = User.create(NOME_VALIDO, EMAIL_VALIDO, HASH_VALIDO);
+        User user1 = User.create(NOME_VALIDO, EMAIL_VALIDO, ACTIVE, HASH_VALIDO);
+        User user2 = User.create(NOME_VALIDO, EMAIL_VALIDO, ACTIVE,  HASH_VALIDO);
 
         assertNotEquals(user1.getId(), user2.getId(),
                 "cada chamada a create() deve gerar um UUID único");
@@ -73,7 +74,7 @@ class UserTest {
     @Test
     @DisplayName("email deve ser normalizado para lowercase pelo VO")
     void emailDeveSerNormalizado() {
-        User user = User.create(NOME_VALIDO, "JOAO@FIAP.BR", HASH_VALIDO);
+        User user = User.create(NOME_VALIDO, "JOAO@FIAP.BR", ACTIVE, HASH_VALIDO);
         assertEquals("joao@fiap.br", user.getEmail().getValue());
     }
 }
