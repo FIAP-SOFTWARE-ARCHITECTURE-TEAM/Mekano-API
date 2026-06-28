@@ -91,7 +91,10 @@
 			<artifactId>quarkus-jdbc-h2</artifactId>
 			<scope>test</scope>
 		</dependency>
-
+		<dependency>
+		    <groupId>io.quarkus</groupId>
+		    <artifactId>quarkus-jackson</artifactId>
+		</dependency>
 		<!-- Quarkus JUnit5 — escopo test -->
 		<dependency>
 			<groupId>io.quarkus</groupId>
