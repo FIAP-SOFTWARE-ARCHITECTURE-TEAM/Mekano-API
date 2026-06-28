@@ -31,6 +31,7 @@ public class VeiculoResourceTest {
         @InjectMock
         UserRepositoryPort userRepository;
 
+        private static final boolean ACTIVE = true;
         private static final UUID CLIENTE_UUID = UUID.fromString("11111111-1111-1111-1111-111111111111");
 
         @BeforeEach
@@ -40,6 +41,7 @@ public class VeiculoResourceTest {
                                 CLIENTE_UUID,
                                 "Cliente Teste",
                                 "cliente@teste.com",
+                                 ACTIVE,
                                 "hash",
                                 LocalDateTime.now());
 

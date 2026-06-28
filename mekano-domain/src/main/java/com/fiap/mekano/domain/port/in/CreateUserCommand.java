@@ -11,4 +11,4 @@ package com.fiap.mekano.domain.port.in;
  * Sem anotações de validação (@NotBlank etc.) — validação é responsabilidade
  * do adapter que constrói este comando.
  */
-public record CreateUserCommand(String name, String email, String password) {}
+public record CreateUserCommand(String name, String email, boolean active, String password) {}

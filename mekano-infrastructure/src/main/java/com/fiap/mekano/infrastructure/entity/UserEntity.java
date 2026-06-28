@@ -38,7 +38,7 @@ public class UserEntity extends BaseEntity {
     /** Armazena o valor String do Email VO. Unique constraint garante unicidade. */
     @Column(unique = true, nullable = false)
     String email;
-
+    
     @Column(name = "password_hash", nullable = false)
     String passwordHash;
 }

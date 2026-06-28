@@ -189,5 +189,6 @@ public class UserResource {
     public Response delete(@PathParam("id") UUID id) {
         userServicePort.deleteUser(id);
         return Response.noContent().build();
-    }
+    }    
+   
 }

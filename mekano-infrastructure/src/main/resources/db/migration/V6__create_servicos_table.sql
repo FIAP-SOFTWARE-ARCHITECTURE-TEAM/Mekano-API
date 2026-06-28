@@ -25,3 +25,5 @@ CREATE INDEX idx_servicos_is_active ON servicos (is_active);
 
 -- Partial unique index: unicidade de nome apenas entre registros ativos
 CREATE UNIQUE INDEX uq_servicos_nome_active ON servicos (nome) WHERE is_active = TRUE;
+
+
