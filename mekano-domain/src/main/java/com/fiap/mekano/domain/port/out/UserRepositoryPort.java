@@ -37,4 +37,6 @@ public interface UserRepositoryPort {
      * @param id UUID do usuário a marcar como deletado
      */
     void markAsDeleted(UUID id);
+    
+    void softDelete(UUID uuid);
 }

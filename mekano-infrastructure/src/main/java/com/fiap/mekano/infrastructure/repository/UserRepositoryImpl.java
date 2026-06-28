@@ -137,4 +137,20 @@ public class UserRepositoryImpl implements UserRepositoryPort {
         }
         return Math.min(size, 100);
     }
+
+	@Override
+	public void softDelete(UUID uuid) {
+	    UserEntity entity = panacheRepository
+                .find("uuid = ?1 and isActive = true", uuid)
+                .firstResult();
+
+        if (entity == null) {
+            throw new AppException(404, "Usuário não encontrado");
+        }
+
+        entity.setIsActive(false);
+        entity.setDeletedAt(LocalDateTime.now());
+
+        panacheRepository.persist(entity);		
+	}
 }

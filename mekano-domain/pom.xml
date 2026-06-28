@@ -1,41 +1,49 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
 
-    <parent>
-        <groupId>com.fiap</groupId>
-        <artifactId>mekano</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
-    </parent>
+	<parent>
+		<groupId>com.fiap</groupId>
+		<artifactId>mekano</artifactId>
+		<version>1.0.0-SNAPSHOT</version>
+	</parent>
 
-    <artifactId>mekano-domain</artifactId>
-    <packaging>jar</packaging>
+	<artifactId>mekano-domain</artifactId>
+	<packaging>jar</packaging>
 
-    <dependencies>
-        <!-- Lombok: compile-only — geração de boilerplate sem vazar para dependentes -->
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <scope>provided</scope>
-            <optional>true</optional>
-        </dependency>
+	<dependencies>
+		<!-- Lombok: compile-only — geração de boilerplate sem vazar para
+		dependentes -->
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<scope>provided</scope>
+			<optional>true</optional>
+		</dependency>
 
-        <!-- JUnit 5: testes unitários puros — zero Quarkus, zero container startup -->
-        <!-- Versão gerenciada pelo Quarkus BOM 3.36.0 importado no root pom.xml -->
-        <!-- NÃO usar io.quarkus:quarkus-junit5 aqui — esse artefato inicializa o container -->
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <scope>test</scope>
-        </dependency>
+		<!-- JUnit 5: testes unitários puros — zero Quarkus, zero container
+		startup -->
+		<!-- Versão gerenciada pelo Quarkus BOM 3.36.0 importado no root pom.xml -->
+		<!-- NÃO usar io.quarkus:quarkus-junit5 aqui — esse artefato inicializa
+		o container -->
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<scope>test</scope>
+		</dependency>
 
-        <!-- AssertJ: fluent assertions para testes legíveis e mantíveis -->
-        <dependency>
-            <groupId>org.assertj</groupId>
-            <artifactId>assertj-core</artifactId>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
+		<!-- AssertJ: fluent assertions para testes legíveis e mantíveis -->
+		<dependency>
+			<groupId>org.assertj</groupId>
+			<artifactId>assertj-core</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<scope>provided</scope>
+		</dependency>
+	</dependencies>
 </project>

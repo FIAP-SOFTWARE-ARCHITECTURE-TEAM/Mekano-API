@@ -1,4 +1,4 @@
-package com.fiap.mekano.application.service.servico;
+package com.fiap.mekano.application.service;
 
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.exception.Messages;

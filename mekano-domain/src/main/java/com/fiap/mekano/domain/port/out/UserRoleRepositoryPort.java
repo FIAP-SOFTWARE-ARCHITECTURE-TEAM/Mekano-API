@@ -7,5 +7,7 @@ import java.util.UUID;
 
 public interface UserRoleRepositoryPort {
 
-    Optional<Role> findRoleByUserUuid(UUID userUuid);
+    Optional<Role> findRoleByUserUuid(UUID userUuid); 
+   
+    void save(UUID userUuid, Role role);
 }
