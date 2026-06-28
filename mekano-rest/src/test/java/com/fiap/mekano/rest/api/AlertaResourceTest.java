@@ -1,7 +1,7 @@
 package com.fiap.mekano.rest.api;
 
-import com.fiap.mekano.infrastructure.entity.PecaEntity;
-import com.fiap.mekano.infrastructure.repository.PecaPanacheRepository;
+import com.fiap.mekano.application.service.peca.PecaService;
+import com.fiap.mekano.domain.model.Peca;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.mockito.Mockito;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -25,24 +27,20 @@ class AlertaResourceTest {
     private static final String BASE_PATH = "/api/v1/alertas";
 
     @InjectMock
-    PecaPanacheRepository pecaPanacheRepository;
+    PecaService pecaService;
 
     @BeforeEach
     void setUp() {
-        var abaixoMinimo = new PecaEntity();
-        abaixoMinimo.uuid = UUID.randomUUID();
-        abaixoMinimo.descricao = "Óleo do Motor 5W30";
-        abaixoMinimo.saldo = 3;
-        abaixoMinimo.estoqueMinimo = 10;
+        var abaixoMinimo = Peca.reconstitute(
+                UUID.randomUUID(), "PEA-001", "Óleo do Motor 5W30",
+                new BigDecimal("45.90"), 3L, 10L, LocalDateTime.now());
 
-        var acimaMinimo = new PecaEntity();
-        acimaMinimo.uuid = UUID.randomUUID();
-        acimaMinimo.descricao = "Filtro de Óleo";
-        acimaMinimo.saldo = 50;
-        acimaMinimo.estoqueMinimo = 5;
+        var acimaMinimo = Peca.reconstitute(
+                UUID.randomUUID(), "PEA-002", "Filtro de Óleo",
+                new BigDecimal("15.50"), 50L, 5L, LocalDateTime.now());
 
-        Mockito.when(pecaPanacheRepository.listAll())
-                .thenReturn(List.of(abaixoMinimo, acimaMinimo));
+        Mockito.when(pecaService.listarAbaixoEstoqueMinimo())
+                .thenReturn(List.of(abaixoMinimo));
     }
 
     @Test

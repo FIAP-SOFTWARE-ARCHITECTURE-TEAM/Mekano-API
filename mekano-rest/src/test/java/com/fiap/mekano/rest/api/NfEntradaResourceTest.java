@@ -3,8 +3,6 @@ package com.fiap.mekano.rest.api;
 import com.fiap.mekano.application.service.nfentrada.CreateNfEntradaResponse;
 import com.fiap.mekano.application.service.nfentrada.NfEntradaService;
 import com.fiap.mekano.domain.model.NfEntrada;
-import com.fiap.mekano.domain.port.out.NfEntradaRepositoryPort;
-import com.fiap.mekano.infrastructure.repository.NfEntradaPanacheRepository;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
@@ -18,8 +16,9 @@ import org.mockito.Mockito;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Optional;
 import java.util.UUID;
+
+import static org.mockito.ArgumentMatchers.any;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
@@ -38,32 +37,26 @@ class NfEntradaResourceTest {
     @InjectMock
     NfEntradaService nfEntradaService;
 
-    @InjectMock
-    NfEntradaRepositoryPort nfEntradaRepository;
-
-    @InjectMock
-    NfEntradaPanacheRepository nfEntradaPanacheRepository;
-
     @BeforeEach
     void setUp() {
         var now = LocalDateTime.now();
         var mockNf = NfEntrada.reconstitute(
-                NF_UUID, "123456", "1", "12345678000190",
-                "Auto Peças Ltda", now, new BigDecimal("1500.00"),
-                new BigDecimal("270.00"), new BigDecimal("75.00"),
-                new BigDecimal("30.00"), new BigDecimal("1875.00"),
-                "35200612345678000190550000001234567890123456", now);
+                NF_UUID,
+                "35200612345678000190550000001234567890123456",
+                new BigDecimal("1875.00"),
+                PECA_UUID, REQUISICAO_UUID, now);
 
-        Mockito.when(nfEntradaService.registrar(Mockito.any()))
-                .thenReturn(new CreateNfEntradaResponse(NF_UUID, 10, now));
+        Mockito.when(nfEntradaService.registrar(any()))
+                .thenReturn(new CreateNfEntradaResponse(NF_UUID,
+                        "35200612345678000190550000001234567890123456",
+                        new BigDecimal("1875.00"),
+                        PECA_UUID, REQUISICAO_UUID, now));
 
-        Mockito.when(nfEntradaRepository.buscarPorId(NF_UUID))
-                .thenReturn(Optional.of(mockNf));
+        Mockito.when(nfEntradaService.buscarPorId(NF_UUID))
+                .thenReturn(mockNf);
 
-        Mockito.when(nfEntradaRepository.buscarPorId(Mockito.argThat(id -> !id.equals(NF_UUID))))
-                .thenReturn(Optional.empty());
-
-        // listAll setup not needed — tested via real integration
+        Mockito.when(nfEntradaService.buscarPorId(Mockito.argThat(id -> !id.equals(NF_UUID))))
+                .thenThrow(new com.fiap.mekano.domain.exception.AppException(404, "NF não encontrada"));
     }
 
     @Test
@@ -73,14 +66,14 @@ class NfEntradaResourceTest {
         given()
                 .contentType(ContentType.JSON)
                 .body("""
-                        {"numero": "123456", "serie": "1", "cnpjFornecedor": "12345678000190", "nomeFornecedor": "Auto Peças Ltda", "dataEmissao": "2026-06-01T10:00:00", "valorMercadoria": 1500.00, "icms": 270.00, "ipi": 75.00, "outrosImpostos": 30.00, "chaveAcesso": "35200612345678000190550000001234567890123456", "pecaId": "%s", "requisicaoCompraId": "%s", "quantidade": 10}
-                        """.formatted(PECA_UUID, REQUISICAO_UUID))
+                        {"chaveAcesso": "35200612345678000190550000001234567890123456", "valorTotal": 1875.00, "requisicaoCompraId": "%s"}
+                        """.formatted(REQUISICAO_UUID))
                 .when()
                 .post(BASE_PATH)
                 .then()
                 .statusCode(201)
-                .body("numero", equalTo("123456"))
-                .body("cnpjFornecedor", equalTo("12345678000190"))
+                .body("chaveAcesso", equalTo("35200612345678000190550000001234567890123456"))
+                .body("valorTotal", equalTo(1875.00f))
                 .header("Location", notNullValue());
     }
 
@@ -107,7 +100,7 @@ class NfEntradaResourceTest {
                 .then()
                 .statusCode(200)
                 .body("id", equalTo(NF_UUID.toString()))
-                .body("numero", equalTo("123456"))
+                .body("chaveAcesso", equalTo("35200612345678000190550000001234567890123456"))
                 .body("valorTotal", equalTo(1875.00f));
     }
 
@@ -130,8 +123,8 @@ class NfEntradaResourceTest {
         given()
                 .contentType(ContentType.JSON)
                 .body("""
-                        {"numero": "654321", "serie": "1", "cnpjFornecedor": "12345678000190", "nomeFornecedor": "Teste", "dataEmissao": "2026-06-01T10:00:00", "valorMercadoria": 100.00, "icms": 10.00, "ipi": 5.00, "outrosImpostos": 1.00, "chaveAcesso": "35200612345678000190550000001234567890123456", "pecaId": "%s", "requisicaoCompraId": "%s", "quantidade": 5}
-                        """.formatted(PECA_UUID, REQUISICAO_UUID))
+                        {"chaveAcesso": "35200612345678000190550000001234567890123456", "valorTotal": 100.00, "requisicaoCompraId": "%s"}
+                        """.formatted(REQUISICAO_UUID))
                 .when()
                 .post(BASE_PATH)
                 .then()

@@ -3,9 +3,6 @@ package com.fiap.mekano.rest.api;
 import com.fiap.mekano.application.service.peca.CreatePecaResponse;
 import com.fiap.mekano.application.service.peca.PecaService;
 import com.fiap.mekano.domain.model.Peca;
-import com.fiap.mekano.domain.model.UnidadeMedida;
-import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
-import com.fiap.mekano.infrastructure.repository.PecaPanacheRepository;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
@@ -19,7 +16,6 @@ import org.mockito.Mockito;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Optional;
 import java.util.UUID;
 
 import static io.restassured.RestAssured.given;
@@ -37,29 +33,22 @@ class PecaResourceTest {
     @InjectMock
     PecaService pecaService;
 
-    @InjectMock
-    PecaRepositoryPort pecaRepository;
-
-    @InjectMock
-    PecaPanacheRepository pecaPanacheRepository;
-
     @BeforeEach
     void setUp() {
         var mockPeca = Peca.reconstitute(
                 PECA_UUID, "PEA-001", "Óleo do Motor 5W30",
-                UnidadeMedida.LITRO, new BigDecimal("45.90"),
+                new BigDecimal("45.90"),
                 50L, 10L, LocalDateTime.now());
 
         Mockito.when(pecaService.criar(Mockito.any()))
-                .thenReturn(new CreatePecaResponse(PECA_UUID, "Óleo do Motor 5W30", 50, 10));
+                .thenReturn(new CreatePecaResponse(PECA_UUID, "PEA-001", "Óleo do Motor 5W30",
+                        new BigDecimal("45.90"), 50L, 10L, LocalDateTime.now()));
 
-        Mockito.when(pecaRepository.buscarPorId(PECA_UUID))
-                .thenReturn(Optional.of(mockPeca));
+        Mockito.when(pecaService.buscarPorId(PECA_UUID))
+                .thenReturn(mockPeca);
 
-        Mockito.when(pecaRepository.buscarPorId(Mockito.argThat(id -> !id.equals(PECA_UUID))))
-                .thenReturn(Optional.empty());
-
-        // listAll setup not needed — tested via real integration
+        Mockito.when(pecaService.buscarPorId(Mockito.argThat(id -> !id.equals(PECA_UUID))))
+                .thenThrow(new com.fiap.mekano.domain.exception.AppException(404, "Peça não encontrada"));
     }
 
     @Test
@@ -69,7 +58,7 @@ class PecaResourceTest {
         given()
                 .contentType(ContentType.JSON)
                 .body("""
-                        {"codigo": "PEA-001", "descricao": "Óleo do Motor 5W30", "unidadeMedida": "LITRO", "valorUnitario": 45.90, "estoqueMinimo": 10}
+                        {"codigo": "PEA-001", "descricao": "Óleo do Motor 5W30", "valorUnitario": 45.90, "estoqueMinimo": 10}
                         """)
                 .when()
                 .post(BASE_PATH)
@@ -125,7 +114,7 @@ class PecaResourceTest {
         given()
                 .contentType(ContentType.JSON)
                 .body("""
-                        {"codigo": "PEA-002", "descricao": "Teste", "unidadeMedida": "UNIDADE", "valorUnitario": 10.00}
+                        {"codigo": "PEA-002", "descricao": "Teste", "valorUnitario": 10.00}
                         """)
                 .when()
                 .post(BASE_PATH)

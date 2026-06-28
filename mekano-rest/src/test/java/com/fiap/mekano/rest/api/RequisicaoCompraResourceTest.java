@@ -1,11 +1,11 @@
 package com.fiap.mekano.rest.api;
 
+import com.fiap.mekano.application.service.peca.PecaService;
 import com.fiap.mekano.application.service.requisicao.CreateRequisicaoCompraResponse;
 import com.fiap.mekano.application.service.requisicao.RequisicaoCompraService;
+import com.fiap.mekano.domain.model.Peca;
 import com.fiap.mekano.domain.model.RequisicaoCompra;
 import com.fiap.mekano.domain.model.StatusRequisicao;
-import com.fiap.mekano.domain.port.out.RequisicaoCompraRepositoryPort;
-import com.fiap.mekano.infrastructure.repository.RequisicaoCompraPanacheRepository;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
@@ -17,8 +17,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.mockito.Mockito;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Optional;
 import java.util.UUID;
 
 import static io.restassured.RestAssured.given;
@@ -38,30 +38,30 @@ class RequisicaoCompraResourceTest {
     RequisicaoCompraService requisicaoService;
 
     @InjectMock
-    RequisicaoCompraRepositoryPort requisicaoRepository;
-
-    @InjectMock
-    RequisicaoCompraPanacheRepository requisicaoPanacheRepository;
+    PecaService pecaService;
 
     @BeforeEach
     void setUp() {
+        var mockPeca = Peca.reconstitute(
+                PECA_UUID, "PEA-001", "Óleo do Motor 5W30",
+                new BigDecimal("45.90"), 50L, 10L, LocalDateTime.now());
+
         var mockRequisicao = RequisicaoCompra.reconstitute(
                 REQUISICAO_UUID, PECA_UUID, 10L,
-                StatusRequisicao.ABERTA, "Reposição de estoque mínimo", LocalDateTime.now());
+                StatusRequisicao.ABERTA, com.fiap.mekano.domain.model.MotivoRequisicao.ESTOQUE_MINIMO, LocalDateTime.now());
+
+        Mockito.when(pecaService.buscarPorId(PECA_UUID))
+                .thenReturn(mockPeca);
 
         Mockito.when(requisicaoService.criar(Mockito.any()))
-                .thenReturn(new CreateRequisicaoCompraResponse(REQUISICAO_UUID, "ABERTA", 10));
+                .thenReturn(new CreateRequisicaoCompraResponse(REQUISICAO_UUID, PECA_UUID, 10L,
+                        "ABERTA", "ESTOQUE_MINIMO", LocalDateTime.now()));
 
-        Mockito.when(requisicaoRepository.buscarPorId(REQUISICAO_UUID))
-                .thenReturn(Optional.of(mockRequisicao));
+        Mockito.when(requisicaoService.buscarPorId(REQUISICAO_UUID))
+                .thenReturn(mockRequisicao);
 
-        Mockito.when(requisicaoRepository.buscarPorId(Mockito.argThat(id -> !id.equals(REQUISICAO_UUID))))
-                .thenReturn(Optional.empty());
-
-        Mockito.when(requisicaoRepository.atualizar(Mockito.any()))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-
-        // listAll setup not needed — tested via real integration
+        Mockito.when(requisicaoService.buscarPorId(Mockito.argThat(id -> !id.equals(REQUISICAO_UUID))))
+                .thenThrow(new com.fiap.mekano.domain.exception.AppException(404, "Requisição não encontrada"));
     }
 
     @Test
@@ -71,7 +71,7 @@ class RequisicaoCompraResourceTest {
         given()
                 .contentType(ContentType.JSON)
                 .body("""
-                        {"pecaId": "%s", "quantidade": 10, "motivo": "Reposição de estoque mínimo"}
+                        {"pecaId": "%s", "quantidade": 10, "motivo": "ESTOQUE_MINIMO"}
                         """.formatted(PECA_UUID))
                 .when()
                 .post(BASE_PATH)
@@ -133,7 +133,7 @@ class RequisicaoCompraResourceTest {
     }
 
     @Test
-    @Order(7)
+    @Order(6)
     @TestSecurity(user = "admin", roles = {"admin"})
     void cancelar_aberta_returns200() {
         given()
@@ -144,13 +144,13 @@ class RequisicaoCompraResourceTest {
     }
 
     @Test
-    @Order(8)
+    @Order(7)
     @TestSecurity(user = "atendente", roles = {"user"})
     void create_asAtendente_returns403() {
         given()
                 .contentType(ContentType.JSON)
                 .body("""
-                        {"pecaId": "%s", "quantidade": 5, "motivo": "Teste"}
+                        {"pecaId": "%s", "quantidade": 5, "motivo": "ESTOQUE_MINIMO"}
                         """.formatted(PECA_UUID))
                 .when()
                 .post(BASE_PATH)
