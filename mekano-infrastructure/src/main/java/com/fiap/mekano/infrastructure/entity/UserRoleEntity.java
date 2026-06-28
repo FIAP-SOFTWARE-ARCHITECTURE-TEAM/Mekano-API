@@ -10,6 +10,9 @@ import java.util.UUID;
 @Table(name = "user_roles")
 public class UserRoleEntity extends BaseEntity {
 
+	@Column(name = "uuid", nullable = false, unique = true)
+	public UUID uuid;
+	
     @Column(name = "user_uuid", nullable = false)
     public UUID userUuid;
 

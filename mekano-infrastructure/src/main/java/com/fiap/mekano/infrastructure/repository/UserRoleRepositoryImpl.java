@@ -43,7 +43,8 @@ public class UserRoleRepositoryImpl implements UserRoleRepositoryPort {
             return;
         }
 
-        UserRoleEntity entity = new UserRoleEntity();       
+        UserRoleEntity entity = new UserRoleEntity();  
+        entity.uuid = UUID.randomUUID();
         entity.userUuid = userUuid;
         entity.role = role;        
         entity.setIsActive(true);
