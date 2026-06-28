@@ -3,8 +3,8 @@ package com.fiap.mekano.application.service.user;
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.model.User;
 import com.fiap.mekano.domain.port.in.CreateUserCommand;
-import com.fiap.mekano.domain.port.in.PasswordHasher;
 import com.fiap.mekano.domain.port.out.EventPublisher;
+import com.fiap.mekano.domain.port.out.PasswordHasherPort;
 import com.fiap.mekano.domain.port.out.UserRepositoryPort;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,7 +25,7 @@ class UserServiceTest {
     UserRepositoryPort userRepository;
 
     @Mock
-    PasswordHasher passwordHasher;
+    PasswordHasherPort passwordHasher;
 
     @Mock
     EventPublisher eventPublisher;
