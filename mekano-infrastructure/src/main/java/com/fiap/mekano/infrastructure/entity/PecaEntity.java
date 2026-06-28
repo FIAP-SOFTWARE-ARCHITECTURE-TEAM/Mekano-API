@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
@@ -21,8 +22,14 @@ public class PecaEntity extends BaseEntity {
     @Column(name = "uuid", unique = true, nullable = false)
     public UUID uuid = UUID.randomUUID();
 
+    @Column(name = "codigo", nullable = false)
+    public String codigo;
+
     @Column(name = "descricao", nullable = false)
     public String descricao;
+
+    @Column(name = "valor_unitario", nullable = false)
+    public BigDecimal valorUnitario;
 
     @Column(name = "saldo", nullable = false)
     public Integer saldo;

@@ -29,7 +29,6 @@ public class UserRoleRepositoryImpl implements UserRoleRepositoryPort {
         if (userUuid == null) {
             return Optional.empty();
         }
-
         return repository.findByUserUuid(userUuid)
         		.map(entity -> entity.role);
     }

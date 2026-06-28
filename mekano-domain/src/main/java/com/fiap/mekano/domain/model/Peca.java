@@ -9,6 +9,7 @@ import lombok.ToString;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -32,7 +33,6 @@ public class Peca {
     private final UUID id;
     private final String codigo;
     private final String descricao;
-    private final UnidadeMedida unidadeMedida;
     private final BigDecimal valorUnitario;
     private final Long saldoAtual;
     private final Long estoqueMinimo;
@@ -43,23 +43,20 @@ public class Peca {
      *
      * @param codigo identificador único da peça (ex: "PEA-001")
      * @param descricao nome/descrição da peça
-     * @param unidadeMedida unidade de medida (UNIDADE, LITRO, etc.)
      * @param valorUnitario preço unitário
      * @param estoqueMinimo quantidade mínima (opcional, pode ser null)
      */
-    public static Peca create(String codigo, String descricao, UnidadeMedida unidadeMedida,
+    public static Peca create(String codigo, String descricao,
                               BigDecimal valorUnitario, Long estoqueMinimo) {
         validateCodigo(codigo);
         validateDescricao(descricao);
-        validateUnidadeMedida(unidadeMedida);
         validateValorUnitario(valorUnitario);
 
         return Peca.builder()
                 .id(UUID.randomUUID())
                 .codigo(codigo.strip())
                 .descricao(descricao.strip())
-                .unidadeMedida(unidadeMedida)
-                .valorUnitario(valorUnitario)
+                .valorUnitario(Objects.requireNonNullElse(valorUnitario, BigDecimal.ZERO))
                 .saldoAtual(0L)
                 .estoqueMinimo(estoqueMinimo)
                 .createdAt(LocalDateTime.now())
@@ -71,11 +68,10 @@ public class Peca {
      * NÃO gera novo UUID nem timestamp — preserva exatamente os valores do banco.
      */
     public static Peca reconstitute(UUID id, String codigo, String descricao,
-                                    UnidadeMedida unidadeMedida, BigDecimal valorUnitario,
+                                    BigDecimal valorUnitario,
                                     Long saldoAtual, Long estoqueMinimo, LocalDateTime createdAt) {
         validateCodigo(codigo);
         validateDescricao(descricao);
-        validateUnidadeMedida(unidadeMedida);
         validateValorUnitario(valorUnitario);
 
         if (saldoAtual == null || saldoAtual < 0) {
@@ -86,7 +82,6 @@ public class Peca {
                 .id(id)
                 .codigo(codigo.strip())
                 .descricao(descricao.strip())
-                .unidadeMedida(unidadeMedida)
                 .valorUnitario(valorUnitario)
                 .saldoAtual(saldoAtual)
                 .estoqueMinimo(estoqueMinimo)
@@ -103,12 +98,6 @@ public class Peca {
     private static void validateDescricao(String descricao) {
         if (descricao == null || descricao.isBlank()) {
             throw new AppException(400, Messages.get("peca.descricao.required"));
-        }
-    }
-
-    private static void validateUnidadeMedida(UnidadeMedida unidadeMedida) {
-        if (unidadeMedida == null) {
-            throw new AppException(400, Messages.get("peca.unidade_medida.required"));
         }
     }
 

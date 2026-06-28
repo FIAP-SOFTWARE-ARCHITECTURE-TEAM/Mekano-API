@@ -1,5 +1,6 @@
 package com.fiap.mekano.application.service.auth;
 
+
 import com.fiap.mekano.domain.model.Role;
 import com.fiap.mekano.domain.port.in.AuthServicePort;
 import com.fiap.mekano.domain.port.in.LoginCommand;
@@ -8,7 +9,7 @@ import com.fiap.mekano.domain.port.out.AccessTokenIssuerPort;
 import com.fiap.mekano.domain.port.out.PasswordHasherPort;
 import com.fiap.mekano.domain.port.out.UserRepositoryPort;
 import com.fiap.mekano.domain.port.out.UserRoleRepositoryPort;
-import com.fiap.mekano.shared.exception.AppException;
+import com.fiap.mekano.domain.exception.AppException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -39,6 +40,7 @@ public class AuthService implements AuthServicePort {
         var user = userRepository.findByEmail(command.email())
                 .filter(foundUser -> foundUser.isActive())
                 .orElseThrow(this::unauthorized);
+
 
         if (!passwordHasher.matches(command.password(), user.getPasswordHash())) {
             throw unauthorized();
@@ -88,8 +90,10 @@ public class AuthService implements AuthServicePort {
         String tokenHash = RefreshTokenService.sha256(refreshToken);
         refreshTokenService.invalidateByUser(tokenHash);
     }
-
+    
     private AppException unauthorized() {
         return new AppException(401, "Credenciais inválidas");
     }
+
+   
 }
