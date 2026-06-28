@@ -14,7 +14,7 @@ public class OrdemServico {
     }
 
     public static OrdemServico criarNova() {
-        return new OrdemServico(UUID.randomUUID(), OsStatus.ABERTA);
+        return new OrdemServico(UUID.randomUUID(), OsStatus.RECEBIDA);
     }
 
     public static OrdemServico restaurar(UUID uuid, OsStatus status) {
@@ -30,22 +30,22 @@ public class OrdemServico {
     }
 
     public void diagnosticar() {
-        validarStatus(OsStatus.ABERTA);
-        this.status = OsStatus.DIAGNOSTICADA;
+        validarStatus(OsStatus.EM_DIAGNOSTICO);
+        this.status = OsStatus.EM_EXECUCAO;
     }
 
     public void orcar() {
-        validarStatus(OsStatus.DIAGNOSTICADA);
-        this.status = OsStatus.ORCADA;
+        validarStatus(OsStatus.RECEBIDA);
+        this.status = OsStatus.AGUARDANDO_APROVACAO;
     }
 
     public void aprovar() {
-        validarStatus(OsStatus.ORCADA);
-        this.status = OsStatus.APROVADA;
+        validarStatus(OsStatus.AGUARDANDO_APROVACAO);
+        this.status = OsStatus.EM_EXECUCAO;
     }
 
     public void executar() {
-        validarStatus(OsStatus.APROVADA);
+        validarStatus(OsStatus.AGUARDANDO_APROVACAO);
         this.status = OsStatus.EM_EXECUCAO;
     }
 
