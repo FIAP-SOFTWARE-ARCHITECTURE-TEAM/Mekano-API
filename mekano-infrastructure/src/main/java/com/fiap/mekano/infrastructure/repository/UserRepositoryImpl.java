@@ -32,6 +32,7 @@ public class UserRepositoryImpl implements UserRepositoryPort {
         entity.setUuid(user.getId());
         entity.setName(user.getName());
         entity.setEmail(user.getEmail().getValue());
+        entity.setIsActive(user.isActive());
         entity.setPasswordHash(user.getPasswordHash());
         if (entity.getCreatedAt() == null) {
             entity.setCreatedAt(user.getCreatedAt());
@@ -125,6 +126,7 @@ public class UserRepositoryImpl implements UserRepositoryPort {
                 entity.getUuid(),
                 entity.getName(),
                 entity.getEmail(),
+                entity.isActive(),
                 entity.getPasswordHash(),
                 entity.getCreatedAt()
         );

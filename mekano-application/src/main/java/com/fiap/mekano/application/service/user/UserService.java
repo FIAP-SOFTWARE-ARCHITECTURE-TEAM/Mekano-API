@@ -8,6 +8,7 @@ import com.fiap.mekano.domain.port.in.CreateUserCommand;
 import com.fiap.mekano.domain.port.in.PasswordHasher;
 import com.fiap.mekano.domain.port.in.UserServicePort;
 import com.fiap.mekano.domain.port.out.EventPublisher;
+import com.fiap.mekano.domain.port.out.PasswordHasherPort;
 import com.fiap.mekano.domain.port.out.UserRepositoryPort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
@@ -20,11 +21,11 @@ public class UserService implements UserServicePort {
 
     private final UserRepositoryPort userRepository;
 
-    private final PasswordHasher passwordHasher;
+    private final PasswordHasherPort passwordHasher;
 
     private final EventPublisher eventPublisher;
 
-    public UserService(UserRepositoryPort userRepository, PasswordHasher passwordHasher, EventPublisher eventPublisher) {
+    public UserService(UserRepositoryPort userRepository, PasswordHasherPort passwordHasher, EventPublisher eventPublisher) {
         this.userRepository = userRepository;
         this.passwordHasher = passwordHasher;
         this.eventPublisher = eventPublisher;
@@ -43,7 +44,7 @@ public class UserService implements UserServicePort {
 
         String passwordHash = passwordHasher.hash(command.password());
 
-        User user = User.create(command.name(), command.email(), passwordHash);
+        User user = User.create(command.name(), command.email(), command.active(), passwordHash);
 
         User savedUser = userRepository.save(user);
 
