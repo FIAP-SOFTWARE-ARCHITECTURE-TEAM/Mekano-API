@@ -15,6 +15,9 @@ public class RefreshTokenEntity extends PanacheEntityBase {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     public Long id;
 
+    @Column(name = "uuid", nullable = false, unique = true)
+    public UUID uuid;
+
     @Column(name = "jti", nullable = false, length = 120)
     public String jti;
 

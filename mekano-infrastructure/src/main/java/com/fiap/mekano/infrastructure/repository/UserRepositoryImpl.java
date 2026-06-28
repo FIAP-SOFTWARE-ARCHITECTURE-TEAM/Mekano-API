@@ -7,7 +7,7 @@ import com.fiap.mekano.domain.port.out.UserRepositoryPort;
 import com.fiap.mekano.infrastructure.cache.CacheNames;
 import com.fiap.mekano.infrastructure.entity.UserEntity;
 import com.fiap.mekano.infrastructure.mapper.UserEntityMapper;
-import io.quarkus.cache.CacheInvalidate;
+import io.quarkus.cache.CacheInvalidateAll;
 import io.quarkus.cache.CacheResult;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
@@ -40,7 +40,7 @@ public class UserRepositoryImpl implements UserRepositoryPort {
 
     @Override
     @Timeout(value = 5, unit = ChronoUnit.SECONDS)
-    @CacheInvalidate(cacheName = CacheNames.USERS)
+    @CacheInvalidateAll(cacheName = CacheNames.USERS)
     public User save(User user) {
         try {
             var entity = mapper.toEntity(user);
@@ -115,7 +115,7 @@ public class UserRepositoryImpl implements UserRepositoryPort {
 
     @Override
     @Transactional
-    @CacheInvalidate(cacheName = CacheNames.USERS)
+    @CacheInvalidateAll(cacheName = CacheNames.USERS)
     public void markAsDeleted(UUID id) {
         UserEntity entity = panacheRepository.find("uuid", id)
                 .firstResultOptional()
@@ -139,6 +139,7 @@ public class UserRepositoryImpl implements UserRepositoryPort {
     }
 
 	@Override
+	@CacheInvalidateAll(cacheName = CacheNames.USERS)
 	public void softDelete(UUID uuid) {
 	    UserEntity entity = panacheRepository
                 .find("uuid = ?1 and isActive = true", uuid)

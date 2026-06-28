@@ -45,6 +45,9 @@ public class RefreshTokenRepositoryImpl implements RefreshTokenRepositoryPort {
         entity.jti = data.jti();
         entity.tokenHash = data.tokenHash();
         entity.userUuid = data.userUuid();
+        if (entity.uuid == null) {
+            entity.uuid = UUID.randomUUID();
+        }
         entity.role = data.role();
         entity.expiresAt = data.expiresAt();
         entity.rotatedAt = data.rotatedAt();

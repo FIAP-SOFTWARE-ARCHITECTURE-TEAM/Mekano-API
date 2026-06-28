@@ -6,6 +6,7 @@ import com.fiap.mekano.infrastructure.cache.CacheNames;
 import com.fiap.mekano.infrastructure.entity.UserRoleEntity;
 
 import io.quarkus.cache.CacheKey;
+import io.quarkus.cache.CacheInvalidateAll;
 import io.quarkus.cache.CacheResult;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -34,6 +35,7 @@ public class UserRoleRepositoryImpl implements UserRoleRepositoryPort {
 
     @Override
     @Transactional
+    @CacheInvalidateAll(cacheName = CacheNames.USER_ROLES)
     public void save(UUID userUuid, Role role) {
         boolean alreadyExists = repository
                 .count("userUuid = ?1 and role = ?2 and isActive = true", userUuid, role) > 0;

@@ -13,22 +13,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Entidade de domínio Orcamento — representa um orçamento de trabalho/peças.
- *
- * Regras:
- * - Criação APENAS via factory method {@link #create} ou {@link #reconstitute}.
- * - O builder é privado para forçar o uso dos factory methods.
- * - Contém uma lista de ItemOrcamento (peças/serviços)
- * - valorTotal é calculado automaticamente: Σ(item.subtotal) para todos os itens
- * - Imutável após criação: campos final, sem setters.
- *
- * Mapeamento JPA (OrcamentoEntity) é responsabilidade do módulo infrastructure.
- */
 @Getter
 @Builder(access = AccessLevel.PRIVATE)
 @ToString
 public class Orcamento {
+
+    private static final long SLA_HORAS = 72;
 
     private final UUID id;
     private final String descricao;
@@ -36,18 +26,19 @@ public class Orcamento {
     private final BigDecimal valorTotal;
     private final LocalDateTime createdAt;
 
-    /**
-     * Factory method — único ponto de criação de um novo orçamento.
-     *
-     * Calcula valorTotal internamente a partir dos itens.
-     *
-     * @param descricao identificação/nome do orçamento
-     * @param itens lista de ItemOrcamento com pelo menos 1 item
-     */
+    private StatusOrcamento status;
+    private UUID ordemServicoUuid;
+    private LocalDateTime dataExpiracao;
+
     public static Orcamento create(String descricao, List<ItemOrcamento> itens) {
+        return create(descricao, itens, null);
+    }
+
+    public static Orcamento create(String descricao, List<ItemOrcamento> itens, UUID ordemServicoUuid) {
         validateDescricao(descricao);
         validateItens(itens);
 
+        LocalDateTime now = LocalDateTime.now();
         BigDecimal total = calcularValorTotal(itens);
 
         return Orcamento.builder()
@@ -55,17 +46,23 @@ public class Orcamento {
                 .descricao(descricao.strip())
                 .itens(Collections.unmodifiableList(itens))
                 .valorTotal(total)
-                .createdAt(LocalDateTime.now())
+                .createdAt(now)
+                .status(StatusOrcamento.PENDENTE)
+                .ordemServicoUuid(ordemServicoUuid)
+                .dataExpiracao(ordemServicoUuid != null ? now.plusHours(SLA_HORAS) : null)
                 .build();
     }
 
-    /**
-     * Factory method para reconstrução a partir de dados persistidos.
-     * NÃO gera novo UUID nem timestamp — preserva exatamente os valores do banco.
-     * Valida que o valorTotal corresponde ao calculado a partir dos itens.
-     */
     public static Orcamento reconstitute(UUID id, String descricao, List<ItemOrcamento> itens,
                                          BigDecimal valorTotal, LocalDateTime createdAt) {
+        return reconstitute(id, descricao, itens, valorTotal, createdAt,
+                StatusOrcamento.PENDENTE, null, null);
+    }
+
+    public static Orcamento reconstitute(UUID id, String descricao, List<ItemOrcamento> itens,
+                                         BigDecimal valorTotal, LocalDateTime createdAt,
+                                         StatusOrcamento status, UUID ordemServicoUuid,
+                                         LocalDateTime dataExpiracao) {
         validateDescricao(descricao);
         validateItens(itens);
 
@@ -80,7 +77,37 @@ public class Orcamento {
                 .itens(Collections.unmodifiableList(itens))
                 .valorTotal(valorTotal)
                 .createdAt(createdAt)
+                .status(status)
+                .ordemServicoUuid(ordemServicoUuid)
+                .dataExpiracao(dataExpiracao)
                 .build();
+    }
+
+    public void aprovar() {
+        if (status != StatusOrcamento.PENDENTE) {
+            throw new AppException(422, Messages.get("orcamento.status.invalido.aprovar", status));
+        }
+        this.status = StatusOrcamento.APROVADO;
+    }
+
+    public void reprovar() {
+        if (status != StatusOrcamento.PENDENTE) {
+            throw new AppException(422, Messages.get("orcamento.status.invalido.reprovar", status));
+        }
+        this.status = StatusOrcamento.REPROVADO;
+    }
+
+    public void expirar() {
+        if (status != StatusOrcamento.PENDENTE) {
+            throw new AppException(422, Messages.get("orcamento.status.invalido.expirar", status));
+        }
+        this.status = StatusOrcamento.EXPIRADO;
+    }
+
+    public boolean isExpirado() {
+        return status == StatusOrcamento.PENDENTE
+                && dataExpiracao != null
+                && LocalDateTime.now().isAfter(dataExpiracao);
     }
 
     private static void validateDescricao(String descricao) {
@@ -95,25 +122,16 @@ public class Orcamento {
         }
     }
 
-    /**
-     * Calcula o valor total do orçamento como Σ(subtotal de cada item).
-     */
     private static BigDecimal calcularValorTotal(List<ItemOrcamento> itens) {
         return itens.stream()
                 .map(ItemOrcamento::calcularSubtotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    /**
-     * Retorna uma cópia imutável da lista de itens.
-     */
     public List<ItemOrcamento> getItens() {
         return itens;
     }
 
-    /**
-     * Retorna a quantidade de itens no orçamento.
-     */
     public int getQuantidadeItens() {
         return itens.size();
     }
