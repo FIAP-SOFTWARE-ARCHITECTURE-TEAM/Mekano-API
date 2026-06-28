@@ -1,12 +1,16 @@
 package com.fiap.mekano.infrastructure.repository;
 
+import com.fiap.mekano.domain.model.MotivoRequisicao;
 import com.fiap.mekano.domain.model.RequisicaoCompra;
 import com.fiap.mekano.domain.model.StatusRequisicao;
 import com.fiap.mekano.domain.port.out.RequisicaoCompraRepositoryPort;
 import com.fiap.mekano.infrastructure.entity.RequisicaoCompraEntity;
+import io.quarkus.panache.common.Page;
+import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -30,6 +34,7 @@ public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositor
         entity.pecaId = requisicao.getPecaId();
         entity.quantidade = requisicao.getQuantidade().intValue();
         entity.status = requisicao.getStatus().name();
+        entity.motivo = requisicao.getMotivo().name();
         if (entity.getCreatedAt() == null) {
             entity.setCreatedAt(requisicao.getCreatedAt());
         }
@@ -51,6 +56,21 @@ public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositor
     }
 
     @Override
+    public List<RequisicaoCompra> findAll(int page, int size) {
+        return panacheRepository.find("isActive = ?1", Sort.by("id"), true)
+                .page(Page.of(page, size))
+                .list()
+                .stream()
+                .map(RequisicaoCompraRepositoryImpl::toDomain)
+                .toList();
+    }
+
+    @Override
+    public long countAll() {
+        return panacheRepository.count("isActive", true);
+    }
+
+    @Override
     public RequisicaoCompra atualizar(RequisicaoCompra requisicao) {
         return salvar(requisicao);
     }
@@ -61,7 +81,7 @@ public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositor
                 entity.pecaId,
                 entity.quantidade == null ? 0L : entity.quantidade.longValue(),
                 parseStatus(entity.status),
-                "Requisicao " + (entity.getId() == null ? "0" : entity.getId()),
+                parseMotivo(entity.motivo),
                 entity.getCreatedAt() == null ? LocalDateTime.now() : entity.getCreatedAt()
         );
     }
@@ -75,6 +95,18 @@ public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositor
             return StatusRequisicao.valueOf(status.strip().toUpperCase());
         } catch (IllegalArgumentException ignored) {
             return StatusRequisicao.ABERTA;
+        }
+    }
+
+    private static MotivoRequisicao parseMotivo(String motivo) {
+        if (motivo == null || motivo.isBlank()) {
+            return MotivoRequisicao.ESTOQUE_MINIMO;
+        }
+
+        try {
+            return MotivoRequisicao.valueOf(motivo.strip().toUpperCase());
+        } catch (IllegalArgumentException ignored) {
+            return MotivoRequisicao.ESTOQUE_MINIMO;
         }
     }
 }

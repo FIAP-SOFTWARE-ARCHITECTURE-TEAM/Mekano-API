@@ -29,4 +29,7 @@ public class RequisicaoCompraEntity extends BaseEntity {
 
     @Column(name = "status", nullable = false)
     public String status;
+
+    @Column(name = "motivo", nullable = false)
+    public String motivo;
 }

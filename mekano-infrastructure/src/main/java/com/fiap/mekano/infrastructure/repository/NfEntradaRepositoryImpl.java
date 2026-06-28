@@ -3,10 +3,14 @@ package com.fiap.mekano.infrastructure.repository;
 import com.fiap.mekano.domain.model.NfEntrada;
 import com.fiap.mekano.domain.port.out.NfEntradaRepositoryPort;
 import com.fiap.mekano.infrastructure.entity.NfEntradaEntity;
+import io.quarkus.panache.common.Page;
+import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -14,12 +18,15 @@ import java.util.UUID;
 public class NfEntradaRepositoryImpl implements NfEntradaRepositoryPort {
 
     private final NfEntradaPanacheRepository panacheRepository;
+    private final EntityManager em;
 
-    public NfEntradaRepositoryImpl(NfEntradaPanacheRepository panacheRepository) {
+    public NfEntradaRepositoryImpl(NfEntradaPanacheRepository panacheRepository, EntityManager em) {
         this.panacheRepository = panacheRepository;
+        this.em = em;
     }
 
     @Override
+    @Transactional(Transactional.TxType.MANDATORY)
     public NfEntrada salvar(NfEntrada nfEntrada) {
         NfEntradaEntity entity = panacheRepository.find("uuid = ?1", nfEntrada.getId()).firstResult();
         if (entity == null) {
@@ -27,9 +34,10 @@ public class NfEntradaRepositoryImpl implements NfEntradaRepositoryPort {
         }
 
         entity.uuid = nfEntrada.getId();
-        entity.pecaId = nfEntrada.getId();
-        entity.requisicaoCompraId = nfEntrada.getId();
-        entity.quantidade = 1;
+        entity.chaveAcesso = nfEntrada.getChaveAcesso();
+        entity.valorTotal = nfEntrada.getValorTotal();
+        entity.pecaId = nfEntrada.getPecaId();
+        entity.requisicaoCompraId = nfEntrada.getRequisicaoCompraId();
         entity.dataRecebimento = nfEntrada.getCreatedAt();
         if (entity.getCreatedAt() == null) {
             entity.setCreatedAt(nfEntrada.getCreatedAt());
@@ -39,6 +47,7 @@ public class NfEntradaRepositoryImpl implements NfEntradaRepositoryPort {
 
         if (entity.getId() == null) {
             panacheRepository.persist(entity);
+            em.flush();
         }
 
         return toDomain(entity);
@@ -51,25 +60,29 @@ public class NfEntradaRepositoryImpl implements NfEntradaRepositoryPort {
                 .map(NfEntradaRepositoryImpl::toDomain);
     }
 
-    private static NfEntrada toDomain(NfEntradaEntity entity) {
-        LocalDateTime now = entity.getCreatedAt() == null ? LocalDateTime.now() : entity.getCreatedAt();
-        String cnpj = "00000000000000";
-        String chave = "00000000000000000000000000000000000000000000";
+    @Override
+    public List<NfEntrada> findAll(int page, int size) {
+        return panacheRepository.find("isActive = ?1", Sort.by("id"), true)
+                .page(Page.of(page, size))
+                .list()
+                .stream()
+                .map(NfEntradaRepositoryImpl::toDomain)
+                .toList();
+    }
 
+    @Override
+    public long countAll() {
+        return panacheRepository.count("isActive", true);
+    }
+
+    private static NfEntrada toDomain(NfEntradaEntity entity) {
         return NfEntrada.reconstitute(
                 entity.uuid,
-                String.valueOf(entity.getId() == null ? 0L : entity.getId()),
-                "1",
-                cnpj,
-                "Fornecedor",
-                now,
-                BigDecimal.ONE,
-                BigDecimal.ZERO,
-                BigDecimal.ZERO,
-                BigDecimal.ZERO,
-                BigDecimal.ONE,
-                chave,
-                now
+                entity.chaveAcesso,
+                entity.valorTotal,
+                entity.pecaId,
+                entity.requisicaoCompraId,
+                entity.getCreatedAt() == null ? LocalDateTime.now() : entity.getCreatedAt()
         );
     }
 }
