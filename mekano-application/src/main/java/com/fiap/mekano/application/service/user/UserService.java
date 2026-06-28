@@ -74,6 +74,7 @@ public class UserService implements UserServicePort {
     }
 
     @Override
+    @Transactional
     public void deleteUser(UUID id) {
         userRepository.markAsDeleted(id);
     }

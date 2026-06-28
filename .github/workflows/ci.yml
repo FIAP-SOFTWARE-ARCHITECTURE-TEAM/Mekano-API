@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]
 
 jobs:
   build:
@@ -28,4 +28,4 @@ jobs:
           restore-keys: ${{ runner.os }}-m2
 
       - name: Build and test
-        run: mvn verify -pl mekano-rest -am --no-transfer-progress
+        run: mvn -B -ntp verify -pl mekano-rest -am

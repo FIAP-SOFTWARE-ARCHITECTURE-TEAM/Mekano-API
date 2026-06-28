@@ -2,27 +2,15 @@ package com.fiap.mekano.rest.api.exception;
 
 import com.fiap.mekano.domain.exception.AppException;
 import io.quarkus.logging.Log;
+
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 import jakarta.ws.rs.ext.ExceptionMapper;
 import jakarta.ws.rs.ext.Provider;
 
-/**
- * ExceptionMapper único que trata todas as exceções da aplicação (D-09).
- *
- * <p>Fluxo de tratamento:
- * <ol>
- *   <li>{@link AppException} — lê status HTTP direto de {@code getStatus()}.</li>
- *   <li>Fallback — exceção não mapeada; 500 com log de stacktrace.</li>
- * </ol>
- *
- * <p>Respostas no formato RFC 7807 (application/problem+json).
- *
- * @see AppException
- * @see ProblemDetail
- */
 @Provider
 @ApplicationScoped
 public class ApiExceptionMapper implements ExceptionMapper<Exception> {
@@ -34,9 +22,18 @@ public class ApiExceptionMapper implements ExceptionMapper<Exception> {
 
     @Override
     public Response toResponse(Exception exception) {
-
         if (exception instanceof AppException ex) {
             return build(ex.getStatus(), ex.getMessage());
+        }
+        if (exception instanceof WebApplicationException ex) {
+            int status = ex.getResponse() != null ? ex.getResponse().getStatus() : 500;
+            String detail = ex.getMessage();
+            if (detail == null || detail.isBlank()) {
+                detail = ex.getResponse() != null && ex.getResponse().getStatusInfo() != null
+                        ? ex.getResponse().getStatusInfo().getReasonPhrase()
+                        : "Erro interno do servidor";
+            }
+            return build(status, detail);
         }
 
         Log.errorf(exception, "Unhandled exception: %s", exception.getMessage());

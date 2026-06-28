@@ -19,7 +19,7 @@ public interface VeiculoServicePort {
 
     Veiculo findById(UUID veiculoId);
 
-    List<Veiculo> findAll(int page, int size);
+    List<Veiculo> findAll(int page, int size, String sort);
 
     long countAll();
 
