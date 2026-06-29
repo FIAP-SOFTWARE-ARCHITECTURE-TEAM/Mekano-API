@@ -92,14 +92,7 @@
 					<artifactId>jandex-maven-plugin</artifactId>
 					<version>${jandex.version}</version>
 				</plugin>
-				<!-- Compiler — configuração base herdada por todos os módulos -->
-				<plugin>
-					<artifactId>maven-compiler-plugin</artifactId>
-					<version>${compiler-plugin.version}</version>
-					<configuration>
-						<parameters>true</parameters>
-					</configuration>
-				</plugin>
+
 				<plugin>
 					<artifactId>maven-surefire-plugin</artifactId>
 					<version>${surefire-plugin.version}</version>
