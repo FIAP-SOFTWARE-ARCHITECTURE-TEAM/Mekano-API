@@ -5,12 +5,12 @@ import java.util.UUID;
 
 public class OrdemServico {
 
-    private UUID uuid;
+    private final UUID uuid;
     private OsStatus status;
 
     private OrdemServico(UUID uuid, OsStatus status) {
-        this.uuid = Objects.requireNonNull(uuid);
-        this.status = Objects.requireNonNull(status);
+        this.uuid = Objects.requireNonNull(uuid, "uuid não pode ser nulo");
+        this.status = Objects.requireNonNull(status, "status não pode ser nulo");
     }
 
     public static OrdemServico criarNova() {
@@ -30,48 +30,53 @@ public class OrdemServico {
     }
 
     public void diagnosticar() {
-        validarStatus(OsStatus.EM_DIAGNOSTICO);
-        this.status = OsStatus.EM_EXECUCAO;
+        transicionarPara(OsStatus.EM_DIAGNOSTICO);
     }
 
     public void orcar() {
-        validarStatus(OsStatus.RECEBIDA);
-        this.status = OsStatus.AGUARDANDO_APROVACAO;
+        transicionarPara(OsStatus.AGUARDANDO_APROVACAO);
     }
 
     public void aprovar() {
-        validarStatus(OsStatus.AGUARDANDO_APROVACAO);
-        this.status = OsStatus.EM_EXECUCAO;
+        transicionarPara(OsStatus.EM_EXECUCAO);
     }
 
+    /**
+     * Registra a ação EXECUTAR sem mudar status.
+     *
+     * Pela máquina de estados atual:
+     * AGUARDANDO_APROVACAO -> EM_EXECUCAO acontece em aprovar().
+     *
+     * Então executar() só é válido quando a OS já está EM_EXECUCAO.
+     */
     public void executar() {
-        validarStatus(OsStatus.AGUARDANDO_APROVACAO);
-        this.status = OsStatus.EM_EXECUCAO;
+        if (this.status != OsStatus.EM_EXECUCAO) {
+            throw new IllegalStateException(
+                    "Ação EXECUTAR inválida. Status atual: " + this.status +
+                    ", esperado: " + OsStatus.EM_EXECUCAO
+            );
+        }
     }
 
     public void finalizar() {
-        validarStatus(OsStatus.EM_EXECUCAO);
-        this.status = OsStatus.FINALIZADA;
+        transicionarPara(OsStatus.FINALIZADA);
+    }
+
+    public void entregar() {
+        transicionarPara(OsStatus.ENTREGUE);
     }
 
     public void cancelar() {
-        if (this.status == OsStatus.FINALIZADA) {
-            throw new IllegalStateException("OS finalizada não pode ser cancelada");
-        }
-
-        if (this.status == OsStatus.CANCELADA) {
-            throw new IllegalStateException("OS já está cancelada");
-        }
-
-        this.status = OsStatus.CANCELADA;
+        transicionarPara(OsStatus.CANCELADA);
     }
 
-    private void validarStatus(OsStatus statusEsperado) {
-        if (this.status != statusEsperado) {
+    private void transicionarPara(OsStatus destino) {
+        if (!this.status.podeTransicionarPara(destino)) {
             throw new IllegalStateException(
-                    "Transição inválida. Status atual: " + this.status +
-                    ", esperado: " + statusEsperado
+                    "Transição inválida de " + this.status + " para " + destino
             );
         }
+
+        this.status = destino;
     }
 }

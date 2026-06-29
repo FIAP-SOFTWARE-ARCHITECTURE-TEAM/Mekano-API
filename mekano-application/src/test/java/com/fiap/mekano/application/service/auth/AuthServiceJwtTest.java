@@ -171,4 +171,14 @@ class AuthServiceJwtTest {
         verify(refreshTokenService).rotate(tokenHash);
         verify(accessTokenIssuer).issue(userUuid, "Admin Mekano", Role.admin);
     }
+    
+    @Test
+    void logout_deveInvalidarRefreshTokenPorHash() {
+        String refreshToken = "jti:secret";
+        String tokenHash = RefreshTokenService.sha256(refreshToken);
+
+        authService.logout(refreshToken);
+
+        verify(refreshTokenService).invalidateByUser(tokenHash);
+    }
 }

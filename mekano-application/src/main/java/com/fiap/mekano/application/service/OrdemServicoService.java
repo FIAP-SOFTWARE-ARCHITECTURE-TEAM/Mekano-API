@@ -1,18 +1,16 @@
 package com.fiap.mekano.application.service;
 
-
+import com.fiap.mekano.application.service.os.OsAuditEventPublisher;
+import com.fiap.mekano.domain.os.OrdemServico;
+import com.fiap.mekano.domain.os.OsAuditAction;
+import com.fiap.mekano.domain.os.OsStatus;
+import com.fiap.mekano.domain.port.out.OrdemServicoRepositoryPort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 import java.util.Map;
 import java.util.UUID;
-
-import com.fiap.mekano.application.service.os.OsAuditEventPublisher;
-import com.fiap.mekano.domain.os.OrdemServico;
-import com.fiap.mekano.domain.os.OsAuditAction;
-import com.fiap.mekano.domain.os.OsStatus;
-import com.fiap.mekano.domain.port.out.OrdemServicoRepositoryPort;
 
 @ApplicationScoped
 public class OrdemServicoService {
@@ -29,15 +27,13 @@ public class OrdemServicoService {
 
         ordemServicoRepository.save(os);
 
-        auditEventPublisher.publish(
-                os.getUuid(),
+        auditar(
+                os,
                 OsAuditAction.CRIAR,
                 usuarioEmail,
-                observacao != null ? observacao : "OS criada",
-                Map.of(
-                        "statusAnterior", "N/A",
-                        "statusAtual", os.getStatus().name()
-                )
+                observacao,
+                "N/A",
+                os.getStatus().name()
         );
 
         return os;
@@ -53,15 +49,13 @@ public class OrdemServicoService {
 
         ordemServicoRepository.save(os);
 
-        auditEventPublisher.publish(
-                os.getUuid(),
+        auditar(
+                os,
                 OsAuditAction.DIAGNOSTICAR,
                 usuarioEmail,
-                observacao != null ? observacao : "OS diagnosticada",
-                Map.of(
-                        "statusAnterior", statusAnterior.name(),
-                        "statusAtual", os.getStatus().name()
-                )
+                observacao,
+                statusAnterior.name(),
+                os.getStatus().name()
         );
 
         return os;
@@ -77,15 +71,13 @@ public class OrdemServicoService {
 
         ordemServicoRepository.save(os);
 
-        auditEventPublisher.publish(
-                os.getUuid(),
+        auditar(
+                os,
                 OsAuditAction.ORCAR,
                 usuarioEmail,
-                observacao != null ? observacao : "Orçamento gerado",
-                Map.of(
-                        "statusAnterior", statusAnterior.name(),
-                        "statusAtual", os.getStatus().name()
-                )
+                observacao,
+                statusAnterior.name(),
+                os.getStatus().name()
         );
 
         return os;
@@ -101,39 +93,48 @@ public class OrdemServicoService {
 
         ordemServicoRepository.save(os);
 
-        auditEventPublisher.publish(
-                os.getUuid(),
+        auditar(
+                os,
                 OsAuditAction.APROVAR,
                 usuarioEmail,
-                observacao != null ? observacao : "Orçamento aprovado pelo cliente",
-                Map.of(
-                        "statusAnterior", statusAnterior.name(),
-                        "statusAtual", os.getStatus().name()
-                )
+                observacao,
+                statusAnterior.name(),
+                os.getStatus().name()
         );
 
         return os;
     }
 
+    /**
+     * Com os novos status, APROVAR já muda:
+     *
+     * AGUARDANDO_APROVACAO -> EM_EXECUCAO
+     *
+     * Portanto, EXECUTAR aqui registra o início/andamento da execução,
+     * mas não muda status novamente.
+     */
     @Transactional
     public OrdemServico executar(UUID osUuid, String usuarioEmail, String observacao) {
         OrdemServico os = buscarOs(osUuid);
 
-        OsStatus statusAnterior = os.getStatus();
+        if (os.getStatus() != OsStatus.EM_EXECUCAO) {
+            throw new IllegalStateException(
+                    "Ação EXECUTAR só pode ser registrada quando a OS está EM_EXECUCAO. Status atual: "
+                            + os.getStatus()
+            );
+        }
 
-        os.executar();
+        OsStatus statusAnterior = os.getStatus();
 
         ordemServicoRepository.save(os);
 
-        auditEventPublisher.publish(
-                os.getUuid(),
+        auditar(
+                os,
                 OsAuditAction.EXECUTAR,
                 usuarioEmail,
-                observacao != null ? observacao : "Execução da OS iniciada",
-                Map.of(
-                        "statusAnterior", statusAnterior.name(),
-                        "statusAtual", os.getStatus().name()
-                )
+                observacao,
+                statusAnterior.name(),
+                os.getStatus().name()
         );
 
         return os;
@@ -149,15 +150,35 @@ public class OrdemServicoService {
 
         ordemServicoRepository.save(os);
 
-        auditEventPublisher.publish(
-                os.getUuid(),
+        auditar(
+                os,
                 OsAuditAction.FINALIZAR,
                 usuarioEmail,
-                observacao != null ? observacao : "OS finalizada",
-                Map.of(
-                        "statusAnterior", statusAnterior.name(),
-                        "statusAtual", os.getStatus().name()
-                )
+                observacao,
+                statusAnterior.name(),
+                os.getStatus().name()
+        );
+
+        return os;
+    }
+
+    @Transactional
+    public OrdemServico entregar(UUID osUuid, String usuarioEmail, String observacao) {
+        OrdemServico os = buscarOs(osUuid);
+
+        OsStatus statusAnterior = os.getStatus();
+
+        os.entregar();
+
+        ordemServicoRepository.save(os);
+
+        auditar(
+                os,
+                OsAuditAction.ENTREGAR,
+                usuarioEmail,
+                observacao,
+                statusAnterior.name(),
+                os.getStatus().name()
         );
 
         return os;
@@ -173,15 +194,13 @@ public class OrdemServicoService {
 
         ordemServicoRepository.save(os);
 
-        auditEventPublisher.publish(
-                os.getUuid(),
+        auditar(
+                os,
                 OsAuditAction.CANCELAR,
                 usuarioEmail,
-                observacao != null ? observacao : "OS cancelada",
-                Map.of(
-                        "statusAnterior", statusAnterior.name(),
-                        "statusAtual", os.getStatus().name()
-                )
+                observacao,
+                statusAnterior.name(),
+                os.getStatus().name()
         );
 
         return os;
@@ -190,5 +209,25 @@ public class OrdemServicoService {
     private OrdemServico buscarOs(UUID osUuid) {
         return ordemServicoRepository.findByUuid(osUuid)
                 .orElseThrow(() -> new IllegalArgumentException("OS não encontrada: " + osUuid));
+    }
+
+    private void auditar(
+            OrdemServico os,
+            OsAuditAction acao,
+            String usuarioEmail,
+            String observacao,
+            String statusAnterior,
+            String statusAtual
+    ) {
+        auditEventPublisher.publish(
+                os.getUuid(),
+                acao,
+                usuarioEmail,
+                observacao != null ? observacao : acao.getObservacaoDefault(),
+                Map.of(
+                        "statusAnterior", statusAnterior,
+                        "statusAtual", statusAtual
+                )
+        );
     }
 }
