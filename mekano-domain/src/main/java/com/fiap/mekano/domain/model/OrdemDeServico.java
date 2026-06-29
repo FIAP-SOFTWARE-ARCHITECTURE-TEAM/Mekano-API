@@ -1,7 +1,12 @@
 package com.fiap.mekano.domain.model;
 
+import com.fiap.mekano.domain.event.CobrancaGeradaEvent;
+import com.fiap.mekano.domain.event.EntregaConfirmadaEvent;
+import com.fiap.mekano.domain.event.PagamentoConfirmadoEvent;
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.exception.Messages;
+import com.fiap.mekano.domain.os.StatusEntrega;
+import com.fiap.mekano.domain.os.StatusPagamento;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -24,6 +29,9 @@ import java.util.UUID;
  *   <li>Reconstrução via {@link #reconstitute} — preserva valores do banco</li>
  *   <li>Cada transição valida contra a matriz do enum StatusOS</li>
  *   <li>ENTREGUE e CANCELADA são terminais — nenhuma transição de saída</li>
+ *   <li>Cobrança só pode ser gerada após OS FINALIZADA</li>
+ *   <li>Pagamento só pode ser confirmado após cobrança gerada</li>
+ *   <li>Entrega só pode ocorrer após pagamento confirmado</li>
  * </ul>
  */
 @Getter
@@ -43,14 +51,17 @@ public class OrdemDeServico {
     private LocalDateTime execucaoFinalizadaEm;
     private String observacaoExecucao;
     private LocalDateTime dataAprovacao;
-    // TODO(#33): campos de pagamento — dependem da migration V18
-    //            (ALTER TABLE ordens_de_servico ADD COLUMN status_pagamento, etc.)
-    //            e dos campos na OrdemDeServicoEntity
     private StatusPagamento statusPagamento;
+    private StatusEntrega statusEntrega;
     private BigDecimal valorCobrado;
     private LocalDateTime dataPagamento;
     private LocalDateTime dataEntrega;
     private String observacaoEntrega;
+    private LocalDateTime cobrancaGeradaEm;
+    private LocalDateTime pagamentoConfirmadoEm;
+    private String referenciaPagamento;
+    private LocalDateTime entregueEm;
+    private String recebidoPor;
     private final LocalDateTime createdAt;
     private final Long version;
 
@@ -81,12 +92,38 @@ public class OrdemDeServico {
                 .status(StatusOS.RECEBIDA)
                 .createdAt(LocalDateTime.now())
                 .version(0L)
+                .statusPagamento(StatusPagamento.NAO_COBRADO)
+                .statusEntrega(StatusEntrega.NAO_LIBERADA)
                 .build();
     }
 
     /**
      * Factory method para reconstrução a partir de dados persistidos.
      * NÃO gera novo UUID nem timestamp.
+     *
+     * Mantém a assinatura antiga para não quebrar adapters/repositórios existentes.
+     */
+	/*
+	 * public static OrdemDeServico reconstitute(UUID id, UUID clienteId, UUID
+	 * veiculoId, String descricaoProblema, StatusOS status, String
+	 * motivoCancelamento, UUID orcamentoUuid, UUID mecanicoUuid, LocalDateTime
+	 * execucaoIniciadaEm, LocalDateTime execucaoFinalizadaEm, String
+	 * observacaoExecucao, LocalDateTime dataAprovacao, LocalDateTime createdAt,
+	 * Long version) {
+	 * 
+	 * return OrdemDeServico.builder() .id(id) .clienteId(clienteId)
+	 * .veiculoId(veiculoId) .descricaoProblema(descricaoProblema) .status(status)
+	 * .motivoCancelamento(motivoCancelamento) .orcamentoUuid(orcamentoUuid)
+	 * .mecanicoUuid(mecanicoUuid) .execucaoIniciadaEm(execucaoIniciadaEm)
+	 * .execucaoFinalizadaEm(execucaoFinalizadaEm)
+	 * .observacaoExecucao(observacaoExecucao) .dataAprovacao(dataAprovacao)
+	 * .createdAt(createdAt) .version(version)
+	 * .statusPagamento(StatusPagamento.NAO_COBRADO)
+	 * .statusEntrega(StatusEntrega.NAO_LIBERADA) .build(); }
+	 */
+
+    /**
+     * Factory method completo para reconstrução incluindo cobrança, pagamento e entrega.
      */
     public static OrdemDeServico reconstitute(UUID id, UUID clienteId, UUID veiculoId,
                                               String descricaoProblema, StatusOS status,
@@ -101,6 +138,12 @@ public class OrdemDeServico {
                                               LocalDateTime dataPagamento,
                                               LocalDateTime dataEntrega,
                                               String observacaoEntrega,
+                                              StatusEntrega statusEntrega,
+                                              LocalDateTime cobrancaGeradaEm,
+                                              LocalDateTime pagamentoConfirmadoEm,
+                                              String referenciaPagamento,
+                                              LocalDateTime entregueEm,
+                                              String recebidoPor,
                                               LocalDateTime createdAt, Long version) {
         return OrdemDeServico.builder()
                 .id(id)
@@ -115,11 +158,17 @@ public class OrdemDeServico {
                 .execucaoFinalizadaEm(execucaoFinalizadaEm)
                 .observacaoExecucao(observacaoExecucao)
                 .dataAprovacao(dataAprovacao)
-                .statusPagamento(statusPagamento)
+                .statusPagamento(statusPagamento == null ? StatusPagamento.NAO_COBRADO : statusPagamento)
                 .valorCobrado(valorCobrado)
                 .dataPagamento(dataPagamento)
                 .dataEntrega(dataEntrega)
                 .observacaoEntrega(observacaoEntrega)
+                .statusEntrega(statusEntrega == null ? StatusEntrega.NAO_LIBERADA : statusEntrega)
+                .cobrancaGeradaEm(cobrancaGeradaEm)
+                .pagamentoConfirmadoEm(pagamentoConfirmadoEm)
+                .referenciaPagamento(referenciaPagamento)
+                .entregueEm(entregueEm)
+                .recebidoPor(recebidoPor)
                 .createdAt(createdAt)
                 .version(version)
                 .build();
@@ -143,6 +192,7 @@ public class OrdemDeServico {
         if (descricaoProblema == null || descricaoProblema.isBlank()) {
             throw new AppException(400, Messages.get("os.descricao.required"));
         }
+
         this.clienteId = clienteId;
         this.veiculoId = veiculoId;
         this.descricaoProblema = descricaoProblema.strip();
@@ -172,133 +222,180 @@ public class OrdemDeServico {
         if (orcamentoUuid == null) {
             throw new AppException(400, Messages.get("os.orcamento_uuid.required"));
         }
+
         this.orcamentoUuid = orcamentoUuid;
     }
 
     /**
-     * AGUARDANDO_APROVACAO → EM_EXECUCAO (aprovação direta, sem estado APROVADA — INC-01)
+     * AGUARDANDO_APROVACAO → EM_EXECUCAO.
      * Armazena orcamentoUuid e dataAprovacao.
      */
     public void aprovarOrcamento(UUID orcamentoUuid) {
         transicionar(StatusOS.EM_EXECUCAO);
+
         if (orcamentoUuid != null) {
             this.orcamentoUuid = orcamentoUuid;
         }
+
         this.dataAprovacao = LocalDateTime.now();
     }
 
     /**
-     * AGUARDANDO_APROVACAO → CANCELADA (cliente reprovou o orçamento)
+     * AGUARDANDO_APROVACAO → CANCELADA.
      */
     public void reprovarOrcamento(String motivo) {
         if (motivo == null || motivo.isBlank()) {
             throw new AppException(400, Messages.get("os.motivo_cancelamento.required"));
         }
+
         transicionar(StatusOS.CANCELADA);
         this.motivoCancelamento = motivo.strip();
+        cancelarPagamentoEEntrega();
     }
 
     /**
-     * Qualquer estado não-terminal → CANCELADA (cancelamento genérico)
+     * Qualquer estado não-terminal → CANCELADA.
      */
     public void cancelar(String motivo) {
         if (motivo == null || motivo.isBlank()) {
             throw new AppException(400, Messages.get("os.motivo_cancelamento.required"));
         }
+
         transicionar(StatusOS.CANCELADA);
         this.motivoCancelamento = motivo.strip();
+        cancelarPagamentoEEntrega();
     }
 
     /**
-     * Qualquer estado não-terminal → CANCELADA (cancelamento por SLA)
+     * Qualquer estado não-terminal → CANCELADA.
      */
     public void cancelarPorSLA() {
         transicionar(StatusOS.CANCELADA);
         this.motivoCancelamento = "Cancelamento automático por SLA";
+        cancelarPagamentoEEntrega();
     }
 
     /**
-     * EM_EXECUCAO → FINALIZADA
+     * EM_EXECUCAO → FINALIZADA.
      */
     public void finalizar() {
         transicionar(StatusOS.FINALIZADA);
     }
 
     /**
-     * EM_EXECUCAO → FINALIZADA com observação de execução
+     * EM_EXECUCAO → FINALIZADA com observação de execução.
      */
     public void finalizarExecucao(String observacao) {
         transicionar(StatusOS.FINALIZADA);
         this.execucaoFinalizadaEm = LocalDateTime.now();
+
         if (observacao != null && !observacao.isBlank()) {
             this.observacaoExecucao = observacao.strip();
         }
     }
 
     /**
-     * AGUARDANDO_APROVACAO → EM_EXECUCAO + registra mecânico e início (execução direta pós-aprovação)
+     * Registra mecânico e início da execução.
+     *
+     * <p>Não altera status porque a transição para EM_EXECUCAO já ocorre em aprovarOrcamento().
      */
     public void iniciarExecucao(UUID mecanicoUuid, String observacao) {
         if (mecanicoUuid == null) {
             throw new AppException(400, Messages.get("os.mecanico.required"));
         }
+
+        if (status != StatusOS.EM_EXECUCAO) {
+            throw new AppException(422, Messages.get("os.transicao.invalida", status, "INICIAR_EXECUCAO"));
+        }
+
         this.mecanicoUuid = mecanicoUuid;
         this.execucaoIniciadaEm = LocalDateTime.now();
+
         if (observacao != null && !observacao.isBlank()) {
             this.observacaoExecucao = observacao.strip();
         }
     }
 
-    /**
-     * FINALIZADA → ENTREGUE
-     */
-    public void entregar() {
-        transicionar(StatusOS.ENTREGUE);
-        this.dataEntrega = LocalDateTime.now();
-    }
+    // ─────────────── Cobrança, pagamento e entrega ───────────────
 
     /**
-     * Entrega com observação (service-level guard valida pagamento antes)
+     * FINALIZADA + NAO_COBRADO → AGUARDANDO_PAGAMENTO.
      */
-    public void entregar(String observacao) {
-        transicionar(StatusOS.ENTREGUE);
-        this.dataEntrega = LocalDateTime.now();
-        if (observacao != null && !observacao.isBlank()) {
-            this.observacaoEntrega = observacao.strip();
+    public CobrancaGeradaEvent gerarCobranca() {
+        if (status != StatusOS.FINALIZADA) {
+            throw new AppException(422, Messages.get("os.cobranca.status.invalido", status));
         }
-    }
 
-    // ─────────────── Pagamento ───────────────
+        if (!statusPagamento.podeTransicionarPara(StatusPagamento.AGUARDANDO_PAGAMENTO)) {
+            throw new AppException(422, Messages.get("os.cobranca.ja.gerada", statusPagamento));
+        }
 
-    public boolean isPagamentoPendente() {
-        return statusPagamento == StatusPagamento.PENDENTE;
-    }
+        this.statusPagamento = StatusPagamento.AGUARDANDO_PAGAMENTO;
+        this.cobrancaGeradaEm = LocalDateTime.now();
 
-    public boolean isPagamentoConfirmado() {
-        return statusPagamento == StatusPagamento.CONFIRMADO;
+        return CobrancaGeradaEvent.of(this.id);
     }
 
     /**
-     * Emite cobrança: seta PENDENTE com valor copiado do orçamento (D-03)
+     * Variante útil quando a cobrança deve ficar vinculada a um orçamento específico.
      */
-    public void emitirCobranca(BigDecimal valor) {
-        if (statusPagamento != null) {
-            throw new AppException(409, "Cobrança já existe para esta OS");
+    public CobrancaGeradaEvent gerarCobranca(UUID orcamentoUuid) {
+        if (orcamentoUuid == null) {
+            throw new AppException(400, Messages.get("os.orcamento_uuid.required"));
         }
-        this.statusPagamento = StatusPagamento.PENDENTE;
-        this.valorCobrado = valor;
-        this.dataPagamento = LocalDateTime.now();
+
+        this.orcamentoUuid = orcamentoUuid;
+        return gerarCobranca();
     }
 
     /**
-     * Confirma pagamento: PENDENTE → CONFIRMADO (D-02)
+     * AGUARDANDO_PAGAMENTO → CONFIRMADO.
+     * Ao confirmar pagamento, a entrega é liberada.
      */
-    public void confirmarPagamento() {
-        if (statusPagamento != StatusPagamento.PENDENTE) {
-            throw new AppException(409, "Pagamento não está pendente");
+    public PagamentoConfirmadoEvent confirmarPagamento(String referenciaPagamento) {
+        if (referenciaPagamento == null || referenciaPagamento.isBlank()) {
+            throw new AppException(400, Messages.get("os.pagamento.referencia.required"));
         }
+
+        if (!statusPagamento.podeTransicionarPara(StatusPagamento.CONFIRMADO)) {
+            throw new AppException(422, Messages.get("os.pagamento.status.invalido", statusPagamento));
+        }
+
         this.statusPagamento = StatusPagamento.CONFIRMADO;
-        this.dataPagamento = LocalDateTime.now();
+        this.pagamentoConfirmadoEm = LocalDateTime.now();
+        this.referenciaPagamento = referenciaPagamento.strip();
+
+        liberarEntrega();
+
+        return PagamentoConfirmadoEvent.of(this.id, this.referenciaPagamento);
+    }
+
+    /**
+     * FINALIZADA + pagamento CONFIRMADO + entrega LIBERADA → ENTREGUE.
+     */
+    public EntregaConfirmadaEvent entregar(String recebidoPor) {
+        if (recebidoPor == null || recebidoPor.isBlank()) {
+            throw new AppException(400, Messages.get("os.entrega.recebedor.required"));
+        }
+
+        if (status != StatusOS.FINALIZADA) {
+            throw new AppException(422, Messages.get("os.transicao.invalida", status, StatusOS.ENTREGUE));
+        }
+
+        if (statusPagamento != StatusPagamento.CONFIRMADO) {
+            throw new AppException(422, Messages.get("os.entrega.pagamento.pendente", statusPagamento));
+        }
+
+        if (!statusEntrega.podeTransicionarPara(StatusEntrega.ENTREGUE)) {
+            throw new AppException(422, Messages.get("os.entrega.status.invalido", statusEntrega));
+        }
+
+        transicionar(StatusOS.ENTREGUE);
+        this.statusEntrega = StatusEntrega.ENTREGUE;
+        this.dataEntrega = LocalDateTime.now();
+        this.entregueEm = LocalDateTime.now();
+        this.recebidoPor = recebidoPor.strip();
+        return EntregaConfirmadaEvent.of(this.id, this.recebidoPor);
     }
 
     // ─────────────── Validação interna ───────────────
@@ -307,6 +404,22 @@ public class OrdemDeServico {
         if (!status.podeTransicionarPara(destino)) {
             throw new AppException(422, Messages.get("os.transicao.invalida", status, destino));
         }
+
         this.status = destino;
+    }
+
+    private void liberarEntrega() {
+        if (statusEntrega.podeTransicionarPara(StatusEntrega.LIBERADA_PARA_ENTREGA)) {
+            this.statusEntrega = StatusEntrega.LIBERADA_PARA_ENTREGA;
+        }
+    }
+
+    private void cancelarPagamentoEEntrega() {
+        if (statusPagamento != StatusPagamento.CONFIRMADO
+                && statusPagamento.podeTransicionarPara(StatusPagamento.CANCELADO)) {
+            this.statusPagamento = StatusPagamento.CANCELADO;
+        }
+
+        this.statusEntrega = StatusEntrega.NAO_LIBERADA;
     }
 }

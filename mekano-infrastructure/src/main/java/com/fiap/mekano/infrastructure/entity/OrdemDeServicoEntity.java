@@ -57,4 +57,25 @@ public class OrdemDeServicoEntity extends BaseEntity {
     @Version
     @Column(nullable = false)
     Long version;
+    
+    @Column(name = "status_pagamento", nullable = false)
+    private String statusPagamento;
+
+    @Column(name = "status_entrega", nullable = false)
+    private String statusEntrega;
+
+    @Column(name = "cobranca_gerada_em")
+    private LocalDateTime cobrancaGeradaEm;
+
+    @Column(name = "pagamento_confirmado_em")
+    private LocalDateTime pagamentoConfirmadoEm;
+
+    @Column(name = "referencia_pagamento")
+    private String referenciaPagamento;
+
+    @Column(name = "entregue_em")
+    private LocalDateTime entregueEm;
+
+    @Column(name = "recebido_por")
+    private String recebidoPor;
 }

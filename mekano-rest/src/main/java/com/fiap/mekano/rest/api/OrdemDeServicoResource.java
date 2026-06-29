@@ -175,8 +175,8 @@ public class OrdemDeServicoResource {
     @Produces(MediaType.APPLICATION_JSON)
     @RolesAllowed({"admin", "atendente"})
     @Operation(summary = "Entregar veículo ao cliente")
-    public Response entregar(@PathParam("id") UUID id) {
-        return Response.ok(toResponse(osService.entregar(id))).build();
+    public Response entregar(@PathParam("id") UUID id, MotivoRequest body) {
+        return Response.ok(toResponse(osService.entregar(id, body != null ? body.motivo() : ""))).build();
     }
 
     @PUT

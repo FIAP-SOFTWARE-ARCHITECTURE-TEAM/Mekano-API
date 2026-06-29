@@ -3,7 +3,7 @@ package com.fiap.mekano.application.service;
 import com.fiap.mekano.domain.event.PagamentoConfirmadoEvent;
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.model.OrdemDeServico;
-import com.fiap.mekano.domain.model.StatusPagamento;
+import com.fiap.mekano.domain.os.StatusPagamento;
 import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
 import com.fiap.mekano.domain.port.out.ProcessedEventsRepositoryPort;
@@ -14,8 +14,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -28,7 +26,6 @@ import static org.mockito.Mockito.*;
 class MockPaymentServiceTest {
 
     @Mock OrdemDeServicoRepositoryPort ordemDeServicoRepository;
-    // TODO(#33): remover mock e usar implementação real quando #33 for feita
     @Mock ProcessedEventsRepositoryPort processedEventsRepository;
     @Mock EventPublisher eventPublisher;
 
@@ -47,7 +44,7 @@ class MockPaymentServiceTest {
 
         mockPaymentService.confirmarPagamento(osUuid);
 
-        assertTrue(os.isPagamentoConfirmado());
+        assertEquals(StatusPagamento.CONFIRMADO, os.getStatusPagamento());
         verify(eventPublisher, times(1)).publish(any(PagamentoConfirmadoEvent.class));
         verify(processedEventsRepository, times(1)).save("PAGAMENTO_CONFIRMADO", osUuid);
     }
@@ -56,7 +53,7 @@ class MockPaymentServiceTest {
     @DisplayName("confirmarPagamento deve lançar 409 se já CONFIRMADO")
     void confirmarPagamento_deveLancarExcecaoSeJaConfirmado() {
         var os = criarOSComCobrancaPendente();
-        os.confirmarPagamento();
+        os.confirmarPagamento("PIX-123");
         var osUuid = os.getId();
 
         when(ordemDeServicoRepository.findById(osUuid)).thenReturn(Optional.of(os));
@@ -66,7 +63,7 @@ class MockPaymentServiceTest {
     }
 
     @Test
-    @DisplayName("confirmarPagamento deve lançar 409 se não está PENDENTE")
+    @DisplayName("confirmarPagamento deve lançar 409 se não está AGUARDANDO_PAGAMENTO")
     void confirmarPagamento_deveLancarExcecaoSeNaoPendente() {
         var os = OrdemDeServico.create(UUID.randomUUID(), UUID.randomUUID(), "Problema");
         var osUuid = os.getId();
@@ -89,7 +86,11 @@ class MockPaymentServiceTest {
 
     private static OrdemDeServico criarOSComCobrancaPendente() {
         var os = OrdemDeServico.create(UUID.randomUUID(), UUID.randomUUID(), "Problema");
-        os.emitirCobranca(new BigDecimal("150.00"));
+        os.iniciarDiagnostico();
+        os.finalizarDiagnostico();
+        os.aprovarOrcamento(UUID.randomUUID());
+        os.finalizar();
+        os.gerarCobranca();
         return os;
     }
 }

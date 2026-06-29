@@ -1,12 +1,13 @@
 package com.fiap.mekano.application.listener;
 
-import com.fiap.mekano.domain.event.CobrancaEmitidaEvent;
+import com.fiap.mekano.domain.event.CobrancaGeradaEvent;
 import com.fiap.mekano.domain.event.OSFinalizadaEvent;
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.model.ItemOrcamento;
 import com.fiap.mekano.domain.model.Orcamento;
 import com.fiap.mekano.domain.model.OrdemDeServico;
 import com.fiap.mekano.domain.model.StatusOrcamento;
+import com.fiap.mekano.domain.os.StatusPagamento;
 import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
@@ -59,9 +60,8 @@ class CobrancaEmitidaListenerTest {
 
         listener.on(event);
 
-        assertTrue(os.isPagamentoPendente());
-        assertEquals(new BigDecimal("10"), os.getValorCobrado());
-        verify(eventPublisher, times(1)).publish(any(CobrancaEmitidaEvent.class));
+        assertEquals(StatusPagamento.AGUARDANDO_PAGAMENTO, os.getStatusPagamento());
+        verify(eventPublisher, times(1)).publish(any(CobrancaGeradaEvent.class));
         verify(processedEventsRepository, times(1)).save("COBRANCA_EMITIDA", osUuid);
     }
 

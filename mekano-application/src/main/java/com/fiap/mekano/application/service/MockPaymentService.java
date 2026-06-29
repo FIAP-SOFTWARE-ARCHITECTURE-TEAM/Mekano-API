@@ -2,6 +2,7 @@ package com.fiap.mekano.application.service;
 
 import com.fiap.mekano.domain.event.PagamentoConfirmadoEvent;
 import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.os.StatusPagamento;
 import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
 import com.fiap.mekano.domain.port.out.ProcessedEventsRepositoryPort;
@@ -32,7 +33,7 @@ public class MockPaymentService {
         var os = ordemDeServicoRepository.findById(osUuid)
                 .orElseThrow(() -> new AppException(404, "OS não encontrada: " + osUuid));
 
-        if (!os.isPagamentoPendente()) {
+        if (os.getStatusPagamento() != StatusPagamento.AGUARDANDO_PAGAMENTO) {
             throw new AppException(409, "Pagamento não está pendente");
         }
 
@@ -47,10 +48,10 @@ public class MockPaymentService {
             throw new AppException(503, "Pagamento indisponível no momento, tente novamente mais tarde");
         }
 
-        UUID transacaoId = UUID.randomUUID();
-        os.confirmarPagamento();
+        String referencia = "MOCK-" + UUID.randomUUID().toString().substring(0, 8);
+        var pagamentoEvent = os.confirmarPagamento(referencia);
         ordemDeServicoRepository.save(os);
         processedEventsRepository.save("PAGAMENTO_CONFIRMADO", osUuid);
-        eventPublisher.publish(PagamentoConfirmadoEvent.of(osUuid, transacaoId, os.getValorCobrado()));
+        eventPublisher.publish(pagamentoEvent);
     }
 }
