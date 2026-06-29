@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.ToString;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -42,6 +43,14 @@ public class OrdemDeServico {
     private LocalDateTime execucaoFinalizadaEm;
     private String observacaoExecucao;
     private LocalDateTime dataAprovacao;
+    // TODO(#33): campos de pagamento — dependem da migration V18
+    //            (ALTER TABLE ordens_de_servico ADD COLUMN status_pagamento, etc.)
+    //            e dos campos na OrdemDeServicoEntity
+    private StatusPagamento statusPagamento;
+    private BigDecimal valorCobrado;
+    private LocalDateTime dataPagamento;
+    private LocalDateTime dataEntrega;
+    private String observacaoEntrega;
     private final LocalDateTime createdAt;
     private final Long version;
 
@@ -87,6 +96,11 @@ public class OrdemDeServico {
                                               LocalDateTime execucaoFinalizadaEm,
                                               String observacaoExecucao,
                                               LocalDateTime dataAprovacao,
+                                              StatusPagamento statusPagamento,
+                                              BigDecimal valorCobrado,
+                                              LocalDateTime dataPagamento,
+                                              LocalDateTime dataEntrega,
+                                              String observacaoEntrega,
                                               LocalDateTime createdAt, Long version) {
         return OrdemDeServico.builder()
                 .id(id)
@@ -101,6 +115,11 @@ public class OrdemDeServico {
                 .execucaoFinalizadaEm(execucaoFinalizadaEm)
                 .observacaoExecucao(observacaoExecucao)
                 .dataAprovacao(dataAprovacao)
+                .statusPagamento(statusPagamento)
+                .valorCobrado(valorCobrado)
+                .dataPagamento(dataPagamento)
+                .dataEntrega(dataEntrega)
+                .observacaoEntrega(observacaoEntrega)
                 .createdAt(createdAt)
                 .version(version)
                 .build();
@@ -235,6 +254,51 @@ public class OrdemDeServico {
      */
     public void entregar() {
         transicionar(StatusOS.ENTREGUE);
+        this.dataEntrega = LocalDateTime.now();
+    }
+
+    /**
+     * Entrega com observação (service-level guard valida pagamento antes)
+     */
+    public void entregar(String observacao) {
+        transicionar(StatusOS.ENTREGUE);
+        this.dataEntrega = LocalDateTime.now();
+        if (observacao != null && !observacao.isBlank()) {
+            this.observacaoEntrega = observacao.strip();
+        }
+    }
+
+    // ─────────────── Pagamento ───────────────
+
+    public boolean isPagamentoPendente() {
+        return statusPagamento == StatusPagamento.PENDENTE;
+    }
+
+    public boolean isPagamentoConfirmado() {
+        return statusPagamento == StatusPagamento.CONFIRMADO;
+    }
+
+    /**
+     * Emite cobrança: seta PENDENTE com valor copiado do orçamento (D-03)
+     */
+    public void emitirCobranca(BigDecimal valor) {
+        if (statusPagamento != null) {
+            throw new AppException(409, "Cobrança já existe para esta OS");
+        }
+        this.statusPagamento = StatusPagamento.PENDENTE;
+        this.valorCobrado = valor;
+        this.dataPagamento = LocalDateTime.now();
+    }
+
+    /**
+     * Confirma pagamento: PENDENTE → CONFIRMADO (D-02)
+     */
+    public void confirmarPagamento() {
+        if (statusPagamento != StatusPagamento.PENDENTE) {
+            throw new AppException(409, "Pagamento não está pendente");
+        }
+        this.statusPagamento = StatusPagamento.CONFIRMADO;
+        this.dataPagamento = LocalDateTime.now();
     }
 
     // ─────────────── Validação interna ───────────────
