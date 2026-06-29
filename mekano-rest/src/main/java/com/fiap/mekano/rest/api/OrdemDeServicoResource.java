@@ -1,14 +1,30 @@
 package com.fiap.mekano.rest.api;
 
+import java.net.URI;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.Collections;
+import java.util.UUID;
+
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
+
 import com.fiap.mekano.domain.model.OrdemDeServico;
 import com.fiap.mekano.domain.port.in.CreateOrdemDeServicoCommand;
 import com.fiap.mekano.domain.port.in.FinalizarDiagnosticoCommand;
 import com.fiap.mekano.domain.port.in.OrdemDeServicoServicePort;
 import com.fiap.mekano.rest.api.dto.CreateOrdemDeServicoRequest;
 import com.fiap.mekano.rest.api.dto.FinalizarDiagnosticoRequest;
+import com.fiap.mekano.rest.api.dto.FinalizarExecucaoRequest;
+import com.fiap.mekano.rest.api.dto.IniciarExecucaoRequest;
+import com.fiap.mekano.rest.api.dto.OrdemDeServicoDetailResponse;
 import com.fiap.mekano.rest.api.dto.OrdemDeServicoPageResponse;
 import com.fiap.mekano.rest.api.dto.OrdemDeServicoResponse;
 import com.fiap.mekano.rest.api.dto.OrdemDeServicoStatusResponse;
+import com.fiap.mekano.rest.api.dto.TempoMedioResponse;
+
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.RequestScoped;
@@ -27,12 +43,6 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
-import org.eclipse.microprofile.openapi.annotations.Operation;
-import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
-import org.eclipse.microprofile.openapi.annotations.tags.Tag;
-
-import java.net.URI;
-import java.util.UUID;
 
 /**
  * Resource para Ordens de Serviço.
@@ -169,13 +179,81 @@ public class OrdemDeServicoResource {
         return Response.ok(toResponse(osService.entregar(id))).build();
     }
 
+    @PUT
+    @Path("/{id}/iniciar-execucao")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @RolesAllowed({"mecanico", "admin"})
+    @Operation(summary = "Iniciar execução da OS")
+    @APIResponse(responseCode = "200", description = "Execução iniciada")
+    @APIResponse(responseCode = "400", description = "OS não está em AGUARDANDO_APROVACAO")
+    public Response iniciarExecucao(@PathParam("id") UUID id, @Valid IniciarExecucaoRequest request) {
+        OrdemDeServico os = osService.iniciarExecucao(id, request.getMecanicoUuid(), request.getObservacao());
+        return Response.ok(toResponse(os)).build();
+    }
+
+    @PUT
+    @Path("/{id}/finalizar-execucao")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @RolesAllowed({"mecanico", "admin"})
+    @Operation(summary = "Finalizar execução da OS")
+    @APIResponse(responseCode = "200", description = "Execução finalizada, evento publicado")
+    @APIResponse(responseCode = "400", description = "OS não está em EM_EXECUCAO")
+    public Response finalizarExecucao(@PathParam("id") UUID id, @Valid FinalizarExecucaoRequest request) {
+        OrdemDeServico os = osService.finalizarExecucao(id, request.getObservacao());
+        return Response.ok(toResponse(os)).build();
+    }
+
+    @GET
+    @Path("/{id}/detalhamento")
+    @Produces(MediaType.APPLICATION_JSON)
+    @RolesAllowed({"admin", "atendente"})
+    @Operation(summary = "Detalhamento da OS com itens orçados")
+    @APIResponse(responseCode = "200", description = "Detalhamento da OS")
+    public Response getDetalhamento(@PathParam("id") UUID id) {
+        OrdemDeServico os = osService.findById(id);
+        var orcamentoUuid = osService.findOrcamentoUuidByOsId(id);
+        var response = new OrdemDeServicoDetailResponse(
+                os.getId(), os.getClienteId(), os.getVeiculoId(),
+                os.getDescricaoProblema(), os.getStatus().name(),
+                orcamentoUuid.orElse(null),
+                os.getMecanicoUuid(),
+                os.getExecucaoIniciadaEm(),
+                os.getExecucaoFinalizadaEm(),
+                os.getObservacaoExecucao(),
+                Collections.singletonList("Itens orçados disponíveis no orçamento"),
+                Collections.emptyList(),
+                os.getCreatedAt()
+        );
+        return Response.ok(response).build();
+    }
+
+    @GET
+    @Path("/tempo-medio")
+    @Produces(MediaType.APPLICATION_JSON)
+    @RolesAllowed({"admin", "atendente"})
+    @Operation(summary = "Tempo médio de execução de OS")
+    @APIResponse(responseCode = "200", description = "Tempo médio calculado")
+    public Response getTempoMedio(
+            @QueryParam("dataInicio") LocalDate dataInicio,
+            @QueryParam("dataFim") LocalDate dataFim) {
+        LocalDateTime inicio = dataInicio != null ? dataInicio.atStartOfDay() : null;
+        LocalDateTime fim = dataFim != null ? dataFim.atTime(LocalTime.MAX) : null;
+        var tempoMedio = osService.calcularTempoMedioExecucao(inicio, fim);
+        return Response.ok(new TempoMedioResponse(tempoMedio.orElse(null))).build();
+    }
+
     // ─────────────── Helper ───────────────
 
     private OrdemDeServicoResponse toResponse(OrdemDeServico os) {
         return new OrdemDeServicoResponse(
                 os.getId(), os.getClienteId(), os.getVeiculoId(),
                 os.getDescricaoProblema(), os.getStatus().name(),
-                os.getMotivoCancelamento(), os.getCreatedAt()
+                os.getMotivoCancelamento(), os.getOrcamentoUuid(),
+                os.getMecanicoUuid(), os.getExecucaoIniciadaEm(),
+                os.getExecucaoFinalizadaEm(), os.getObservacaoExecucao(),
+                os.getCreatedAt()
         );
     }
 
