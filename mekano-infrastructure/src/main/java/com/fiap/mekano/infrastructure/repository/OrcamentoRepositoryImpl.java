@@ -4,6 +4,7 @@ import com.fiap.mekano.domain.model.Orcamento;
 import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
 import com.fiap.mekano.infrastructure.cache.CacheNames;
 import com.fiap.mekano.infrastructure.entity.OrcamentoEntity;
+import com.fiap.mekano.infrastructure.entity.PecaEntity;
 import com.fiap.mekano.infrastructure.mapper.OrcamentoEntityMapper;
 import io.quarkus.cache.CacheInvalidateAll;
 import io.quarkus.cache.CacheResult;
@@ -24,6 +25,9 @@ public class OrcamentoRepositoryImpl implements OrcamentoRepositoryPort {
 
     @Inject
     OrcamentoEntityMapper mapper;
+
+    @Inject
+    PecaPanacheRepository pecaPanacheRepository;
 
     @Override
     @Transactional
@@ -71,5 +75,29 @@ public class OrcamentoRepositoryImpl implements OrcamentoRepositoryPort {
                 .find("status = 'PENDENTE' AND dataExpiracao < ?1 AND isActive = ?2",
                         LocalDateTime.now(), true)
                 .list().stream().map(mapper::toDomain).toList();
+    }
+
+    @Override
+    public boolean existsByPecaIdVinculadaAOrdemComStatus(UUID pecaId, List<String> statuses) {
+        String descricao = pecaPanacheRepository.find("uuid = ?1 AND isActive = ?2", pecaId, true)
+                .firstResultOptional()
+                .map(PecaEntity::getDescricao)
+                .orElse(null);
+
+        if (descricao == null || descricao.isBlank()) {
+            return false;
+        }
+
+        String escapedDescricao = descricao
+                .replace("\\", "\\\\")
+                .replace("|", "\\p")
+                .replace(";", "\\s");
+
+        List<OrcamentoEntity> orcamentos = panacheRepository
+                .find("ordemServicoUuid IS NOT NULL AND isActive = ?1", true)
+                .list();
+
+        return orcamentos.stream().anyMatch(orc ->
+                orc.getItensJson() != null && orc.getItensJson().contains(escapedDescricao + "|"));
     }
 }

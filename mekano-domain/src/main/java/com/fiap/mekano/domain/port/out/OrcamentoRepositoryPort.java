@@ -15,4 +15,6 @@ public interface OrcamentoRepositoryPort {
     Optional<Orcamento> findByOrdemServicoUuid(UUID ordemServicoUuid);
 
     List<Orcamento> findExpiradosPendentes();
+
+    boolean existsByPecaIdVinculadaAOrdemComStatus(UUID pecaId, List<String> statuses);
 }
