@@ -1,16 +1,25 @@
 package com.fiap.mekano.application.service.ordemdeservico;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import com.fiap.mekano.domain.event.DiagnosticoFinalizadoEvent;
 import com.fiap.mekano.domain.event.OrdemDeServicoCriadaEvent;
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.exception.Messages;
+import com.fiap.mekano.domain.model.ItemOrcamento;
 import com.fiap.mekano.domain.model.OrdemDeServico;
+import com.fiap.mekano.domain.model.Peca;
+import com.fiap.mekano.domain.model.Servico;
 import com.fiap.mekano.domain.port.in.CreateOrdemDeServicoCommand;
+import com.fiap.mekano.domain.port.in.FinalizarDiagnosticoCommand;
 import com.fiap.mekano.domain.port.in.OrdemDeServicoServicePort;
 import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
+import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
+import com.fiap.mekano.domain.port.out.ServicoRepositoryPort;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
@@ -24,10 +33,15 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
 
     private final OrdemDeServicoRepositoryPort repository;
     private final EventPublisher eventPublisher;
+    private final PecaRepositoryPort pecaRepository;
+    private final ServicoRepositoryPort servicoRepository;
 
-    public OrdemDeServicoService(OrdemDeServicoRepositoryPort repository, EventPublisher eventPublisher) {
+    public OrdemDeServicoService(OrdemDeServicoRepositoryPort repository, EventPublisher eventPublisher,
+                                 PecaRepositoryPort pecaRepository, ServicoRepositoryPort servicoRepository) {
         this.repository = repository;
         this.eventPublisher = eventPublisher;
+        this.pecaRepository = pecaRepository;
+        this.servicoRepository = servicoRepository;
     }
 
     @Override
@@ -73,26 +87,30 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
 
     @Override
     @Transactional
-    public OrdemDeServico finalizarDiagnostico(UUID id) {
-        OrdemDeServico os = findById(id);
+    public OrdemDeServico finalizarDiagnostico(FinalizarDiagnosticoCommand command) {
+        OrdemDeServico os = findById(command.osId());
+        List<ItemOrcamento> itens = new ArrayList<>();
+
+        for (var item : command.itens()) {
+            switch (item.tipo().toUpperCase()) {
+                case "PECA" -> {
+                    Peca peca = pecaRepository.buscarPorId(item.referenciaUuid())
+                            .orElseThrow(() -> new AppException(404, "Peça não encontrada: " + item.referenciaUuid()));
+                    itens.add(new ItemOrcamento(peca.getDescricao(), item.quantidade(), peca.getValorUnitario()));
+                }
+                case "SERVICO" -> {
+                    Servico servico = servicoRepository.findById(item.referenciaUuid())
+                            .orElseThrow(() -> new AppException(404, "Serviço não encontrado: " + item.referenciaUuid()));
+                    itens.add(new ItemOrcamento(servico.getNome(), item.quantidade(), servico.getValor()));
+                }
+                default -> throw new AppException(400, "Tipo de item inválido: " + item.tipo());
+            }
+        }
+
         os.finalizarDiagnostico();
-        return repository.save(os);
-    }
-
-    @Override
-    @Transactional
-    public OrdemDeServico aprovarOrcamento(UUID id) {
-        OrdemDeServico os = findById(id);
-        os.aprovarOrcamento();
-        return repository.save(os);
-    }
-
-    @Override
-    @Transactional
-    public OrdemDeServico reprovarOrcamento(UUID id, String motivo) {
-        OrdemDeServico os = findById(id);
-        os.reprovarOrcamento(motivo);
-        return repository.save(os);
+        repository.save(os);
+        eventPublisher.publish(DiagnosticoFinalizadoEvent.of(os.getId(), command.descricao(), itens));
+        return os;
     }
 
     @Override

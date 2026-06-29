@@ -4,15 +4,16 @@ import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.domain.model.Orcamento;
 import com.fiap.mekano.domain.model.OrdemDeServico;
-import com.fiap.mekano.domain.model.StatusOS;
 import com.fiap.mekano.domain.port.in.AprovarOrcamentoCommand;
-import com.fiap.mekano.domain.port.in.GerarOrcamentoCommand;
 import com.fiap.mekano.domain.port.in.OrcamentoServicePort;
 import com.fiap.mekano.domain.port.in.ReprovarOrcamentoCommand;
 import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
+
+import java.util.List;
+import java.util.UUID;
 
 @ApplicationScoped
 public class OrcamentoService implements OrcamentoServicePort {
@@ -28,24 +29,6 @@ public class OrcamentoService implements OrcamentoServicePort {
 
     @Override
     @Transactional
-    public Orcamento gerarOrcamento(GerarOrcamentoCommand command) {
-        OrdemDeServico os = ordemDeServicoRepository.findById(command.ordemServicoUuid())
-                .orElseThrow(() -> new AppException(404, Messages.get("os.not.found", command.ordemServicoUuid())));
-
-        if (os.getStatus() != StatusOS.EM_DIAGNOSTICO) {
-            throw new AppException(422, Messages.get("orcamento.os.status.invalido", os.getStatus()));
-        }
-
-        Orcamento orcamento = Orcamento.create(
-                command.descricao(), command.itens(), command.ordemServicoUuid());
-
-        os.finalizarDiagnostico();
-        ordemDeServicoRepository.save(os);
-        return orcamentoRepository.save(orcamento);
-    }
-
-    @Override
-    @Transactional
     public Orcamento aprovar(AprovarOrcamentoCommand command) {
         Orcamento orcamento = orcamentoRepository.findByUuid(command.orcamentoUuid())
                 .orElseThrow(() -> new AppException(404, Messages.get("orcamento.not.found", command.orcamentoUuid())));
@@ -55,7 +38,7 @@ public class OrcamentoService implements OrcamentoServicePort {
         if (orcamento.getOrdemServicoUuid() != null) {
             OrdemDeServico os = ordemDeServicoRepository.findById(orcamento.getOrdemServicoUuid())
                     .orElseThrow(() -> new AppException(404, Messages.get("os.not.found", orcamento.getOrdemServicoUuid())));
-            os.aprovarOrcamento();
+            os.aprovarOrcamento(orcamento.getId());
             ordemDeServicoRepository.save(os);
         }
 
@@ -78,5 +61,17 @@ public class OrcamentoService implements OrcamentoServicePort {
         }
 
         return orcamentoRepository.save(orcamento);
+    }
+
+    @Override
+    public Orcamento buscarPorId(UUID orcamentoUuid) {
+        return orcamentoRepository.findByUuid(orcamentoUuid)
+                .orElseThrow(() -> new AppException(404, Messages.get("orcamento.not.found", orcamentoUuid)));
+    }
+
+    @Override
+    public Orcamento buscarPorOrdemServico(UUID osUuid) {
+        return orcamentoRepository.findByOrdemServicoUuid(osUuid)
+                .orElseThrow(() -> new AppException(404, "Nenhum orçamento encontrado para a OS: " + osUuid));
     }
 }

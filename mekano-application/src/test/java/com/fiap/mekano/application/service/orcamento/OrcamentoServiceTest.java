@@ -7,7 +7,6 @@ import com.fiap.mekano.domain.model.OrdemDeServico;
 import com.fiap.mekano.domain.model.StatusOS;
 import com.fiap.mekano.domain.model.StatusOrcamento;
 import com.fiap.mekano.domain.port.in.AprovarOrcamentoCommand;
-import com.fiap.mekano.domain.port.in.GerarOrcamentoCommand;
 import com.fiap.mekano.domain.port.in.ReprovarOrcamentoCommand;
 import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
@@ -39,55 +38,6 @@ class OrcamentoServiceTest {
 
     @InjectMocks
     OrcamentoService orcamentoService;
-
-    @Test
-    @DisplayName("gerarOrcamento() deve criar orçamento e transicionar OS para AGUARDANDO_APROVACAO")
-    void deveGerarOrcamento() {
-        var os = OrdemDeServico.create(UUID.randomUUID(), UUID.randomUUID(), "Problema no motor");
-        os.iniciarDiagnostico();
-        var osUuid = os.getId();
-
-        var command = new GerarOrcamentoCommand(osUuid, "Orçamento",
-                List.of(new ItemOrcamento("Serviço", 1L, new BigDecimal("100.00"))));
-
-        when(ordemDeServicoRepository.findById(osUuid)).thenReturn(Optional.of(os));
-        when(orcamentoRepository.save(any(Orcamento.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(ordemDeServicoRepository.save(any(OrdemDeServico.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        Orcamento result = orcamentoService.gerarOrcamento(command);
-
-        assertNotNull(result);
-        assertEquals(StatusOrcamento.PENDENTE, result.getStatus());
-        assertEquals(osUuid, result.getOrdemServicoUuid());
-        assertEquals(StatusOS.AGUARDANDO_APROVACAO, os.getStatus());
-        verify(orcamentoRepository, times(1)).save(any(Orcamento.class));
-        verify(ordemDeServicoRepository, times(1)).save(any(OrdemDeServico.class));
-    }
-
-    @Test
-    @DisplayName("gerarOrcamento() deve lançar 404 se OS não existe")
-    void deveLancar404SeOSNaoExiste() {
-        var osUuid = UUID.randomUUID();
-        var command = new GerarOrcamentoCommand(osUuid, "Orçamento",
-                List.of(new ItemOrcamento("Item", 1L, BigDecimal.TEN)));
-
-        when(ordemDeServicoRepository.findById(osUuid)).thenReturn(Optional.empty());
-
-        assertThrows(AppException.class, () -> orcamentoService.gerarOrcamento(command));
-    }
-
-    @Test
-    @DisplayName("gerarOrcamento() deve lançar 422 se OS não está EM_DIAGNOSTICO")
-    void deveLancar422SeOSNaoEstaEmDiagnostico() {
-        var os = OrdemDeServico.create(UUID.randomUUID(), UUID.randomUUID(), "Problema");
-        var command = new GerarOrcamentoCommand(os.getId(), "Orçamento",
-                List.of(new ItemOrcamento("Item", 1L, BigDecimal.TEN)));
-
-        when(ordemDeServicoRepository.findById(os.getId())).thenReturn(Optional.of(os));
-
-        var ex = assertThrows(AppException.class, () -> orcamentoService.gerarOrcamento(command));
-        assertEquals(422, ex.getStatus());
-    }
 
     @Test
     @DisplayName("aprovar() deve aprovar orçamento e transicionar OS para EM_EXECUCAO")

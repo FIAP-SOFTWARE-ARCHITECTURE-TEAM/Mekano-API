@@ -12,9 +12,7 @@ public interface OrdemDeServicoServicePort {
     List<OrdemDeServico> findAll(int page, int size, String sort);
     long countAll();
     OrdemDeServico iniciarDiagnostico(UUID id);
-    OrdemDeServico finalizarDiagnostico(UUID id);
-    OrdemDeServico aprovarOrcamento(UUID id);
-    OrdemDeServico reprovarOrcamento(UUID id, String motivo);
+    OrdemDeServico finalizarDiagnostico(FinalizarDiagnosticoCommand command);
     OrdemDeServico cancelar(UUID id, String motivo);
     OrdemDeServico finalizar(UUID id);
     OrdemDeServico entregar(UUID id);

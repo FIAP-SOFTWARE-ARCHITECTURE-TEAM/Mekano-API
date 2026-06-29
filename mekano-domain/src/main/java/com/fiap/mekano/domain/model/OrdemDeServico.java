@@ -36,6 +36,12 @@ public class OrdemDeServico {
     private String descricaoProblema;
     private StatusOS status;
     private String motivoCancelamento;
+    private UUID orcamentoUuid;
+    private UUID mecanicoUuid;
+    private LocalDateTime execucaoIniciadaEm;
+    private LocalDateTime execucaoFinalizadaEm;
+    private String observacaoExecucao;
+    private LocalDateTime dataAprovacao;
     private final LocalDateTime createdAt;
     private final Long version;
 
@@ -76,6 +82,11 @@ public class OrdemDeServico {
     public static OrdemDeServico reconstitute(UUID id, UUID clienteId, UUID veiculoId,
                                               String descricaoProblema, StatusOS status,
                                               String motivoCancelamento,
+                                              UUID orcamentoUuid, UUID mecanicoUuid,
+                                              LocalDateTime execucaoIniciadaEm,
+                                              LocalDateTime execucaoFinalizadaEm,
+                                              String observacaoExecucao,
+                                              LocalDateTime dataAprovacao,
                                               LocalDateTime createdAt, Long version) {
         return OrdemDeServico.builder()
                 .id(id)
@@ -84,6 +95,12 @@ public class OrdemDeServico {
                 .descricaoProblema(descricaoProblema)
                 .status(status)
                 .motivoCancelamento(motivoCancelamento)
+                .orcamentoUuid(orcamentoUuid)
+                .mecanicoUuid(mecanicoUuid)
+                .execucaoIniciadaEm(execucaoIniciadaEm)
+                .execucaoFinalizadaEm(execucaoFinalizadaEm)
+                .observacaoExecucao(observacaoExecucao)
+                .dataAprovacao(dataAprovacao)
                 .createdAt(createdAt)
                 .version(version)
                 .build();
@@ -129,10 +146,26 @@ public class OrdemDeServico {
     }
 
     /**
-     * AGUARDANDO_APROVACAO → EM_EXECUCAO (aprovação direta, sem estado APROVADA — INC-01)
+     * Associa um orçamento à OS sem transicionar status.
+     * Chamado por OrcamentoService.gerarOrcamento() ao gerar o orçamento.
      */
-    public void aprovarOrcamento() {
+    public void associarOrcamento(UUID orcamentoUuid) {
+        if (orcamentoUuid == null) {
+            throw new AppException(400, Messages.get("os.orcamento_uuid.required"));
+        }
+        this.orcamentoUuid = orcamentoUuid;
+    }
+
+    /**
+     * AGUARDANDO_APROVACAO → EM_EXECUCAO (aprovação direta, sem estado APROVADA — INC-01)
+     * Armazena orcamentoUuid e dataAprovacao.
+     */
+    public void aprovarOrcamento(UUID orcamentoUuid) {
         transicionar(StatusOS.EM_EXECUCAO);
+        if (orcamentoUuid != null) {
+            this.orcamentoUuid = orcamentoUuid;
+        }
+        this.dataAprovacao = LocalDateTime.now();
     }
 
     /**
@@ -170,6 +203,31 @@ public class OrdemDeServico {
      */
     public void finalizar() {
         transicionar(StatusOS.FINALIZADA);
+    }
+
+    /**
+     * EM_EXECUCAO → FINALIZADA com observação de execução
+     */
+    public void finalizarExecucao(String observacao) {
+        transicionar(StatusOS.FINALIZADA);
+        this.execucaoFinalizadaEm = LocalDateTime.now();
+        if (observacao != null && !observacao.isBlank()) {
+            this.observacaoExecucao = observacao.strip();
+        }
+    }
+
+    /**
+     * AGUARDANDO_APROVACAO → EM_EXECUCAO + registra mecânico e início (execução direta pós-aprovação)
+     */
+    public void iniciarExecucao(UUID mecanicoUuid, String observacao) {
+        if (mecanicoUuid == null) {
+            throw new AppException(400, Messages.get("os.mecanico.required"));
+        }
+        this.mecanicoUuid = mecanicoUuid;
+        this.execucaoIniciadaEm = LocalDateTime.now();
+        if (observacao != null && !observacao.isBlank()) {
+            this.observacaoExecucao = observacao.strip();
+        }
     }
 
     /**

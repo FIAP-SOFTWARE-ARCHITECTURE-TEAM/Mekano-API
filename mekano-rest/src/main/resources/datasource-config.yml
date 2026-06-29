@@ -11,6 +11,8 @@ quarkus:
       url: ${DB_URL:jdbc:postgresql://localhost:5432/mekano}
   flyway:
     migrate-at-start: true
+    repair-at-start: true
+    out-of-order: true
     connect-retries: 5
   hibernate-orm:
     schema-management:
