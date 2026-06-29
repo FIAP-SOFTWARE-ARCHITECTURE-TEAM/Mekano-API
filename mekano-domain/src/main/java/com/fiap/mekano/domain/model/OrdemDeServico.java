@@ -146,12 +146,25 @@ public class OrdemDeServico {
     }
 
     /**
+     * Associa um orçamento à OS sem transicionar status.
+     * Chamado por OrcamentoService.gerarOrcamento() ao gerar o orçamento.
+     */
+    public void associarOrcamento(UUID orcamentoUuid) {
+        if (orcamentoUuid == null) {
+            throw new AppException(400, Messages.get("os.orcamento_uuid.required"));
+        }
+        this.orcamentoUuid = orcamentoUuid;
+    }
+
+    /**
      * AGUARDANDO_APROVACAO → EM_EXECUCAO (aprovação direta, sem estado APROVADA — INC-01)
      * Armazena orcamentoUuid e dataAprovacao.
      */
     public void aprovarOrcamento(UUID orcamentoUuid) {
         transicionar(StatusOS.EM_EXECUCAO);
-        this.orcamentoUuid = orcamentoUuid;
+        if (orcamentoUuid != null) {
+            this.orcamentoUuid = orcamentoUuid;
+        }
         this.dataAprovacao = LocalDateTime.now();
     }
 

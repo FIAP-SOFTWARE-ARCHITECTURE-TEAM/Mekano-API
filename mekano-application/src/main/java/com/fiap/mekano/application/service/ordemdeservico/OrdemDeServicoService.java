@@ -83,7 +83,7 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
     @Transactional
     public OrdemDeServico aprovarOrcamento(UUID id) {
         OrdemDeServico os = findById(id);
-        os.aprovarOrcamento();
+        os.aprovarOrcamento(os.getOrcamentoUuid());
         return repository.save(os);
     }
 

@@ -42,6 +42,7 @@ public class OrcamentoService implements OrcamentoServicePort {
                 command.descricao(), command.itens(), command.ordemServicoUuid());
 
         os.finalizarDiagnostico();
+        os.associarOrcamento(orcamento.getId());
         ordemDeServicoRepository.save(os);
         return orcamentoRepository.save(orcamento);
     }
