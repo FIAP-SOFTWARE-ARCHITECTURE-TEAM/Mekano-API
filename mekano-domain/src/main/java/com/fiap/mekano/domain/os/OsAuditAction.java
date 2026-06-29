@@ -1,56 +1,58 @@
 package com.fiap.mekano.domain.os;
 
+import com.fiap.mekano.domain.model.StatusOS;
+
 public enum OsAuditAction {
 
     CRIAR(
-            OsStatus.RECEBIDA,
+    		StatusOS.RECEBIDA,
             "OS recebida"
     ),
 
     DIAGNOSTICAR(
-            OsStatus.EM_DIAGNOSTICO,
+    		StatusOS.EM_DIAGNOSTICO,
             "OS em diagnóstico"
     ),
 
     ORCAR(
-            OsStatus.AGUARDANDO_APROVACAO,
+    		StatusOS.AGUARDANDO_APROVACAO,
             "OS aguardando aprovação"
     ),
 
     APROVAR(
-            OsStatus.EM_EXECUCAO,
+    		StatusOS.EM_EXECUCAO,
             "OS aprovada e enviada para execução"
     ),
 
     EXECUTAR(
-            OsStatus.EM_EXECUCAO,
+    		StatusOS.EM_EXECUCAO,
             "OS em execução"
     ),
 
     FINALIZAR(
-            OsStatus.FINALIZADA,
+    		StatusOS.FINALIZADA,
             "OS finalizada"
     ),
 
     ENTREGAR(
-            OsStatus.ENTREGUE,
+    		StatusOS.ENTREGUE,
             "OS entregue"
     ),
 
     CANCELAR(
-            OsStatus.CANCELADA,
+    		StatusOS.CANCELADA,
             "OS cancelada"
     );
 
-    private final OsStatus statusDestino;
+    private final StatusOS statusDestino;
     private final String observacaoDefault;
 
-    OsAuditAction(OsStatus statusDestino, String observacaoDefault) {
+    OsAuditAction(StatusOS statusDestino, String observacaoDefault) {
         this.statusDestino = statusDestino;
         this.observacaoDefault = observacaoDefault;
     }
 
-    public OsStatus getStatusDestino() {
+    public StatusOS getStatusDestino() {
         return statusDestino;
     }
 

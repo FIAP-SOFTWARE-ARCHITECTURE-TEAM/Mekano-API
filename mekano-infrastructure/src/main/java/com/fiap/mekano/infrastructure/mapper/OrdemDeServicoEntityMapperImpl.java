@@ -2,6 +2,8 @@ package com.fiap.mekano.infrastructure.mapper;
 
 import com.fiap.mekano.domain.model.OrdemDeServico;
 import com.fiap.mekano.domain.model.StatusOS;
+import com.fiap.mekano.domain.os.StatusEntrega;
+import com.fiap.mekano.domain.os.StatusPagamento;
 import com.fiap.mekano.infrastructure.entity.OrdemDeServicoEntity;
 import jakarta.enterprise.context.ApplicationScoped;
 
@@ -28,6 +30,26 @@ public class OrdemDeServicoEntityMapperImpl implements OrdemDeServicoEntityMappe
         entity.setDataAprovacao(os.getDataAprovacao());
         entity.setCreatedAt(os.getCreatedAt());
         entity.setVersion(os.getVersion());
+        
+        entity.setStatusPagamento(
+                os.getStatusPagamento() == null
+                        ? StatusPagamento.NAO_COBRADO.name()
+                        : os.getStatusPagamento().name()
+        );
+
+        entity.setStatusEntrega(
+                os.getStatusEntrega() == null
+                        ? StatusEntrega.NAO_LIBERADA.name()
+                        : os.getStatusEntrega().name()
+        );
+
+        entity.setCobrancaGeradaEm(os.getCobrancaGeradaEm());
+        entity.setPagamentoConfirmadoEm(os.getPagamentoConfirmadoEm());
+        entity.setReferenciaPagamento(os.getReferenciaPagamento());
+        entity.setEntregueEm(os.getEntregueEm());
+        entity.setRecebidoPor(os.getRecebidoPor());
+        
+        
         return entity;
     }
 
@@ -50,7 +72,31 @@ public class OrdemDeServicoEntityMapperImpl implements OrdemDeServicoEntityMappe
                 entity.getObservacaoExecucao(),
                 entity.getDataAprovacao(),
                 entity.getCreatedAt(),
-                entity.getVersion()
+                entity.getVersion(),
+                parseStatusPagamento(entity.getStatusPagamento()),
+                parseStatusEntrega(entity.getStatusEntrega()),
+                entity.getCobrancaGeradaEm(),
+                entity.getPagamentoConfirmadoEm(),
+                entity.getReferenciaPagamento(),
+                entity.getEntregueEm(),
+                entity.getRecebidoPor()
+                
         );
+    }
+    
+    private StatusPagamento parseStatusPagamento(String value) {
+        if (value == null || value.isBlank()) {
+            return StatusPagamento.NAO_COBRADO;
+        }
+
+        return StatusPagamento.valueOf(value);
+    }
+
+    private StatusEntrega parseStatusEntrega(String value) {
+        if (value == null || value.isBlank()) {
+            return StatusEntrega.NAO_LIBERADA;
+        }
+
+        return StatusEntrega.valueOf(value);
     }
 }
