@@ -14,6 +14,8 @@ import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
+import java.util.UUID;
+
 @ApplicationScoped
 public class OrcamentoService implements OrcamentoServicePort {
 
@@ -55,7 +57,7 @@ public class OrcamentoService implements OrcamentoServicePort {
         if (orcamento.getOrdemServicoUuid() != null) {
             OrdemDeServico os = ordemDeServicoRepository.findById(orcamento.getOrdemServicoUuid())
                     .orElseThrow(() -> new AppException(404, Messages.get("os.not.found", orcamento.getOrdemServicoUuid())));
-            os.aprovarOrcamento();
+            os.aprovarOrcamento(orcamento.getId());
             ordemDeServicoRepository.save(os);
         }
 
@@ -78,5 +80,11 @@ public class OrcamentoService implements OrcamentoServicePort {
         }
 
         return orcamentoRepository.save(orcamento);
+    }
+
+    @Override
+    public Orcamento buscarPorId(UUID orcamentoUuid) {
+        return orcamentoRepository.findByUuid(orcamentoUuid)
+                .orElseThrow(() -> new AppException(404, Messages.get("orcamento.not.found", orcamentoUuid)));
     }
 }
