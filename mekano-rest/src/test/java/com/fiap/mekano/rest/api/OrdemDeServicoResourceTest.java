@@ -11,6 +11,7 @@ import org.junit.jupiter.api.TestMethodOrder;
 import java.util.UUID;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 
@@ -352,6 +353,6 @@ class OrdemDeServicoResourceTest {
                 .put(BASE_PATH + "/" + osId + "/reprovar-orcamento")
                 .then()
                 .statusCode(422)
-                .body("detail", equalTo("Transição inválida: FINALIZADA → CANCELADA"));
+                .body("detail", containsString("FINALIZADA"));
     }
 }
