@@ -42,9 +42,8 @@ public class OrcamentoResource {
     @Operation(summary = "Listar orçamentos por OS", description = "Retorna os orçamentos associados a uma ordem de serviço")
     @APIResponse(responseCode = "200", description = "Lista de orçamentos")
     public Response buscarPorOS(@QueryParam("osUuid") UUID osUuid) {
-        var orcamentos = orcamentoService.buscarPorOrdemServico(osUuid)
-                .stream().map(OrcamentoResponse::from).toList();
-        return Response.ok(orcamentos).build();
+        var orcamento = orcamentoService.buscarPorOrdemServico(osUuid);
+        return Response.ok(OrcamentoResponse.from(orcamento)).build();
     }
 
     @GET
