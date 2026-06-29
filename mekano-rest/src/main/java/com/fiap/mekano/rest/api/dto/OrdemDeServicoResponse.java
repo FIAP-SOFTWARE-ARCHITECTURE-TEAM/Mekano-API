@@ -13,6 +13,5 @@ public record OrdemDeServicoResponse(
         @Schema(description = "Descrição do problema") String descricaoProblema,
         @Schema(description = "Status atual") String status,
         @Schema(description = "Motivo do cancelamento (se aplicável)") String motivoCancelamento,
-        @Schema(description = "UUID do orçamento gerado") UUID orcamentoUuid,
         @Schema(description = "Data de criação") LocalDateTime createdAt
 ) {}

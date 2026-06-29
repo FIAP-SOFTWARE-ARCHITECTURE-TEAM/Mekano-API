@@ -175,7 +175,7 @@ public class OrdemDeServicoResource {
         return new OrdemDeServicoResponse(
                 os.getId(), os.getClienteId(), os.getVeiculoId(),
                 os.getDescricaoProblema(), os.getStatus().name(),
-                os.getMotivoCancelamento(), os.getOrcamentoUuid(), os.getCreatedAt()
+                os.getMotivoCancelamento(), os.getCreatedAt()
         );
     }
 

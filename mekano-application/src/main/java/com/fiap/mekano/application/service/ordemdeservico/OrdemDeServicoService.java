@@ -10,7 +10,6 @@ import com.fiap.mekano.domain.event.OrdemDeServicoCriadaEvent;
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.domain.model.ItemOrcamento;
-import com.fiap.mekano.domain.model.Orcamento;
 import com.fiap.mekano.domain.model.OrdemDeServico;
 import com.fiap.mekano.domain.model.Peca;
 import com.fiap.mekano.domain.model.Servico;
@@ -18,7 +17,6 @@ import com.fiap.mekano.domain.port.in.CreateOrdemDeServicoCommand;
 import com.fiap.mekano.domain.port.in.FinalizarDiagnosticoCommand;
 import com.fiap.mekano.domain.port.in.OrdemDeServicoServicePort;
 import com.fiap.mekano.domain.port.out.EventPublisher;
-import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
 import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
 import com.fiap.mekano.domain.port.out.ServicoRepositoryPort;
@@ -37,16 +35,13 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
     private final EventPublisher eventPublisher;
     private final PecaRepositoryPort pecaRepository;
     private final ServicoRepositoryPort servicoRepository;
-    private final OrcamentoRepositoryPort orcamentoRepository;
 
     public OrdemDeServicoService(OrdemDeServicoRepositoryPort repository, EventPublisher eventPublisher,
-                                 PecaRepositoryPort pecaRepository, ServicoRepositoryPort servicoRepository,
-                                 OrcamentoRepositoryPort orcamentoRepository) {
+                                 PecaRepositoryPort pecaRepository, ServicoRepositoryPort servicoRepository) {
         this.repository = repository;
         this.eventPublisher = eventPublisher;
         this.pecaRepository = pecaRepository;
         this.servicoRepository = servicoRepository;
-        this.orcamentoRepository = orcamentoRepository;
     }
 
     @Override
@@ -113,10 +108,7 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
         }
 
         os.finalizarDiagnostico();
-        Orcamento orcamento = Orcamento.create(command.descricao(), itens, os.getId());
-        os.associarOrcamento(orcamento.getId());
         repository.save(os);
-        orcamentoRepository.save(orcamento);
         eventPublisher.publish(DiagnosticoFinalizadoEvent.of(os.getId(), command.descricao(), itens));
         return os;
     }
