@@ -70,8 +70,16 @@ public class RefreshTokenService {
 
     @Transactional
     public void invalidateByUser(String tokenHash) {
-        repository.findByTokenHash(tokenHash)
-                .ifPresent(token -> repository.deleteByUser(token.userUuid()));
+        Instant now = Instant.now();
+
+        RefreshTokenData token = repository.findByTokenHash(tokenHash)
+                .orElseThrow(this::unauthorized);
+
+        if (token.isRotated() || token.isExpired(now)) {
+            throw unauthorized();
+        }
+
+        repository.deleteByUser(token.userUuid());
     }
 
     public static String sha256(String value) {

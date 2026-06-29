@@ -1,11 +1,18 @@
 package com.fiap.mekano.application.service;
 
-import com.fiap.mekano.application.service.ServicoService;
-import com.fiap.mekano.domain.exception.AppException;
-import com.fiap.mekano.domain.model.Servico;
-import com.fiap.mekano.domain.port.in.CreateServicoCommand;
-import com.fiap.mekano.domain.port.in.UpdateServicoCommand;
-import com.fiap.mekano.domain.port.out.ServicoRepositoryPort;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.math.BigDecimal;
+import java.util.Optional;
+import java.util.UUID;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,13 +20,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.math.BigDecimal;
-import java.util.Optional;
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.model.Servico;
+import com.fiap.mekano.domain.port.in.CreateServicoCommand;
+import com.fiap.mekano.domain.port.in.UpdateServicoCommand;
+import com.fiap.mekano.domain.port.out.ServicoRepositoryPort;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("ServicoService")
