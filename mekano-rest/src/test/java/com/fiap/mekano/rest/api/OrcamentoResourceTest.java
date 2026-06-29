@@ -24,7 +24,6 @@ import java.util.UUID;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.notNullValue;
 
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -36,6 +35,25 @@ class OrcamentoResourceTest {
 
     @InjectMock
     OrcamentoServicePort orcamentoService;
+
+    @BeforeEach
+    void setUp() {
+        var aprovado = mockOrcamentoAprovado();
+        var reprovado = mockOrcamentoReprovado();
+        var pendente = mockOrcamento();
+
+        Mockito.when(orcamentoService.buscarPorId(ORCAMENTO_UUID))
+                .thenReturn(pendente);
+
+        Mockito.when(orcamentoService.buscarPorId(Mockito.argThat(id -> !id.equals(ORCAMENTO_UUID))))
+                .thenThrow(new AppException(404, "Orçamento não encontrado"));
+
+        Mockito.when(orcamentoService.aprovar(Mockito.any()))
+                .thenReturn(aprovado);
+
+        Mockito.when(orcamentoService.reprovar(Mockito.any()))
+                .thenReturn(reprovado);
+    }
 
     private static Orcamento mockOrcamento() {
         var itens = List.of(new ItemOrcamento("Troca de óleo", 1L, new BigDecimal("89.90")));
@@ -58,65 +76,8 @@ class OrcamentoResourceTest {
                 StatusOrcamento.REPROVADO, OS_UUID, LocalDateTime.now().plusHours(72));
     }
 
-    @BeforeEach
-    void setUp() {
-        var pendente = mockOrcamento();
-        var aprovado = mockOrcamentoAprovado();
-        var reprovado = mockOrcamentoReprovado();
-
-        Mockito.when(orcamentoService.gerarOrcamento(Mockito.any()))
-                .thenReturn(pendente);
-
-        Mockito.when(orcamentoService.buscarPorId(ORCAMENTO_UUID))
-                .thenReturn(pendente);
-
-        Mockito.when(orcamentoService.buscarPorId(Mockito.argThat(id -> !id.equals(ORCAMENTO_UUID))))
-                .thenThrow(new AppException(404, "Orçamento não encontrado"));
-
-        Mockito.when(orcamentoService.aprovar(Mockito.any()))
-                .thenReturn(aprovado);
-
-        Mockito.when(orcamentoService.reprovar(Mockito.any()))
-                .thenReturn(reprovado);
-    }
-
     @Test
     @Order(1)
-    @TestSecurity(user = "admin", roles = {"admin"})
-    void gerar_comDadosValidos_returns201() {
-        given()
-                .contentType(ContentType.JSON)
-                .body("""
-                        {"ordemServicoUuid": "%s", "descricao": "Orçamento completo", "itens": [{"descricao": "Troca de óleo", "quantidade": 1, "valorUnitario": 89.90}]}
-                        """.formatted(OS_UUID.toString()))
-                .when()
-                .post(BASE_PATH)
-                .then()
-                .statusCode(201)
-                .body("id", notNullValue())
-                .body("descricao", equalTo("Orçamento completo"))
-                .body("status", equalTo("PENDENTE"))
-                .body("valorTotal", equalTo(89.90f))
-                .header("Location", notNullValue());
-    }
-
-    @Test
-    @Order(2)
-    @TestSecurity(user = "admin", roles = {"admin"})
-    void gerar_semItens_returns400() {
-        given()
-                .contentType(ContentType.JSON)
-                .body("""
-                        {"ordemServicoUuid": "%s", "descricao": "Sem itens", "itens": []}
-                        """.formatted(OS_UUID.toString()))
-                .when()
-                .post(BASE_PATH)
-                .then()
-                .statusCode(400);
-    }
-
-    @Test
-    @Order(3)
     @TestSecurity(user = "cliente", roles = {"cliente"})
     void aprovar_comDadosValidos_returns200() {
         given()
@@ -130,7 +91,7 @@ class OrcamentoResourceTest {
     }
 
     @Test
-    @Order(4)
+    @Order(2)
     @TestSecurity(user = "cliente", roles = {"cliente"})
     void reprovar_comMotivo_returns200() {
         given()
@@ -147,7 +108,7 @@ class OrcamentoResourceTest {
     }
 
     @Test
-    @Order(5)
+    @Order(3)
     @TestSecurity(user = "admin", roles = {"admin"})
     void buscarPorId_existente_returns200() {
         given()
@@ -160,7 +121,7 @@ class OrcamentoResourceTest {
     }
 
     @Test
-    @Order(6)
+    @Order(4)
     @TestSecurity(user = "admin", roles = {"admin"})
     void buscarPorId_inexistente_returns404() {
         given()
@@ -169,19 +130,5 @@ class OrcamentoResourceTest {
                 .then()
                 .statusCode(404)
                 .contentType(containsString("application/problem+json"));
-    }
-
-    @Test
-    @Order(7)
-    void gerar_semAutenticacao_returns401() {
-        given()
-                .contentType(ContentType.JSON)
-                .body("""
-                        {"ordemServicoUuid": "%s", "descricao": "X", "itens": [{"descricao": "Y", "quantidade": 1, "valorUnitario": 10.0}]}
-                        """.formatted(OS_UUID.toString()))
-                .when()
-                .post(BASE_PATH)
-                .then()
-                .statusCode(401);
     }
 }

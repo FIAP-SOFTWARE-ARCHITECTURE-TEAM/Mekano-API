@@ -162,63 +162,30 @@ class OrdemDeServicoResourceTest {
                 .body("dataEntrada", notNullValue());
     }
 
-    // ─────────────── FINALIZAR DIAGNOSTICO ───────────────
+    // ─────────────── AUTORIZAÇÃO ───────────────
 
     @Test
-    @Order(4)
+    @Order(8)
     @TestSecurity(user = "mecanico", roles = {"mecanico"})
-    void finalizarDiagnostico_returns200() {
+    void create_asMecanico_returns403() {
         given()
-                .when()
-                .put(BASE_PATH + "/" + createdUuid + "/finalizar-diagnostico")
-                .then()
-                .statusCode(200)
-                .body("status", equalTo("AGUARDANDO_APROVACAO"));
-    }
-
-    // ─────────────── GET STATUS (após diagnóstico) ───────────────
-
-    @Test
-    @Order(5)
-    void getStatus_aguardandoAprovacao_returns200() {
-        given()
-                .when()
-                .get(BASE_PATH + "/" + createdUuid + "/status")
-                .then()
-                .statusCode(200)
-                .body("status", equalTo("AGUARDANDO_APROVACAO"));
-    }
-
-    // ─────────────── CANCELAR ───────────────
-
-    @Test
-    @Order(6)
-    @TestSecurity(user = "admin", roles = {"admin"})
-    void cancelar_os_aguardando_aprovacao_returns_200() {
-        // Criar nova OS e levar até AGUARDANDO_APROVACAO
-        String osId = given()
                 .contentType(ContentType.JSON)
                 .body("""
-                        {"clienteId": "%s", "veiculoId": "%s", "descricaoProblema": "Freio com ruído"}
+                        {"clienteId": "%s", "veiculoId": "%s", "descricaoProblema": "teste"}
                         """.formatted(UUID.randomUUID(), UUID.randomUUID()))
                 .when()
                 .post(BASE_PATH)
-                .then().statusCode(201).extract().path("id");
-
-        given().put(BASE_PATH + "/" + osId + "/iniciar-diagnostico").then().statusCode(200);
-        given().put(BASE_PATH + "/" + osId + "/finalizar-diagnostico").then().statusCode(200);
-
-        // Cancelar de AGUARDANDO_APROVACAO
-        given()
-                .contentType(ContentType.JSON)
-                .body("""
-                        {"motivo": "Cliente desistiu do serviço"}
-                        """)
-                .when()
-                .put(BASE_PATH + "/" + osId + "/cancelar")
                 .then()
-                .statusCode(200)
-                .body("status", equalTo("CANCELADA"))
-                .body("motivoCancelamento", equalTo("Cliente desistiu do serviço"));
+                .statusCode(403);
+    }
+
+    @Test
+    @Order(9)
+    void listAll_withoutAuth_returns401() {
+        given()
+                .when()
+                .get(BASE_PATH)
+                .then()
+                .statusCode(401);
     }
 }

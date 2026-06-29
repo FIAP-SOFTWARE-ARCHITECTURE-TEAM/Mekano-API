@@ -6,8 +6,6 @@ import java.util.UUID;
 
 public interface OrcamentoServicePort {
 
-    Orcamento gerarOrcamento(GerarOrcamentoCommand command);
-
     Orcamento aprovar(AprovarOrcamentoCommand command);
 
     Orcamento reprovar(ReprovarOrcamentoCommand command);

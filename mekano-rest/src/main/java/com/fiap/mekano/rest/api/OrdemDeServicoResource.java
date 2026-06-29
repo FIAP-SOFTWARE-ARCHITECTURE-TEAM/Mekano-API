@@ -2,8 +2,10 @@ package com.fiap.mekano.rest.api;
 
 import com.fiap.mekano.domain.model.OrdemDeServico;
 import com.fiap.mekano.domain.port.in.CreateOrdemDeServicoCommand;
+import com.fiap.mekano.domain.port.in.FinalizarDiagnosticoCommand;
 import com.fiap.mekano.domain.port.in.OrdemDeServicoServicePort;
 import com.fiap.mekano.rest.api.dto.CreateOrdemDeServicoRequest;
+import com.fiap.mekano.rest.api.dto.FinalizarDiagnosticoRequest;
 import com.fiap.mekano.rest.api.dto.OrdemDeServicoPageResponse;
 import com.fiap.mekano.rest.api.dto.OrdemDeServicoResponse;
 import com.fiap.mekano.rest.api.dto.OrdemDeServicoStatusResponse;
@@ -123,11 +125,20 @@ public class OrdemDeServicoResource {
 
     @PUT
     @Path("/{id}/finalizar-diagnostico")
+    @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @RolesAllowed({"mecanico", "admin"})
-    @Operation(summary = "Finalizar diagnóstico")
-    public Response finalizarDiagnostico(@PathParam("id") UUID id) {
-        return Response.ok(toResponse(osService.finalizarDiagnostico(id))).build();
+    @Operation(summary = "Finalizar diagnóstico e gerar orçamento",
+               description = "Finaliza o diagnóstico e dispara a geração automática do orçamento via evento. " +
+                             "Os itens referenciam peças e serviços já cadastrados no sistema.")
+    @APIResponse(responseCode = "200", description = "Diagnóstico finalizado, orçamento gerado automaticamente")
+    public Response finalizarDiagnostico(@PathParam("id") UUID id, @Valid FinalizarDiagnosticoRequest request) {
+        var itens = request.getItens().stream()
+                .map(i -> new FinalizarDiagnosticoCommand.ItemDiagnostico(
+                        i.getReferenciaUuid(), i.getTipo(), i.getQuantidade()))
+                .toList();
+        var command = new FinalizarDiagnosticoCommand(id, request.getDescricao(), itens);
+        return Response.ok(toResponse(osService.finalizarDiagnostico(command))).build();
     }
 
     @PUT
