@@ -34,6 +34,7 @@ class CobrancaEmitidaListenerTest {
 
     @Mock OrdemDeServicoRepositoryPort ordemDeServicoRepository;
     @Mock OrcamentoRepositoryPort orcamentoRepository;
+    // TODO(#33): remover mock e usar implementação real quando #33 for feita
     @Mock ProcessedEventsRepositoryPort processedEventsRepository;
     @Mock EventPublisher eventPublisher;
 

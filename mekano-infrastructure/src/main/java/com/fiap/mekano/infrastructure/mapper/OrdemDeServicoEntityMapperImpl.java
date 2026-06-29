@@ -2,6 +2,7 @@ package com.fiap.mekano.infrastructure.mapper;
 
 import com.fiap.mekano.domain.model.OrdemDeServico;
 import com.fiap.mekano.domain.model.StatusOS;
+import com.fiap.mekano.domain.model.StatusPagamento;
 import com.fiap.mekano.infrastructure.entity.OrdemDeServicoEntity;
 import jakarta.enterprise.context.ApplicationScoped;
 
@@ -28,6 +29,9 @@ public class OrdemDeServicoEntityMapperImpl implements OrdemDeServicoEntityMappe
         entity.setDataAprovacao(os.getDataAprovacao());
         entity.setCreatedAt(os.getCreatedAt());
         entity.setVersion(os.getVersion());
+        // TODO(#33): mapear statusPagamento, valorCobrado, dataPagamento,
+        //           dataEntrega, observacaoEntrega quando campos forem
+        //           adicionados na OrdemDeServicoEntity
         return entity;
     }
 
@@ -49,6 +53,11 @@ public class OrdemDeServicoEntityMapperImpl implements OrdemDeServicoEntityMappe
                 entity.getExecucaoFinalizadaEm(),
                 entity.getObservacaoExecucao(),
                 entity.getDataAprovacao(),
+                null, // TODO(#33): statusPagamento da entity
+                null, // TODO(#33): valorCobrado da entity
+                null, // TODO(#33): dataPagamento da entity
+                null, // TODO(#33): dataEntrega da entity
+                null, // TODO(#33): observacaoEntrega da entity
                 entity.getCreatedAt(),
                 entity.getVersion()
         );

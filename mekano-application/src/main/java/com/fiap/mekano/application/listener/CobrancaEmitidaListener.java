@@ -21,6 +21,8 @@ public class CobrancaEmitidaListener {
     private final ProcessedEventsRepositoryPort processedEventsRepository;
     private final EventPublisher eventPublisher;
 
+    // TODO(#33): substituir ProcessedEventsRepositoryPort pela implementação real
+    //            (processed_events table + ProcessedEventEntity + ProcessedEventRepository)
     public CobrancaEmitidaListener(OrdemDeServicoRepositoryPort ordemDeServicoRepository,
                                    OrcamentoRepositoryPort orcamentoRepository,
                                    ProcessedEventsRepositoryPort processedEventsRepository,

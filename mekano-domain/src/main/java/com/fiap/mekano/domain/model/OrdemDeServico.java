@@ -43,6 +43,9 @@ public class OrdemDeServico {
     private LocalDateTime execucaoFinalizadaEm;
     private String observacaoExecucao;
     private LocalDateTime dataAprovacao;
+    // TODO(#33): campos de pagamento — dependem da migration V18
+    //            (ALTER TABLE ordens_de_servico ADD COLUMN status_pagamento, etc.)
+    //            e dos campos na OrdemDeServicoEntity
     private StatusPagamento statusPagamento;
     private BigDecimal valorCobrado;
     private LocalDateTime dataPagamento;

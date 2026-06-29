@@ -17,6 +17,8 @@ public class MockPaymentService {
     private final ProcessedEventsRepositoryPort processedEventsRepository;
     private final EventPublisher eventPublisher;
 
+    // TODO(#33): substituir ProcessedEventsRepositoryPort pela implementação real
+    //            (processed_events table + ProcessedEventEntity + ProcessedEventRepository)
     public MockPaymentService(OrdemDeServicoRepositoryPort ordemDeServicoRepository,
                               ProcessedEventsRepositoryPort processedEventsRepository,
                               EventPublisher eventPublisher) {
