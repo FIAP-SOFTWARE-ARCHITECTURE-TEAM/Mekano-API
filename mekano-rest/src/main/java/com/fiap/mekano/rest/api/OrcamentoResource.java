@@ -16,6 +16,7 @@ import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.openapi.annotations.Operation;
@@ -24,6 +25,7 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
+import java.util.List;
 import java.util.UUID;
 
 @Path("/orcamentos")
@@ -34,6 +36,16 @@ public class OrcamentoResource {
 
     @Inject
     OrcamentoServicePort orcamentoService;
+
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(summary = "Listar orçamentos por OS", description = "Retorna os orçamentos associados a uma ordem de serviço")
+    @APIResponse(responseCode = "200", description = "Lista de orçamentos")
+    public Response buscarPorOS(@QueryParam("osUuid") UUID osUuid) {
+        var orcamentos = orcamentoService.buscarPorOrdemServico(osUuid)
+                .stream().map(OrcamentoResponse::from).toList();
+        return Response.ok(orcamentos).build();
+    }
 
     @GET
     @Path("/{uuid}")

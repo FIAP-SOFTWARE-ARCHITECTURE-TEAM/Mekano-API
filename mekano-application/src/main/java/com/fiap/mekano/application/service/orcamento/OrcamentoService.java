@@ -12,6 +12,7 @@ import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @ApplicationScoped
@@ -66,5 +67,12 @@ public class OrcamentoService implements OrcamentoServicePort {
     public Orcamento buscarPorId(UUID orcamentoUuid) {
         return orcamentoRepository.findByUuid(orcamentoUuid)
                 .orElseThrow(() -> new AppException(404, Messages.get("orcamento.not.found", orcamentoUuid)));
+    }
+
+    @Override
+    public List<Orcamento> buscarPorOrdemServico(UUID osUuid) {
+        return orcamentoRepository.findByOrdemServicoUuid(osUuid)
+                .map(List::of)
+                .orElse(List.of());
     }
 }
