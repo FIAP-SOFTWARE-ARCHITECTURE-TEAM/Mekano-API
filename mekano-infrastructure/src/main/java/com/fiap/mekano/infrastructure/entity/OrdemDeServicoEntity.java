@@ -8,12 +8,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
-/**
- * Entidade JPA para Ordem de Serviço.
- * {@code @Version} para optimistic locking (D-26).
- */
 @Entity
 @Table(name = "ordens_de_servico")
 @Getter
@@ -21,16 +18,16 @@ import java.util.UUID;
 @NoArgsConstructor
 public class OrdemDeServicoEntity extends BaseEntity {
 
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false, unique = true)
     UUID uuid;
 
-    @Column(name = "cliente_id", nullable = false)
-    UUID clienteId;
+    @Column(name = "cliente_uuid", nullable = false)
+    UUID clienteUuid;
 
-    @Column(name = "veiculo_id", nullable = false)
-    UUID veiculoId;
+    @Column(name = "veiculo_uuid", nullable = false)
+    UUID veiculoUuid;
 
-    @Column(name = "descricao_problema", nullable = false, length = 1000)
+    @Column(name = "descricao_problema", nullable = false, length = 500)
     String descricaoProblema;
 
     @Column(nullable = false, length = 30)
@@ -38,6 +35,24 @@ public class OrdemDeServicoEntity extends BaseEntity {
 
     @Column(name = "motivo_cancelamento", length = 500)
     String motivoCancelamento;
+
+    @Column(name = "orcamento_uuid")
+    UUID orcamentoUuid;
+
+    @Column(name = "mecanico_uuid")
+    UUID mecanicoUuid;
+
+    @Column(name = "execucao_iniciada_em")
+    LocalDateTime execucaoIniciadaEm;
+
+    @Column(name = "execucao_finalizada_em")
+    LocalDateTime execucaoFinalizadaEm;
+
+    @Column(name = "observacao_execucao", length = 1000)
+    String observacaoExecucao;
+
+    @Column(name = "data_aprovacao")
+    LocalDateTime dataAprovacao;
 
     @Version
     @Column(nullable = false)

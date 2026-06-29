@@ -119,6 +119,12 @@
 			<groupId>io.quarkus</groupId>
 			<artifactId>quarkus-smallrye-jwt-build</artifactId>
 		</dependency>
+
+		<!-- Scheduler — @Scheduled para SLA expiry job -->
+		<dependency>
+			<groupId>io.quarkus</groupId>
+			<artifactId>quarkus-scheduler</artifactId>
+		</dependency>
 	</dependencies>
 
 	<build>

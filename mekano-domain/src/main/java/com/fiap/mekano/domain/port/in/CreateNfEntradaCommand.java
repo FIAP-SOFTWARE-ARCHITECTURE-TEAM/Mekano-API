@@ -1,9 +1,10 @@
 package com.fiap.mekano.domain.port.in;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 public record CreateNfEntradaCommand(
-    UUID pecaId,
-    UUID requisicaoCompraId,
-    Integer quantidade
+    String chaveAcesso,
+    BigDecimal valorTotal,
+    UUID requisicaoCompraId
 ) {}

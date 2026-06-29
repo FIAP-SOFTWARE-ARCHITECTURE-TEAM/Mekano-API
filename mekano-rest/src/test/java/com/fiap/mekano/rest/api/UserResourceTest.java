@@ -27,7 +27,7 @@ import static org.hamcrest.Matchers.nullValue;
  */
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@TestSecurity(user = "testuser", roles = {"user"})
+@TestSecurity(user = "admin@mekano.com", roles = {"admin"})
 class UserResourceTest {
 
     private static final String VALID_EMAIL = "ana@fiap.br";

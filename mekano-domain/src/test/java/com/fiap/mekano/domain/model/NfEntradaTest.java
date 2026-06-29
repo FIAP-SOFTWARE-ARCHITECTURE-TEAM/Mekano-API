@@ -5,7 +5,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -14,102 +14,52 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class NfEntradaTest {
 
     @Test
-    @DisplayName("deve criar nota fiscal com cálculo automático de valor total")
-    void deveCriarNfEntradaComValorTotal() {
-        LocalDateTime dataEmissao = LocalDateTime.now().minusDays(1);
+    @DisplayName("deve criar nota fiscal")
+    void deveCriarNfEntrada() {
+        UUID pecaId = UUID.randomUUID();
+        UUID requisicaoId = UUID.randomUUID();
 
         NfEntrada nf = NfEntrada.create(
-                "123456",
-                "1",
-                "12345678000190",
-                "Fornecedor LTDA",
-                dataEmissao,
-                new BigDecimal("1000.00"),
-                new BigDecimal("100.00"),
-                new BigDecimal("50.00"),
-                new BigDecimal("25.00"),
-                "12345678901234567890123456789012345678901234"
+                "12345678901234567890123456789012345678901234",
+                new BigDecimal("1875.00"),
+                pecaId, requisicaoId
         );
 
         assertThat(nf.getId()).isNotNull();
-        assertThat(nf.getNumero()).isEqualTo("123456");
-        assertThat(nf.getValorTotal()).isEqualTo(new BigDecimal("1175.00"));
-    }
-
-    @Test
-    @DisplayName("deve rejeitar data emissão no futuro")
-    void deveRejeitarDataEmissaoFuturo() {
-        LocalDateTime dataFutura = LocalDateTime.now().plusDays(1);
-
-        assertThatThrownBy(() -> NfEntrada.create(
-                "123456",
-                "1",
-                "12345678000190",
-                "Fornecedor",
-                dataFutura,
-                new BigDecimal("1000.00"),
-                BigDecimal.ZERO,
-                BigDecimal.ZERO,
-                BigDecimal.ZERO,
-                "12345678901234567890123456789012345678901234"
-        )).isInstanceOf(AppException.class);
-    }
-
-    @Test
-    @DisplayName("deve rejeitar CNPJ inválido")
-    void deveRejeitarCnpjInvalido() {
-        LocalDateTime data = LocalDateTime.now().minusDays(1);
-
-        assertThatThrownBy(() -> NfEntrada.create(
-                "123456",
-                "1",
-                "123",
-                "Fornecedor",
-                data,
-                new BigDecimal("1000.00"),
-                BigDecimal.ZERO,
-                BigDecimal.ZERO,
-                BigDecimal.ZERO,
-                "12345678901234567890123456789012345678901234"
-        )).isInstanceOf(AppException.class);
+        assertThat(nf.getChaveAcesso()).isEqualTo("12345678901234567890123456789012345678901234");
+        assertThat(nf.getValorTotal()).isEqualTo(new BigDecimal("1875.00"));
+        assertThat(nf.getPecaId()).isEqualTo(pecaId);
+        assertThat(nf.getRequisicaoCompraId()).isEqualTo(requisicaoId);
     }
 
     @Test
     @DisplayName("deve rejeitar chave de acesso inválida")
     void deveRejeitarChaveAcessoInvalida() {
-        LocalDateTime data = LocalDateTime.now().minusDays(1);
-
         assertThatThrownBy(() -> NfEntrada.create(
-                "123456",
-                "1",
-                "12345678000190",
-                "Fornecedor",
-                data,
-                new BigDecimal("1000.00"),
+                "1234",
+                BigDecimal.ONE,
+                UUID.randomUUID(), UUID.randomUUID()
+        )).isInstanceOf(AppException.class);
+    }
+
+    @Test
+    @DisplayName("deve rejeitar valor total zero ou negativo")
+    void deveRejeitarValorTotalInvalido() {
+        assertThatThrownBy(() -> NfEntrada.create(
+                "12345678901234567890123456789012345678901234",
                 BigDecimal.ZERO,
-                BigDecimal.ZERO,
-                BigDecimal.ZERO,
-                "1234"
+                UUID.randomUUID(), UUID.randomUUID()
         )).isInstanceOf(AppException.class);
     }
 
     @Test
     @DisplayName("deve formatar chave de acesso corretamente")
     void deveFormatarChaveAcesso() {
-        LocalDateTime data = LocalDateTime.now().minusDays(1);
         String chave = "12345678901234567890123456789012345678901234";
 
         NfEntrada nf = NfEntrada.create(
-                "123456",
-                "1",
-                "12345678000190",
-                "Fornecedor",
-                data,
-                new BigDecimal("1000.00"),
-                BigDecimal.ZERO,
-                BigDecimal.ZERO,
-                BigDecimal.ZERO,
-                chave
+                chave, BigDecimal.ONE,
+                UUID.randomUUID(), UUID.randomUUID()
         );
 
         assertThat(nf.chaveAcessoFormatada())
@@ -117,21 +67,22 @@ class NfEntradaTest {
     }
 
     @Test
-    @DisplayName("deve rejeitar valor negativo de impostos")
-    void deveRejeitarValorNegativoImpostos() {
-        LocalDateTime data = LocalDateTime.now().minusDays(1);
-
+    @DisplayName("deve rejeitar pecaId nulo")
+    void deveRejeitarPecaIdNulo() {
         assertThatThrownBy(() -> NfEntrada.create(
-                "123456",
-                "1",
-                "12345678000190",
-                "Fornecedor",
-                data,
-                new BigDecimal("1000.00"),
-                new BigDecimal("-100.00"),
-                BigDecimal.ZERO,
-                BigDecimal.ZERO,
-                "12345678901234567890123456789012345678901244"
+                "12345678901234567890123456789012345678901234",
+                BigDecimal.ONE,
+                null, UUID.randomUUID()
+        )).isInstanceOf(AppException.class);
+    }
+
+    @Test
+    @DisplayName("deve rejeitar requisicaoCompraId nulo")
+    void deveRejeitarRequisicaoIdNulo() {
+        assertThatThrownBy(() -> NfEntrada.create(
+                "12345678901234567890123456789012345678901234",
+                BigDecimal.ONE,
+                UUID.randomUUID(), null
         )).isInstanceOf(AppException.class);
     }
 }
