@@ -6,6 +6,7 @@ import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.domain.model.Peca;
 import com.fiap.mekano.domain.port.in.CreatePecaCommand;
 import com.fiap.mekano.domain.port.out.EventPublisher;
+import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
 import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
@@ -18,10 +19,13 @@ public class PecaService {
 
     private final PecaRepositoryPort pecaRepository;
     private final EventPublisher eventPublisher;
+    private final OrcamentoRepositoryPort orcamentoRepository;
 
-    public PecaService(PecaRepositoryPort pecaRepository, EventPublisher eventPublisher) {
+    public PecaService(PecaRepositoryPort pecaRepository, EventPublisher eventPublisher,
+                       OrcamentoRepositoryPort orcamentoRepository) {
         this.pecaRepository = pecaRepository;
         this.eventPublisher = eventPublisher;
+        this.orcamentoRepository = orcamentoRepository;
     }
 
     @Transactional
@@ -74,5 +78,14 @@ public class PecaService {
 
     public List<Peca> listarAbaixoEstoqueMinimo() {
         return pecaRepository.listarAbaixoEstoqueMinimo();
+    }
+
+    @Transactional
+    public void excluir(UUID pecaId) {
+        if (orcamentoRepository.existsByPecaIdVinculadaAOrdemComStatus(
+                pecaId, List.of("AGUARDANDO_APROVACAO", "EM_EXECUCAO"))) {
+            throw new AppException(409, Messages.get("os.peca.vinculada.os.ativa"));
+        }
+        pecaRepository.remover(pecaId);
     }
 }

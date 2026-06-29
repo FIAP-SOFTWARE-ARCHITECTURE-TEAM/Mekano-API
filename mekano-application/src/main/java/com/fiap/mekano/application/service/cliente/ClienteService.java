@@ -9,6 +9,7 @@ import com.fiap.mekano.domain.port.in.CreateClienteCommand;
 import com.fiap.mekano.domain.port.in.UpdateClienteCommand;
 import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;
 import com.fiap.mekano.domain.port.out.EventPublisher;
+import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
@@ -20,10 +21,13 @@ public class ClienteService implements ClienteServicePort {
 
     private final ClienteRepositoryPort clienteRepository;
     private final EventPublisher eventPublisher;
+    private final OrdemDeServicoRepositoryPort osRepository;
 
-    public ClienteService(ClienteRepositoryPort clienteRepository, EventPublisher eventPublisher) {
+    public ClienteService(ClienteRepositoryPort clienteRepository, EventPublisher eventPublisher,
+                          OrdemDeServicoRepositoryPort osRepository) {
         this.clienteRepository = clienteRepository;
         this.eventPublisher = eventPublisher;
+        this.osRepository = osRepository;
     }
 
     @Override
@@ -61,6 +65,9 @@ public class ClienteService implements ClienteServicePort {
 
     @Override
     public void deleteCliente(UUID id) {
+        if (osRepository.existsByClienteUuidAndStatusIn(id, List.of("EM_EXECUCAO", "AGUARDANDO_APROVACAO"))) {
+            throw new AppException(409, Messages.get("os.cliente.possui.os.ativa"));
+        }
         clienteRepository.markAsDeleted(id);
     }
 }

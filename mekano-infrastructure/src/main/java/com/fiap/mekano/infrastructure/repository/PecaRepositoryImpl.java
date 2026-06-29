@@ -120,6 +120,16 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
                 .executeUpdate();
     }
 
+    @Override
+    @Transactional
+    public void remover(UUID id) {
+        panacheRepository.find("uuid = ?1", id).firstResultOptional().ifPresent(entity -> {
+            entity.setIsActive(false);
+            entity.setDeletedAt(LocalDateTime.now());
+            panacheRepository.flush();
+        });
+    }
+
     private static Peca toDomain(PecaEntity entity) {
         return Peca.reconstitute(
                 entity.uuid,
