@@ -51,24 +51,19 @@ public class OrdemDeServico {
     private LocalDateTime execucaoFinalizadaEm;
     private String observacaoExecucao;
     private LocalDateTime dataAprovacao;
-    // TODO(#33): campos de pagamento — dependem da migration V18
-    //            (ALTER TABLE ordens_de_servico ADD COLUMN status_pagamento, etc.)
-    //            e dos campos na OrdemDeServicoEntity
     private StatusPagamento statusPagamento;
+    private StatusEntrega statusEntrega;
     private BigDecimal valorCobrado;
     private LocalDateTime dataPagamento;
     private LocalDateTime dataEntrega;
     private String observacaoEntrega;
-    private final LocalDateTime createdAt;
-    private final Long version;
-
-    private StatusPagamento statusPagamento;
-    private StatusEntrega statusEntrega;
     private LocalDateTime cobrancaGeradaEm;
     private LocalDateTime pagamentoConfirmadoEm;
     private String referenciaPagamento;
     private LocalDateTime entregueEm;
     private String recebidoPor;
+    private final LocalDateTime createdAt;
+    private final Long version;
 
     /**
      * Factory method — cria uma nova OS com status RECEBIDA.
@@ -143,6 +138,12 @@ public class OrdemDeServico {
                                               LocalDateTime dataPagamento,
                                               LocalDateTime dataEntrega,
                                               String observacaoEntrega,
+                                              StatusEntrega statusEntrega,
+                                              LocalDateTime cobrancaGeradaEm,
+                                              LocalDateTime pagamentoConfirmadoEm,
+                                              String referenciaPagamento,
+                                              LocalDateTime entregueEm,
+                                              String recebidoPor,
                                               LocalDateTime createdAt, Long version) {
         return OrdemDeServico.builder()
                 .id(id)
@@ -157,20 +158,19 @@ public class OrdemDeServico {
                 .execucaoFinalizadaEm(execucaoFinalizadaEm)
                 .observacaoExecucao(observacaoExecucao)
                 .dataAprovacao(dataAprovacao)
-                .statusPagamento(statusPagamento)
+                .statusPagamento(statusPagamento == null ? StatusPagamento.NAO_COBRADO : statusPagamento)
                 .valorCobrado(valorCobrado)
                 .dataPagamento(dataPagamento)
                 .dataEntrega(dataEntrega)
                 .observacaoEntrega(observacaoEntrega)
-                .createdAt(createdAt)
-                .version(version)
-                .statusPagamento(statusPagamento == null ? StatusPagamento.NAO_COBRADO : statusPagamento)
                 .statusEntrega(statusEntrega == null ? StatusEntrega.NAO_LIBERADA : statusEntrega)
                 .cobrancaGeradaEm(cobrancaGeradaEm)
                 .pagamentoConfirmadoEm(pagamentoConfirmadoEm)
                 .referenciaPagamento(referenciaPagamento)
                 .entregueEm(entregueEm)
                 .recebidoPor(recebidoPor)
+                .createdAt(createdAt)
+                .version(version)
                 .build();
     }
 
@@ -391,51 +391,11 @@ public class OrdemDeServico {
         }
 
         transicionar(StatusOS.ENTREGUE);
+        this.statusEntrega = StatusEntrega.ENTREGUE;
         this.dataEntrega = LocalDateTime.now();
-    }
-
-    /**
-     * Entrega com observação (service-level guard valida pagamento antes)
-     */
-    public void entregar(String observacao) {
-        transicionar(StatusOS.ENTREGUE);
-        this.dataEntrega = LocalDateTime.now();
-        if (observacao != null && !observacao.isBlank()) {
-            this.observacaoEntrega = observacao.strip();
-        }
-    }
-
-    // ─────────────── Pagamento ───────────────
-
-    public boolean isPagamentoPendente() {
-        return statusPagamento == StatusPagamento.PENDENTE;
-    }
-
-    public boolean isPagamentoConfirmado() {
-        return statusPagamento == StatusPagamento.CONFIRMADO;
-    }
-
-    /**
-     * Emite cobrança: seta PENDENTE com valor copiado do orçamento (D-03)
-     */
-    public void emitirCobranca(BigDecimal valor) {
-        if (statusPagamento != null) {
-            throw new AppException(409, "Cobrança já existe para esta OS");
-        }
-        this.statusPagamento = StatusPagamento.PENDENTE;
-        this.valorCobrado = valor;
-        this.dataPagamento = LocalDateTime.now();
-    }
-
-    /**
-     * Confirma pagamento: PENDENTE → CONFIRMADO (D-02)
-     */
-    public void confirmarPagamento() {
-        if (statusPagamento != StatusPagamento.PENDENTE) {
-            throw new AppException(409, "Pagamento não está pendente");
-        }
-        this.statusPagamento = StatusPagamento.CONFIRMADO;
-        this.dataPagamento = LocalDateTime.now();
+        this.entregueEm = LocalDateTime.now();
+        this.recebidoPor = recebidoPor.strip();
+        return EntregaConfirmadaEvent.of(this.id, this.recebidoPor);
     }
 
     // ─────────────── Validação interna ───────────────

@@ -71,20 +71,19 @@ public class OrdemDeServicoEntityMapperImpl implements OrdemDeServicoEntityMappe
                 entity.getExecucaoFinalizadaEm(),
                 entity.getObservacaoExecucao(),
                 entity.getDataAprovacao(),
-                null, // TODO(#33): statusPagamento da entity
+                parseStatusPagamento(entity.getStatusPagamento()), // TODO(#33): substituir por entity.getStatusPagamento() quando StatusPagamento for mapeado na entity
                 null, // TODO(#33): valorCobrado da entity
                 null, // TODO(#33): dataPagamento da entity
                 null, // TODO(#33): dataEntrega da entity
                 null, // TODO(#33): observacaoEntrega da entity
-                entity.getCreatedAt(),
-                entity.getVersion(),
-                parseStatusPagamento(entity.getStatusPagamento()),
                 parseStatusEntrega(entity.getStatusEntrega()),
                 entity.getCobrancaGeradaEm(),
                 entity.getPagamentoConfirmadoEm(),
                 entity.getReferenciaPagamento(),
                 entity.getEntregueEm(),
-                entity.getRecebidoPor()
+                entity.getRecebidoPor(),
+                entity.getCreatedAt(),
+                entity.getVersion()
                 
         );
     }

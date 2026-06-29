@@ -225,15 +225,19 @@ class OrdemDeServicoCicloCobrancaPagamentoEntregaTest {
                 null,
                 "Executado com sucesso",
                 LocalDateTime.now().minusDays(4),
-                createdAt,
-                20L,
                 StatusPagamento.CONFIRMADO,
+                null,
+                null,
+                null,
+                null,
                 StatusEntrega.ENTREGUE,
                 cobrancaGeradaEm,
                 pagamentoConfirmadoEm,
                 "PIX-999",
                 entregueEm,
-                "Maria Cliente"
+                "Maria Cliente",
+                createdAt,
+                20L
         );
 
         assertEquals(id, os.getId());

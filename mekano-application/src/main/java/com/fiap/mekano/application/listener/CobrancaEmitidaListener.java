@@ -1,6 +1,5 @@
 package com.fiap.mekano.application.listener;
 
-import com.fiap.mekano.domain.event.CobrancaEmitidaEvent;
 import com.fiap.mekano.domain.event.OSFinalizadaEvent;
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.model.Orcamento;
@@ -45,9 +44,9 @@ public class CobrancaEmitidaListener {
         Orcamento orcamento = orcamentoRepository.findByOrdemServicoUuid(event.ordemServicoId())
                 .orElseThrow(() -> new AppException(404, "Orçamento não encontrado para OS: " + event.ordemServicoId()));
 
-        os.emitirCobranca(orcamento.getValorTotal());
+        var cobrancaEvent = os.gerarCobranca(orcamento.getId());
         ordemDeServicoRepository.save(os);
         processedEventsRepository.save("COBRANCA_EMITIDA", event.ordemServicoId());
-        eventPublisher.publish(CobrancaEmitidaEvent.of(event.ordemServicoId(), orcamento.getValorTotal()));
+        eventPublisher.publish(cobrancaEvent);
     }
 }

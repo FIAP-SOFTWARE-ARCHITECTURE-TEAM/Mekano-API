@@ -17,7 +17,7 @@ public interface OrdemDeServicoServicePort {
     OrdemDeServico finalizarDiagnostico(FinalizarDiagnosticoCommand command);
     OrdemDeServico cancelar(UUID id, String motivo);
     OrdemDeServico finalizar(UUID id);
-    OrdemDeServico entregar(UUID id);
+    OrdemDeServico entregar(UUID id, String recebidoPor);
 
     OrdemDeServico iniciarExecucao(UUID id, UUID mecanicoUuid, String observacao);
     OrdemDeServico finalizarExecucao(UUID id, String observacao);

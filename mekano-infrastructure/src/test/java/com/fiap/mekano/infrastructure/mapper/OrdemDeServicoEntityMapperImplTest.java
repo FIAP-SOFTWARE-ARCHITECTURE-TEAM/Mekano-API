@@ -48,15 +48,19 @@ class OrdemDeServicoEntityMapperImplTest {
                 execucaoFinalizadaEm,
                 "Executado com sucesso",
                 dataAprovacao,
-                createdAt,
-                7L,
                 StatusPagamento.CONFIRMADO,
+                null,
+                null,
+                null,
+                null,
                 StatusEntrega.ENTREGUE,
                 cobrancaGeradaEm,
                 pagamentoConfirmadoEm,
                 "PIX-123",
                 entregueEm,
-                "João Cliente"
+                "João Cliente",
+                createdAt,
+                7L
         );
 
         OrdemDeServicoEntity entity = mapper.toEntity(domain);
