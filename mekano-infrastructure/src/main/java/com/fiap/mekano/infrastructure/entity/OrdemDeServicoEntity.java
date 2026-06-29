@@ -2,6 +2,7 @@ package com.fiap.mekano.infrastructure.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import lombok.Getter;
@@ -78,4 +79,14 @@ public class OrdemDeServicoEntity extends BaseEntity {
     @Version
     @Column(nullable = false)
     Long version;
+
+    @PrePersist
+    protected void onCreate() {
+        if (statusPagamento == null) {
+            statusPagamento = "PENDENTE";
+        }
+        if (statusEntrega == null) {
+            statusEntrega = "PENDENTE";
+        }
+    }
 }

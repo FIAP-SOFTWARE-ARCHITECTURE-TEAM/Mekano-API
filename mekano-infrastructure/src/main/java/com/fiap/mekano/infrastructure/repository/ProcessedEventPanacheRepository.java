@@ -5,7 +5,7 @@ import io.quarkus.hibernate.orm.panache.PanacheRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 
 @ApplicationScoped
-public class ProcessedEventPanacheRepository implements PanacheRepository<ProcessedEventEntity, Long> {
+public class ProcessedEventPanacheRepository implements PanacheRepository<ProcessedEventEntity> {
 
     public boolean eventoJaProcessado(String eventoId) {
         return count("evento_id = ?1", eventoId) > 0;

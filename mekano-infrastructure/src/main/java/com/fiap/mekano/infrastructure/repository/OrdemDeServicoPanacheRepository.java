@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.UUID;
 
 @ApplicationScoped
-public class OrdemDeServicoPanacheRepository implements PanacheRepository<OrdemDeServicoEntity, Long> {
+public class OrdemDeServicoPanacheRepository implements PanacheRepository<OrdemDeServicoEntity> {
 
     public OrdemDeServicoEntity buscarPorUuid(UUID uuid) {
         return find("uuid = ?1 and isActive = true", uuid).firstResult();
