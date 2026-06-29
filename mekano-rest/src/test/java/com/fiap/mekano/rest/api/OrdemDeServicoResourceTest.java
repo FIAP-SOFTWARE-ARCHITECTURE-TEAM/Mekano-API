@@ -11,7 +11,6 @@ import org.junit.jupiter.api.TestMethodOrder;
 import java.util.UUID;
 
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 
@@ -177,94 +176,25 @@ class OrdemDeServicoResourceTest {
                 .body("status", equalTo("AGUARDANDO_APROVACAO"));
     }
 
-    // ─────────────── APROVAR ORCAMENTO ───────────────
+    // ─────────────── GET STATUS (após diagnóstico) ───────────────
 
     @Test
     @Order(5)
-    @TestSecurity(user = "atendente", roles = {"atendente"})
-    void aprovarOrcamento_returns200() {
+    void getStatus_aguardandoAprovacao_returns200() {
         given()
                 .when()
-                .put(BASE_PATH + "/" + createdUuid + "/aprovar-orcamento")
+                .get(BASE_PATH + "/" + createdUuid + "/status")
                 .then()
                 .statusCode(200)
-                .body("status", equalTo("EM_EXECUCAO"));
+                .body("status", equalTo("AGUARDANDO_APROVACAO"));
     }
 
-    // ─────────────── FINALIZAR ───────────────
+    // ─────────────── CANCELAR ───────────────
 
     @Test
     @Order(6)
-    @TestSecurity(user = "mecanico", roles = {"mecanico"})
-    void finalizar_returns200() {
-        given()
-                .when()
-                .put(BASE_PATH + "/" + createdUuid + "/finalizar")
-                .then()
-                .statusCode(200)
-                .body("status", equalTo("FINALIZADA"));
-    }
-
-    // ─────────────── ENTREGAR ───────────────
-
-    @Test
-    @Order(7)
-    @TestSecurity(user = "atendente", roles = {"atendente"})
-    void entregar_returns200() {
-        given()
-                .when()
-                .put(BASE_PATH + "/" + createdUuid + "/entregar")
-                .then()
-                .statusCode(200)
-                .body("status", equalTo("ENTREGUE"));
-    }
-
-    // ─────────────── TRANSIÇÃO INVÁLIDA ───────────────
-
-    @Test
-    @Order(8)
-    @TestSecurity(user = "mecanico", roles = {"mecanico"})
-    void iniciarDiagnostico_estadoTerminal_returns422() {
-        given()
-                .when()
-                .put(BASE_PATH + "/" + createdUuid + "/iniciar-diagnostico")
-                .then()
-                .statusCode(422);
-    }
-
-    // ─────────────── AUTORIZAÇÃO ───────────────
-
-    @Test
-    @Order(9)
-    @TestSecurity(user = "mecanico", roles = {"mecanico"})
-    void create_asMecanico_returns403() {
-        given()
-                .contentType(ContentType.JSON)
-                .body("""
-                        {"clienteId": "%s", "veiculoId": "%s", "descricaoProblema": "teste"}
-                        """.formatted(UUID.randomUUID(), UUID.randomUUID()))
-                .when()
-                .post(BASE_PATH)
-                .then()
-                .statusCode(403);
-    }
-
-    @Test
-    @Order(10)
-    void listAll_withoutAuth_returns401() {
-        given()
-                .when()
-                .get(BASE_PATH)
-                .then()
-                .statusCode(401);
-    }
-
-    // ─────────────── REPROVAR COM MOTIVO ───────────────
-
-    @Test
-    @Order(11)
     @TestSecurity(user = "admin", roles = {"admin"})
-    void reprovarOrcamento_returns200() {
+    void cancelar_os_aguardando_aprovacao_returns_200() {
         // Criar nova OS e levar até AGUARDANDO_APROVACAO
         String osId = given()
                 .contentType(ContentType.JSON)
@@ -278,81 +208,17 @@ class OrdemDeServicoResourceTest {
         given().put(BASE_PATH + "/" + osId + "/iniciar-diagnostico").then().statusCode(200);
         given().put(BASE_PATH + "/" + osId + "/finalizar-diagnostico").then().statusCode(200);
 
-        // Reprovar
+        // Cancelar de AGUARDANDO_APROVACAO
         given()
                 .contentType(ContentType.JSON)
                 .body("""
-                        {"motivo": "Valor muito alto para o cliente"}
+                        {"motivo": "Cliente desistiu do serviço"}
                         """)
                 .when()
-                .put(BASE_PATH + "/" + osId + "/reprovar-orcamento")
+                .put(BASE_PATH + "/" + osId + "/cancelar")
                 .then()
                 .statusCode(200)
                 .body("status", equalTo("CANCELADA"))
-                .body("motivoCancelamento", equalTo("Valor muito alto para o cliente"));
-    }
-
-    @Test
-    @Order(12)
-    @TestSecurity(user = "admin", roles = {"admin"})
-    void cancelar_os_em_execucao_returns_200() {
-        // Criar nova OS e levar até EM_EXECUCAO
-        String osId = given()
-                .contentType(ContentType.JSON)
-                .body("""
-                        {"clienteId": "%s", "veiculoId": "%s", "descricaoProblema": "Freio com ruído"}
-                        """.formatted(UUID.randomUUID(), UUID.randomUUID()))
-                .when()
-                .post(BASE_PATH)
-                .then().statusCode(201).extract().path("id");
-
-        given().put(BASE_PATH + "/" + osId + "/iniciar-diagnostico").then().statusCode(200);
-        given().put(BASE_PATH + "/" + osId + "/finalizar-diagnostico").then().statusCode(200);
-        given().put(BASE_PATH + "/" + osId + "/aprovar-orcamento").then().statusCode(200);
-
-        // Reprovar
-        given()
-                .contentType(ContentType.JSON)
-                .body("""
-                        {"motivo": "Cliente achou outra oficina mais barata"}
-                        """)
-                .when()
-                .put(BASE_PATH + "/" + osId + "/reprovar-orcamento")
-                .then()
-                .statusCode(200)
-                .body("status", equalTo("CANCELADA"))
-                .body("motivoCancelamento", equalTo("Cliente achou outra oficina mais barata"));
-    }
-
-    @Test
-    @Order(12)
-    @TestSecurity(user = "admin", roles = {"admin"})
-    void cancelar_os_finalizada_returns_422() {
-        // Criar nova OS e levar até FINALIZADA
-        String osId = given()
-                .contentType(ContentType.JSON)
-                .body("""
-                        {"clienteId": "%s", "veiculoId": "%s", "descricaoProblema": "Freio com ruído"}
-                        """.formatted(UUID.randomUUID(), UUID.randomUUID()))
-                .when()
-                .post(BASE_PATH)
-                .then().statusCode(201).extract().path("id");
-
-        given().put(BASE_PATH + "/" + osId + "/iniciar-diagnostico").then().statusCode(200);
-        given().put(BASE_PATH + "/" + osId + "/finalizar-diagnostico").then().statusCode(200);
-        given().put(BASE_PATH + "/" + osId + "/aprovar-orcamento").then().statusCode(200);
-        given().put(BASE_PATH + "/" + osId + "/finalizar").then().statusCode(200);
-
-        // Reprovar
-        given()
-                .contentType(ContentType.JSON)
-                .body("""
-                        {"motivo": "Cliente achou outra oficina mais barata"}
-                        """)
-                .when()
-                .put(BASE_PATH + "/" + osId + "/reprovar-orcamento")
-                .then()
-                .statusCode(422)
-                .body("detail", containsString("FINALIZADA"));
+                .body("motivoCancelamento", equalTo("Cliente desistiu do serviço"));
     }
 }

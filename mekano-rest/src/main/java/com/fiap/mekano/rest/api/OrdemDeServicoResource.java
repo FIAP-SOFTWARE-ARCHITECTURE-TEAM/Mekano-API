@@ -131,25 +131,6 @@ public class OrdemDeServicoResource {
     }
 
     @PUT
-    @Path("/{id}/aprovar-orcamento")
-    @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({"admin", "atendente"})
-    @Operation(summary = "Aprovar orçamento → EM_EXECUCAO")
-    public Response aprovarOrcamento(@PathParam("id") UUID id) {
-        return Response.ok(toResponse(osService.aprovarOrcamento(id))).build();
-    }
-
-    @PUT
-    @Path("/{id}/reprovar-orcamento")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({"admin", "atendente"})
-    @Operation(summary = "Reprovar orçamento → CANCELADA")
-    public Response reprovarOrcamento(@PathParam("id") UUID id, MotivoRequest body) {
-        return Response.ok(toResponse(osService.reprovarOrcamento(id, body.motivo()))).build();
-    }
-
-    @PUT
     @Path("/{id}/cancelar")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)

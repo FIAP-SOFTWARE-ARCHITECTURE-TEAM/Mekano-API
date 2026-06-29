@@ -81,22 +81,6 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
 
     @Override
     @Transactional
-    public OrdemDeServico aprovarOrcamento(UUID id) {
-        OrdemDeServico os = findById(id);
-        os.aprovarOrcamento(os.getOrcamentoUuid());
-        return repository.save(os);
-    }
-
-    @Override
-    @Transactional
-    public OrdemDeServico reprovarOrcamento(UUID id, String motivo) {
-        OrdemDeServico os = findById(id);
-        os.reprovarOrcamento(motivo);
-        return repository.save(os);
-    }
-
-    @Override
-    @Transactional
     public OrdemDeServico cancelar(UUID id, String motivo) {
         OrdemDeServico os = findById(id);
         os.cancelar(motivo);
