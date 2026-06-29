@@ -1,15 +1,19 @@
 package com.fiap.mekano.application.service.ordemdeservico;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import com.fiap.mekano.domain.event.DiagnosticoFinalizadoEvent;
+import com.fiap.mekano.domain.event.OSFinalizadaEvent;
 import com.fiap.mekano.domain.event.OrdemDeServicoCriadaEvent;
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.domain.model.ItemOrcamento;
+import com.fiap.mekano.domain.model.Orcamento;
 import com.fiap.mekano.domain.model.OrdemDeServico;
 import com.fiap.mekano.domain.model.Peca;
 import com.fiap.mekano.domain.model.Servico;
@@ -17,6 +21,7 @@ import com.fiap.mekano.domain.port.in.CreateOrdemDeServicoCommand;
 import com.fiap.mekano.domain.port.in.FinalizarDiagnosticoCommand;
 import com.fiap.mekano.domain.port.in.OrdemDeServicoServicePort;
 import com.fiap.mekano.domain.port.out.EventPublisher;
+import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
 import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
 import com.fiap.mekano.domain.port.out.ServicoRepositoryPort;
@@ -35,13 +40,16 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
     private final EventPublisher eventPublisher;
     private final PecaRepositoryPort pecaRepository;
     private final ServicoRepositoryPort servicoRepository;
+    private final OrcamentoRepositoryPort orcamentoRepository;
 
     public OrdemDeServicoService(OrdemDeServicoRepositoryPort repository, EventPublisher eventPublisher,
-                                 PecaRepositoryPort pecaRepository, ServicoRepositoryPort servicoRepository) {
+                                 PecaRepositoryPort pecaRepository, ServicoRepositoryPort servicoRepository,
+                                 OrcamentoRepositoryPort orcamentoRepository) {
         this.repository = repository;
         this.eventPublisher = eventPublisher;
         this.pecaRepository = pecaRepository;
         this.servicoRepository = servicoRepository;
+        this.orcamentoRepository = orcamentoRepository;
     }
 
     @Override
@@ -117,6 +125,7 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
     @Transactional
     public OrdemDeServico cancelar(UUID id, String motivo) {
         OrdemDeServico os = findById(id);
+        liberarEstoque(os);
         os.cancelar(motivo);
         return repository.save(os);
     }
@@ -135,5 +144,67 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
         OrdemDeServico os = findById(id);
         os.entregar();
         return repository.save(os);
+    }
+
+    @Override
+    @Transactional
+    public OrdemDeServico iniciarExecucao(UUID id, UUID mecanicoUuid, String observacao) {
+        OrdemDeServico os = findById(id);
+        if (os.getStatus() != com.fiap.mekano.domain.model.StatusOS.AGUARDANDO_APROVACAO) {
+            throw new AppException(400, Messages.get("os.execucao.status.invalido.iniciar", os.getStatus()));
+        }
+        os.iniciarExecucao(mecanicoUuid, observacao);
+        return repository.save(os);
+    }
+
+    @Override
+    @Transactional
+    public OrdemDeServico finalizarExecucao(UUID id, String observacao) {
+        OrdemDeServico os = findById(id);
+        if (os.getStatus() != com.fiap.mekano.domain.model.StatusOS.EM_EXECUCAO) {
+            throw new AppException(400, Messages.get("os.execucao.status.invalido.finalizar", os.getStatus()));
+        }
+        os.finalizarExecucao(observacao);
+        OrdemDeServico saved = repository.save(os);
+        eventPublisher.publish(OSFinalizadaEvent.of(saved.getId()));
+        return saved;
+    }
+
+    @Override
+    public List<OrdemDeServico> findAllWithFilters(String status, UUID clienteUuid, UUID veiculoUuid,
+                                                    LocalDateTime dataInicio, LocalDateTime dataFim,
+                                                    int page, int size) {
+        return repository.findAllWithFilters(status, clienteUuid, veiculoUuid, dataInicio, dataFim, page, size);
+    }
+
+    @Override
+    public Optional<OrdemDeServico> findByIdWithItems(UUID id) {
+        return repository.findByIdWithItems(id);
+    }
+
+    @Override
+    public Optional<UUID> findOrcamentoUuidByOsId(UUID osId) {
+        return repository.findOrcamentoUuidByOsId(osId);
+    }
+
+    @Override
+    public Optional<Double> calcularTempoMedioExecucao(LocalDateTime dataInicio, LocalDateTime dataFim) {
+        return repository.calcularTempoMedioExecucao(dataInicio, dataFim);
+    }
+
+    @Override
+    public boolean clientePossuiOsAtiva(UUID clienteUuid) {
+        return repository.existsByClienteUuidAndStatusIn(clienteUuid, List.of("EM_EXECUCAO", "AGUARDANDO_APROVACAO"));
+    }
+
+    private void liberarEstoque(OrdemDeServico os) {
+        if (os.getOrcamentoUuid() == null) return;
+        orcamentoRepository.findByUuid(os.getOrcamentoUuid()).ifPresent(orcamento -> {
+            for (ItemOrcamento item : orcamento.getItens()) {
+                pecaRepository.buscarPorDescricao(item.getDescricao()).ifPresent(peca -> {
+                    pecaRepository.creditarSaldo(peca.getId(), item.getQuantidade().intValue());
+                });
+            }
+        });
     }
 }

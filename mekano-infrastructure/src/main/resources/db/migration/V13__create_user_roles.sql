@@ -4,7 +4,11 @@ CREATE TABLE user_roles (
     user_uuid UUID NOT NULL,
     role VARCHAR(30) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	created_by UUID NOT NULL,
+    created_by UUID,
+    updated_at TIMESTAMP,
+    updated_by UUID,
+    deleted_at TIMESTAMP,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
     CONSTRAINT uk_user_roles_uuid UNIQUE (uuid),
     CONSTRAINT uk_user_roles_user_role UNIQUE (user_uuid, role)
 );

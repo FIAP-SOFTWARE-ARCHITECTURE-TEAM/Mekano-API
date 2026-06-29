@@ -1,6 +1,8 @@
 package com.fiap.mekano.domain.port.in;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import com.fiap.mekano.domain.model.OrdemDeServico;
@@ -16,4 +18,14 @@ public interface OrdemDeServicoServicePort {
     OrdemDeServico cancelar(UUID id, String motivo);
     OrdemDeServico finalizar(UUID id);
     OrdemDeServico entregar(UUID id);
+
+    OrdemDeServico iniciarExecucao(UUID id, UUID mecanicoUuid, String observacao);
+    OrdemDeServico finalizarExecucao(UUID id, String observacao);
+    List<OrdemDeServico> findAllWithFilters(String status, UUID clienteUuid, UUID veiculoUuid,
+                                            LocalDateTime dataInicio, LocalDateTime dataFim,
+                                            int page, int size);
+    Optional<OrdemDeServico> findByIdWithItems(UUID id);
+    Optional<UUID> findOrcamentoUuidByOsId(UUID osId);
+    Optional<Double> calcularTempoMedioExecucao(LocalDateTime dataInicio, LocalDateTime dataFim);
+    boolean clientePossuiOsAtiva(UUID clienteUuid);
 }

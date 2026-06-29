@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class OrdemDeServicoRepositoryImpl implements OrdemDeServicoRepositoryPort {
@@ -94,7 +95,9 @@ public class OrdemDeServicoRepositoryImpl implements OrdemDeServicoRepositoryPor
     }
 
     @Override
-    public List<OrdemDeServico> findAllWithFilters(String status, UUID clienteUuid, int page, int size) {
+    public List<OrdemDeServico> findAllWithFilters(String status, UUID clienteUuid, UUID veiculoUuid,
+                                                    LocalDateTime dataInicio, LocalDateTime dataFim,
+                                                    int page, int size) {
         StringBuilder query = new StringBuilder("isActive = :active");
         Map<String, Object> params = new HashMap<>();
         params.put("active", true);
@@ -106,6 +109,18 @@ public class OrdemDeServicoRepositoryImpl implements OrdemDeServicoRepositoryPor
         if (clienteUuid != null) {
             query.append(" AND clienteUuid = :clienteUuid");
             params.put("clienteUuid", clienteUuid);
+        }
+        if (veiculoUuid != null) {
+            query.append(" AND veiculoUuid = :veiculoUuid");
+            params.put("veiculoUuid", veiculoUuid);
+        }
+        if (dataInicio != null) {
+            query.append(" AND createdAt >= :dataInicio");
+            params.put("dataInicio", dataInicio);
+        }
+        if (dataFim != null) {
+            query.append(" AND createdAt <= :dataFim");
+            params.put("dataFim", dataFim);
         }
 
         return panacheRepository.find(query.toString(), Sort.by("createdAt").descending(), params)
@@ -120,9 +135,23 @@ public class OrdemDeServicoRepositoryImpl implements OrdemDeServicoRepositoryPor
     }
 
     @Override
-    public Optional<Double> calcularTempoMedioExecucao() {
+    public Optional<Double> calcularTempoMedioExecucao(LocalDateTime dataInicio, LocalDateTime dataFim) {
+        StringBuilder query = new StringBuilder("status = ?1 AND isActive = ?2");
+        List<Object> params = new java.util.ArrayList<>();
+        params.add("FINALIZADA");
+        params.add(true);
+
+        if (dataInicio != null) {
+            query.append(" AND execucaoFinalizadaEm >= ?").append(params.size() + 1);
+            params.add(dataInicio);
+        }
+        if (dataFim != null) {
+            query.append(" AND execucaoFinalizadaEm <= ?").append(params.size() + 1);
+            params.add(dataFim);
+        }
+
         List<OrdemDeServicoEntity> finalizadas = panacheRepository
-                .find("status = ?1 AND isActive = ?2", "FINALIZADA", true).list();
+                .find(query.toString(), params.toArray()).list();
 
         if (finalizadas.isEmpty()) {
             return Optional.empty();
@@ -145,5 +174,20 @@ public class OrdemDeServicoRepositoryImpl implements OrdemDeServicoRepositoryPor
             entity.setDeletedAt(LocalDateTime.now());
             panacheRepository.flush();
         });
+    }
+
+    @Override
+    public boolean existsByClienteUuidAndStatusIn(UUID clienteUuid, List<String> statuses) {
+        return panacheRepository
+                .find("clienteUuid = ?1 AND status IN (?2) AND isActive = ?3",
+                        clienteUuid, statuses, true)
+                .count() > 0;
+    }
+
+    @Override
+    public Optional<UUID> findOrcamentoUuidByOsId(UUID osId) {
+        return panacheRepository.find("uuid = ?1 AND isActive = ?2", osId, true)
+                .firstResultOptional()
+                .map(OrdemDeServicoEntity::getOrcamentoUuid);
     }
 }
