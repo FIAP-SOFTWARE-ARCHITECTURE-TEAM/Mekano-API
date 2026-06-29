@@ -20,12 +20,12 @@ public class OrdemDeServicoEntityMapperImpl implements OrdemDeServicoEntityMappe
         entity.setDescricaoProblema(os.getDescricaoProblema());
         entity.setStatus(os.getStatus().name());
         entity.setMotivoCancelamento(os.getMotivoCancelamento());
-        entity.setOrcamentoUuid(null);
-        entity.setMecanicoUuid(null);
-        entity.setExecucaoIniciadaEm(null);
-        entity.setExecucaoFinalizadaEm(null);
-        entity.setObservacaoExecucao(null);
-        entity.setDataAprovacao(null);
+        entity.setOrcamentoUuid(os.getOrcamentoUuid());
+        entity.setMecanicoUuid(os.getMecanicoUuid());
+        entity.setExecucaoIniciadaEm(os.getExecucaoIniciadaEm());
+        entity.setExecucaoFinalizadaEm(os.getExecucaoFinalizadaEm());
+        entity.setObservacaoExecucao(os.getObservacaoExecucao());
+        entity.setDataAprovacao(os.getDataAprovacao());
         entity.setCreatedAt(os.getCreatedAt());
         entity.setVersion(os.getVersion());
         return entity;
@@ -43,6 +43,12 @@ public class OrdemDeServicoEntityMapperImpl implements OrdemDeServicoEntityMappe
                 entity.getDescricaoProblema(),
                 StatusOS.valueOf(entity.getStatus()),
                 entity.getMotivoCancelamento(),
+                entity.getOrcamentoUuid(),
+                entity.getMecanicoUuid(),
+                entity.getExecucaoIniciadaEm(),
+                entity.getExecucaoFinalizadaEm(),
+                entity.getObservacaoExecucao(),
+                entity.getDataAprovacao(),
                 entity.getCreatedAt(),
                 entity.getVersion()
         );
