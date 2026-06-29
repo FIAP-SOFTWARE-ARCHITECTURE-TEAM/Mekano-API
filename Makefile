@@ -89,3 +89,33 @@ swagger:
 
 health:
 	$(CURL) -s http://127.0.0.1:8080/q/health | $(PYTHON) -m json.tool
+
+# ─────────────── Migrations (Flyway via psql) ───────────────
+
+.PHONY: migrate-status migrate-repair migrate-clean migrate-redo tables describe
+
+# histórico do Flyway
+migrate-status:
+	docker exec mekano-postgres psql -U mekano -d mekano -c "SELECT version, description, success FROM flyway_schema_history ORDER BY installed_rank;"
+
+# remove migrations que falharam
+migrate-repair:
+	docker exec mekano-postgres psql -U mekano -d mekano -c "DELETE FROM flyway_schema_history WHERE success = false;"
+
+# dropa schema inteiro
+migrate-clean:
+	docker exec mekano-postgres psql -U mekano -d mekano -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+	@echo "Schema limpo. Reinicie o quarkus:dev para Flyway recriar tudo."
+
+# destrói volume + recria (tudo do zero)
+migrate-redo:
+	$(MAKE) reset-db
+	@echo "Volume recriado. Flyway executa todas as migrations no próximo start."
+
+# lista tabelas
+tables:
+	docker exec mekano-postgres psql -U mekano -d mekano -c "\dt"
+
+# mostra estrutura de uma tabela
+describe:
+	@read -p "Tabela: " table; docker exec mekano-postgres psql -U mekano -d mekano -c "\d $$table"
