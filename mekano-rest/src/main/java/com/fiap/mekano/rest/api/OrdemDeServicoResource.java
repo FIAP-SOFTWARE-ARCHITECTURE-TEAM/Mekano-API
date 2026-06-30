@@ -54,7 +54,7 @@ import jakarta.ws.rs.core.UriInfo;
  * Roles mistas (D-14, D-15):
  * - POST: admin, atendente
  * - PUT transições: mecanico, admin
- * - GET /status: @PermitAll (público, AUTH-03)
+     * - GET /status: @RolesAllowed (autenticado, AUTH-03)
  * - GET lista: admin, atendente
  */
 @Path("/os")
@@ -100,8 +100,8 @@ public class OrdemDeServicoResource {
     @GET
     @Path("/{id}/status")
     @Produces(MediaType.APPLICATION_JSON)
-    @PermitAll
-    @Operation(summary = "Consultar status da OS (público)")
+    @RolesAllowed({"admin", "atendente", "mecanico", "cliente", "financeiro", "user"})
+    @Operation(summary = "Consultar status da OS")
     @APIResponse(responseCode = "200", description = "Status da OS")
     public Response getStatus(@PathParam("id") UUID id) {
         OrdemDeServico os = osService.findById(id);

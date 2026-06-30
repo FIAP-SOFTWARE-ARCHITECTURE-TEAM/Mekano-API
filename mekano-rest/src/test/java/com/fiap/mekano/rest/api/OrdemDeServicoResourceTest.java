@@ -147,11 +147,12 @@ class OrdemDeServicoResourceTest {
                 .body("status", equalTo("EM_DIAGNOSTICO"));
     }
 
-    // ─────────────── GET STATUS (público) ───────────────
+    // ─────────────── GET STATUS ───────────────
 
     @Test
     @Order(3)
-    void getStatus_withoutAuth_returns200() {
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void getStatus_returns200() {
         given()
                 .when()
                 .get(BASE_PATH + "/" + createdUuid + "/status")

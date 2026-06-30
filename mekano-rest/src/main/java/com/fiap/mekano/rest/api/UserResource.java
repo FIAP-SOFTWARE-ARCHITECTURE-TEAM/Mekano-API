@@ -42,7 +42,7 @@ import java.util.UUID;
  */
 @Path("/users")
 @RequestScoped
-@RolesAllowed("admin")
+@RolesAllowed("user")
 @Tag(name = "Users", description = "User management")
 public class UserResource {
 
