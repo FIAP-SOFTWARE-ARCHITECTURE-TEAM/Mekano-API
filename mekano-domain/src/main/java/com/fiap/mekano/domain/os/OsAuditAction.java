@@ -42,6 +42,16 @@ public enum OsAuditAction {
     CANCELAR(
     		StatusOS.CANCELADA,
             "OS cancelada"
+    ),
+
+    PAGAMENTO_CONFIRMADO(
+            StatusOS.FINALIZADA,
+            "Pagamento confirmado"
+    ),
+
+    ENTREGA_REALIZADA(
+            StatusOS.ENTREGUE,
+            "Entrega realizada ao cliente"
     );
 
     private final StatusOS statusDestino;
