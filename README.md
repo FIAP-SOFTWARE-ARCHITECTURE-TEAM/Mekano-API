@@ -1,76 +1,72 @@
-# mekano
+# Mekano API
 
-This project uses Quarkus, the Supersonic Subatomic Java Framework.
+Este projeto usa Quarkus, o framework Java Supersônico e Subatômico.
 
-If you want to learn more about Quarkus, please visit its website: <https://quarkus.io/>.
+Para saber mais sobre o Quarkus, acesse o site oficial: <https://quarkus.io/>.
 
-## Running the application in dev mode
+## Executando a aplicação em modo de desenvolvimento
 
-You can run your application in dev mode that enables live coding using:
+Você pode executar a aplicação em modo dev, que habilita live coding:
 
 ```shell script
 ./mvnw quarkus:dev
 ```
 
-> **_NOTE:_**  Quarkus now ships with a Dev UI, which is available in dev mode only at <http://localhost:8080/q/dev/>.
+> **_NOTA:_** O Quarkus inclui uma Dev UI, disponível apenas em modo dev em <http://localhost:8080/q/dev/>.
 
-## Packaging and running the application
+## Empacotando e executando a aplicação
 
-The application can be packaged using:
+A aplicação pode ser empacotada com:
 
 ```shell script
 ./mvnw package
 ```
 
-It produces the `quarkus-run.jar` file in the `target/quarkus-app/` directory.
-Be aware that it’s not an _über-jar_ as the dependencies are copied into the `target/quarkus-app/lib/` directory.
+Isso produz o arquivo `quarkus-run.jar` no diretório `target/quarkus-app/`.
+Note que este não é um _über-jar_ — as dependências são copiadas para `target/quarkus-app/lib/`.
 
-The application is now runnable using `java -jar target/quarkus-app/quarkus-run.jar`.
+A aplicação fica executável com `java -jar target/quarkus-app/quarkus-run.jar`.
 
-If you want to build an _über-jar_, execute the following command:
+Se quiser gerar um _über-jar_, execute:
 
 ```shell script
 ./mvnw package -Dquarkus.package.jar.type=uber-jar
 ```
 
-The application, packaged as an _über-jar_, is now runnable using `java -jar target/*-runner.jar`.
+A aplicação empacotada como _über-jar_ fica executável com `java -jar target/*-runner.jar`.
 
-## Creating a native executable
+## Criando um executável nativo
 
-You can create a native executable using:
+Você pode criar um executável nativo com:
 
 ```shell script
 ./mvnw package -Dnative
 ```
 
-Or, if you don't have GraalVM installed, you can run the native executable build in a container using:
+Ou, se não tiver o GraalVM instalado, pode gerar o executável nativo dentro de um container:
 
 ```shell script
 ./mvnw package -Dnative -Dquarkus.native.container-build=true
 ```
 
-You can then execute your native executable with: `./target/mekano-1.0.0-SNAPSHOT-runner`
+Depois é só executar: `./target/mekano-1.0.0-SNAPSHOT-runner`
 
-If you want to learn more about building native executables, please consult <https://quarkus.io/guides/maven-tooling>.
+Para saber mais sobre executáveis nativos, consulte <https://quarkus.io/guides/maven-tooling>.
 
-## Provided Code
+## Código incluído
 
 ### REST
 
-Easily start your REST Web Services
+Início rápido para Web Services REST.
 
-[Related guide section...](https://quarkus.io/guides/getting-started-reactive#reactive-jax-rs-resources)
+[Seção do guia relacionada...](https://quarkus.io/guides/getting-started-reactive#reactive-jax-rs-resources)
 
-## Geração de chaves JWT (Phase 9)
+## Geração de chaves JWT
 
-Esta seção descreve como gerar localmente o par de chaves Ed25519 (ES256/EdDSA)
-usado pelo SmallRye JWT para verificar tokens MicroProfile JWT (Phase 9, D-10).
-A chave privada é estritamente dev-local — **nunca** deve ser commitada
-(D-09, `.gitignore` veta `privateKey*.pem` e `**/privateKey.pem`).
-
-A migração de RSA (Phase 8) para Ed25519 foi feita na Phase 9, Plan 09-03:
-algoritmo mais moderno, tamanho de chave fixo (sem necessidade de `initialize(2048)`),
-e suporte nativo no Java 17+ via `KeyPairGenerator.getInstance("Ed25519")`.
+Esta seção descreve como gerar localmente o par de chaves Ed25519 (EdDSA)
+usado pelo SmallRye JWT para verificar tokens MicroProfile JWT.
+A chave privada é estritamente para uso local em dev — **nunca** deve ser commitada
+(`.gitignore` veta `privateKey*.pem` e `**/privateKey.pem`).
 
 ### 1. Criar diretório de secrets (fora do repositório)
 
@@ -83,11 +79,14 @@ mkdir -p ~/.mekano/secrets
 
 ### 2. Gerar par Ed25519 via `openssl`
 
+> **Atenção:** o LibreSSL que vem com o macOS não suporta Ed25519. Use o OpenSSL do Homebrew:
+> `brew install openssl && $(brew --prefix openssl)/bin/openssl` nos comandos abaixo.
+
 ```bash
 # 1) Gerar chave privada Ed25519 (PKCS#8)
 openssl genpkey -algorithm Ed25519 -out ~/.mekano/secrets/privatekey.pem
 
-# 2) Extrair chave pública para o classpath do adapter
+# 2) Extrair chave pública para o classpath
 openssl pkey -in ~/.mekano/secrets/privatekey.pem -pubout -out mekano-rest/src/main/resources/publicKey.pem
 ```
 
@@ -98,26 +97,25 @@ openssl pkey -in ~/.mekano/secrets/privatekey.pem -pubout -out mekano-rest/src/m
   runtime via `mp.jwt.verify.publickey.location`.
 - `~/.mekano/secrets/privatekey.pem` — **fora** do repositório git, em
   diretório dedicado no perfil do usuário. O caminho é configurado em
-  `application.properties` via `${user.home}/.mekano/secrets/privatekey.pem`.
+  `auth-config.yml` via `${user.home}/.mekano/secrets/privatekey.pem`.
 - Os testes automatizados **não** dependem desses arquivos: o
   `JwtTestProfile` gera um par Ed25519 em memória programaticamente,
-  o que torna a suíte CI-friendly e reprodutível.
+  o que torna a suíte amigável para CI e reprodutível.
 
-### 4. Variável de ambiente `MP_JWT_ISSUER`
+### 4. Issuer do JWT
 
-O issuer default configurado em `application.properties` é
-`https://mekano.fiap.com.br/auth`. Para sobrescrever em runtime,
-exporte `MP_JWT_ISSUER` antes de subir a aplicação:
+O issuer configurado em `auth-config.yml` é `mekano-api`. Para sobrescrever em runtime,
+exporte a variável antes de subir a aplicação:
 
 ```bash
-export MP_JWT_ISSUER=https://meu-issuer-local/auth
+export MP_JWT_VERIFY_ISSUER=mekano-api
 ./mvnw -pl mekano-rest quarkus:dev
 ```
 
 ### 5. Personalizar caminho da chave privada (produção)
 
 Em ambientes produtivos, o caminho da chave privada pode ser sobrescrito
-via variável de ambiente `SMALLRYE_JWT_SIGN_KEY_LOCATION`:
+via variável de ambiente:
 
 ```bash
 export SMALLRYE_JWT_SIGN_KEY_LOCATION=/etc/secrets/jwt/privatekey.pem
