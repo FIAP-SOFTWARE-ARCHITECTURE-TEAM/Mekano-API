@@ -19,6 +19,28 @@ services:
     networks:
       - mekano-net
 
+  keygen:
+    image: alpine:3.20
+    container_name: mekano-keygen
+    command: >
+      sh -c "
+        if [ ! -f /secrets/privatekey.pem ]; then
+          mkdir -p /secrets &&
+          apk add --no-cache openssl &&
+          openssl genpkey -algorithm Ed25519 -out /secrets/privatekey.pem &&
+          openssl pkey -in /secrets/privatekey.pem -pubout -out /secrets/publicKey.pem &&
+          chmod 644 /secrets/privatekey.pem /secrets/publicKey.pem &&
+          echo 'Key pair generated'
+        else
+          echo 'Key pair already exists'
+        fi
+      "
+    volumes:
+      - mekano_secrets:/secrets
+    restart: no
+    networks:
+      - mekano-net
+
   mekano:
     build:
       context: .
@@ -31,9 +53,15 @@ services:
       DB_URL: jdbc:postgresql://postgres:5432/mekano
       DB_USER: ${POSTGRES_USER:-mekano}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-mekano}
+      SMALLRYE_JWT_SIGN_KEY_LOCATION: /home/jboss/.mekano/secrets/privatekey.pem
+      MP_JWT_VERIFY_PUBLICKEY_LOCATION: /home/jboss/.mekano/secrets/publicKey.pem
+    volumes:
+      - mekano_secrets:/home/jboss/.mekano/secrets:ro
     depends_on:
       postgres:
         condition: service_healthy
+      keygen:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/q/health/live || exit 1"]
       interval: 30s
@@ -49,4 +77,6 @@ networks:
 
 volumes:
   postgres_data:
+    driver: local
+  mekano_secrets:
     driver: local
