@@ -2,6 +2,7 @@ package com.fiap.mekano.rest.api.dto;
 
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -18,5 +19,12 @@ public record OrdemDeServicoResponse(
         @Schema(description = "Início da execução") LocalDateTime execucaoIniciadaEm,
         @Schema(description = "Fim da execução") LocalDateTime execucaoFinalizadaEm,
         @Schema(description = "Observação da execução") String observacaoExecucao,
+        @Schema(description = "Status do pagamento") String statusPagamento,
+        @Schema(description = "Status da entrega") String statusEntrega,
+        @Schema(description = "Valor cobrado") BigDecimal valorCobrado,
+        @Schema(description = "Referência do pagamento") String referenciaPagamento,
+        @Schema(description = "Quem recebeu o veículo") String recebidoPor,
+        @Schema(description = "Data do pagamento") LocalDateTime pagamentoConfirmadoEm,
+        @Schema(description = "Data da entrega") LocalDateTime entregueEm,
         @Schema(description = "Data de criação") LocalDateTime createdAt
 ) {}
