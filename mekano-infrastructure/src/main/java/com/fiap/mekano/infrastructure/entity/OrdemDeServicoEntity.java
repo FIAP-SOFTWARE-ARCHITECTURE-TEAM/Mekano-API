@@ -80,12 +80,6 @@ public class OrdemDeServicoEntity extends BaseEntity {
     @Column(nullable = false)
     Long version;
 
-    @Column(name = "status_pagamento", nullable = false)
-    private String statusPagamento;
-
-    @Column(name = "status_entrega", nullable = false)
-    private String statusEntrega;
-
     @Column(name = "cobranca_gerada_em")
     private LocalDateTime cobrancaGeradaEm;
 
