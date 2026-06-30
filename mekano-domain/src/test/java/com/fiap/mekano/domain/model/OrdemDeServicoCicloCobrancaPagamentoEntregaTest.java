@@ -9,6 +9,7 @@ import com.fiap.mekano.domain.os.StatusPagamento;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -65,7 +66,7 @@ class OrdemDeServicoCicloCobrancaPagamentoEntregaTest {
         OrdemDeServico os = osFinalizada();
         UUID orcamentoUuid = UUID.randomUUID();
 
-        os.gerarCobranca(orcamentoUuid);
+        os.gerarCobranca(orcamentoUuid, BigDecimal.valueOf(1500.00));
 
         assertEquals(orcamentoUuid, os.getOrcamentoUuid());
         assertEquals(StatusPagamento.AGUARDANDO_PAGAMENTO, os.getStatusPagamento());

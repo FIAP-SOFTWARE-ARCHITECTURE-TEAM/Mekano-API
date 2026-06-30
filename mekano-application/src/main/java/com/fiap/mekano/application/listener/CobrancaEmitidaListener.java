@@ -44,7 +44,7 @@ public class CobrancaEmitidaListener {
         Orcamento orcamento = orcamentoRepository.findByOrdemServicoUuid(event.ordemServicoId())
                 .orElseThrow(() -> new AppException(404, "Orçamento não encontrado para OS: " + event.ordemServicoId()));
 
-        var cobrancaEvent = os.gerarCobranca(orcamento.getId());
+        var cobrancaEvent = os.gerarCobranca(orcamento.getId(), orcamento.getValorTotal());
         ordemDeServicoRepository.save(os);
         processedEventsRepository.save("COBRANCA_EMITIDA", event.ordemServicoId());
         eventPublisher.publish(cobrancaEvent);

@@ -339,12 +339,16 @@ public class OrdemDeServico {
     /**
      * Variante útil quando a cobrança deve ficar vinculada a um orçamento específico.
      */
-    public CobrancaGeradaEvent gerarCobranca(UUID orcamentoUuid) {
+    public CobrancaGeradaEvent gerarCobranca(UUID orcamentoUuid, BigDecimal valorTotal) {
         if (orcamentoUuid == null) {
             throw new AppException(400, Messages.get("os.orcamento_uuid.required"));
         }
+        if (valorTotal == null || valorTotal.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new AppException(400, Messages.get("os.cobranca.valor.invalido", valorTotal));
+        }
 
         this.orcamentoUuid = orcamentoUuid;
+        this.valorCobrado = valorTotal;
         return gerarCobranca();
     }
 
