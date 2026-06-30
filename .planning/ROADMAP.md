@@ -12,9 +12,9 @@
 
 ## Phases
 
-- [ ] **Phase 1: Auth & OS Foundation** — Auth/roles + Cliente/Veiculo/Serviço CRUD + OS criação/diagnóstico + consulta pública
-- [ ] **Phase 2: OS Continuation & Estoque** — Fluxo de orçamento/aprovação + execução/finalização + estoque completo + métricas
-- [ ] **Phase 3: Pagamento & Delivery** — Cobrança + pagamento simulado + entrega + docs finais
+- [x] **Phase 1: Auth & OS Foundation** — Auth/roles + Cliente/Veiculo/Serviço CRUD + OS criação/diagnóstico + consulta pública
+- [x] **Phase 2: OS Continuation & Estoque** — Fluxo de orçamento/aprovação + execução/finalização + estoque completo + métricas
+- [ ] **Phase 3: Pagamento & Delivery** — Cobrança + pagamento simulado + entrega + docs finais (parcial: 50%)
 
 ---
 
@@ -38,21 +38,21 @@
 **Plans:** 6 plansPlans:
 **Wave 1**
 
-- [ ] 01-01-PLAN.md — Auth Foundation: JWT Ed25519, roles, refresh rotation, walking skeleton
+- [x] 01-01-PLAN.md — Auth Foundation: JWT Ed25519, roles, refresh rotation, walking skeleton
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 01-02-PLAN.md — Cliente CRUD: domain, infra, REST com update
-- [ ] 01-03-PLAN.md — Veiculo CRUD: domain, infra, REST com update
-- [ ] 01-04-PLAN.md — Servico CRUD: domain, infra, REST (admin-only)
+- [x] 01-02-PLAN.md — Cliente CRUD: domain, infra, REST com update
+- [x] 01-03-PLAN.md — Veiculo CRUD: domain, infra, REST com update
+- [x] 01-04-PLAN.md — Servico CRUD: domain, infra, REST (admin-only)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 01-05-PLAN.md — OrdemDeServico: state machine, child entities, public status
+- [x] 01-05-PLAN.md — OrdemDeServico: state machine, child entities, public status
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 01-06-PLAN.md — Sequence diagrams: Mermaid docs dos fluxos da OS
+- [x] 01-06-PLAN.md — Sequence diagrams: Mermaid docs dos fluxos da OS
 
 ---
 
@@ -75,23 +75,23 @@
 
 **Wave 1** *(infrastructure foundation)*
 
-- [ ] PLAN-01-entity-base.md — Entities, VOs, Flyway V6-V11, domain models, ports, mappers
+- [x] PLAN-01-entity-base.md — Entities, VOs, Flyway V6-V11, domain models, ports, mappers
 
 **Wave 2** *(application services — parallel: 3 devs OS + 2 devs Estoque)*
 
-- [ ] PLAN-02-estoque-domain-services.md — Peca/Req/Nf domain + services + atomic stock + CDI events
-- [ ] PLAN-03-orcamento-domain-services.md — Orcamento aggregate + OS state machine + SLA job + CDI events
-- [ ] PLAN-05-admin-users.md — Admin user CRUD service + role 'cliente' auth (fits in Wave 2)
+- [x] PLAN-02-estoque-domain-services.md — Peca/Req/Nf domain + services + atomic stock + CDI events
+- [x] PLAN-03-orcamento-domain-services.md — Orcamento aggregate + OS state machine + SLA job + CDI events
+- [x] PLAN-05-admin-users.md — Admin user CRUD service + role 'cliente' auth (fits in Wave 2)
 
 **Wave 3** *(services + REST — parallel)*
 
-- [ ] PLAN-04-ordemservico-execucao.md — OS execution start/finish + metrics + detail + list filters
-- [ ] PLAN-06-estoque-rest.md — REST endpoints for Peca, RequisicaoCompra, NfEntrada, Alertas
+- [x] PLAN-04-ordemservico-execucao.md — OS execution start/finish + metrics + detail + list filters
+- [x] PLAN-06-estoque-rest.md — REST endpoints for Peca, RequisicaoCompra, NfEntrada, Alertas
 
 **Wave 4** *(REST + cross-cutting)*
 
-- [ ] PLAN-07-orcamento-rest.md — REST for Orcamento approval/rejection + OS execution endpoints
-- [ ] PLAN-08-audit-openapi-build.md — Audit log, OpenAPI annotations, JaCoCo 80%, OWASP DC, README
+- [x] PLAN-07-orcamento-rest.md — REST for Orcamento approval/rejection + OS execution endpoints
+- [x] PLAN-08-audit-openapi-build.md — Audit log, OpenAPI annotations, JaCoCo 80%, OWASP DC, README
 
 ---
 
@@ -118,9 +118,9 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Auth & OS Foundation | 0/6 | Not started | - |
-| 2. OS Continuation & Estoque | 0/8 | Not started | - |
-| 3. Pagamento & Delivery | 0/0 | Not started | - |
+| 1. Auth & OS Foundation | 6/6 | ✅ Complete | 2026-06-28 |
+| 2. OS Continuation & Estoque | 8/8 | ✅ Complete | 2026-06-29 |
+| 3. Pagamento & Delivery | TBD (parcial) | 🔄 In progress — 3/6 issues | - |
 
 ---
 
