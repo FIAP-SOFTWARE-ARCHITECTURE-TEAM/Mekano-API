@@ -10,33 +10,50 @@ API REST para gestão de oficina mecânica — ordens de serviço, clientes, ve�
 
 ## Como inicializar o projeto
 
-1. Suba o banco PostgreSQL com Docker:
+### Dev (Docker Compose + keygen automático)
 
 ```bash
-docker-compose up -d
+# 1. Build + sobe tudo (postgres, keygen, app)
+./mvnw package -pl mekano-rest -am -DskipTests && docker compose build
+docker compose up -d
+
+# 2. A app estará em http://localhost:8080
+#    Swagger UI: http://localhost:8080/q/swagger-ui
 ```
 
-2. Verifique se o container está rodando:
+O serviço `keygen` gera automaticamente o par de chaves Ed25519 na primeira execução e o armazena em um volume nomeado (`mekano_secrets`). A app só inicia após a geração das chaves.
+
+### Prod (bind mount da chave do host)
+
+Use `docker-compose.prod.yml`:
 
 ```bash
-docker ps
+# 1. Gerar chave no host (uma vez)
+./mekano-rest/keygen.sh
+
+# 2. Copiar a chave privada para /etc/mekano/secrets/
+cp ~/.mekano/secrets/privatekey.pem /etc/mekano/secrets/
+cp ~/.mekano/secrets/publicKey.pem /etc/mekano/secrets/
+
+# 3. Subir em produção
+docker compose -f docker-compose.prod.yml up -d
 ```
 
-3. Acesse o banco (opcional):
+### Dev local (sem Docker)
 
 ```bash
-docker exec -it mekano-postgres psql -U mekano -d mekano
-```
+# 1. Suba apenas o banco
+docker compose up -d postgres
 
-## Rodar em modo dev local
+# 2. Gere as chaves JWT (necessário apenas uma vez)
+./mekano-rest/keygen.sh
 
-```bash
+# 3. Inicie o Quarkus em modo dev
 ./mvnw quarkus:dev
 ```
 
 > O Quarkus Dev UI estará disponível em <http://localhost:8080/q/dev/>.
-
-O Flyway executa as migrations automaticamente ao subir a aplicação.
+> Flyway, JWT e CORS são configurados automaticamente.
 
 ## Build completo e testes
 
@@ -46,42 +63,39 @@ Para verificar se o projeto compila 100% e todos os testes passam:
 ./mvnw -B -ntp verify -pl mekano-rest -am
 ```
 
-## Geração de chave JWT
+## Autenticação JWT
 
-O projeto utiliza **Ed25519 (EdDSA)** para assinar e verificar tokens JWT via SmallRye JWT.
+O projeto utiliza **Ed25519 (EdDSA)** para assinar e verificar tokens via `quarkus-smallrye-jwt`.
 
-### 1. Criar diretório de secrets
+- A chave **pública** (`publicKey.pem`) fica no classpath (segura para commit)
+- A chave **privada** (`privatekey.pem`) **nunca** entra na imagem Docker nem no repositório
+- Todos os endpoints REST exigem `@RolesAllowed` (exceto `/auth/login`, `/auth/refresh`, `/auth/logout`)
+- Perfil `prod` lê as chaves de `/etc/mekano/secrets/` (bind mount)
 
-```bash
-mkdir -p ~/.mekano/secrets
-```
-
-### 2. Gerar a chave privada
-
-Você pode pedir para uma IA gerar o comando ou usar diretamente:
+### Geração de chaves (local)
 
 ```bash
-openssl genpkey -algorithm Ed25519 -out ~/.mekano/secrets/privatekey.pem
+# Gera ~/.mekano/secrets/privatekey.pem + publicKey.pem no classpath
+./mekano-rest/keygen.sh
 ```
 
-> **Prompt sugerido para IA:**  
-> *"Generate an openssl command to create an Ed25519 private key in PKCS#8 format and save it to ~/.mekano/secrets/privatekey.pem, then extract the public key to mekano-rest/src/main/resources/publicKey.pem"*
+### Docker Dev
 
-### 3. Extrair a chave pública
+O serviço `keygen` no `docker-compose.yml` gera as chaves automaticamente usando Alpine + OpenSSL, armazenando em um volume nomeado (`mekano_secrets`).
 
-```bash
-openssl pkey -in ~/.mekano/secrets/privatekey.pem -pubout -out mekano-rest/src/main/resources/publicKey.pem
-```
+### Docker Prod
 
-### 4. Personalizar caminho da chave (produção)
+Em produção, a chave privada é montada via bind mount de `/etc/mekano/secrets/`. O `keygen.sh` deve ser executado uma vez no host antes do deploy.
 
-Em produção, use a variável de ambiente:
+### Seed admin
 
-```bash
-export SMALLRYE_JWT_SIGN_KEY_LOCATION=/etc/secrets/jwt/privatekey.pem
-```
+A migration **V32** cria um usuário admin inicial:
 
-> **Importante:** A chave privada (`privatekey.pem`) **nunca** deve ser commitada no git — o `.gitignore` já a exclui.
+| Campo | Valor |
+|-------|-------|
+| E-mail | `admin@mekano.com.br` |
+| Senha | `Mekano@2024` |
+| Role | `admin` |
 
 ## Testes
 
@@ -147,10 +161,6 @@ mvn test
 ## Postman
 
 Importe o arquivo **`Mekano API v1.0.postman_collection.json`** (raiz do projeto) no Postman para testar todos os endpoints.
-
-> A migration **V32** já cria um usuário **admin** para facilitar a autenticação:
-> - **E-mail:** `admin@mekano.com.br`
-> - **Senha:** `Mekano@2024`
 
 ## Estrutura do projeto
 
