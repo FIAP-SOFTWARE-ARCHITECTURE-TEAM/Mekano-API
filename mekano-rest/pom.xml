@@ -56,6 +56,11 @@
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-hibernate-validator</artifactId>
         </dependency>
+        <!-- EXT-??: SmallRye JWT — verificação de tokens e enforcement de @RolesAllowed -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-jwt</artifactId>
+        </dependency>
         <!-- EXT-XX: Logging JSON (reconhece quarkus.log.console.json.*) -->
         <dependency>
             <groupId>io.quarkus</groupId>
