@@ -142,8 +142,10 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
     @Transactional
     public OrdemDeServico entregar(UUID id, String recebidoPor) {
         OrdemDeServico os = findById(id);
-        os.entregar(recebidoPor);
-        return repository.save(os);
+        var event = os.entregar(recebidoPor);
+        OrdemDeServico saved = repository.save(os);
+        eventPublisher.publish(event);
+        return saved;
     }
 
     @Override

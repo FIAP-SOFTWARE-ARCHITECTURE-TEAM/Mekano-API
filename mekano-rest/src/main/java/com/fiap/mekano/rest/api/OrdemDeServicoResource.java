@@ -11,6 +11,7 @@ import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
+import com.fiap.mekano.application.service.MockPaymentService;
 import com.fiap.mekano.domain.model.OrdemDeServico;
 import com.fiap.mekano.domain.port.in.CreateOrdemDeServicoCommand;
 import com.fiap.mekano.domain.port.in.FinalizarDiagnosticoCommand;
@@ -23,6 +24,8 @@ import com.fiap.mekano.rest.api.dto.OrdemDeServicoDetailResponse;
 import com.fiap.mekano.rest.api.dto.OrdemDeServicoPageResponse;
 import com.fiap.mekano.rest.api.dto.OrdemDeServicoResponse;
 import com.fiap.mekano.rest.api.dto.OrdemDeServicoStatusResponse;
+import com.fiap.mekano.rest.api.dto.PagamentoResponse;
+import com.fiap.mekano.rest.api.dto.RecebidoPorRequest;
 import com.fiap.mekano.rest.api.dto.TempoMedioResponse;
 
 import jakarta.annotation.security.PermitAll;
@@ -33,6 +36,7 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.PATCH;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
@@ -50,7 +54,7 @@ import jakarta.ws.rs.core.UriInfo;
  * Roles mistas (D-14, D-15):
  * - POST: admin, atendente
  * - PUT transições: mecanico, admin
- * - GET /status: @PermitAll (público, AUTH-03)
+     * - GET /status: @RolesAllowed (autenticado, AUTH-03)
  * - GET lista: admin, atendente
  */
 @Path("/os")
@@ -60,6 +64,9 @@ public class OrdemDeServicoResource {
 
     @Inject
     OrdemDeServicoServicePort osService;
+
+    @Inject
+    MockPaymentService paymentService;
 
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
@@ -93,8 +100,8 @@ public class OrdemDeServicoResource {
     @GET
     @Path("/{id}/status")
     @Produces(MediaType.APPLICATION_JSON)
-    @PermitAll
-    @Operation(summary = "Consultar status da OS (público)")
+    @RolesAllowed({"admin", "atendente", "mecanico", "cliente", "financeiro", "user"})
+    @Operation(summary = "Consultar status da OS")
     @APIResponse(responseCode = "200", description = "Status da OS")
     public Response getStatus(@PathParam("id") UUID id) {
         OrdemDeServico os = osService.findById(id);
@@ -170,13 +177,36 @@ public class OrdemDeServicoResource {
         return Response.ok(toResponse(osService.finalizar(id))).build();
     }
 
-    @PUT
+    @PATCH
     @Path("/{id}/entregar")
+    @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @RolesAllowed({"admin", "atendente"})
     @Operation(summary = "Entregar veículo ao cliente")
-    public Response entregar(@PathParam("id") UUID id, MotivoRequest body) {
-        return Response.ok(toResponse(osService.entregar(id, body != null ? body.motivo() : ""))).build();
+    @APIResponse(responseCode = "200", description = "Entrega registrada")
+    @APIResponse(responseCode = "422", description = "Pagamento pendente ou OS não finalizada")
+    public Response entregar(@PathParam("id") UUID id, @Valid RecebidoPorRequest body) {
+        return Response.ok(toResponse(osService.entregar(id, body.getRecebidoPor()))).build();
+    }
+
+    @PATCH
+    @Path("/{id}/confirmar-pagamento")
+    @Produces(MediaType.APPLICATION_JSON)
+    @RolesAllowed({"admin", "financeiro"})
+    @Operation(summary = "Confirmar pagamento da OS")
+    @APIResponse(responseCode = "200", description = "Pagamento confirmado com sucesso")
+    @APIResponse(responseCode = "409", description = "Pagamento não está pendente")
+    @APIResponse(responseCode = "503", description = "Mock de pagamento indisponível")
+    public Response confirmarPagamento(@PathParam("id") UUID id) {
+        paymentService.confirmarPagamento(id);
+        var os = osService.findById(id);
+        return Response.ok(new PagamentoResponse(
+                id,
+                os.getStatusPagamento().name(),
+                os.getReferenciaPagamento(),
+                os.getValorCobrado(),
+                os.getPagamentoConfirmadoEm()
+        )).build();
     }
 
     @PUT
@@ -222,6 +252,13 @@ public class OrdemDeServicoResource {
                 os.getExecucaoIniciadaEm(),
                 os.getExecucaoFinalizadaEm(),
                 os.getObservacaoExecucao(),
+                os.getStatusPagamento() != null ? os.getStatusPagamento().name() : null,
+                os.getStatusEntrega() != null ? os.getStatusEntrega().name() : null,
+                os.getValorCobrado(),
+                os.getReferenciaPagamento(),
+                os.getRecebidoPor(),
+                os.getPagamentoConfirmadoEm(),
+                os.getEntregueEm(),
                 Collections.singletonList("Itens orçados disponíveis no orçamento"),
                 Collections.emptyList(),
                 os.getCreatedAt()
@@ -253,6 +290,13 @@ public class OrdemDeServicoResource {
                 os.getMotivoCancelamento(), os.getOrcamentoUuid(),
                 os.getMecanicoUuid(), os.getExecucaoIniciadaEm(),
                 os.getExecucaoFinalizadaEm(), os.getObservacaoExecucao(),
+                os.getStatusPagamento() != null ? os.getStatusPagamento().name() : null,
+                os.getStatusEntrega() != null ? os.getStatusEntrega().name() : null,
+                os.getValorCobrado(),
+                os.getReferenciaPagamento(),
+                os.getRecebidoPor(),
+                os.getPagamentoConfirmadoEm(),
+                os.getEntregueEm(),
                 os.getCreatedAt()
         );
     }

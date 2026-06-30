@@ -1,4 +1,7 @@
--- V29: Add payment and delivery columns to ordens_de_servico table
+-- V31: Fix payment/delivery columns on the correct table ordens_de_servico
+-- V29 originally targeted ordens_servico (wrong table). This migration adds
+-- the columns to the correct ordens_de_servico table used by the entity.
+
 ALTER TABLE ordens_de_servico ADD COLUMN IF NOT EXISTS status_pagamento VARCHAR(50) DEFAULT 'NAO_COBRADO';
 ALTER TABLE ordens_de_servico ADD COLUMN IF NOT EXISTS data_pagamento TIMESTAMP;
 ALTER TABLE ordens_de_servico ADD COLUMN IF NOT EXISTS forma_pagamento VARCHAR(50);

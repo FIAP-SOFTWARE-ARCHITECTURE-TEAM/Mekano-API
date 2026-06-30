@@ -54,6 +54,24 @@ public class OrdemDeServicoRepositoryImpl implements OrdemDeServicoRepositoryPor
                 managed.setStatus(entity.getStatus());
                 managed.setMotivoCancelamento(entity.getMotivoCancelamento());
                 managed.setVersion(entity.getVersion());
+                managed.setOrcamentoUuid(entity.getOrcamentoUuid());
+                managed.setMecanicoUuid(entity.getMecanicoUuid());
+                managed.setExecucaoIniciadaEm(entity.getExecucaoIniciadaEm());
+                managed.setExecucaoFinalizadaEm(entity.getExecucaoFinalizadaEm());
+                managed.setObservacaoExecucao(entity.getObservacaoExecucao());
+                managed.setDataAprovacao(entity.getDataAprovacao());
+                managed.setStatusPagamento(entity.getStatusPagamento());
+                managed.setStatusEntrega(entity.getStatusEntrega());
+                managed.setDataPagamento(entity.getDataPagamento());
+                managed.setFormaPagamento(entity.getFormaPagamento());
+                managed.setValorPago(entity.getValorPago());
+                managed.setDataEntrega(entity.getDataEntrega());
+                managed.setEnderecoEntrega(entity.getEnderecoEntrega());
+                managed.setCobrancaGeradaEm(entity.getCobrancaGeradaEm());
+                managed.setPagamentoConfirmadoEm(entity.getPagamentoConfirmadoEm());
+                managed.setReferenciaPagamento(entity.getReferenciaPagamento());
+                managed.setEntregueEm(entity.getEntregueEm());
+                managed.setRecebidoPor(entity.getRecebidoPor());
                 panacheRepository.flush();
                 return mapper.toDomain(managed);
             }
