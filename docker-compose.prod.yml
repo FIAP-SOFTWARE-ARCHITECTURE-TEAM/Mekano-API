@@ -6,48 +6,50 @@ services:
       - "5432:5432"
     environment:
       POSTGRES_DB: mekano
-      POSTGRES_USER: ${DB_USER:?DB_USER é obrigatório}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD é obrigatório}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:?DB_USER é obrigatório} -d mekano"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d mekano"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
-    restart: unless-stopped
-    networks:
-      - mekano-net
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
 
   mekano:
-    build:
-      context: .
-      dockerfile: mekano-rest/src/main/docker/Dockerfile.prod-jvm
+    image: ${MEKANO_IMAGE:-mekano-api:latest}
     container_name: mekano-api
     ports:
       - "8080:8080"
     environment:
       QUARKUS_PROFILE: prod
       DB_URL: jdbc:postgresql://postgres:5432/mekano
-      DB_USER: ${DB_USER:?DB_USER é obrigatório}
-      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD é obrigatório}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      SMALLRYE_JWT_SIGN_KEY_LOCATION: /etc/mekano/secrets/privatekey.pem
+      MP_JWT_VERIFY_PUBLICKEY_LOCATION: /etc/mekano/secrets/publicKey.pem
+    volumes:
+      - /etc/mekano/secrets:/etc/mekano/secrets:ro
     depends_on:
       postgres:
         condition: service_healthy
-    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/q/health/live || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 60s
-    networks:
-      - mekano-net
-
-networks:
-  mekano-net:
-    driver: bridge
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 5
 
 volumes:
   postgres_data:

@@ -85,7 +85,7 @@ public class OrdemDeServicoResource {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({"admin", "atendente"})
+    @RolesAllowed({ "admin", "atendente", "mecanico" })
     @Operation(summary = "Listar OS (paginado)")
     public Response listAll(
             @QueryParam("page") @DefaultValue("0") int page,
@@ -166,15 +166,6 @@ public class OrdemDeServicoResource {
     @Operation(summary = "Cancelar OS")
     public Response cancelar(@PathParam("id") UUID id, MotivoRequest body) {
         return Response.ok(toResponse(osService.cancelar(id, body.motivo()))).build();
-    }
-
-    @PUT
-    @Path("/{id}/finalizar")
-    @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({"mecanico", "admin"})
-    @Operation(summary = "Finalizar execução")
-    public Response finalizar(@PathParam("id") UUID id) {
-        return Response.ok(toResponse(osService.finalizar(id))).build();
     }
 
     @PATCH

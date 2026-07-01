@@ -24,71 +24,7 @@
                   "    console.log('Admin token obtido com sucesso');",
                   "}"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
-            {
-              "listen": "prerequest",
-              "script": {
-                "exec": [
-                  "const variablesToReset = [\r",
-                  "    \"adminToken\",\r",
-                  "    \"adminRefreshToken\",\r",
-                  "\r",
-                  "    \"atendenteToken\",\r",
-                  "    \"atendenteEmail\",\r",
-                  "    \"atendenteSenha\",\r",
-                  "    \"atendenteUuid\",\r",
-                  "\r",
-                  "    \"mecanicoToken\",\r",
-                  "    \"mecanicoEmail\",\r",
-                  "    \"mecanicoSenha\",\r",
-                  "    \"mecanicoUuid\",\r",
-                  "\r",
-                  "    \"financeiroToken\",\r",
-                  "    \"financeiroEmail\",\r",
-                  "    \"financeiroSenha\",\r",
-                  "    \"financeiroUuid\",\r",
-                  "\r",
-                  "    \"clienteToken\",\r",
-                  "    \"clienteUserEmail\",\r",
-                  "    \"clienteUserSenha\",\r",
-                  "    \"clienteUserUuid\",\r",
-                  "    \"clienteUuid\",\r",
-                  "\r",
-                  "    \"veiculoUuid\",\r",
-                  "    \"servicoUuid\",\r",
-                  "\r",
-                  "    \"pecaUuid\",\r",
-                  "    \"pecaCodigo\",\r",
-                  "    \"pecaSaldoAtual\",\r",
-                  "\r",
-                  "    \"requisicaoCompraUuid\",\r",
-                  "    \"reqCompraOSUuid\",\r",
-                  "\r",
-                  "    \"nfEntradaUuid\",\r",
-                  "    \"nfEntradaOSUuid\",\r",
-                  "\r",
-                  "    \"osUuid\",\r",
-                  "    \"orcamentoUuid\",\r",
-                  "\r",
-                  "    \"userUuid\",\r",
-                  "    \"idUsuarioDelete\",\r",
-                  "\r",
-                  "    \"primeiroUsuarioAdmin\"\r",
-                  "];\r",
-                  "\r",
-                  "variablesToReset.forEach(variable => {\r",
-                  "    pm.collectionVariables.set(variable, \"\");\r",
-                  "});\r",
-                  "\r",
-                  "console.log(`Foram limpas ${variablesToReset.length} variáveis da Collection.`);"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "type": "text/javascript"
               }
             }
           ],
@@ -598,54 +534,6 @@
           "response": []
         },
         {
-          "name": "POST Criar Usuário Cliente para Delete",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    var jsonData = pm.response.json();",
-                  "    pm.collectionVariables.set('idUsuarioDelete', jsonData.id);",
-                  "    console.log('Cliente user criado: ' + jsonData.email + ' / senha: ' + jsonData.senhaGerada);",
-                  "}"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Cliente Delete\",\n  \"email\": \"clienteDelete{{sequencia}}@mekano.com\",\n  \"role\": \"cliente\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/admin/usuarios",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "admin",
-                "usuarios"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
           "name": "POST Login (atendente)",
           "event": [
             {
@@ -870,14 +758,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/admin/usuarios/{{idUsuarioDelete}}",
+              "raw": "{{baseUrl}}/admin/usuarios/{{primeiroUsuarioAdmin}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "admin",
                 "usuarios",
-                "{{idUsuarioDelete}}"
+                "{{primeiroUsuarioAdmin}}"
               ]
             }
           },
@@ -893,14 +781,14 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/admin/usuarios/{{idUsuarioDelete}}",
+                  "raw": "{{baseUrl}}/admin/usuarios/{{primeiroUsuarioAdmin}}",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
                     "admin",
                     "usuarios",
-                    "{{idUsuarioDelete}}"
+                    "{{primeiroUsuarioAdmin}}"
                   ]
                 }
               },
@@ -3166,16 +3054,14 @@
                 "exec": [
                   "if (pm.response.code === 200) {",
                   "    var jsonData = pm.response.json();",
-                  "    pm.collectionVariables.set('orcamentoUuid', jsonData.id);",
-                  "    console.log('Orçamento encontrado: ' + jsonData.id + ' valor total: ' + jsonData.valorTotal);",
+                  "    pm.collectionVariables.set('orcamentoUuid', jsonData.id());",
+                  "    console.log('Orçamento encontrado: ' + jsonData.id() + ' valor total: ' + jsonData.valorTotal());",
                   "    pm.test('Status deve ser PENDENTE', function() {",
-                  "        pm.expect(jsonData.status).to.eql('PENDENTE');",
+                  "        pm.expect(jsonData.status()).to.eql('PENDENTE');",
                   "    });",
                   "}"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "type": "text/javascript"
               }
             }
           ],
@@ -3447,56 +3333,6 @@
             }
           },
           "response": []
-        },
-        {
-          "name": "10.1 GET Listar OS",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{mecanicoToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/os",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "os"
-              ]
-            }
-          },
-          "response": [
-            {
-              "name": "Sucesso",
-              "originalRequest": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{mecanicoToken}}"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/os",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "os"
-                  ]
-                }
-              },
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "Text",
-              "header": [],
-              "cookie": [],
-              "body": "{\n  \"id\": \"a1b2c3d4-...\",\n  \"status\": \"ENTREGUE\",\n  \"statusPagamento\": \"CONFIRMADO\",\n  \"statusEntrega\": \"ENTREGUE\",\n  \"valorCobrado\": 283.50,\n  \"referenciaPagamento\": \"MOCK-a1b2c3d4\",\n  \"recebidoPor\": \"João Silva\",\n  \"entregueEm\": \"2026-06-30T10:08:00\",\n  ...\n}"
-            }
-          ]
         },
         {
           "name": "10 PUT Iniciar Execução (atribuir mecânico)",
@@ -4884,7 +4720,7 @@
     },
     {
       "key": "pecaSaldoAtual",
-      "value": ""
+      "value": "0"
     },
     {
       "key": "requisicaoCompraUuid",
@@ -4912,10 +4748,6 @@
     },
     {
       "key": "userUuid",
-      "value": ""
-    },
-    {
-      "key": "idUsuarioDelete",
       "value": ""
     },
     {

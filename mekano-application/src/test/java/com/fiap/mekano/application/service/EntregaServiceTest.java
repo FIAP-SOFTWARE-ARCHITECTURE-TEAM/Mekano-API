@@ -72,7 +72,8 @@ class EntregaServiceTest {
         os.iniciarDiagnostico();
         os.finalizarDiagnostico();
         os.aprovarOrcamento(UUID.randomUUID());
-        os.finalizar();
+        os.iniciarExecucao(UUID.randomUUID(), null);
+        os.finalizarExecucao(null);
         return os;
     }
 
