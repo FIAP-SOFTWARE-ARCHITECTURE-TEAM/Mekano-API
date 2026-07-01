@@ -1,11 +1,21 @@
+# --- Stage 1: Build ---
+FROM registry.access.redhat.com/ubi9/openjdk-17 AS build
+USER root
+RUN microdnf install -y unzip && microdnf clean all
+WORKDIR /app
+COPY --chown=185:0 --chmod=755 . .
+USER 185
+RUN ./mvnw package -pl mekano-rest -am -DskipTests -B -q
+
+# --- Stage 2: Runtime ---
 FROM registry.access.redhat.com/ubi9/openjdk-17-runtime:1.24
 
 ENV LANGUAGE='en_US:en'
 
-COPY --chown=185 mekano-rest/target/quarkus-app/lib/ /deployments/lib/
-COPY --chown=185 mekano-rest/target/quarkus-app/*.jar /deployments/
-COPY --chown=185 mekano-rest/target/quarkus-app/app/ /deployments/app/
-COPY --chown=185 mekano-rest/target/quarkus-app/quarkus/ /deployments/quarkus/
+COPY --from=build /app/mekano-rest/target/quarkus-app/lib/ /deployments/lib/
+COPY --from=build /app/mekano-rest/target/quarkus-app/*.jar /deployments/
+COPY --from=build /app/mekano-rest/target/quarkus-app/app/ /deployments/app/
+COPY --from=build /app/mekano-rest/target/quarkus-app/quarkus/ /deployments/quarkus/
 
 EXPOSE 8080
 USER 185

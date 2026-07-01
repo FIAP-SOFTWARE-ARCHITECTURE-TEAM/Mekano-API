@@ -14,14 +14,13 @@ API REST para gestão de oficina mecânica — ordens de serviço, clientes, ve�
 
 ```bash
 # 1. Build + sobe tudo (postgres, keygen, app)
-./mvnw package -pl mekano-rest -am -DskipTests && docker compose build
-docker compose up -d
+docker compose build && docker compose up -d
 
 # 2. A app estará em http://localhost:8080
 #    Swagger UI: http://localhost:8080/q/swagger-ui
 ```
 
-O serviço `keygen` gera automaticamente o par de chaves Ed25519 na primeira execução e o armazena em um volume nomeado (`mekano_secrets`). A app só inicia após a geração das chaves.
+> O `Dockerfile.jvm` é multi-stage: compila o JAR internamente (sem precisar de Maven instalado na máquina host) e depois gera a imagem runtime. O serviço `keygen` gera o par de chaves Ed25519 na primeira execução.
 
 ### Prod (bind mount da chave do host)
 
