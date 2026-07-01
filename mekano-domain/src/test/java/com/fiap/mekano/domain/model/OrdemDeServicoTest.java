@@ -15,7 +15,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@DisplayName("OrdemDeServico — máquina de estados (7×7 = 49 transições)")
+@DisplayName("OrdemDeServico — máquina de estados (8×8 = 64 transições)")
 class OrdemDeServicoTest {
 
     /**
@@ -24,7 +24,8 @@ class OrdemDeServicoTest {
     private static final Map<StatusOS, Set<StatusOS>> TRANSICOES_VALIDAS = Map.of(
             StatusOS.RECEBIDA, Set.of(StatusOS.EM_DIAGNOSTICO, StatusOS.CANCELADA),
             StatusOS.EM_DIAGNOSTICO, Set.of(StatusOS.AGUARDANDO_APROVACAO, StatusOS.CANCELADA),
-            StatusOS.AGUARDANDO_APROVACAO, Set.of(StatusOS.EM_EXECUCAO, StatusOS.CANCELADA),
+            StatusOS.AGUARDANDO_APROVACAO, Set.of(StatusOS.AGUARDANDO_EXECUCAO, StatusOS.CANCELADA),
+            StatusOS.AGUARDANDO_EXECUCAO, Set.of(StatusOS.EM_EXECUCAO, StatusOS.CANCELADA),
             StatusOS.EM_EXECUCAO, Set.of(StatusOS.FINALIZADA, StatusOS.CANCELADA),
             StatusOS.FINALIZADA, Set.of(StatusOS.ENTREGUE),
             StatusOS.ENTREGUE, Set.of(),
@@ -113,13 +114,13 @@ class OrdemDeServicoTest {
     }
 
     @Test
-    @DisplayName("aprovarOrcamento() transiciona AGUARDANDO_APROVACAO → EM_EXECUCAO")
+    @DisplayName("aprovarOrcamento() transiciona AGUARDANDO_APROVACAO → AGUARDANDO_EXECUCAO")
     void aprovarOrcamentoDeveTransicionar() {
         OrdemDeServico os = criarOS();
         os.iniciarDiagnostico();
         os.finalizarDiagnostico();
-        os.aprovarOrcamento();
-        assertEquals(StatusOS.EM_EXECUCAO, os.getStatus());
+        os.aprovarOrcamento(UUID.randomUUID());
+        assertEquals(StatusOS.AGUARDANDO_EXECUCAO, os.getStatus());
     }
 
     @Test
@@ -161,13 +162,14 @@ class OrdemDeServicoTest {
     }
 
     @Test
-    @DisplayName("finalizar() transiciona EM_EXECUCAO → FINALIZADA")
+    @DisplayName("finalizar-execucao transiciona EM_EXECUCAO → FINALIZADA")
     void finalizarDeveTransicionar() {
         OrdemDeServico os = criarOS();
         os.iniciarDiagnostico();
         os.finalizarDiagnostico();
-        os.aprovarOrcamento();
-        os.finalizar();
+        os.aprovarOrcamento(UUID.randomUUID());
+        os.iniciarExecucao(UUID.randomUUID(), null);
+        os.finalizarExecucao(null);
         assertEquals(StatusOS.FINALIZADA, os.getStatus());
     }
 
@@ -177,9 +179,12 @@ class OrdemDeServicoTest {
         OrdemDeServico os = criarOS();
         os.iniciarDiagnostico();
         os.finalizarDiagnostico();
-        os.aprovarOrcamento();
-        os.finalizar();
-        os.entregar();
+        os.aprovarOrcamento(UUID.randomUUID());
+        os.iniciarExecucao(UUID.randomUUID(), null);
+        os.finalizarExecucao(null);
+        os.gerarCobranca();
+        os.confirmarPagamento("PIX-123");
+        os.entregar("Cliente");
         assertEquals(StatusOS.ENTREGUE, os.getStatus());
     }
 
@@ -189,9 +194,12 @@ class OrdemDeServicoTest {
         OrdemDeServico os = criarOS();
         os.iniciarDiagnostico();
         os.finalizarDiagnostico();
-        os.aprovarOrcamento();
-        os.finalizar();
-        os.entregar();
+        os.aprovarOrcamento(UUID.randomUUID());
+        os.iniciarExecucao(UUID.randomUUID(), null);
+        os.finalizarExecucao(null);
+        os.gerarCobranca();
+        os.confirmarPagamento("PIX-123");
+        os.entregar("Cliente");
 
         assertThrows(AppException.class, os::iniciarDiagnostico);
         assertThrows(AppException.class, () -> os.cancelar("motivo"));
@@ -204,15 +212,15 @@ class OrdemDeServicoTest {
         os.cancelar("motivo");
 
         assertThrows(AppException.class, os::iniciarDiagnostico);
-        assertThrows(AppException.class, os::finalizar);
-        assertThrows(AppException.class, os::entregar);
+        assertThrows(AppException.class, () -> os.finalizarExecucao(null));
+        assertThrows(AppException.class, () -> os.entregar("Cliente"));
     }
 
     @Test
     @DisplayName("transição inválida RECEBIDA → FINALIZADA lança 422")
     void transicaoInvalidaDeveLancar422() {
         OrdemDeServico os = criarOS();
-        AppException ex = assertThrows(AppException.class, os::finalizar);
+        AppException ex = assertThrows(AppException.class, () -> os.finalizarExecucao(null));
         assertEquals(422, ex.getStatus());
     }
 
@@ -226,7 +234,11 @@ class OrdemDeServicoTest {
 
         OrdemDeServico os = OrdemDeServico.reconstitute(
                 id, clienteId, veiculoId, "Barulho no motor",
-                StatusOS.EM_EXECUCAO, null, createdAt, 3L
+                StatusOS.EM_EXECUCAO, null, null, null,
+                null, null, null, null,
+                null, null, null, null,
+                null, null, null, null,
+                null, null, null, createdAt, 3L
         );
 
         assertEquals(id, os.getId());
