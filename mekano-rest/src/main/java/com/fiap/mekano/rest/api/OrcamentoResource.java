@@ -1,11 +1,21 @@
 package com.fiap.mekano.rest.api;
 
+import java.util.UUID;
+
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
+
+import com.fiap.mekano.domain.model.Orcamento;
 import com.fiap.mekano.domain.port.in.AprovarOrcamentoCommand;
 import com.fiap.mekano.domain.port.in.OrcamentoServicePort;
 import com.fiap.mekano.domain.port.in.ReprovarOrcamentoCommand;
 import com.fiap.mekano.rest.api.dto.OrcamentoResponse;
 import com.fiap.mekano.rest.api.dto.ReprovarMotivoRequest;
 import com.fiap.mekano.rest.api.exception.ProblemDetail;
+
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
@@ -19,14 +29,6 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.eclipse.microprofile.openapi.annotations.Operation;
-import org.eclipse.microprofile.openapi.annotations.media.Content;
-import org.eclipse.microprofile.openapi.annotations.media.Schema;
-import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
-import org.eclipse.microprofile.openapi.annotations.tags.Tag;
-
-import java.util.List;
-import java.util.UUID;
 
 @Path("/orcamentos")
 @RequestScoped
@@ -39,10 +41,10 @@ public class OrcamentoResource {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    @Operation(summary = "Listar orçamentos por OS", description = "Retorna os orçamentos associados a uma ordem de serviço")
+    @Operation(summary = "Buscar orçamento por OS", description = "Busca o orçamento associado a uma ordem de serviço")
     @APIResponse(responseCode = "200", description = "Lista de orçamentos")
     public Response buscarPorOS(@QueryParam("osUuid") UUID osUuid) {
-        var orcamento = orcamentoService.buscarPorOrdemServico(osUuid);
+        Orcamento orcamento = orcamentoService.buscarPorOrdemServico(osUuid);
         return Response.ok(OrcamentoResponse.from(orcamento)).build();
     }
 
