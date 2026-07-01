@@ -110,6 +110,7 @@ class CobrancaEmitidaListenerTest {
         os.iniciarDiagnostico();
         os.finalizarDiagnostico();
         os.aprovarOrcamento(UUID.randomUUID());
+        os.iniciarExecucao(UUID.randomUUID(), null);
         os.finalizarExecucao(null);
         return os;
     }

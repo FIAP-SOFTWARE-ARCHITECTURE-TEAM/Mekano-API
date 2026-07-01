@@ -40,7 +40,7 @@ class OrcamentoServiceTest {
     OrcamentoService orcamentoService;
 
     @Test
-    @DisplayName("aprovar() deve aprovar orçamento e transicionar OS para EM_EXECUCAO")
+    @DisplayName("aprovar() deve aprovar orçamento e transicionar OS para AGUARDANDO_EXECUCAO")
     void deveAprovarOrcamento() {
         var os = OrdemDeServico.create(UUID.randomUUID(), UUID.randomUUID(), "Problema");
         os.iniciarDiagnostico();
@@ -57,7 +57,7 @@ class OrcamentoServiceTest {
         var result = orcamentoService.aprovar(new AprovarOrcamentoCommand(orcamento.getId()));
 
         assertEquals(StatusOrcamento.APROVADO, result.getStatus());
-        assertEquals(StatusOS.EM_EXECUCAO, os.getStatus());
+        assertEquals(StatusOS.AGUARDANDO_EXECUCAO, os.getStatus());
     }
 
     @Test

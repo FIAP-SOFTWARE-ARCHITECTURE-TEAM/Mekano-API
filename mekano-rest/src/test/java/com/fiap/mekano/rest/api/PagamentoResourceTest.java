@@ -99,6 +99,22 @@ class PagamentoResourceTest {
 
     @Test
     @Order(4)
+    @TestSecurity(user = "mecanico", roles = {"mecanico"})
+    void iniciarExecucao() {
+        given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {"mecanicoUuid": "%s", "observacao": "Iniciando E2E"}
+                        """.formatted(UUID.randomUUID()))
+                .when()
+                .put(OS_PATH + "/" + osId + "/iniciar-execucao")
+                .then()
+                .statusCode(200)
+                .body("status", equalTo("EM_EXECUCAO"));
+    }
+
+    @Test
+    @Order(5)
     @TestSecurity(user = "admin", roles = {"admin"})
     void finalizarExecucao() {
         given()
@@ -114,7 +130,7 @@ class PagamentoResourceTest {
     }
 
     @Test
-    @Order(5)
+    @Order(6)
     @TestSecurity(user = "admin", roles = {"admin"})
     void entregaSemPagamento_retorna422() {
         given()
@@ -129,7 +145,7 @@ class PagamentoResourceTest {
     }
 
     @Test
-    @Order(6)
+    @Order(7)
     @TestSecurity(user = "admin", roles = {"admin"})
     void confirmarPagamento() {
         given()
@@ -145,7 +161,7 @@ class PagamentoResourceTest {
     }
 
     @Test
-    @Order(7)
+    @Order(8)
     @TestSecurity(user = "admin", roles = {"admin"})
     void entregar() {
         given()
@@ -164,7 +180,7 @@ class PagamentoResourceTest {
     }
 
     @Test
-    @Order(8)
+    @Order(9)
     @TestSecurity(user = "admin", roles = {"admin"})
     void getVerifyEstadoFinal() {
         given()
@@ -183,7 +199,7 @@ class PagamentoResourceTest {
     }
 
     @Test
-    @Order(9)
+    @Order(10)
     @TestSecurity(user = "admin", roles = {"admin"})
     void pagamentoSemCobranca_retorna409() {
         String novaOsId = given()

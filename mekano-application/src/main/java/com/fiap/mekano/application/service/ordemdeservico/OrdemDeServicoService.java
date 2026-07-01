@@ -142,7 +142,7 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
     @Transactional
     public OrdemDeServico iniciarExecucao(UUID id, UUID mecanicoUuid, String observacao) {
         OrdemDeServico os = findById(id);
-        if (os.getStatus() != com.fiap.mekano.domain.model.StatusOS.AGUARDANDO_APROVACAO) {
+        if (os.getStatus() != com.fiap.mekano.domain.model.StatusOS.AGUARDANDO_EXECUCAO) {
             throw new AppException(400, Messages.get("os.execucao.status.invalido.iniciar", os.getStatus()));
         }
         os.iniciarExecucao(mecanicoUuid, observacao);

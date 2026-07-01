@@ -227,11 +227,11 @@ public class OrdemDeServico {
     }
 
     /**
-     * AGUARDANDO_APROVACAO → EM_EXECUCAO.
+     * AGUARDANDO_APROVACAO → AGUARDANDO_EXECUCAO.
      * Armazena orcamentoUuid e dataAprovacao.
      */
     public void aprovarOrcamento(UUID orcamentoUuid) {
-        transicionar(StatusOS.EM_EXECUCAO);
+        transicionar(StatusOS.AGUARDANDO_EXECUCAO);
 
         if (orcamentoUuid != null) {
             this.orcamentoUuid = orcamentoUuid;
@@ -288,19 +288,15 @@ public class OrdemDeServico {
     }
 
     /**
+     * AGUARDANDO_EXECUCAO → EM_EXECUCAO.
      * Registra mecânico e início da execução.
-     *
-     * <p>Não altera status porque a transição para EM_EXECUCAO já ocorre em aprovarOrcamento().
      */
     public void iniciarExecucao(UUID mecanicoUuid, String observacao) {
         if (mecanicoUuid == null) {
             throw new AppException(400, Messages.get("os.mecanico.required"));
         }
 
-        if (status != StatusOS.EM_EXECUCAO) {
-            throw new AppException(422, Messages.get("os.transicao.invalida", status, "INICIAR_EXECUCAO"));
-        }
-
+        transicionar(StatusOS.EM_EXECUCAO);
         this.mecanicoUuid = mecanicoUuid;
         this.execucaoIniciadaEm = LocalDateTime.now();
 
