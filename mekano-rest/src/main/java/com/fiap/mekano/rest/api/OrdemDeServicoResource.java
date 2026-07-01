@@ -85,7 +85,7 @@ public class OrdemDeServicoResource {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({"admin", "atendente"})
+    @RolesAllowed({ "admin", "atendente", "mecanico" })
     @Operation(summary = "Listar OS (paginado)")
     public Response listAll(
             @QueryParam("page") @DefaultValue("0") int page,
