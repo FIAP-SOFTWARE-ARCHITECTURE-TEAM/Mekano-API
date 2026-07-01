@@ -14,7 +14,7 @@ API REST para gestão de oficina mecânica — ordens de serviço, clientes, ve�
 
 ```bash
 # 1. Build + sobe tudo (postgres, keygen, app)
-docker compose build && docker compose up -d
+docker compose up -d
 
 # 2. A app estará em http://localhost:8080
 #    Swagger UI: http://localhost:8080/q/swagger-ui
