@@ -168,15 +168,6 @@ public class OrdemDeServicoResource {
         return Response.ok(toResponse(osService.cancelar(id, body.motivo()))).build();
     }
 
-    @PUT
-    @Path("/{id}/finalizar")
-    @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({"mecanico", "admin"})
-    @Operation(summary = "Finalizar execução")
-    public Response finalizar(@PathParam("id") UUID id) {
-        return Response.ok(toResponse(osService.finalizar(id))).build();
-    }
-
     @PATCH
     @Path("/{id}/entregar")
     @Consumes(MediaType.APPLICATION_JSON)

@@ -89,7 +89,7 @@ class MockPaymentServiceTest {
         os.iniciarDiagnostico();
         os.finalizarDiagnostico();
         os.aprovarOrcamento(UUID.randomUUID());
-        os.finalizar();
+        os.finalizarExecucao(null);
         os.gerarCobranca();
         return os;
     }

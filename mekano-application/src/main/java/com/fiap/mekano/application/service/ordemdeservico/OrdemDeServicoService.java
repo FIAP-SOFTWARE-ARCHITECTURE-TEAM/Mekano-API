@@ -130,16 +130,6 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
 
     @Override
     @Transactional
-    public OrdemDeServico finalizar(UUID id) {
-        OrdemDeServico os = findById(id);
-        os.finalizar();
-        OrdemDeServico saved = repository.save(os);
-        eventPublisher.publish(com.fiap.mekano.domain.event.OSFinalizadaEvent.of(saved.getId()));
-        return saved;
-    }
-
-    @Override
-    @Transactional
     public OrdemDeServico entregar(UUID id, String recebidoPor) {
         OrdemDeServico os = findById(id);
         var event = os.entregar(recebidoPor);

@@ -276,13 +276,6 @@ public class OrdemDeServico {
     }
 
     /**
-     * EM_EXECUCAO → FINALIZADA.
-     */
-    public void finalizar() {
-        transicionar(StatusOS.FINALIZADA);
-    }
-
-    /**
      * EM_EXECUCAO → FINALIZADA com observação de execução.
      */
     public void finalizarExecucao(String observacao) {

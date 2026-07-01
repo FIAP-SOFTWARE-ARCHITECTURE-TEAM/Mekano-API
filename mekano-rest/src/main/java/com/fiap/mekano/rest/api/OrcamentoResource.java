@@ -62,7 +62,7 @@ public class OrcamentoResource {
     @POST
     @Path("/{uuid}/aprovar")
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed("cliente")
+    @RolesAllowed({ "admin", "cliente"})
     @Operation(summary = "Aprovar orçamento", description = "Cliente aprova o orçamento — OS transiciona para EM_EXECUCAO")
     @APIResponse(responseCode = "200", description = "Orçamento aprovado",
             content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = OrcamentoResponse.class)))
@@ -77,7 +77,7 @@ public class OrcamentoResource {
     @Path("/{uuid}/reprovar")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed("cliente")
+    @RolesAllowed({ "admin", "cliente" })
     @Operation(summary = "Reprovar orçamento", description = "Cliente reprova o orçamento — OS transiciona para CANCELADA")
     @APIResponse(responseCode = "200", description = "Orçamento reprovado",
             content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = OrcamentoResponse.class)))
