@@ -1,124 +1,173 @@
-# mekano
+# Mekano API
 
-This project uses Quarkus, the Supersonic Subatomic Java Framework.
+API REST para gestão de oficina mecânica — ordens de serviço, clientes, veículos, estoque e faturamento.
 
-If you want to learn more about Quarkus, please visit its website: <https://quarkus.io/>.
+## Pré-requisitos
 
-## Running the application in dev mode
+- **Java 17** (configurado via `JAVA_HOME`)
+- **Docker Desktop** ou **Rancher Desktop** instalado e em execução
+- **Maven Wrapper** (`./mvnw` incluso no projeto — não precisa instalar Maven)
 
-You can run your application in dev mode that enables live coding using:
+## Como inicializar o projeto
 
-```shell script
+### Dev (Docker Compose + keygen automático)
+
+```bash
+# 1. Build + sobe tudo (postgres, keygen, app)
+docker compose up -d
+
+# 2. A app estará em http://localhost:8080
+#    Swagger UI: http://localhost:8080/q/swagger-ui
+```
+
+> O `Dockerfile.jvm` é multi-stage: compila o JAR internamente (sem precisar de Maven instalado na máquina host) e depois gera a imagem runtime. O serviço `keygen` gera o par de chaves Ed25519 na primeira execução.
+
+### Prod (bind mount da chave do host)
+
+Use `docker-compose.prod.yml`:
+
+```bash
+# 1. Gerar chave no host (uma vez)
+./mekano-rest/keygen.sh
+
+# 2. Copiar a chave privada para /etc/mekano/secrets/
+cp ~/.mekano/secrets/privatekey.pem /etc/mekano/secrets/
+cp ~/.mekano/secrets/publicKey.pem /etc/mekano/secrets/
+
+# 3. Subir em produção
+docker compose -f docker-compose.prod.yml up -d
+```
+
+### Dev local (sem Docker)
+
+```bash
+# 1. Suba apenas o banco
+docker compose up -d postgres
+
+# 2. Gere as chaves JWT (necessário apenas uma vez)
+./mekano-rest/keygen.sh
+
+# 3. Inicie o Quarkus em modo dev
 ./mvnw quarkus:dev
 ```
 
-> **_NOTE:_**  Quarkus now ships with a Dev UI, which is available in dev mode only at <http://localhost:8080/q/dev/>.
+> O Quarkus Dev UI estará disponível em <http://localhost:8080/q/dev/>.
+> Flyway, JWT e CORS são configurados automaticamente.
 
-## Packaging and running the application
+## Build completo e testes
 
-The application can be packaged using:
+Para verificar se o projeto compila 100% e todos os testes passam:
 
-```shell script
-./mvnw package
+```powershell
+./mvnw -B -ntp verify -pl mekano-rest -am
 ```
 
-It produces the `quarkus-run.jar` file in the `target/quarkus-app/` directory.
-Be aware that it’s not an _über-jar_ as the dependencies are copied into the `target/quarkus-app/lib/` directory.
+## Autenticação JWT
 
-The application is now runnable using `java -jar target/quarkus-app/quarkus-run.jar`.
+O projeto utiliza **Ed25519 (EdDSA)** para assinar e verificar tokens via `quarkus-smallrye-jwt`.
 
-If you want to build an _über-jar_, execute the following command:
+- A chave **pública** (`publicKey.pem`) fica no classpath (segura para commit)
+- A chave **privada** (`privatekey.pem`) **nunca** entra na imagem Docker nem no repositório
+- Todos os endpoints REST exigem `@RolesAllowed` (exceto `/auth/login`, `/auth/refresh`, `/auth/logout`)
+- Perfil `prod` lê as chaves de `/etc/mekano/secrets/` (bind mount)
 
-```shell script
-./mvnw package -Dquarkus.package.jar.type=uber-jar
-```
-
-The application, packaged as an _über-jar_, is now runnable using `java -jar target/*-runner.jar`.
-
-## Creating a native executable
-
-You can create a native executable using:
-
-```shell script
-./mvnw package -Dnative
-```
-
-Or, if you don't have GraalVM installed, you can run the native executable build in a container using:
-
-```shell script
-./mvnw package -Dnative -Dquarkus.native.container-build=true
-```
-
-You can then execute your native executable with: `./target/mekano-1.0.0-SNAPSHOT-runner`
-
-If you want to learn more about building native executables, please consult <https://quarkus.io/guides/maven-tooling>.
-
-## Provided Code
-
-### REST
-
-Easily start your REST Web Services
-
-[Related guide section...](https://quarkus.io/guides/getting-started-reactive#reactive-jax-rs-resources)
-
-## Geração de chaves JWT (Phase 9)
-
-Esta seção descreve como gerar localmente o par de chaves Ed25519 (ES256/EdDSA)
-usado pelo SmallRye JWT para verificar tokens MicroProfile JWT (Phase 9, D-10).
-A chave privada é estritamente dev-local — **nunca** deve ser commitada
-(D-09, `.gitignore` veta `privateKey*.pem` e `**/privateKey.pem`).
-
-A migração de RSA (Phase 8) para Ed25519 foi feita na Phase 9, Plan 09-03:
-algoritmo mais moderno, tamanho de chave fixo (sem necessidade de `initialize(2048)`),
-e suporte nativo no Java 17+ via `KeyPairGenerator.getInstance("Ed25519")`.
-
-### 1. Criar diretório de secrets (fora do repositório)
-
-A chave privada reside em `~/.mekano/secrets/privatekey.pem`, um diretório
-fora do repositório git — eliminando o risco de versionamento acidental.
+### Geração de chaves (local)
 
 ```bash
-mkdir -p ~/.mekano/secrets
+# Gera ~/.mekano/secrets/privatekey.pem + publicKey.pem no classpath
+./mekano-rest/keygen.sh
 ```
 
-### 2. Gerar par Ed25519 via `openssl`
+### Docker Dev
+
+O serviço `keygen` no `docker-compose.yml` gera as chaves automaticamente usando Alpine + OpenSSL, armazenando em um volume nomeado (`mekano_secrets`).
+
+### Docker Prod
+
+Em produção, a chave privada é montada via bind mount de `/etc/mekano/secrets/`. O `keygen.sh` deve ser executado uma vez no host antes do deploy.
+
+### Seed admin
+
+A migration **V32** cria um usuário admin inicial:
+
+| Campo | Valor |
+|-------|-------|
+| E-mail | `admin@mekano.com.br` |
+| Senha | `Mekano@2024` |
+| Role | `admin` |
+
+## Testes
+
+### Rodar todos os testes do projeto
+
+Executa os testes de todos os módulos: `mekano-domain`, `mekano-application`, `mekano-infrastructure`, `mekano-rest`.
 
 ```bash
-# 1) Gerar chave privada Ed25519 (PKCS#8)
-openssl genpkey -algorithm Ed25519 -out ~/.mekano/secrets/privatekey.pem
-
-# 2) Extrair chave pública para o classpath do adapter
-openssl pkey -in ~/.mekano/secrets/privatekey.pem -pubout -out mekano-rest/src/main/resources/publicKey.pem
+./mvnw test
 ```
 
-### 3. Onde cada arquivo vive (e por quê)
+```powershell
+mvn test
+```
 
-- `mekano-rest/src/main/resources/publicKey.pem` — **rastreado** no git.
-  É empacotado no artefato e usado pelo Quarkus para verificar tokens em
-  runtime via `mp.jwt.verify.publickey.location`.
-- `~/.mekano/secrets/privatekey.pem` — **fora** do repositório git, em
-  diretório dedicado no perfil do usuário. O caminho é configurado em
-  `application.properties` via `${user.home}/.mekano/secrets/privatekey.pem`.
-- Os testes automatizados **não** dependem desses arquivos: o
-  `JwtTestProfile` gera um par Ed25519 em memória programaticamente,
-  o que torna a suíte CI-friendly e reprodutível.
-
-### 4. Variável de ambiente `MP_JWT_ISSUER`
-
-O issuer default configurado em `application.properties` é
-`https://mekano.fiap.com.br/auth`. Para sobrescrever em runtime,
-exporte `MP_JWT_ISSUER` antes de subir a aplicação:
+### Rodar apenas um módulo específico
 
 ```bash
-export MP_JWT_ISSUER=https://meu-issuer-local/auth
-./mvnw -pl mekano-rest quarkus:dev
+./mvnw test -pl mekano-domain -am
 ```
 
-### 5. Personalizar caminho da chave privada (produção)
+- `-pl mekano-domain` → executa apenas esse módulo
+- `-am` (also make) → compila dependências necessárias
 
-Em ambientes produtivos, o caminho da chave privada pode ser sobrescrito
-via variável de ambiente `SMALLRYE_JWT_SIGN_KEY_LOCATION`:
+### Rodar apenas um teste específico
 
 ```bash
-export SMALLRYE_JWT_SIGN_KEY_LOCATION=/etc/secrets/jwt/privatekey.pem
+./mvnw test -pl mekano-domain -Dtest=PlacaVeiculoTest
 ```
+
+```powershell
+.\mvnw.cmd test -pl mekano-domain -Dtest=PlacaVeiculoTest
+```
+
+### Rodar múltiplos testes específicos
+
+```powershell
+.\mvnw.cmd test `
+  -pl mekano-domain `
+  -Dtest="PlacaVeiculoTest,VeiculoTest"
+```
+
+### Rodar um único método de teste
+
+```powershell
+.\mvnw.cmd test `
+  -pl mekano-domain `
+  -Dtest=PlacaVeiculoTest#deveCriarPlacaAntigaValida
+```
+
+### Mostrar apenas as falhas
+
+```powershell
+.\mvnw.cmd test -q
+```
+
+### Clean + verify (ciclo Maven completo)
+
+```powershell
+.\mvnw.cmd clean verify
+```
+
+## Postman
+
+Importe o arquivo **`Mekano API v1.0.postman_collection.json`** (raiz do projeto) no Postman para testar todos os endpoints.
+
+## Estrutura do projeto
+
+O projeto segue **Clean Architecture** com 4 módulos Maven:
+
+| Módulo | Função |
+|--------|--------|
+| `mekano-domain` | Entidades, Value Objects, Ports, Eventos |
+| `mekano-application` | Casos de uso (serviços da aplicação) |
+| `mekano-infrastructure` | JPA, Repositórios, Mappers, Flyway |
+| `mekano-rest` | Recursos REST, DTOs, Config |

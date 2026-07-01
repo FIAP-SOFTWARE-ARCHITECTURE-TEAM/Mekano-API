@@ -15,8 +15,8 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 
-import com.fiap.mekano.domain.model.User;
-import com.fiap.mekano.domain.port.out.UserRepositoryPort;
+import com.fiap.mekano.domain.model.Cliente;
+import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;
 
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
@@ -29,22 +29,24 @@ import io.restassured.http.ContentType;
 public class VeiculoResourceTest {
 
         @InjectMock
-        UserRepositoryPort userRepository;
+        ClienteRepositoryPort clienteRepository;
 
         private static final UUID CLIENTE_UUID = UUID.fromString("11111111-1111-1111-1111-111111111111");
 
         @BeforeEach
         void setup() {
 
-                User fakeUser = User.reconstitute(
+                Cliente fakeCliente = Cliente.reconstitute(
                                 CLIENTE_UUID,
                                 "Cliente Teste",
+                                "52998224725",
                                 "cliente@teste.com",
-                                "hash",
+                                null,
+                                "Rua A", "100", "Centro", "São Paulo", "SP", "01001000",
                                 LocalDateTime.now());
 
-                when(userRepository.findById(CLIENTE_UUID))
-                                .thenReturn(Optional.of(fakeUser));
+                when(clienteRepository.findById(CLIENTE_UUID))
+                                .thenReturn(Optional.of(fakeCliente));
         }
 
         /** CENÁRIO 1 - Criação com sucesso */

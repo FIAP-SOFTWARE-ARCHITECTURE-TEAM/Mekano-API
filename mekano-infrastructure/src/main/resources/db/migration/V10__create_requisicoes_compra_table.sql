@@ -7,6 +7,7 @@ CREATE TABLE requisicoes_compra (
     peca_id UUID NOT NULL,
     quantidade INTEGER NOT NULL,
     status VARCHAR(30) NOT NULL,
+    motivo VARCHAR(30) NOT NULL,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP,
     created_by UUID,

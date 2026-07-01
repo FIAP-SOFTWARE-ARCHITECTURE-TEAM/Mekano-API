@@ -17,10 +17,7 @@ import java.util.UUID;
  * Regras:
  * - Criação APENAS via factory method {@link #create} ou {@link #reconstitute}.
  * - O builder é privado para forçar o uso dos factory methods.
- * - Número da NF + série + CNPJ fornecedor formam uma chave única no sistema
- * - Data emissão não pode ser no futuro
- * - ICMS, IPI e impostos devem ser >= 0
- * - valorTotal deve ser >= valorMercadoria
+ * - Chave de acesso NFe (44 dígitos) é obrigatória
  * - Imutável após criação: campos final, sem setters.
  *
  * Mapeamento JPA (NfEntradaEntity) é responsabilidade do módulo infrastructure.
@@ -31,167 +28,51 @@ import java.util.UUID;
 public class NfEntrada {
 
     private final UUID id;
-    private final String numero;
-    private final String serie;
-    private final String cnpjFornecedor;
-    private final String nomeFornecedor;
-    private final LocalDateTime dataEmissao;
-    private final BigDecimal valorMercadoria;
-    private final BigDecimal icms;
-    private final BigDecimal ipi;
-    private final BigDecimal outrosImpostos;
-    private final BigDecimal valorTotal;
     private final String chaveAcesso;
+    private final BigDecimal valorTotal;
+    private final UUID pecaId;
+    private final UUID requisicaoCompraId;
     private final LocalDateTime createdAt;
 
     /**
      * Factory method — único ponto de criação de uma nota fiscal.
-     *
-     * @param numero número da nota fiscal
-     * @param serie série da nota fiscal (tipicamente "1")
-     * @param cnpjFornecedor CNPJ do fornecedor (apenas dígitos)
-     * @param nomeFornecedor nome comercial do fornecedor
-     * @param dataEmissao data de emissão da NF (não pode ser no futuro)
-     * @param valorMercadoria valor base das mercadorias
-     * @param icms valor do imposto ICMS
-     * @param ipi valor do imposto IPI
-     * @param outrosImpostos valor de outros impostos
-     * @param chaveAcesso chave de acesso NFe (44 dígitos)
      */
-    public static NfEntrada create(String numero, String serie, String cnpjFornecedor, String nomeFornecedor,
-                                   LocalDateTime dataEmissao, BigDecimal valorMercadoria,
-                                   BigDecimal icms, BigDecimal ipi, BigDecimal outrosImpostos,
-                                   String chaveAcesso) {
-        validateNumero(numero);
-        validateSerie(serie);
-        validateCnpjFornecedor(cnpjFornecedor);
-        validateNomeFornecedor(nomeFornecedor);
-        validateDataEmissao(dataEmissao);
-        validateValorMercadoria(valorMercadoria);
-        validateIcms(icms);
-        validateIpi(ipi);
-        validateOutrosImpostos(outrosImpostos);
+    public static NfEntrada create(String chaveAcesso, BigDecimal valorTotal,
+                                   UUID pecaId, UUID requisicaoCompraId) {
         validateChaveAcesso(chaveAcesso);
-
-        BigDecimal total = calcularValorTotal(valorMercadoria, icms, ipi, outrosImpostos);
+        validateValorTotal(valorTotal);
+        validatePecaId(pecaId);
+        validateRequisicaoCompraId(requisicaoCompraId);
 
         return NfEntrada.builder()
                 .id(UUID.randomUUID())
-                .numero(numero.strip())
-                .serie(serie.strip())
-                .cnpjFornecedor(cnpjFornecedor)
-                .nomeFornecedor(nomeFornecedor.strip())
-                .dataEmissao(dataEmissao)
-                .valorMercadoria(valorMercadoria)
-                .icms(icms)
-                .ipi(ipi)
-                .outrosImpostos(outrosImpostos)
-                .valorTotal(total)
                 .chaveAcesso(chaveAcesso)
+                .valorTotal(valorTotal)
+                .pecaId(pecaId)
+                .requisicaoCompraId(requisicaoCompraId)
                 .createdAt(LocalDateTime.now())
                 .build();
     }
 
     /**
      * Factory method para reconstrução a partir de dados persistidos.
-     * NÃO gera novo UUID nem timestamp — preserva exatamente os valores do banco.
      */
-    public static NfEntrada reconstitute(UUID id, String numero, String serie, String cnpjFornecedor,
-                                         String nomeFornecedor, LocalDateTime dataEmissao, BigDecimal valorMercadoria,
-                                         BigDecimal icms, BigDecimal ipi, BigDecimal outrosImpostos,
-                                         BigDecimal valorTotal, String chaveAcesso, LocalDateTime createdAt) {
-        validateNumero(numero);
-        validateSerie(serie);
-        validateCnpjFornecedor(cnpjFornecedor);
-        validateNomeFornecedor(nomeFornecedor);
-        validateDataEmissao(dataEmissao);
-        validateValorMercadoria(valorMercadoria);
-        validateIcms(icms);
-        validateIpi(ipi);
-        validateOutrosImpostos(outrosImpostos);
+    public static NfEntrada reconstitute(UUID id, String chaveAcesso, BigDecimal valorTotal,
+                                         UUID pecaId, UUID requisicaoCompraId,
+                                         LocalDateTime createdAt) {
         validateChaveAcesso(chaveAcesso);
-
-        BigDecimal calculado = calcularValorTotal(valorMercadoria, icms, ipi, outrosImpostos);
-        if (valorTotal.compareTo(calculado) != 0) {
-            throw new AppException(400, Messages.get("nf_entrada.valor_total.inconsistente", valorTotal, calculado));
-        }
+        validateValorTotal(valorTotal);
+        validatePecaId(pecaId);
+        validateRequisicaoCompraId(requisicaoCompraId);
 
         return NfEntrada.builder()
                 .id(id)
-                .numero(numero.strip())
-                .serie(serie.strip())
-                .cnpjFornecedor(cnpjFornecedor)
-                .nomeFornecedor(nomeFornecedor.strip())
-                .dataEmissao(dataEmissao)
-                .valorMercadoria(valorMercadoria)
-                .icms(icms)
-                .ipi(ipi)
-                .outrosImpostos(outrosImpostos)
-                .valorTotal(valorTotal)
                 .chaveAcesso(chaveAcesso)
+                .valorTotal(valorTotal)
+                .pecaId(pecaId)
+                .requisicaoCompraId(requisicaoCompraId)
                 .createdAt(createdAt)
                 .build();
-    }
-
-    private static void validateNumero(String numero) {
-        if (numero == null || numero.isBlank()) {
-            throw new AppException(400, Messages.get("nf_entrada.numero.required"));
-        }
-    }
-
-    private static void validateSerie(String serie) {
-        if (serie == null || serie.isBlank()) {
-            throw new AppException(400, Messages.get("nf_entrada.serie.required"));
-        }
-    }
-
-    private static void validateCnpjFornecedor(String cnpj) {
-        if (cnpj == null || cnpj.isBlank()) {
-            throw new AppException(400, Messages.get("nf_entrada.cnpj_fornecedor.required"));
-        }
-        String cleaned = cnpj.replaceAll("[^0-9]", "");
-        if (cleaned.length() != 14) {
-            throw new AppException(400, Messages.get("nf_entrada.cnpj_fornecedor.invalid", cnpj));
-        }
-    }
-
-    private static void validateNomeFornecedor(String nome) {
-        if (nome == null || nome.isBlank()) {
-            throw new AppException(400, Messages.get("nf_entrada.nome_fornecedor.required"));
-        }
-    }
-
-    private static void validateDataEmissao(LocalDateTime data) {
-        if (data == null) {
-            throw new AppException(400, Messages.get("nf_entrada.data_emissao.required"));
-        }
-        if (data.isAfter(LocalDateTime.now())) {
-            throw new AppException(400, Messages.get("nf_entrada.data_emissao.futuro"));
-        }
-    }
-
-    private static void validateValorMercadoria(BigDecimal valor) {
-        if (valor == null || valor.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new AppException(400, Messages.get("nf_entrada.valor_mercadoria.invalido"));
-        }
-    }
-
-    private static void validateIcms(BigDecimal valor) {
-        if (valor == null || valor.compareTo(BigDecimal.ZERO) < 0) {
-            throw new AppException(400, Messages.get("nf_entrada.icms.invalido"));
-        }
-    }
-
-    private static void validateIpi(BigDecimal valor) {
-        if (valor == null || valor.compareTo(BigDecimal.ZERO) < 0) {
-            throw new AppException(400, Messages.get("nf_entrada.ipi.invalido"));
-        }
-    }
-
-    private static void validateOutrosImpostos(BigDecimal valor) {
-        if (valor == null || valor.compareTo(BigDecimal.ZERO) < 0) {
-            throw new AppException(400, Messages.get("nf_entrada.outros_impostos.invalido"));
-        }
     }
 
     private static void validateChaveAcesso(String chave) {
@@ -204,15 +85,22 @@ public class NfEntrada {
         }
     }
 
-    /**
-     * Calcula o valor total: mercadoria + ICMS + IPI + outros impostos.
-     */
-    private static BigDecimal calcularValorTotal(BigDecimal valorMercadoria, BigDecimal icms,
-                                                 BigDecimal ipi, BigDecimal outrosImpostos) {
-        return valorMercadoria
-                .add(icms)
-                .add(ipi)
-                .add(outrosImpostos);
+    private static void validateValorTotal(BigDecimal valor) {
+        if (valor == null || valor.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new AppException(400, Messages.get("nf_entrada.valor_mercadoria.invalido"));
+        }
+    }
+
+    private static void validatePecaId(UUID pecaId) {
+        if (pecaId == null) {
+            throw new AppException(400, "ID da peça é obrigatório");
+        }
+    }
+
+    private static void validateRequisicaoCompraId(UUID requisicaoCompraId) {
+        if (requisicaoCompraId == null) {
+            throw new AppException(400, "ID da requisição de compra é obrigatório");
+        }
     }
 
     /**

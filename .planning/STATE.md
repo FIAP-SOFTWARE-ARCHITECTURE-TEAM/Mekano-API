@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-last_updated: "2026-06-23T23:36:35.625Z"
+status: Em execução — Fase 3
+last_updated: "2026-06-29T23:59:00.000Z"
 progress:
   total_phases: 3
-  completed_phases: 0
-  total_plans: 15
-  completed_plans: 0
-  percent: 0
+  completed_phases: 2
+  total_plans: 14
+  completed_plans: 14
+  percent: 80
 ---
 
 # STATE: Mekano
@@ -25,9 +25,9 @@ progress:
 |-----|-------|
 | Stack | Java 17, Quarkus 3.36.0, PostgreSQL 16, Maven multi-module |
 | Architecture | Clean Architecture (domain → application → infrastructure → rest) |
-| Bounded Contexts | User/Auth (existing), OS (Phase 1), Estoque (Phase 2), Pagamento (Phase 3) |
+| Bounded Contexts | User/Auth, OS, Estoque (implementados), Pagamento (em andamento) |
 | Team | 5 developers |
-| Timeline | 10 days |
+| Timeline | 10 days (Dias 1-8 decorridos) |
 | Granularity | standard |
 | Mode | mvp |
 
@@ -35,20 +35,19 @@ progress:
 
 | Attribute | Value |
 |-----------|-------|
-| **Phase** | 2 — OS Continuation & Estoque |
-| **Plan** | Plans created (8 plans) |
-| **Status** | Ready for execution |
-| **Progress** | ░░░░░░░░░░░░░░░░░░░░ 0% |
+| **Phase** | 3 — Pagamento & Delivery |
+| **Status** | Em execução — 3 de 6 issues fechadas |
+| **Progress** | ████████████████░░░░ 80% |
 | **Milestone** | v1 |
 
 ## Performance Metrics
 
-*Gathering data — no metrics recorded yet.*
-
 | Metric | Current | Target | Notes |
 |--------|---------|--------|-------|
+| Issues fechadas | 25/28 | 28 | ✓ Fases 1 e 2 completas |
 | Requirements mapped | 37/37 | 37 | ✓ Full coverage |
 | Phases defined | 3 | — | Auth & OS → OS Cont. & Estoque → Pagamento & Delivery |
+| Fases concluídas | 2/3 | 3 | Fase 3 em andamento |
 
 ## Accumulated Context
 
@@ -56,47 +55,60 @@ progress:
 
 | Decision | Rationale | Status |
 |----------|-----------|--------|
-| Vertical slice strategy | Avoids integration chaos with 5 devs in parallel | Locked |
-| OS state machine with transition matrix | Prevents illegal state transitions | Locked |
-| CDI events for inter-context comm | Decoupled contexts without Kafka overengineering | Locked |
-| Orcamento as separate aggregate | Prevents mega-aggregate (Pitfall 1) | Locked |
-| Atomic stock reservation (UPDATE ... WHERE saldo >= qtd) | Prevents race condition (Pitfall 3) | Locked |
-| Payment idempotency via processed_events table | Prevents double-processing (Pitfall 4) | Locked |
-| Auth construído como task da Phase 1 | Não revisar codebase existente, tratar como task | Locked |
+| Vertical slice strategy | Avoids integration chaos with 5 devs in parallel | Executado |
+| OS state machine with transition matrix | Prevents illegal state transitions | Implementado |
+| CDI events for inter-context comm | Decoupled contexts without Kafka overengineering | Implementado |
+| Orcamento as separate aggregate | Prevents mega-aggregate (Pitfall 1) | Implementado |
+| Atomic stock reservation (UPDATE ... WHERE saldo >= qtd) | Prevents race condition (Pitfall 3) | Implementado |
+| Payment idempotency via processed_events table | Prevents double-processing (Pitfall 4) | Parcial — stub no-op |
+| Auth construído como task da Phase 1 | Não revisar codebase existente, tratar como task | Implementado |
+| JWT Ed25519 | Ed25519/EdDSA por segurança e performance | Implementado |
+| Refresh rotation com PESSIMISTIC_WRITE | Previne ataque de reuse | Implementado |
+| JaCoCo 80% LINE + OWASP CVSS≥7 | Gates de qualidade | Configurado (sem CI) |
 
 ### Pending Decisions
 
-- [ ] **SLA policy values**: What default SLA window for budget expiration? (PoliticaSLA value object)
-- [ ] **Simulated bank service**: What delay profile for the mock? (@Retry/@Timeout)
-- [ ] **Roles**: Confirm list of roles (admin, atendente, mecanico, almoxarife, financeiro)
-- [ ] **JWT strategy**: Reutilizar Ed25519 existente ou nova config?
+- [x] **Roles**: admin, atendente, mecanico, almoxarife, financeiro, cliente — confirmadas e implementadas
+- [x] **JWT strategy**: Ed25519 existente reutilizado
+- [ ] **SLA policy values**: Em implementação na Fase 3
+- [ ] **Simulated bank service**: Mock com delay de 2s definido (#34), aguardando endpoint REST (#37)
 
 ### Open Todos
 
-- [ ] PLAN.md: Phase 1 — Auth & OS Foundation
-- [ ] Criar tasks individuais para GitHub Issues
+- [x] Criar AGENTS.md para aplicar engenharia de contexto no projeto
+- [x] PLAN.md: Phase 1 — Auth & OS Foundation (6 planos executados)
+- [x] PLAN.md: Phase 2 — OS Continuation & Estoque (8 planos executados)
+- [x] Criar tasks individuais para GitHub Issues
+- [ ] Fechar Issues #33 (idempotência real), #37 (REST pagamento/entrega)
+- [ ] Atualizar README.md com arquitetura e módulos
+- [ ] Criar CI/CD pipeline (.github/workflows)
+- [ ] Alinhar branches main/develop
 
 ### Blockers
 
-None yet.
+- ProcessedEventsRepositoryStub — sem idempotência real (#33)
+- PagamentoResource e EntregaResource não existem (#37)
 
 ## Session Continuity
 
-**Last session:** 2026-06-23T23:36:35.621Z
-**Next action:** `/gsd-execute-phase 2` — Execute Phase 2: OS Continuation & Estoque (8 plans in 4 waves).
+**Last session:** 2026-06-29T23:59:00.000Z
+**Next action:** Implementar ProcessedEventEntity + real idempotency (#33) e criar PagamentoResource + EntregaResource (#37).
 
 ### Threads
 
 | Thread | Phase | Status | Owner | Context |
 |--------|-------|--------|-------|---------|
 | Roadmap restructured | 1-3 | ✅ Done | GSD | All 37 v1 mapped, 3 phases, vertical slices |
+| Phase 1 execution | 1 | ✅ Done | Equipe | 12 issues fechadas, 6 planos |
+| Phase 2 execution | 2 | ✅ Done | Equipe | 9 issues fechadas, 8 planos |
+| Phase 3 execution | 3 | 🔄 Em andamento | Equipe | 3/6 issues fechadas |
 
 ### Next Phase Brief
 
-**Phase 1 — Auth & OS Foundation** (Days 1-4, all 5 devs):
+**Phase 3 — Pagamento & Delivery** (em execução):
 
-1. Implementar auth JWT com roles (admin, atendente, mecanico, almoxarife, financeiro)
-2. CRUD Cliente (CPF/CNPJ validado), Veículo (placa única), Serviço (valor > 0)
-3. OS lifecycle: RECEBIDA → EM_DIAGNOSTICO com state machine
-4. Endpoint público de consulta de status da OS
-5. Diagramas de sequência dos fluxos principais
+1. Implementar `ProcessedEventEntity` + real idempotency (substituir stub)
+2. Criar `PagamentoResource` (POST /pagamentos/{osUuid}/confirmar)
+3. Criar `EntregaResource` (PATCH /os/{uuid}/entrega) com guarda de pagamento
+4. Executar full test suite + relatório
+5. Atualizar CONTRIBUTING.md com fluxos de pagamento/entrega

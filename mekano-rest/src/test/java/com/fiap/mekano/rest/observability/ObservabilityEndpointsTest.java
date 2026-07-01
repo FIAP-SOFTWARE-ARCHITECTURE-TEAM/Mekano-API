@@ -77,15 +77,13 @@ class ObservabilityEndpointsTest {
     }
 
     @Test
-    void openapi_exposesUsersResource() {
-        // Valida UAT 4: tag Users, path /users, e schemas referenciados pelas @APIResponse.
+    void openapi_exposesAdminResource() {
         given()
                 .when().get("/q/openapi")
                 .then()
                 .statusCode(200)
-                .body(containsString("Users"))
-                .body(containsString("/users"))
-                .body(containsString("UserResponse"))
+                .body(containsString("/admin/usuarios"))
+                .body(containsString("AdminCreateUserRequest"))
                 .body(containsString("ProblemDetail"));
     }
 }

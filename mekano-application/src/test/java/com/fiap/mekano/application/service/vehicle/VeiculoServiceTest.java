@@ -23,12 +23,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.fiap.mekano.domain.event.VeiculoCriadoEvent;
 import com.fiap.mekano.domain.exception.AppException;
-import com.fiap.mekano.domain.model.User;
+import com.fiap.mekano.domain.model.Cliente;
 import com.fiap.mekano.domain.model.Veiculo;
 import com.fiap.mekano.domain.port.in.CreateVeiculoCommand;
 import com.fiap.mekano.domain.port.in.UpdateVeiculoCommand;
+import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;
 import com.fiap.mekano.domain.port.out.EventPublisher;
-import com.fiap.mekano.domain.port.out.UserRepositoryPort;
 import com.fiap.mekano.domain.port.out.VeiculoRepositoryPort;
 
 /**
@@ -54,7 +54,7 @@ class VeiculoServiceTest {
     VeiculoRepositoryPort veiculoRepository;
 
     @Mock
-    UserRepositoryPort clienteRepository;
+    ClienteRepositoryPort clienteRepository;
 
     @Mock
     EventPublisher eventPublisher;
@@ -75,11 +75,13 @@ class VeiculoServiceTest {
                 "Corolla",
                 2020);
 
-        User cliente = User.reconstitute(
+        Cliente cliente = Cliente.reconstitute(
                 clienteUuid,
                 "João Silva",
+                "52998224725",
                 "joao@fiap.br",
-                "$2a$10$hash",
+                null,
+                "Rua A", "100", "Centro", "São Paulo", "SP", "01001000",
                 LocalDateTime.now());
 
         when(clienteRepository.findById(clienteUuid))
@@ -143,11 +145,13 @@ class VeiculoServiceTest {
                 "Corolla",
                 2020);
 
-        User cliente = User.reconstitute(
+        Cliente cliente = Cliente.reconstitute(
                 clienteUuid,
                 "Cliente",
+                "52998224725",
                 "cliente@fiap.br",
-                "$2a$10$hash",
+                null,
+                "Rua A", "100", "Centro", "São Paulo", "SP", "01001000",
                 LocalDateTime.now());
 
         when(clienteRepository.findById(clienteUuid))

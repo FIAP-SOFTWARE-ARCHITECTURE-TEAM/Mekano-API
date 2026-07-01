@@ -11,17 +11,22 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * Entidade de domínio RequisicaoCompra — representa um pedido de compra de insumos.
+ * Entidade de domínio RequisicaoCompra — representa um pedido de compra de
+ * insumos.
  *
  * Regras:
- * - Criação APENAS via factory methods {@link #criarParaOrcamento} ou {@link #criarParaMinimo}.
+ * - Criação APENAS via factory methods {@link #criarParaOrcamento} ou
+ * {@link #criarParaMinimo}.
  * - O builder é privado para forçar o uso dos factory methods.
- * - Requisição criada via criarParaOrcamento já nasce com status COMPRADA (aprovação automática)
- * - Requisição criada via criarParaMinimo nasce com status ABERTA (aguardando aprovação)
+ * - Requisição criada via criarParaOrcamento já nasce com status COMPRADA
+ * (aprovação automática)
+ * - Requisição criada via criarParaMinimo nasce com status ABERTA (aguardando
+ * aprovação)
  * - Status pode transitar: ABERTA → ENVIADA → RECEBIDA; ou COMPRADA → RECEBIDA
  * - Imutável após criação: campos final, sem setters.
  *
- * Mapeamento JPA (RequisicaoCompraEntity) é responsabilidade do módulo infrastructure.
+ * Mapeamento JPA (RequisicaoCompraEntity) é responsabilidade do módulo
+ * infrastructure.
  */
 @Getter
 @Builder(access = AccessLevel.PRIVATE)
@@ -32,7 +37,7 @@ public class RequisicaoCompra {
     private final UUID pecaId;
     private final Long quantidade;
     private final StatusRequisicao status;
-    private final String motivo;
+    private final MotivoRequisicao motivo;
     private final LocalDateTime createdAt;
 
     /**
@@ -41,11 +46,11 @@ public class RequisicaoCompra {
      * Requisições vinculadas a orçamentos já nascem com status COMPRADA,
      * pois presumem-se aprovadas como parte do orçamento do cliente.
      *
-     * @param pecaId referência à peça
+     * @param pecaId     referência à peça
      * @param quantidade quantidade a comprar
-     * @param motivo razão da compra (ex: "Orçamento #123")
+     * @param motivo     razão da compra
      */
-    public static RequisicaoCompra criarParaOrcamento(UUID pecaId, Long quantidade, String motivo) {
+    public static RequisicaoCompra criarParaOrcamento(UUID pecaId, Long quantidade, MotivoRequisicao motivo) {
         validatePecaId(pecaId);
         validateQuantidade(quantidade);
         validateMotivo(motivo);
@@ -54,8 +59,8 @@ public class RequisicaoCompra {
                 .id(UUID.randomUUID())
                 .pecaId(pecaId)
                 .quantidade(quantidade)
-                .status(StatusRequisicao.COMPRADA)
-                .motivo(motivo.strip())
+                .status(StatusRequisicao.COMPRA_APROVADA)
+                .motivo(motivo)
                 .createdAt(LocalDateTime.now())
                 .build();
     }
@@ -66,11 +71,11 @@ public class RequisicaoCompra {
      * Requisições por mínimo nascem com status ABERTA,
      * e requerem aprovação manual antes de serem enviadas ao fornecedor.
      *
-     * @param pecaId referência à peça
+     * @param pecaId     referência à peça
      * @param quantidade quantidade a comprar
-     * @param motivo razão da compra (ex: "Reposição de mínimo")
+     * @param motivo     razão da compra
      */
-    public static RequisicaoCompra criarParaMinimo(UUID pecaId, Long quantidade, String motivo) {
+    public static RequisicaoCompra criarParaMinimo(UUID pecaId, Long quantidade, MotivoRequisicao motivo) {
         validatePecaId(pecaId);
         validateQuantidade(quantidade);
         validateMotivo(motivo);
@@ -80,7 +85,7 @@ public class RequisicaoCompra {
                 .pecaId(pecaId)
                 .quantidade(quantidade)
                 .status(StatusRequisicao.ABERTA)
-                .motivo(motivo.strip())
+                .motivo(motivo)
                 .createdAt(LocalDateTime.now())
                 .build();
     }
@@ -90,7 +95,7 @@ public class RequisicaoCompra {
      * NÃO gera novo UUID nem timestamp — preserva exatamente os valores do banco.
      */
     public static RequisicaoCompra reconstitute(UUID id, UUID pecaId, Long quantidade,
-                                                StatusRequisicao status, String motivo, LocalDateTime createdAt) {
+            StatusRequisicao status, MotivoRequisicao motivo, LocalDateTime createdAt) {
         validatePecaId(pecaId);
         validateQuantidade(quantidade);
         validateMotivo(motivo);
@@ -100,7 +105,7 @@ public class RequisicaoCompra {
                 .pecaId(pecaId)
                 .quantidade(quantidade)
                 .status(status)
-                .motivo(motivo.strip())
+                .motivo(motivo)
                 .createdAt(createdAt)
                 .build();
     }
@@ -117,8 +122,8 @@ public class RequisicaoCompra {
         }
     }
 
-    private static void validateMotivo(String motivo) {
-        if (motivo == null || motivo.isBlank()) {
+    private static void validateMotivo(MotivoRequisicao motivo) {
+        if (motivo == null) {
             throw new AppException(400, Messages.get("requisicao_compra.motivo.required"));
         }
     }
@@ -134,6 +139,6 @@ public class RequisicaoCompra {
      * Verifica se a requisição pode ser recebida (status ENVIADA ou COMPRADA).
      */
     public boolean podeSerRecebida() {
-        return status == StatusRequisicao.ENVIADA || status == StatusRequisicao.COMPRADA;
+        return status == StatusRequisicao.ENVIADA || status == StatusRequisicao.COMPRA_APROVADA;
     }
 }

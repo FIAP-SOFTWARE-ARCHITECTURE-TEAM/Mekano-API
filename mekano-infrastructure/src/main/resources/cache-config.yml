@@ -26,3 +26,11 @@ quarkus:
         initial-capacity: 10
         maximum-size: 200
         expire-after-write: 120s
+      orcamentos:
+        initial-capacity: 10
+        maximum-size: 100
+        expire-after-write: 60s
+      ordens_servico:
+        initial-capacity: 20
+        maximum-size: 500
+        expire-after-write: 30s

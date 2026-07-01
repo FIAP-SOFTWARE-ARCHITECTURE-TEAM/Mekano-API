@@ -10,8 +10,8 @@ import com.fiap.mekano.domain.model.Veiculo;
 import com.fiap.mekano.domain.port.in.CreateVeiculoCommand;
 import com.fiap.mekano.domain.port.in.UpdateVeiculoCommand;
 import com.fiap.mekano.domain.port.in.VeiculoServicePort;
+import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;
 import com.fiap.mekano.domain.port.out.EventPublisher;
-import com.fiap.mekano.domain.port.out.UserRepositoryPort;
 import com.fiap.mekano.domain.port.out.VeiculoRepositoryPort;
 import com.fiap.mekano.domain.valueobject.PlacaVeiculo;
 
@@ -23,12 +23,12 @@ public class VeiculoService
         implements VeiculoServicePort {
 
     private final VeiculoRepositoryPort veiculoRepository;
-    private final UserRepositoryPort clienteRepository;
+    private final ClienteRepositoryPort clienteRepository;
     private final EventPublisher eventPublisher;
 
     public VeiculoService(
             VeiculoRepositoryPort veiculoRepository,
-            UserRepositoryPort clienteRepository,
+            ClienteRepositoryPort clienteRepository,
             EventPublisher eventPublisher) {
         this.veiculoRepository = veiculoRepository;
         this.clienteRepository = clienteRepository;

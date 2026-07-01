@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import org.hibernate.exception.ConstraintViolationException;
 import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.faulttolerance.Timeout;
 
@@ -74,10 +75,13 @@ public class VeiculoRepositoryImpl
             /** Se for Create */
         } else {
             entity = mapper.toEntity(veiculo);
-            panacheRepository.persist(entity);
+            try {
+                panacheRepository.persist(entity);
+                panacheRepository.flush();
+            } catch (ConstraintViolationException e) {
+                throw new AppException(409, "Placa já cadastrada");
+            }
         }
-
-        panacheRepository.flush();
 
         return mapper.toDomain(entity);
     }

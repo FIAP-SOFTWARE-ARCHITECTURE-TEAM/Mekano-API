@@ -1,0 +1,4926 @@
+{
+  "info": {
+    "_postman_id": "8d096299-7d65-424a-bd9c-3c97888abcc8",
+    "name": "Mekano API v1.0",
+    "description": "## Collection da API Mekano (Clean Architecture Quarkus)\n\n### Ordem de Execução Sugerida\n\n#### Setup (1-9)\n1. POST Login (admin) → obtém token JWT\n2. Criar usuários para cada perfil via POST /admin/usuarios\n3. Login como cada perfil (atendente, mecanico, financeiro, cliente)\n\n#### Dados Mestres (10-28)\n4. CRUD Cliente\n5. CRUD Veículo (depende de cliente)\n6. CRUD Serviço\n7. CRUD Peça\n\n#### E2E Ordem de Serviço (29-45)\n8. Criar OS → Iniciar Diagnóstico → Finalizar Diagnóstico → Aprovar Orçamento\n9. Criar Requisição de Compra → Enviar → Receber\n10. Registrar NF de Entrada (credita saldo da peça)\n11. Iniciar Execução → Finalizar Execução\n12. Confirmar Pagamento → Entregar Veículo\n\n#### Consultas (46-55)\n13. Detalhamento, Status, Audit, Tempo Médio, Alertas\n\n### Variáveis de Ambiente\n- `baseUrl`: URL base da API (padrão: http://localhost:8080/api/v1)\n- `adminToken`, `atendenteToken`, `mecanicoToken`, `financeiroToken`, `clienteToken`: JWTs\n- Demais UUIDs populados automaticamente pelos scripts de teste\n\n### Roles e Permissões\n- `admin`: acesso total\n- `atendente`: clientes, veículos, OS (criar/consultar/entregar)\n- `mecanico`: OS (diagnóstico/execução)\n- `financeiro`: OS (confirmar pagamento)\n- `cliente`: Orçamentos (aprovar/reprovar)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "29252768"
+  },
+  "item": [
+    {
+      "name": "🔐 Auth",
+      "item": [
+        {
+          "name": "POST Login (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('adminToken', jsonData.access_token);",
+                  "    pm.collectionVariables.set('adminRefreshToken', jsonData.refresh_token);",
+                  "    console.log('Admin token obtido com sucesso');",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const variablesToReset = [\r",
+                  "    \"adminToken\",\r",
+                  "    \"adminRefreshToken\",\r",
+                  "\r",
+                  "    \"atendenteToken\",\r",
+                  "    \"atendenteEmail\",\r",
+                  "    \"atendenteSenha\",\r",
+                  "    \"atendenteUuid\",\r",
+                  "\r",
+                  "    \"mecanicoToken\",\r",
+                  "    \"mecanicoEmail\",\r",
+                  "    \"mecanicoSenha\",\r",
+                  "    \"mecanicoUuid\",\r",
+                  "\r",
+                  "    \"financeiroToken\",\r",
+                  "    \"financeiroEmail\",\r",
+                  "    \"financeiroSenha\",\r",
+                  "    \"financeiroUuid\",\r",
+                  "\r",
+                  "    \"clienteToken\",\r",
+                  "    \"clienteUserEmail\",\r",
+                  "    \"clienteUserSenha\",\r",
+                  "    \"clienteUserUuid\",\r",
+                  "    \"clienteUuid\",\r",
+                  "\r",
+                  "    \"veiculoUuid\",\r",
+                  "    \"servicoUuid\",\r",
+                  "\r",
+                  "    \"pecaUuid\",\r",
+                  "    \"pecaCodigo\",\r",
+                  "    \"pecaSaldoAtual\",\r",
+                  "\r",
+                  "    \"requisicaoCompraUuid\",\r",
+                  "    \"reqCompraOSUuid\",\r",
+                  "\r",
+                  "    \"nfEntradaUuid\",\r",
+                  "    \"nfEntradaOSUuid\",\r",
+                  "\r",
+                  "    \"osUuid\",\r",
+                  "    \"orcamentoUuid\",\r",
+                  "\r",
+                  "    \"userUuid\",\r",
+                  "    \"idUsuarioDelete\",\r",
+                  "\r",
+                  "    \"primeiroUsuarioAdmin\"\r",
+                  "];\r",
+                  "\r",
+                  "variablesToReset.forEach(variable => {\r",
+                  "    pm.collectionVariables.set(variable, \"\");\r",
+                  "});\r",
+                  "\r",
+                  "console.log(`Foram limpas ${variablesToReset.length} variáveis da Collection.`);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login como administrador. Retorna access_token, refresh_token e expires_in (900s)."
+          },
+          "response": [
+            {
+              "name": "Sucesso",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "Login como administrador. Retorna access_token, refresh_token e expires_in (900s)."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "Text",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"access_token\": \"eyJ0eXAiOiJKV1Qi...\",\n  \"refresh_token\": \"abc123...def456\",\n  \"expires_in\": 900\n}"
+            },
+            {
+              "name": "Credenciais inválidas",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "Login como administrador. Retorna access_token, refresh_token e expires_in (900s)."
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "Text",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/problem+json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"type\": \"about:blank\",\n  \"title\": \"Unauthorized\",\n  \"status\": 401,\n  \"detail\": \"Credenciais inválidas\",\n  \"instance\": \"/api/v1/auth/login\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('adminToken', jsonData.access_token);",
+                  "    pm.collectionVariables.set('adminRefreshToken', jsonData.refresh_token);",
+                  "    console.log('Token renovado com sucesso');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{adminRefreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"refresh_token\": \"{{adminRefreshToken}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/refresh",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "refresh"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"access_token\": \"eyJ0eXAiOiJKV1Qi...\",\n  \"refresh_token\": \"xyz789...abc012\",\n  \"expires_in\": 900\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{adminRefreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"refresh_token\": \"{{adminRefreshToken}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/logout",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "logout"
+                  ]
+                }
+              },
+              "status": "No Content",
+              "code": 204,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": ""
+            }
+          ]
+        },
+        {
+          "name": "POST Login - erro 401 (senha inválida)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@mekano.com\",\n  \"password\": \"senha_errada_123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Credenciais inválidas",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"admin@mekano.com\",\n  \"password\": \"senha_errada_123\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"type\": \"about:blank\",\n  \"title\": \"Unauthorized\",\n  \"status\": 401,\n  \"detail\": \"Credenciais inválidas\",\n  \"instance\": \"/api/v1/auth/login\"\n}"
+            }
+          ]
+        }
+      ],
+      "description": "Autenticação e gerenciamento de tokens JWT"
+    },
+    {
+      "name": "👑 Admin Users (Gerenciamento de Usuários do Sistema)",
+      "item": [
+        {
+          "name": "POST Criar Usuário (atendente)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('atendenteUuid', jsonData.id);",
+                  "    pm.collectionVariables.set('atendenteSenha', jsonData.senhaGerada);",
+                  "    pm.collectionVariables.set('atendenteEmail', jsonData.email);",
+                  "    console.log('Atendente criado: ' + jsonData.email + ' / senha: ' + jsonData.senhaGerada);",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Atendente Teste\",\n  \"email\": \"atendente{{sequencia}}@mekano.com\",\n  \"role\": \"atendente\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/usuarios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "usuarios"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Criar Usuário (mecanico)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('mecanicoUuid', jsonData.id);",
+                  "    pm.collectionVariables.set('mecanicoSenha', jsonData.senhaGerada);",
+                  "    pm.collectionVariables.set('mecanicoEmail', jsonData.email);",
+                  "    console.log('Mecânico criado: ' + jsonData.email + ' / senha: ' + jsonData.senhaGerada);",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Mecanico Teste\",\n  \"email\": \"mecanico{{sequencia}}@mekano.com\",\n  \"role\": \"mecanico\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/usuarios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "usuarios"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Criar Usuário (financeiro)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('financeiroUuid', jsonData.id);",
+                  "    pm.collectionVariables.set('financeiroSenha', jsonData.senhaGerada);",
+                  "    pm.collectionVariables.set('financeiroEmail', jsonData.email);",
+                  "    console.log('Financeiro criado: ' + jsonData.email + ' / senha: ' + jsonData.senhaGerada);",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Financeiro Teste\",\n  \"email\": \"financeiro{{sequencia}}@mekano.com\",\n  \"role\": \"financeiro\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/usuarios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "usuarios"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Criar Usuário (cliente - perfil de aprovação)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('clienteUserUuid', jsonData.id);",
+                  "    pm.collectionVariables.set('clienteUserSenha', jsonData.senhaGerada);",
+                  "    pm.collectionVariables.set('clienteUserEmail', jsonData.email);",
+                  "    console.log('Cliente user criado: ' + jsonData.email + ' / senha: ' + jsonData.senhaGerada);",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cliente Aprovador\",\n  \"email\": \"clienteuser{{sequencia}}@mekano.com\",\n  \"role\": \"cliente\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/usuarios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "usuarios"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Criar Usuário Cliente para Delete",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('idUsuarioDelete', jsonData.id);",
+                  "    console.log('Cliente user criado: ' + jsonData.email + ' / senha: ' + jsonData.senhaGerada);",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cliente Delete\",\n  \"email\": \"clienteDelete{{sequencia}}@mekano.com\",\n  \"role\": \"cliente\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/usuarios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "usuarios"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Login (atendente)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('atendenteToken', jsonData.access_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{atendenteEmail}}\",\n  \"password\": \"{{atendenteSenha}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Login (mecanico)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('mecanicoToken', jsonData.access_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{mecanicoEmail}}\",\n  \"password\": \"{{mecanicoSenha}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Login (financeiro)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('financeiroToken', jsonData.access_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{financeiroEmail}}\",\n  \"password\": \"{{financeiroSenha}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Login (cliente - aprova orçamentos)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('clienteToken', jsonData.access_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{clienteUserEmail}}\",\n  \"password\": \"{{clienteUserSenha}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Listar Usuários (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.length > 0) {",
+                  "        pm.collectionVariables.set('primeiroUsuarioAdmin', jsonData[0].id);",
+                  "    }",
+                  "    console.log('Total de usuários: ' + jsonData.length);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/usuarios?page=0&size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "usuarios"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Remover Usuário (admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/usuarios/{{idUsuarioDelete}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "usuarios",
+                "{{idUsuarioDelete}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/usuarios/{{idUsuarioDelete}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "usuarios",
+                    "{{idUsuarioDelete}}"
+                  ]
+                }
+              },
+              "status": "No Content",
+              "code": 204,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": ""
+            }
+          ]
+        }
+      ],
+      "description": "Criação e gerenciamento de usuários por administradores. Esses usuários representam os perfis do sistema (admin, atendente, mecanico, financeiro, cliente).",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              "let seq = pm.collectionVariables.get(\"sequencia\")\r",
+              "\r",
+              "if(!seq) {\r",
+              "    seq = 1;\r",
+              "} else {\r",
+              "    seq = parseInt(seq, 10) + 1;\r",
+              "}\r",
+              "\r",
+              "let seqFormatado = String(seq).padStart(7, '0');\r",
+              "\r",
+              "pm.collectionVariables.set(\"sequencia\", seqFormatado);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "👤 Clientes",
+      "item": [
+        {
+          "name": "POST Criar Cliente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('clienteUuid', jsonData.id);",
+                  "    console.log('Cliente criado: ' + jsonData.id);",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{atendenteToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"João Silva\",\n  \"cpf\": \"52998224725\",\n  \"email\": \"joao{{sequencia}}@email.com\",\n  \"telefone\": \"11987654321\",\n  \"logradouro\": \"Rua das Flores\",\n  \"numero\": \"123\",\n  \"bairro\": \"Centro\",\n  \"cidade\": \"São Paulo\",\n  \"uf\": \"SP\",\n  \"cep\": \"01001000\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/clientes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clientes"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso (201)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{atendenteToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nome\": \"João Silva\",\n  \"cpf\": \"52998224725\",\n  \"email\": \"joao{{sequencia}}@email.com\",\n  \"telefone\": \"11987654321\",\n  \"logradouro\": \"Rua das Flores\",\n  \"numero\": \"123\",\n  \"bairro\": \"Centro\",\n  \"cidade\": \"São Paulo\",\n  \"uf\": \"SP\",\n  \"cep\": \"01001000\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/clientes",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "clientes"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"nome\": \"João Silva\",\n  \"cpf\": \"52998224725\",\n  \"email\": \"joao@email.com\",\n  \"telefone\": \"11987654321\",\n  \"enderecoLogradouro\": \"Rua das Flores\",\n  \"enderecoNumero\": \"123\",\n  \"enderecoBairro\": \"Centro\",\n  \"enderecoCidade\": \"São Paulo\",\n  \"enderecoUf\": \"SP\",\n  \"enderecoCep\": \"01001000\",\n  \"createdAt\": \"2026-06-30T10:00:00\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST Criar Cliente - erro 400 (CPF inválido)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Cliente Inválido\",\n  \"cpf\": \"12345678901\",\n  \"email\": \"invalido@email.com\",\n  \"telefone\": \"11999999999\",\n  \"logradouro\": \"Rua A\",\n  \"numero\": \"1\",\n  \"bairro\": \"Centro\",\n  \"cidade\": \"São Paulo\",\n  \"uf\": \"SP\",\n  \"cep\": \"01001000\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/clientes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clientes"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Erro validação",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nome\": \"Cliente Inválido\",\n  \"cpf\": \"12345678901\",\n  \"email\": \"invalido@email.com\",\n  \"telefone\": \"11999999999\",\n  \"logradouro\": \"Rua A\",\n  \"numero\": \"1\",\n  \"bairro\": \"Centro\",\n  \"cidade\": \"São Paulo\",\n  \"uf\": \"SP\",\n  \"cep\": \"01001000\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/clientes",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "clientes"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"type\": \"about:blank\",\n  \"title\": \"Bad Request\",\n  \"status\": 400,\n  \"detail\": \"CPF inválido\",\n  \"instance\": \"/api/v1/clientes\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET Listar Clientes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    console.log('Total clientes: ' + jsonData.totalElements);",
+                  "    if (jsonData.content && jsonData.content.length > 0 && !pm.collectionVariables.get('clienteUuid')) {",
+                  "        pm.collectionVariables.set('clienteUuid', jsonData.content[0].id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{atendenteToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/clientes?page=0&size=10&sort=nome,asc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clientes"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                },
+                {
+                  "key": "sort",
+                  "value": "nome,asc"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{atendenteToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/clientes?page=0&size=10&sort=nome,asc",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "clientes"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "0"
+                    },
+                    {
+                      "key": "size",
+                      "value": "10"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "nome,asc"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"content\": [{\"id\":\"...\",\"nome\":\"João Silva\",...}],\n  \"page\": 0,\n  \"size\": 10,\n  \"totalElements\": 1,\n  \"totalPages\": 1\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET Buscar Cliente por ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{atendenteToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/clientes/{{clienteUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clientes",
+                "{{clienteUuid}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Atualizar Cliente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"João Silva Atualizado\",\n  \"email\": \"joao.atualizado@email.com\",\n  \"telefone\": \"11988887777\",\n  \"logradouro\": \"Rua das Orquídeas\",\n  \"numero\": \"456\",\n  \"bairro\": \"Jardins\",\n  \"cidade\": \"São Paulo\",\n  \"uf\": \"SP\",\n  \"cep\": \"01311000\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/clientes/{{clienteUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clientes",
+                "{{clienteUuid}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Cliente não encontrado (404)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{atendenteToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/clientes/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clientes",
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Não encontrado",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{atendenteToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/clientes/00000000-0000-0000-0000-000000000000",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "clientes",
+                    "00000000-0000-0000-0000-000000000000"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"type\": \"about:blank\",\n  \"title\": \"Not Found\",\n  \"status\": 404,\n  \"detail\": \"Cliente não encontrado: 00000000-0000-0000-0000-000000000000\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "DELETE Remover Cliente",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/clientes/{{clienteUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clientes",
+                "{{clienteUuid}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/clientes/{{clienteUuid}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "clientes",
+                    "{{clienteUuid}}"
+                  ]
+                }
+              },
+              "status": "No Content",
+              "code": 204,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": ""
+            }
+          ]
+        }
+      ],
+      "description": "CRUD de clientes (pessoas físicas donas dos veículos)."
+    },
+    {
+      "name": "🚗 Veículos",
+      "item": [
+        {
+          "name": "POST Criar Veículo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('veiculoUuid', jsonData.id);",
+                  "    console.log('Veículo criado: ' + jsonData.id + ' placa: ' + jsonData.placa);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{atendenteToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteUuid\": \"{{clienteUuid}}\",\n  \"placa\": \"ABC1D23\",\n  \"marca\": \"Toyota\",\n  \"modelo\": \"Corolla\",\n  \"ano\": 2022\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/veiculos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "veiculos"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso (201)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{atendenteToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"clienteUuid\": \"{{clienteUuid}}\",\n  \"placa\": \"ABC1D23\",\n  \"marca\": \"Toyota\",\n  \"modelo\": \"Corolla\",\n  \"ano\": 2022\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/veiculos",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "veiculos"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"id\": \"b2c3d4e5-f6a7-8901-bcde-f12345678901\",\n  \"clienteUuid\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"placa\": \"ABC1D23\",\n  \"marca\": \"Toyota\",\n  \"modelo\": \"Corolla\",\n  \"ano\": 2022,\n  \"createdAt\": \"2026-06-30T10:01:00\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST Criar Veículo - erro 409 (placa duplicada)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteUuid\": \"{{clienteUuid}}\",\n  \"placa\": \"ABC1D23\",\n  \"marca\": \"Toyota\",\n  \"modelo\": \"Corolla\",\n  \"ano\": 2022\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/veiculos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "veiculos"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Conflito",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"clienteUuid\": \"{{clienteUuid}}\",\n  \"placa\": \"ABC1D23\",\n  \"marca\": \"Toyota\",\n  \"modelo\": \"Corolla\",\n  \"ano\": 2022\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/veiculos",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "veiculos"
+                  ]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"type\": \"about:blank\",\n  \"title\": \"Conflict\",\n  \"status\": 409,\n  \"detail\": \"Veículo já cadastrado\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST Criar Veículo - erro 400 (placa inválida)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteUuid\": \"{{clienteUuid}}\",\n  \"placa\": \"INVALIDA\",\n  \"marca\": \"Teste\",\n  \"modelo\": \"Teste\",\n  \"ano\": 2020\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/veiculos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "veiculos"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Erro validação",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"clienteUuid\": \"{{clienteUuid}}\",\n  \"placa\": \"INVALIDA\",\n  \"marca\": \"Teste\",\n  \"modelo\": \"Teste\",\n  \"ano\": 2020\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/veiculos",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "veiculos"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": ""
+            }
+          ]
+        },
+        {
+          "name": "GET Listar Veículos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    console.log('Total veículos: ' + jsonData.totalElements);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{atendenteToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/veiculos?page=0&size=10&sort=placa,asc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "veiculos"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                },
+                {
+                  "key": "sort",
+                  "value": "placa,asc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Buscar Veículo por ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{atendenteToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/veiculos/{{veiculoUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "veiculos",
+                "{{veiculoUuid}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Atualizar Veículo",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"placa\": \"XYZ9K87\",\n  \"marca\": \"Toyota\",\n  \"modelo\": \"Corolla Cross\",\n  \"ano\": 2023\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/veiculos/{{veiculoUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "veiculos",
+                "{{veiculoUuid}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Remover Veículo",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/veiculos/{{veiculoUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "veiculos",
+                "{{veiculoUuid}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/veiculos/{{veiculoUuid}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "veiculos",
+                    "{{veiculoUuid}}"
+                  ]
+                }
+              },
+              "status": "No Content",
+              "code": 204,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": ""
+            }
+          ]
+        }
+      ],
+      "description": "CRUD de veículos vinculados a clientes."
+    },
+    {
+      "name": "🔧 Serviços",
+      "item": [
+        {
+          "name": "POST Criar Serviço",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('servicoUuid', jsonData.id);",
+                  "    console.log('Serviço criado: ' + jsonData.id + ' - ' + jsonData.nome);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Troca de óleo\",\n  \"descricao\": \"Troca de óleo do motor 5W30 sintético\",\n  \"valor\": 89.90\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/servicos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "servicos"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso (201)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nome\": \"Troca de óleo\",\n  \"descricao\": \"Troca de óleo do motor 5W30 sintético\",\n  \"valor\": 89.90\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/servicos",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "servicos"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"id\": \"c3d4e5f6-a7b8-9012-cdef-123456789012\",\n  \"nome\": \"Troca de óleo\",\n  \"descricao\": \"Troca de óleo do motor 5W30 sintético\",\n  \"valor\": 89.90,\n  \"createdAt\": \"2026-06-30T10:02:00\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST Criar Serviço - erro 409 (nome duplicado)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Troca de óleo\",\n  \"descricao\": \"Duplicado\",\n  \"valor\": 89.90\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/servicos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "servicos"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Conflito",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nome\": \"Troca de óleo\",\n  \"descricao\": \"Duplicado\",\n  \"valor\": 89.90\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/servicos",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "servicos"
+                  ]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"type\": \"about:blank\",\n  \"title\": \"Conflict\",\n  \"status\": 409,\n  \"detail\": \"Serviço 'Troca de óleo' já cadastrado\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET Listar Serviços",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    console.log('Total serviços: ' + jsonData.totalElements);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/servicos?page=0&size=10&sort=nome,asc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "servicos"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                },
+                {
+                  "key": "sort",
+                  "value": "nome,asc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Buscar Serviço por ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/servicos/{{servicoUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "servicos",
+                "{{servicoUuid}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Atualizar Serviço",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Troca de óleo sintético\",\n  \"descricao\": \"Troca de óleo 5W30 premium\",\n  \"valor\": 129.90\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/servicos/{{servicoUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "servicos",
+                "{{servicoUuid}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Remover Serviço",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/servicos/{{servicoUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "servicos",
+                "{{servicoUuid}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/servicos/{{servicoUuid}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "servicos",
+                    "{{servicoUuid}}"
+                  ]
+                }
+              },
+              "status": "No Content",
+              "code": 204,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": ""
+            }
+          ]
+        }
+      ],
+      "description": "CRUD de serviços prestados pela oficina (mão de obra)."
+    },
+    {
+      "name": "⚙️ Peças e Insumos",
+      "item": [
+        {
+          "name": "POST Criar Peça",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('pecaUuid', jsonData.id);",
+                  "    console.log('Peça criada: ' + jsonData.id + ' - ' + jsonData.codigo);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"OLEO-5W30\",\n  \"descricao\": \"Óleo do Motor 5W30 Sintético - 1L\",\n  \"valorUnitario\": 45.90,\n  \"estoqueMinimo\": 5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pecas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pecas"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso (201)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"codigo\": \"OLEO-5W30\",\n  \"descricao\": \"Óleo do Motor 5W30 Sintético - 1L\",\n  \"valorUnitario\": 45.90,\n  \"estoqueMinimo\": 5\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/pecas",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "pecas"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"id\": \"d4e5f6a7-b8c9-0123-defa-234567890123\",\n  \"codigo\": \"OLEO-5W30\",\n  \"descricao\": \"Óleo do Motor 5W30 Sintético - 1L\",\n  \"valorUnitario\": 45.90,\n  \"saldoAtual\": 0,\n  \"estoqueMinimo\": 5,\n  \"createdAt\": \"2026-06-30T10:03:00\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST Criar Peça - erro 400 (dados inválidos)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"\",\n  \"descricao\": \"Peça sem código\",\n  \"valorUnitario\": -1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pecas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pecas"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Erro validação",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"codigo\": \"\",\n  \"descricao\": \"Peça sem código\",\n  \"valorUnitario\": -1\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/pecas",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "pecas"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": ""
+            }
+          ]
+        },
+        {
+          "name": "GET Listar Peças",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    console.log('Total peças: ' + jsonData.totalElements);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pecas?page=0&size=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pecas"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Buscar Peça por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('pecaCodigo', jsonData.codigo);",
+                  "    pm.collectionVariables.set('pecaSaldoAtual', jsonData.saldoAtual);",
+                  "    console.log('Peça: ' + jsonData.codigo + ' saldo: ' + jsonData.saldoAtual);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pecas/{{pecaUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pecas",
+                "{{pecaUuid}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Gerenciamento de peças e insumos do estoque."
+    },
+    {
+      "name": "📋 Requisições de Compra",
+      "item": [
+        {
+          "name": "POST Criar Requisição de Compra",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('requisicaoCompraUuid', jsonData.id);",
+                  "    console.log('Requisição criada: ' + jsonData.id + ' status: ' + jsonData.status);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pecaId\": \"{{pecaUuid}}\",\n  \"quantidade\": 10,\n  \"motivo\": \"ESTOQUE_MINIMO\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/requisicoes-compra",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "requisicoes-compra"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso (201)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"pecaId\": \"{{pecaUuid}}\",\n  \"quantidade\": 10,\n  \"motivo\": \"ESTOQUE_MINIMO\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/requisicoes-compra",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "requisicoes-compra"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"id\": \"e5f6a7b8-c9d0-1234-efab-345678901234\",\n  \"peca\": {\"pecaId\":\"d4e5f6a7-...\",\"codigo\":\"OLEO-5W30\",\"descricao\":\"Óleo do Motor...\"},\n  \"quantidade\": 10,\n  \"status\": \"ABERTA\",\n  \"motivo\": \"ESTOQUE_MINIMO\",\n  \"createdAt\": \"2026-06-30T10:04:00\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "PUT Enviar Requisição (ABERTA → ENVIADA)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    console.log('Requisição enviada. Status: ' + jsonData.status);",
+                  "    pm.test('Status deve ser ENVIADA', function() {",
+                  "        pm.expect(jsonData.status).to.eql('ENVIADA');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/requisicoes-compra/{{requisicaoCompraUuid}}/enviar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "requisicoes-compra",
+                "{{requisicaoCompraUuid}}",
+                "enviar"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/requisicoes-compra/{{requisicaoCompraUuid}}/enviar",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "requisicoes-compra",
+                    "{{requisicaoCompraUuid}}",
+                    "enviar"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"id\": \"e5f6a7b8-...\",\n  \"peca\": {...},\n  \"quantidade\": 10,\n  \"status\": \"ENVIADA\",\n  \"motivo\": \"ESTOQUE_MINIMO\",\n  \"createdAt\": \"...\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "PUT Receber Requisição (ENVIADA → PRODUTO_RECEBIDO)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    console.log('Requisição recebida. Status: ' + jsonData.status);",
+                  "    pm.test('Status deve ser PRODUTO_RECEBIDO', function() {",
+                  "        pm.expect(jsonData.status).to.eql('PRODUTO_RECEBIDO');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/requisicoes-compra/{{requisicaoCompraUuid}}/receber",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "requisicoes-compra",
+                "{{requisicaoCompraUuid}}",
+                "receber"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/requisicoes-compra/{{requisicaoCompraUuid}}/receber",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "requisicoes-compra",
+                    "{{requisicaoCompraUuid}}",
+                    "receber"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"id\": \"e5f6a7b8-...\",\n  \"peca\": {...},\n  \"quantidade\": 10,\n  \"status\": \"PRODUTO_RECEBIDO\",\n  \"motivo\": \"ESTOQUE_MINIMO\",\n  \"createdAt\": \"...\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET Listar Requisições",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    console.log('Total requisições: ' + jsonData.totalElements);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/requisicoes-compra?page=0&size=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "requisicoes-compra"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Buscar Requisição por ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/requisicoes-compra/{{requisicaoCompraUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "requisicoes-compra",
+                "{{requisicaoCompraUuid}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Cancelar Requisição (PRODUTO_RECEBIDO → CANCELADA)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/requisicoes-compra/{{requisicaoCompraUuid}}/cancelar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "requisicoes-compra",
+                "{{requisicaoCompraUuid}}",
+                "cancelar"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso",
+              "originalRequest": {
+                "header": []
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"status\": \"CANCELADA\"\n}"
+            }
+          ]
+        }
+      ],
+      "description": "Requisições de compra para abastecimento de estoque. Fluxo: ABERTA → ENVIADA → PRODUTO_RECEBIDO (ou CANCELADA)."
+    },
+    {
+      "name": "📄 Notas Fiscais de Entrada",
+      "item": [
+        {
+          "name": "POST Criar NF de Entrada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('nfEntradaUuid', jsonData.id);",
+                  "    console.log('NF Entrada registrada: ' + jsonData.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chaveAcesso\": \"35200612345678000190550000001234567890123456\",\n  \"valorTotal\": 459.00,\n  \"requisicaoCompraId\": \"{{requisicaoCompraUuid}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/nf-entrada",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "nf-entrada"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso (201)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"chaveAcesso\": \"35200612345678000190550000001234567890123456\",\n  \"valorTotal\": 459.00,\n  \"requisicaoCompraId\": \"{{requisicaoCompraUuid}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/nf-entrada",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "nf-entrada"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"id\": \"f6a7b8c9-d0e1-2345-fabc-456789012345\",\n  \"chaveAcesso\": \"35200612345678000190550000001234567890123456\",\n  \"valorTotal\": 459.00,\n  \"pecaId\": \"d4e5f6a7-...\",\n  \"requisicaoCompraId\": \"e5f6a7b8-...\",\n  \"createdAt\": \"2026-06-30T10:05:00\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST Criar NF Entrada - erro 409 (req não recebida)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chaveAcesso\": \"35200612345678000190550000009999999999999999\",\n  \"valorTotal\": 100.00,\n  \"requisicaoCompraId\": \"00000000-0000-0000-0000-000000000000\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/nf-entrada",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "nf-entrada"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Erro",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"chaveAcesso\": \"35200612345678000190550000009999999999999999\",\n  \"valorTotal\": 100.00,\n  \"requisicaoCompraId\": \"00000000-0000-0000-0000-000000000000\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/nf-entrada",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "nf-entrada"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": ""
+            }
+          ]
+        },
+        {
+          "name": "GET Listar NF Entrada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    console.log('Total NF: ' + jsonData.totalElements);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/nf-entrada?page=0&size=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "nf-entrada"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Buscar NF Entrada por ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/nf-entrada/{{nfEntradaUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "nf-entrada",
+                "{{nfEntradaUuid}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Registro de notas fiscais de entrada. Uma NF só pode ser registrada para requisições com status PRODUTO_RECEBIDO. Ao registrar, o saldo da peça é creditado automaticamente."
+    },
+    {
+      "name": "🚨 Alertas de Estoque",
+      "item": [
+        {
+          "name": "GET Listar Alertas (estoque baixo)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    console.log('Alertas encontrados: ' + jsonData.length);",
+                  "    if (jsonData.length > 0) {",
+                  "        jsonData.forEach(function(a) {",
+                  "            console.log('  - ' + a.codigo + ' saldo: ' + a.saldoAtual + ' / mínimo: ' + a.estoqueMinimo);",
+                  "        });",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{atendenteToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/alertas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "alertas"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{atendenteToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/alertas",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "alertas"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "[\n  {\n    \"pecaId\": \"d4e5f6a7-...\",\n    \"codigo\": \"OLEO-5W30\",\n    \"descricao\": \"Óleo do Motor 5W30 Sintético - 1L\",\n    \"saldoAtual\": 10,\n    \"estoqueMinimo\": 15\n  }\n]"
+            }
+          ]
+        }
+      ],
+      "description": "Alertas de peças com saldo abaixo do estoque mínimo."
+    },
+    {
+      "name": "🔄 Ordem de Serviço (E2E Completo)",
+      "item": [
+        {
+          "name": "01 POST Criar OS",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('osUuid', jsonData.id);",
+                  "    pm.test('Status inicial deve ser RECEBIDA', function() {",
+                  "        pm.expect(jsonData.status).to.eql('RECEBIDA');",
+                  "    });",
+                  "    console.log('OS criada: ' + jsonData.id + ' status: ' + jsonData.status);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{atendenteToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteUuid}}\",\n  \"veiculoId\": \"{{veiculoUuid}}\",\n  \"descricaoProblema\": \"Motor falhando ao acelerar e luz de injeção acesa no painel\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/os",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "os"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso (201)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{atendenteToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"clienteId\": \"{{clienteUuid}}\",\n  \"veiculoId\": \"{{veiculoUuid}}\",\n  \"descricaoProblema\": \"Motor falhando ao acelerar e luz de injeção acesa no painel\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/os",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "os"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"id\": \"a1b2c3d4-...\",\n  \"clienteId\": \"...\",\n  \"veiculoId\": \"...\",\n  \"descricaoProblema\": \"Motor falhando...\",\n  \"status\": \"RECEBIDA\",\n  \"statusPagamento\": \"NAO_COBRADO\",\n  \"statusEntrega\": \"NAO_LIBERADA\",\n  \"createdAt\": \"2026-06-30T10:06:00\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "02 PUT Iniciar Diagnóstico",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test('Status deve ser EM_DIAGNOSTICO', function() {",
+                  "        pm.expect(jsonData.status).to.eql('EM_DIAGNOSTICO');",
+                  "    });",
+                  "    console.log('Diagnóstico iniciado. Status: ' + jsonData.status);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mecanicoToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/os/{{osUuid}}/iniciar-diagnostico",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "os",
+                "{{osUuid}}",
+                "iniciar-diagnostico"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{mecanicoToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/os/{{osUuid}}/iniciar-diagnostico",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "os",
+                    "{{osUuid}}",
+                    "iniciar-diagnostico"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"id\": \"a1b2c3d4-...\",\n  \"status\": \"EM_DIAGNOSTICO\",\n  ...\n}"
+            }
+          ]
+        },
+        {
+          "name": "03 PUT Finalizar Diagnóstico (gerar orçamento)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test('Status deve ser AGUARDANDO_APROVACAO', function() {",
+                  "        pm.expect(jsonData.status).to.eql('AGUARDANDO_APROVACAO');",
+                  "    });",
+                  "    console.log('Diagnóstico finalizado. Status: ' + jsonData.status);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mecanicoToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descricao\": \"Diagnóstico completo - Motor falhando devido a velas e óleo degradado\",\n  \"itens\": [\n    {\n      \"referenciaUuid\": \"{{pecaUuid}}\",\n      \"tipo\": \"PECA\",\n      \"quantidade\": 4\n    },\n    {\n      \"referenciaUuid\": \"{{servicoUuid}}\",\n      \"tipo\": \"SERVICO\",\n      \"quantidade\": 1\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/os/{{osUuid}}/finalizar-diagnostico",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "os",
+                "{{osUuid}}",
+                "finalizar-diagnostico"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{mecanicoToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"descricao\": \"Diagnóstico completo - Motor falhando devido a velas e óleo degradado\",\n  \"itens\": [\n    {\n      \"referenciaUuid\": \"{{pecaUuid}}\",\n      \"tipo\": \"PECA\",\n      \"quantidade\": 4\n    },\n    {\n      \"referenciaUuid\": \"{{servicoUuid}}\",\n      \"tipo\": \"SERVICO\",\n      \"quantidade\": 1\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/os/{{osUuid}}/finalizar-diagnostico",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "os",
+                    "{{osUuid}}",
+                    "finalizar-diagnostico"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"id\": \"a1b2c3d4-...\",\n  \"status\": \"AGUARDANDO_APROVACAO\",\n  \"orcamentoUuid\": \"b2c3d4e5-...\",\n  ...\n}"
+            }
+          ]
+        },
+        {
+          "name": "04 GET Buscar Orçamento por OS",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('orcamentoUuid', jsonData.id);",
+                  "    console.log('Orçamento encontrado: ' + jsonData.id + ' valor total: ' + jsonData.valorTotal);",
+                  "    pm.test('Status deve ser PENDENTE', function() {",
+                  "        pm.expect(jsonData.status).to.eql('PENDENTE');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{atendenteToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orcamentos?osUuid={{osUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orcamentos"
+              ],
+              "query": [
+                {
+                  "key": "osUuid",
+                  "value": "{{osUuid}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{atendenteToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/orcamentos?osUuid={{osUuid}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "orcamentos"
+                  ],
+                  "query": [
+                    {
+                      "key": "osUuid",
+                      "value": "{{osUuid}}"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"id\": \"b2c3d4e5-...\",\n  \"descricao\": \"Diagnóstico completo...\",\n  \"itens\": [{\"descricao\":\"Óleo do Motor...\",\"quantidade\":4,\"valorUnitario\":45.90}],\n  \"valorTotal\": 283.50,\n  \"status\": \"PENDENTE\",\n  \"ordemServicoUuid\": \"a1b2c3d4-...\",\n  \"dataExpiracao\": \"2026-07-03T10:06:00\",\n  \"createdAt\": \"2026-06-30T10:06:00\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "05 POST Aprovar Orçamento (como cliente)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test('Status do orçamento deve ser APROVADO', function() {",
+                  "        pm.expect(jsonData.status()).to.eql('APROVADO');",
+                  "    });",
+                  "    console.log('Orçamento aprovado! Status: ' + jsonData.status());",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clienteToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orcamentos/{{orcamentoUuid}}/aprovar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orcamentos",
+                "{{orcamentoUuid}}",
+                "aprovar"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{clienteToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/orcamentos/{{orcamentoUuid}}/aprovar",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "orcamentos",
+                    "{{orcamentoUuid}}",
+                    "aprovar"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"id\": \"b2c3d4e5-...\",\n  \"status\": \"APROVADO\",\n  ...\n}"
+            }
+          ]
+        },
+        {
+          "name": "06 POST Criar Requisição de Compra (para peça da OS)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('reqCompraOSUuid', jsonData.id);",
+                  "    console.log('Requisição para OS criada: ' + jsonData.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pecaId\": \"{{pecaUuid}}\",\n  \"quantidade\": 4,\n  \"motivo\": \"ORDEM_SERVICO\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/requisicoes-compra",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "requisicoes-compra"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "07 PUT Enviar Requisição (ABERTA → ENVIADA)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/requisicoes-compra/{{reqCompraOSUuid}}/enviar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "requisicoes-compra",
+                "{{reqCompraOSUuid}}",
+                "enviar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "08 PUT Receber Requisição (ENVIADA → PRODUTO_RECEBIDO)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/requisicoes-compra/{{reqCompraOSUuid}}/receber",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "requisicoes-compra",
+                "{{reqCompraOSUuid}}",
+                "receber"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "09 POST Registrar NF de Entrada (credita saldo peça)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('nfEntradaOSUuid', jsonData.id);",
+                  "    console.log('NF registrada para OS. Saldo da peça creditado.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chaveAcesso\": \"35200612345678000190550000009876543210987654\",\n  \"valorTotal\": 183.60,\n  \"requisicaoCompraId\": \"{{reqCompraOSUuid}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/nf-entrada",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "nf-entrada"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "10.1 GET Listar OS",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mecanicoToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/os",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "os"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{mecanicoToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/os",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "os"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"id\": \"a1b2c3d4-...\",\n  \"status\": \"ENTREGUE\",\n  \"statusPagamento\": \"CONFIRMADO\",\n  \"statusEntrega\": \"ENTREGUE\",\n  \"valorCobrado\": 283.50,\n  \"referenciaPagamento\": \"MOCK-a1b2c3d4\",\n  \"recebidoPor\": \"João Silva\",\n  \"entregueEm\": \"2026-06-30T10:08:00\",\n  ...\n}"
+            }
+          ]
+        },
+        {
+          "name": "10 PUT Iniciar Execução (atribuir mecânico)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test('Status deve ser EM_EXECUCAO', function() {",
+                  "        pm.expect(jsonData.status).to.eql('EM_EXECUCAO');",
+                  "    });",
+                  "    console.log('Execução iniciada pelo mecânico: ' + jsonData.mecanicoUuid);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mecanicoToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mecanicoUuid\": \"{{mecanicoUuid}}\",\n  \"observacao\": \"Iniciando substituição de velas e troca de óleo\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/os/{{osUuid}}/iniciar-execucao",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "os",
+                "{{osUuid}}",
+                "iniciar-execucao"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "11 PUT Finalizar Execução",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test('Status deve ser FINALIZADA', function() {",
+                  "        pm.expect(jsonData.status).to.eql('FINALIZADA');",
+                  "    });",
+                  "    console.log('Execução finalizada. Status: ' + jsonData.status);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mecanicoToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"observacao\": \"Serviço concluído. Velas substituídas e óleo trocado. Veículo testado.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/os/{{osUuid}}/finalizar-execucao",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "os",
+                "{{osUuid}}",
+                "finalizar-execucao"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "12 PATCH Confirmar Pagamento (como financeiro)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test('Status pagamento deve ser CONFIRMADO', function() {",
+                  "        pm.expect(jsonData.status).to.eql('CONFIRMADO');",
+                  "    });",
+                  "    console.log('Pagamento confirmado. Referência: ' + jsonData.transacaoId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{financeiroToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/os/{{osUuid}}/confirmar-pagamento",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "os",
+                "{{osUuid}}",
+                "confirmar-pagamento"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{financeiroToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/os/{{osUuid}}/confirmar-pagamento",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "os",
+                    "{{osUuid}}",
+                    "confirmar-pagamento"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"osUuid\": \"a1b2c3d4-...\",\n  \"status\": \"CONFIRMADO\",\n  \"transacaoId\": \"MOCK-a1b2c3d4\",\n  \"valorCobrado\": 283.50,\n  \"dataPagamento\": \"2026-06-30T10:07:00\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "13 PATCH Entregar Veículo ao Cliente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test('Status deve ser ENTREGUE', function() {",
+                  "        pm.expect(jsonData.status).to.eql('ENTREGUE');",
+                  "    });",
+                  "    pm.test('Status entrega deve ser ENTREGUE', function() {",
+                  "        pm.expect(jsonData.statusEntrega).to.eql('ENTREGUE');",
+                  "    });",
+                  "    console.log('Veículo entregue! Status final: ' + jsonData.status);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{atendenteToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recebidoPor\": \"João Silva\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/os/{{osUuid}}/entregar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "os",
+                "{{osUuid}}",
+                "entregar"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{atendenteToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"recebidoPor\": \"João Silva\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/os/{{osUuid}}/entregar",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "os",
+                    "{{osUuid}}",
+                    "entregar"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"id\": \"a1b2c3d4-...\",\n  \"status\": \"ENTREGUE\",\n  \"statusPagamento\": \"CONFIRMADO\",\n  \"statusEntrega\": \"ENTREGUE\",\n  \"recebidoPor\": \"João Silva\",\n  \"entregueEm\": \"2026-06-30T10:08:00\",\n  ...\n}"
+            }
+          ]
+        },
+        {
+          "name": "14 GET Detalhamento da OS",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{atendenteToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/os/{{osUuid}}/detalhamento",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "os",
+                "{{osUuid}}",
+                "detalhamento"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{atendenteToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/os/{{osUuid}}/detalhamento",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "os",
+                    "{{osUuid}}",
+                    "detalhamento"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"id\": \"a1b2c3d4-...\",\n  \"status\": \"ENTREGUE\",\n  \"statusPagamento\": \"CONFIRMADO\",\n  \"statusEntrega\": \"ENTREGUE\",\n  \"valorCobrado\": 283.50,\n  \"referenciaPagamento\": \"MOCK-a1b2c3d4\",\n  \"recebidoPor\": \"João Silva\",\n  \"entregueEm\": \"2026-06-30T10:08:00\",\n  ...\n}"
+            }
+          ]
+        },
+        {
+          "name": "15 GET Status da OS",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{atendenteToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/os/{{osUuid}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "os",
+                "{{osUuid}}",
+                "status"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{atendenteToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/os/{{osUuid}}/status",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "os",
+                    "{{osUuid}}",
+                    "status"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"id\": \"a1b2c3d4-...\",\n  \"status\": \"ENTREGUE\",\n  \"dataEntrada\": \"2026-06-30T10:06:00\"\n}"
+            }
+          ]
+        }
+      ],
+      "description": "Fluxo completo de uma Ordem de Serviço, desde a criação até a entrega do veículo.\n\n## Fluxo de status:\nRECEBIDA → EM_DIAGNOSTICO → AGUARDANDO_APROVACAO → EM_EXECUCAO → FINALIZADA → ENTREGUE\n\n## Etapas:\n1. Criar OS (RECEBIDA)\n2. Iniciar diagnóstico (EM_DIAGNOSTICO)\n3. Finalizar diagnóstico com itens (AGUARDANDO_APROVACAO + Orçamento criado)\n4. Aprovar orçamento (EM_EXECUCAO)\n5. Criar requisição de compra para peças do orçamento\n6. Enviar → Receber requisição\n7. Registrar NF de entrada (credita saldo)\n8. Iniciar execução (atribuir mecânico)\n9. Finalizar execução (FINALIZADA + cobrança gerada automaticamente)\n10. Confirmar pagamento\n11. Entregar veículo (ENTREGUE)"
+    },
+    {
+      "name": "💰 Orçamentos",
+      "item": [
+        {
+          "name": "GET Buscar Orçamento por UUID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{atendenteToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orcamentos/{{orcamentoUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orcamentos",
+                "{{orcamentoUuid}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Reprovar Orçamento (cenário de erro)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clienteToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Preço muito alto - orçamento reprovado pelo cliente\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orcamentos/{{orcamentoUuid}}/reprovar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orcamentos",
+                "{{orcamentoUuid}}",
+                "reprovar"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Conflito (já aprovado)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{clienteToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"motivo\": \"Preço muito alto - orçamento reprovado pelo cliente\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/orcamentos/{{orcamentoUuid}}/reprovar",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "orcamentos",
+                    "{{orcamentoUuid}}",
+                    "reprovar"
+                  ]
+                }
+              },
+              "status": "Conflict",
+              "code": 422,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"type\": \"about:blank\",\n  \"title\": \"Unprocessable Entity\",\n  \"status\": 422,\n  \"detail\": \"Orçamento não está pendente\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST Aprovar - erro 422 (já aprovado)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clienteToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orcamentos/{{orcamentoUuid}}/aprovar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orcamentos",
+                "{{orcamentoUuid}}",
+                "aprovar"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Erro",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{clienteToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/orcamentos/{{orcamentoUuid}}/aprovar",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "orcamentos",
+                    "{{orcamentoUuid}}",
+                    "aprovar"
+                  ]
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"type\": \"about:blank\",\n  \"title\": \"Unprocessable Entity\",\n  \"status\": 422,\n  \"detail\": \"Orçamento não está pendente\"\n}"
+            }
+          ]
+        }
+      ],
+      "description": "Consulta, aprovação e reprovação de orçamentos."
+    },
+    {
+      "name": "📊 Consultas e Utilitários",
+      "item": [
+        {
+          "name": "GET Trilha de Auditoria da OS",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    console.log('Eventos de auditoria: ' + jsonData.length);",
+                  "    jsonData.forEach(function(e) {",
+                  "        console.log('  [' + e.acao + '] ' + e.observacao + ' por ' + e.usuarioEmail);",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/os/{{osUuid}}/audit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "os",
+                "{{osUuid}}",
+                "audit"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/os/{{osUuid}}/audit",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "os",
+                    "{{osUuid}}",
+                    "audit"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "[\n  {\"uuid\":\"...\",\"osUuid\":\"...\",\"acao\":\"CRIAR\",\"usuarioEmail\":\"admin@mekano.com\",\"observacao\":\"OS recebida\",\"createdAt\":\"...\"},\n  {\"uuid\":\"...\",\"osUuid\":\"...\",\"acao\":\"DIAGNOSTICAR\",\"usuarioEmail\":\"mecanico@...\",\"observacao\":\"OS em diagnostico\",\"createdAt\":\"...\"},\n  {\"uuid\":\"...\",\"osUuid\":\"...\",\"acao\":\"ORCAR\",\"usuarioEmail\":\"mecanico@...\",\"observacao\":\"OS aguardando aprovacao\",\"createdAt\":\"...\"},\n  {\"uuid\":\"...\",\"osUuid\":\"...\",\"acao\":\"APROVAR\",\"usuarioEmail\":\"cliente@...\",\"observacao\":\"OS aprovada e enviada para execucao\",\"createdAt\":\"...\"},\n  {\"uuid\":\"...\",\"osUuid\":\"...\",\"acao\":\"FINALIZAR\",\"usuarioEmail\":\"mecanico@...\",\"observacao\":\"OS finalizada\",\"createdAt\":\"...\"},\n  {\"uuid\":\"...\",\"osUuid\":\"...\",\"acao\":\"PAGAMENTO_CONFIRMADO\",\"usuarioEmail\":\"financeiro@...\",\"observacao\":\"Pagamento confirmado\",\"createdAt\":\"...\"},\n  {\"uuid\":\"...\",\"osUuid\":\"...\",\"acao\":\"ENTREGAR\",\"usuarioEmail\":\"atendente@...\",\"observacao\":\"OS entregue\",\"createdAt\":\"...\"}\n]"
+            }
+          ]
+        },
+        {
+          "name": "GET Tempo Médio de Execução de OS",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    console.log('Tempo médio: ' + jsonData.tempoMedioHoras + ' horas');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{atendenteToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/os/tempo-medio",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "os",
+                "tempo-medio"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{atendenteToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/os/tempo-medio",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "os",
+                    "tempo-medio"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"tempoMedioHoras\": 2.5\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET Listar OS (paginado)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    console.log('Total OS: ' + jsonData.totalElements);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{atendenteToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/os?page=0&size=10&sort=createdAt,desc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "os"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                },
+                {
+                  "key": "sort",
+                  "value": "createdAt,desc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Buscar OS por ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{atendenteToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/os/{{osUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "os",
+                "{{osUuid}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Endpoints de consulta e utilitários diversos."
+    },
+    {
+      "name": "👥 Users (Autocadastro)",
+      "item": [
+        {
+          "name": "POST Criar User (autocadastro)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('userUuid', jsonData.id);",
+                  "    console.log('User criado: ' + jsonData.id + ' email: ' + jsonData.email);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Usuário Teste\",\n  \"email\": \"usuario{{timestamp}}@teste.com\",\n  \"password\": \"Senha@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Criar User - erro 409 (email duplicado)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Duplicado\",\n  \"email\": \"usuario{{timestamp}}@teste.com\",\n  \"password\": \"Senha@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Conflito",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Duplicado\",\n  \"email\": \"usuario{{timestamp}}@teste.com\",\n  \"password\": \"Senha@123\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/users",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users"
+                  ]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"type\": \"about:blank\",\n  \"title\": \"Conflict\",\n  \"status\": 409,\n  \"detail\": \"Usuário já existe com o email: usuario...@teste.com\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET Listar Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users?page=0&size=10&sort=name,asc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                },
+                {
+                  "key": "sort",
+                  "value": "name,asc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Buscar User por ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{userUuid}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Remover User (soft delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{userUuid}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/users/{{userUuid}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "{{userUuid}}"
+                  ]
+                }
+              },
+              "status": "No Content",
+              "code": 204,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": ""
+            }
+          ]
+        }
+      ],
+      "description": "Autocadastro de usuários (role 'user' por padrão)."
+    },
+    {
+      "name": "🧪 Cenários de Erro (OS)",
+      "item": [
+        {
+          "name": "POST Criar OS - erro 400 (dados inválidos)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{atendenteToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": null,\n  \"veiculoId\": null,\n  \"descricaoProblema\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/os",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "os"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Erro validação",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{atendenteToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"clienteId\": null,\n  \"veiculoId\": null,\n  \"descricaoProblema\": \"\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/os",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "os"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": ""
+            }
+          ]
+        },
+        {
+          "name": "PUT Iniciar Diagnóstico - erro 422 (OS cancelada)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mecanicoToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/os/00000000-0000-0000-0000-000000000000/iniciar-diagnostico",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "os",
+                "00000000-0000-0000-0000-000000000000",
+                "iniciar-diagnostico"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Não encontrado",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{mecanicoToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/os/00000000-0000-0000-0000-000000000000/iniciar-diagnostico",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "os",
+                    "00000000-0000-0000-0000-000000000000",
+                    "iniciar-diagnostico"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": ""
+            }
+          ]
+        },
+        {
+          "name": "PATCH Entregar sem pagamento - erro 422",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{atendenteToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recebidoPor\": \"Teste\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/os/{{osUuid}}/entregar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "os",
+                "{{osUuid}}",
+                "entregar"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Erro (pagamento pendente)",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{atendenteToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"recebidoPor\": \"Teste\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/os/{{osUuid}}/entregar",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "os",
+                    "{{osUuid}}",
+                    "entregar"
+                  ]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"type\": \"about:blank\",\n  \"title\": \"Conflict\",\n  \"status\": 409,\n  \"detail\": \"Não é possível entregar veículo sem pagamento confirmado\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "PUT Cancelar OS",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test('Status deve ser CANCELADA', function() {",
+                  "        pm.expect(jsonData.status).to.eql('CANCELADA');",
+                  "    });",
+                  "    console.log('OS cancelada. Motivo: ' + jsonData.motivoCancelamento);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Cliente desistiu do serviço\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/os/{{osUuid}}/cancelar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "os",
+                "{{osUuid}}",
+                "cancelar"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Sucesso",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"motivo\": \"Cliente desistiu do serviço\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/os/{{osUuid}}/cancelar",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "os",
+                    "{{osUuid}}",
+                    "cancelar"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"id\": \"a1b2c3d4-...\",\n  \"status\": \"CANCELADA\",\n  \"motivoCancelamento\": \"Cliente desistiu do serviço\",\n  ...\n}"
+            }
+          ]
+        }
+      ],
+      "description": "Testes de validação e cenários de erro para Ordem de Serviço."
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api/v1"
+    },
+    {
+      "key": "adminEmail",
+      "value": "admin@mekano.com"
+    },
+    {
+      "key": "adminPassword",
+      "value": "admin123"
+    },
+    {
+      "key": "sequencia",
+      "value": ""
+    },
+    {
+      "key": "adminToken",
+      "value": ""
+    },
+    {
+      "key": "adminRefreshToken",
+      "value": ""
+    },
+    {
+      "key": "atendenteToken",
+      "value": ""
+    },
+    {
+      "key": "atendenteEmail",
+      "value": ""
+    },
+    {
+      "key": "atendenteSenha",
+      "value": ""
+    },
+    {
+      "key": "atendenteUuid",
+      "value": ""
+    },
+    {
+      "key": "mecanicoToken",
+      "value": ""
+    },
+    {
+      "key": "mecanicoEmail",
+      "value": ""
+    },
+    {
+      "key": "mecanicoSenha",
+      "value": ""
+    },
+    {
+      "key": "mecanicoUuid",
+      "value": ""
+    },
+    {
+      "key": "financeiroToken",
+      "value": ""
+    },
+    {
+      "key": "financeiroEmail",
+      "value": ""
+    },
+    {
+      "key": "financeiroSenha",
+      "value": ""
+    },
+    {
+      "key": "financeiroUuid",
+      "value": ""
+    },
+    {
+      "key": "clienteToken",
+      "value": ""
+    },
+    {
+      "key": "clienteUserEmail",
+      "value": ""
+    },
+    {
+      "key": "clienteUserSenha",
+      "value": ""
+    },
+    {
+      "key": "clienteUserUuid",
+      "value": ""
+    },
+    {
+      "key": "clienteUuid",
+      "value": ""
+    },
+    {
+      "key": "veiculoUuid",
+      "value": ""
+    },
+    {
+      "key": "servicoUuid",
+      "value": ""
+    },
+    {
+      "key": "pecaUuid",
+      "value": ""
+    },
+    {
+      "key": "pecaCodigo",
+      "value": ""
+    },
+    {
+      "key": "pecaSaldoAtual",
+      "value": ""
+    },
+    {
+      "key": "requisicaoCompraUuid",
+      "value": ""
+    },
+    {
+      "key": "reqCompraOSUuid",
+      "value": ""
+    },
+    {
+      "key": "nfEntradaUuid",
+      "value": ""
+    },
+    {
+      "key": "nfEntradaOSUuid",
+      "value": ""
+    },
+    {
+      "key": "osUuid",
+      "value": ""
+    },
+    {
+      "key": "orcamentoUuid",
+      "value": ""
+    },
+    {
+      "key": "userUuid",
+      "value": ""
+    },
+    {
+      "key": "idUsuarioDelete",
+      "value": ""
+    },
+    {
+      "key": "primeiroUsuarioAdmin",
+      "value": ""
+    }
+  ]
+}
