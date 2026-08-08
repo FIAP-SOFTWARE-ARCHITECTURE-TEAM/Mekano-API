@@ -116,7 +116,10 @@
   3. Collection Postman/Swagger revisada e link disponível; Miro atualizado em relação à API
   4. Documentação da API com componentes, infraestrutura provisionada e fluxo de deploy; explicação de HPA e simulação de carga
   5. Vídeo demonstrativo (até 15 min) gravado e disponibilizado mostrando ambiente em execução
-**Plans**: TBD
+**Plans**: 2 plans
+**Plan list**:
+  - [ ] 08-01-PLAN.md — README restructure, Mermaid diagrams, Swagger bump, Postman update, Miro, component docs, HPA, video task (Wave 1)
+  - [ ] 08-02-PLAN.md — CI/CD Mermaid (deferred — depends on INF-04) (Wave 2)
 **UI hint**: no
 
 ---
