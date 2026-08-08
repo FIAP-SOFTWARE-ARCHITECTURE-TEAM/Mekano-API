@@ -21,11 +21,13 @@ import com.fiap.mekano.domain.os.OsAuditAction;
 import com.fiap.mekano.domain.port.in.CreateOrdemDeServicoCommand;
 import com.fiap.mekano.domain.port.in.FinalizarDiagnosticoCommand;
 import com.fiap.mekano.domain.port.in.OrdemDeServicoServicePort;
+import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;
 import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
 import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
 import com.fiap.mekano.domain.port.out.ServicoRepositoryPort;
+import com.fiap.mekano.domain.port.out.VeiculoRepositoryPort;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
@@ -43,22 +45,33 @@ private final OrdemDeServicoRepositoryPort repository;
     private final ServicoRepositoryPort servicoRepository;
     private final OrcamentoRepositoryPort orcamentoRepository;
     private final OsAuditEventPublisher osAuditEventPublisher;
+    private final ClienteRepositoryPort clienteRepository;
+    private final VeiculoRepositoryPort veiculoRepository;
 
     public OrdemDeServicoService(OrdemDeServicoRepositoryPort repository, EventPublisher eventPublisher,
                                   PecaRepositoryPort pecaRepository, ServicoRepositoryPort servicoRepository,
                                   OrcamentoRepositoryPort orcamentoRepository,
-                                  OsAuditEventPublisher osAuditEventPublisher) {
+                                  OsAuditEventPublisher osAuditEventPublisher,
+                                  ClienteRepositoryPort clienteRepository,
+                                  VeiculoRepositoryPort veiculoRepository) {
         this.repository = repository;
         this.eventPublisher = eventPublisher;
         this.pecaRepository = pecaRepository;
         this.servicoRepository = servicoRepository;
         this.orcamentoRepository = orcamentoRepository;
         this.osAuditEventPublisher = osAuditEventPublisher;
+        this.clienteRepository = clienteRepository;
+        this.veiculoRepository = veiculoRepository;
     }
 
     @Override
     @Transactional
     public OrdemDeServico create(CreateOrdemDeServicoCommand command) {
+        // OS-07: validar existência de clienteId e veiculoId antes de criar
+        clienteRepository.findById(command.clienteId())
+                .orElseThrow(() -> new AppException(404, Messages.get("cliente.not.found", command.clienteId())));
+        veiculoRepository.findById(command.veiculoId())
+                .orElseThrow(() -> new AppException(404, Messages.get("veiculo.not.found", command.veiculoId())));
         OrdemDeServico os = OrdemDeServico.create(command.clienteId(), command.veiculoId(), command.descricaoProblema());
         OrdemDeServico saved = repository.save(os);
         eventPublisher.publish(OrdemDeServicoCriadaEvent.of(saved));

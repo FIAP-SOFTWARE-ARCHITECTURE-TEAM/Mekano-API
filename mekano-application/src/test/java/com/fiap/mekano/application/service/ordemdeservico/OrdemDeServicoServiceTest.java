@@ -10,12 +10,15 @@ import com.fiap.mekano.domain.model.Peca;
 import com.fiap.mekano.domain.model.Servico;
 import com.fiap.mekano.domain.model.StatusOS;
 import com.fiap.mekano.domain.os.OsAuditAction;
+import com.fiap.mekano.domain.port.in.CreateOrdemDeServicoCommand;
 import com.fiap.mekano.domain.port.in.FinalizarDiagnosticoCommand;
+import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;
 import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
 import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
 import com.fiap.mekano.domain.port.out.ServicoRepositoryPort;
+import com.fiap.mekano.domain.port.out.VeiculoRepositoryPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -63,6 +66,12 @@ class OrdemDeServicoServiceTest {
     @Mock
     OsAuditEventPublisher osAuditEventPublisher;
 
+    @Mock
+    ClienteRepositoryPort clienteRepository;
+
+    @Mock
+    VeiculoRepositoryPort veiculoRepository;
+
     @InjectMocks
     OrdemDeServicoService service;
 
@@ -80,6 +89,9 @@ class OrdemDeServicoServiceTest {
         // Simular save retornando a mesma OS
         when(repository.findById(osId)).thenReturn(Optional.of(os));
         when(repository.save(any(OrdemDeServico.class))).thenAnswer(inv -> inv.getArgument(0));
+        // Simular cliente e veiculo existentes para validação no create
+        when(clienteRepository.findById(any(UUID.class))).thenReturn(Optional.of(mock(com.fiap.mekano.domain.model.Cliente.class)));
+        when(veiculoRepository.findById(any(UUID.class))).thenReturn(Optional.of(mock(com.fiap.mekano.domain.model.Veiculo.class)));
     }
 
     @Test
@@ -237,6 +249,54 @@ class OrdemDeServicoServiceTest {
 
         verify(osAuditEventPublisher).publish(novaOs.getId(), OsAuditAction.CRIAR, null,
                 OsAuditAction.CRIAR.getObservacaoDefault(), Map.of());
+    }
+
+    // ─────────────── Testes de validação OS-07 (create) ───────────────
+
+    @Test
+    @DisplayName("create com cliente inexistente deve lançar AppException 404 e save nunca chamado")
+    void createComClienteInexistenteLanca404() {
+        UUID clienteId = UUID.randomUUID();
+        UUID veiculoId = UUID.randomUUID();
+        when(clienteRepository.findById(clienteId)).thenReturn(Optional.empty());
+
+        var cmd = new CreateOrdemDeServicoCommand(clienteId, veiculoId, "Problema no motor");
+
+        var ex = assertThrows(AppException.class, () -> service.create(cmd));
+        assertEquals(404, ex.getStatus());
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("create com veiculo inexistente deve lançar AppException 404 e save nunca chamado")
+    void createComVeiculoInexistenteLanca404() {
+        UUID clienteId = UUID.randomUUID();
+        UUID veiculoId = UUID.randomUUID();
+        when(clienteRepository.findById(clienteId)).thenReturn(Optional.of(mock(com.fiap.mekano.domain.model.Cliente.class)));
+        when(veiculoRepository.findById(veiculoId)).thenReturn(Optional.empty());
+
+        var cmd = new CreateOrdemDeServicoCommand(clienteId, veiculoId, "Problema no motor");
+
+        var ex = assertThrows(AppException.class, () -> service.create(cmd));
+        assertEquals(404, ex.getStatus());
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("create com cliente e veiculo existentes deve chamar save")
+    void createComClienteEVeiculoExistentesChamaSave() {
+        UUID clienteId = UUID.randomUUID();
+        UUID veiculoId = UUID.randomUUID();
+        when(clienteRepository.findById(clienteId)).thenReturn(Optional.of(mock(com.fiap.mekano.domain.model.Cliente.class)));
+        when(veiculoRepository.findById(veiculoId)).thenReturn(Optional.of(mock(com.fiap.mekano.domain.model.Veiculo.class)));
+
+        var cmd = new CreateOrdemDeServicoCommand(clienteId, veiculoId, "Problema no motor");
+        var novaOs = OrdemDeServico.create(clienteId, veiculoId, "Problema no motor");
+        when(repository.save(any())).thenReturn(novaOs);
+
+        service.create(cmd);
+
+        verify(repository).save(any());
     }
 
     @Test
