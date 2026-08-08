@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: "gaps: estoque pipeline, pagamento/audit, requisitos publicos e SLA"
 status: Ready to execute
-last_updated: "2026-08-08T03:26:46.107Z"
+last_updated: "2026-08-08T01:15:00.000Z"
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 7
-  completed_plans: 6
-  percent: 0
+  completed_plans: 7
+  percent: 100
 ---
 
 # STATE: Mekano
@@ -33,8 +33,8 @@ progress:
 
 ## Current Position
 
-Phase: 03.1 (close-v1-0-gaps-estoque-pipeline-pagamento-audit-requisitos-) — EXECUTING
-Plan: 7 of 7
+Phase: 03.1 (close-v1-0-gaps-estoque-pipeline-pagamento-audit-requisitos-) — COMPLETE
+Plan: 7 of 7 (all completed)
 | Attribute | Value |
 |-----------|-------|
 | **Phase** | 03.1 — Close v1.0 gaps (INSERTED após Fase 3) |
@@ -51,9 +51,12 @@ Plan: 7 of 7
 | Phases defined | 3 | — | Auth & OS → OS Cont. & Estoque → Pagamento & Delivery |
 | Fases concluídas | 3/3 | 3 | ✓ Milestone entregue |
 | Phase 03.1 P01 | 6.5 | 3 tasks | 8 files |
-| Phase 03.1-close-v1-0-gaps-estoque-pipeline-pagamento-audit-requisitos- P02 | 12min | 2 tasks | 17 files |
+| Phase 03.1 P02 | 12min | 2 tasks | 17 files |
 | Phase 03.1 P03 | 10 | 2 tasks | 10 files |
-| Phase 03.1-07 | 8min | 2 tasks (T2+T3) | 11 files |
+| Phase 03.1 P04 | 25min | 3 tasks | 14 files |
+| Phase 03.1 P05 | 18min | 2 tasks | 10 files |
+| Phase 03.1 P06 | 12min | 2 tasks | 8 files |
+| Phase 03.1 P07 | 8min | 2 tasks (T2+T3) | 11 files |
 
 ## Accumulated Context
 
@@ -104,8 +107,8 @@ Plan: 7 of 7
 
 ## Session Continuity
 
-**Last session:** 2026-08-08T00:53:00Z
-**Next action:** All plans executed — ready for re-audit and milestone completion
+**Last session:** 2026-08-08T01:15:00Z
+**Next action:** All 7 plans executed — re-audit and milestone completion
 
 ### Threads
 
@@ -138,7 +141,7 @@ Plan: 7 of 7
 - [Phase 03.1]: D-02: UUID da OS/orçamento é a chave de acesso para endpoints públicos; risco aceito para MVP
 - [Phase 03.1]: D-03: Demais endpoints continuam exigindo autenticação (teste negativo 401)
 - [Phase 03.1]: D-15: updateCliente aplica campos via Cliente.reconstitute + save, preservando CPF e createdAt
-- [Phase 03.1]: D-16: shared AppException mapeada no ApiExceptionMapper entre domain.AppException e WebApplicationException
+- [Phase 03.1]: D-17: VERIFICATION.md retroativo para fases 01/02/03 + nyquist true + traceability 37/37 Complete
 - [Phase 03.1]: D-01: @PermitAll no método sobrepõe @RolesAllowed da classe (Jakarta Security)
 - [Phase ?]: D-04: Semântica reserva na aprovação, débito no início da execução (fiel à spec EST-03/EST-08)
 - [Phase ?]: D-05: Reserva modelada como coluna saldoReservado na peça (V34), estoque mínimo = função do saldo disponível

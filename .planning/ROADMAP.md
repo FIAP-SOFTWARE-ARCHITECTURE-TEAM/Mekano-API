@@ -170,7 +170,7 @@
 **Depends on:** Phase 3 (Pagamento & Delivery)
 **Requirements:** AUTH-03, AUTH-04, OS-02, OS-10, OS-11, OS-12, OS-15, EST-02, EST-03, EST-04, EST-07, EST-08, EST-09, PAG-02, DOC-01, DOC-02, DOC-03
 **Time allocation:** closure phase (pós-milestone)
-**Plans:** 5/7 plans executed
+**Plans:** 7/7 plans executed
 
 **Wave 1**
 
@@ -192,4 +192,4 @@
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 03.1-06-PLAN.md - Verificação formal retroativa: VERIFICATION.md 01/02/03 + nyquist true + traceability 37/37 Complete
+- [x] 03.1-06-PLAN.md - Verificação formal retroativa: VERIFICATION.md 01/02/03 + nyquist true + traceability 37/37 Complete
