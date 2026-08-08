@@ -77,9 +77,14 @@
 **Success Criteria** (what must be TRUE):
   1. Relatório JaCoCo `report-aggregate` mostra ≥80% LINE coverage no projeto completo (excluindo DTOs, Entities, Mappers gerados, REST Client proxies)
   2. Pipeline CI falha se cobertura ficar abaixo de 80%
-  3. Bugs conhecidos corrigidos (NfEntradaRepositoryImpl copy-paste, ClienteService.updateCliente no-op, field injection em stubs)
-  4. Revisão geral de código concluída: inconsistências de naming (PT-BR vs EN), field injection, estilo de entidades, mappers vazios, VOs duplicados e packages incorretos endereçados sem introduzir regressões
-**Plans**: TBD
+  3. Revisão geral de código concluída: inconsistências de naming (PT-BR vs EN), field injection, estilo de entidades, mappers vazios, VOs duplicados e packages incorretos endereçados sem introduzir regressões
+**Plans**: 5 plans
+**Plan list**:
+  - [ ] 06-01-PLAN.md — JaCoCo aggregated coverage gating (report-aggregate + exclusions) — Wave 1
+  - [ ] 06-02-PLAN.md — PT-BR→EN port rename (Peca, NfEntrada, RequisicaoCompra) — Wave 2
+  - [ ] 06-03-PLAN.md — Dead code removal, entity style, VO unification — Wave 2
+  - [ ] 06-04-PLAN.md — FT/Cache additions to remaining repos — Wave 3
+  - [ ] 06-05-PLAN.md — Open-ended findings + ItemOrcamento move — Wave 4
 **UI hint**: no
 
 ---
@@ -93,7 +98,10 @@
   2. Existência de endpoint de abertura de OS verificada e documentada (API-02)
   3. Existência de endpoint de consulta de status da OS verificada e documentada (API-03)
   4. Listagem de OS retorna ordenada por prioridade: Em Execução > Aguardando Aprovação > Diagnóstico > Recebida, mais antigas primeiro, omitindo finalizadas/entregues
-**Plans**: TBD
+**Plans**: 2 plans
+**Plan list**:
+  - [ ] 07-01-PLAN.md — Document endpoint verification (API-01 pending, API-02 verified, API-03 verified)
+  - [ ] 07-02-PLAN.md — Implement status priority ordering + terminal exclusion in findAllWithFilters (API-04)
 **UI hint**: no
 
 ---
@@ -119,8 +127,8 @@
 |-------|----------------|--------|-----------|
 | 4. Infrastructure Foundation | 0/2 | Planning complete | - |
 | 5. WhatsApp Integration | 0/3 | Plans created | - |
-| 6. Quality & Bug Fixes | 0/0 | Not started | - |
-| 7. API Improvements | 0/0 | Not started | - |
+| 6. Quality & Bug Fixes | 0/5 | Plans created | - |
+| 7. API Improvements | 0/2 | Plans created | - |
 | 8. Documentation & Polish | 0/0 | Not started | - |
 
 ---
