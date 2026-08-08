@@ -38,7 +38,7 @@ class PecaResourceTest {
         var mockPeca = Peca.reconstitute(
                 PECA_UUID, "PEA-001", "Óleo do Motor 5W30",
                 new BigDecimal("45.90"),
-                50L, 10L, LocalDateTime.now());
+                50L, 10L, LocalDateTime.now(), 0L);
 
         Mockito.when(pecaService.criar(Mockito.any()))
                 .thenReturn(new CreatePecaResponse(PECA_UUID, "PEA-001", "Óleo do Motor 5W30",

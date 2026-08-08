@@ -42,6 +42,7 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
         entity.descricao = peca.getDescricao();
         entity.valorUnitario = peca.getValorUnitario();
         entity.saldo = peca.getSaldoAtual() == null ? 0 : peca.getSaldoAtual().intValue();
+        entity.saldoReservado = peca.getSaldoReservado() == null ? 0 : peca.getSaldoReservado().intValue();
         entity.estoqueMinimo = peca.getEstoqueMinimo() == null ? 0 : peca.getEstoqueMinimo().intValue();
         if (entity.getCreatedAt() == null) {
             entity.setCreatedAt(peca.getCreatedAt());
@@ -83,7 +84,7 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
     public List<Peca> listarAbaixoEstoqueMinimo() {
         return panacheRepository.find("isActive = ?1", true).list()
                 .stream()
-                .filter(e -> e.estoqueMinimo > 0 && e.saldo < e.estoqueMinimo)
+                .filter(e -> e.estoqueMinimo > 0 && (e.saldo - e.saldoReservado) < e.estoqueMinimo)
                 .map(PecaRepositoryImpl::toDomain)
                 .toList();
     }
@@ -99,7 +100,9 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
                 .map(PecaRepositoryImpl::toDomain);
     }
 
-    @Transactional(Transactional.TxType.MANDATORY)
+    @Override
+    @Transactional
+    @CacheInvalidate(cacheName = CacheNames.PECAS)
     public boolean debitarSaldo(UUID uuid, Integer quantidade) {
         int rowsUpdated = em.createNativeQuery(
                 "UPDATE pecas SET saldo = saldo - :qtd WHERE uuid = :uuid AND saldo >= :qtd"
@@ -110,7 +113,9 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
         return rowsUpdated > 0;
     }
 
-    @Transactional(Transactional.TxType.MANDATORY)
+    @Override
+    @Transactional
+    @CacheInvalidate(cacheName = CacheNames.PECAS)
     public void creditarSaldo(UUID uuid, Integer quantidade) {
         em.createNativeQuery(
                 "UPDATE pecas SET saldo = saldo + :qtd WHERE uuid = :uuid"
@@ -118,6 +123,45 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
                 .setParameter("uuid", uuid)
                 .setParameter("qtd", quantidade)
                 .executeUpdate();
+    }
+
+    @Override
+    @Transactional
+    @CacheInvalidate(cacheName = CacheNames.PECAS)
+    public boolean reservarSaldo(UUID uuid, Integer quantidade) {
+        int rowsUpdated = em.createNativeQuery(
+                "UPDATE pecas SET saldo_reservado = saldo_reservado + :qtd WHERE uuid = :uuid AND (saldo - saldo_reservado) >= :qtd"
+        )
+                .setParameter("uuid", uuid)
+                .setParameter("qtd", quantidade)
+                .executeUpdate();
+        return rowsUpdated > 0;
+    }
+
+    @Override
+    @Transactional
+    @CacheInvalidate(cacheName = CacheNames.PECAS)
+    public boolean debitarSaldoReservado(UUID uuid, Integer quantidade) {
+        int rowsUpdated = em.createNativeQuery(
+                "UPDATE pecas SET saldo = saldo - :qtd, saldo_reservado = saldo_reservado - :qtd WHERE uuid = :uuid AND saldo_reservado >= :qtd"
+        )
+                .setParameter("uuid", uuid)
+                .setParameter("qtd", quantidade)
+                .executeUpdate();
+        return rowsUpdated > 0;
+    }
+
+    @Override
+    @Transactional
+    @CacheInvalidate(cacheName = CacheNames.PECAS)
+    public boolean liberarReserva(UUID uuid, Integer quantidade) {
+        int rowsUpdated = em.createNativeQuery(
+                "UPDATE pecas SET saldo_reservado = saldo_reservado - :qtd WHERE uuid = :uuid AND saldo_reservado >= :qtd"
+        )
+                .setParameter("uuid", uuid)
+                .setParameter("qtd", quantidade)
+                .executeUpdate();
+        return rowsUpdated > 0;
     }
 
     @Override
@@ -138,7 +182,8 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
                 entity.valorUnitario,
                 entity.saldo == null ? 0L : entity.saldo.longValue(),
                 entity.estoqueMinimo == null ? 0L : entity.estoqueMinimo.longValue(),
-                entity.getCreatedAt() == null ? LocalDateTime.now() : entity.getCreatedAt()
+                entity.getCreatedAt() == null ? LocalDateTime.now() : entity.getCreatedAt(),
+                entity.saldoReservado == null ? 0L : entity.saldoReservado.longValue()
         );
     }
 }

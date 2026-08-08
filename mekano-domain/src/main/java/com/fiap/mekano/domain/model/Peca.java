@@ -35,6 +35,7 @@ public class Peca {
     private final String descricao;
     private final BigDecimal valorUnitario;
     private final Long saldoAtual;
+    private final Long saldoReservado;
     private final Long estoqueMinimo;
     private final LocalDateTime createdAt;
 
@@ -58,6 +59,7 @@ public class Peca {
                 .descricao(descricao.strip())
                 .valorUnitario(Objects.requireNonNullElse(valorUnitario, BigDecimal.ZERO))
                 .saldoAtual(0L)
+                .saldoReservado(0L)
                 .estoqueMinimo(estoqueMinimo)
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -69,7 +71,8 @@ public class Peca {
      */
     public static Peca reconstitute(UUID id, String codigo, String descricao,
                                     BigDecimal valorUnitario,
-                                    Long saldoAtual, Long estoqueMinimo, LocalDateTime createdAt) {
+                                    Long saldoAtual, Long estoqueMinimo, LocalDateTime createdAt,
+                                    Long saldoReservado) {
         validateCodigo(codigo);
         validateDescricao(descricao);
         validateValorUnitario(valorUnitario);
@@ -78,12 +81,18 @@ public class Peca {
             throw new AppException(400, Messages.get("peca.saldo.negativo", codigo));
         }
 
+        Long reservado = saldoReservado == null ? 0L : saldoReservado;
+        if (reservado < 0) {
+            throw new AppException(400, "Saldo reservado não pode ser negativo: " + codigo);
+        }
+
         return Peca.builder()
                 .id(id)
                 .codigo(codigo.strip())
                 .descricao(descricao.strip())
                 .valorUnitario(valorUnitario)
                 .saldoAtual(saldoAtual)
+                .saldoReservado(reservado)
                 .estoqueMinimo(estoqueMinimo)
                 .createdAt(createdAt)
                 .build();
@@ -140,10 +149,17 @@ public class Peca {
     }
 
     /**
-     * Verifica se o saldo caiu abaixo do estoque mínimo.
+     * Retorna o saldo disponível (saldo atual - saldo reservado).
+     */
+    public Long disponivel() {
+        return saldoAtual - saldoReservado;
+    }
+
+    /**
+     * Verifica se o saldo disponível caiu abaixo do estoque mínimo.
      * Retorna false se estoqueMinimo for null (peça sem mínimo configurado).
      */
     public boolean isEstoqueMinimoAtingido() {
-        return estoqueMinimo != null && saldoAtual < estoqueMinimo;
+        return estoqueMinimo != null && disponivel() < estoqueMinimo;
     }
 }

@@ -68,6 +68,21 @@ public class PecaService {
         pecaRepository.creditarSaldo(pecaId, quantidade);
     }
 
+    @Transactional
+    public boolean reservarSaldo(UUID pecaId, Integer quantidade) {
+        return pecaRepository.reservarSaldo(pecaId, quantidade);
+    }
+
+    @Transactional
+    public boolean debitarSaldoReservado(UUID pecaId, Integer quantidade) {
+        return pecaRepository.debitarSaldoReservado(pecaId, quantidade);
+    }
+
+    @Transactional
+    public boolean liberarReserva(UUID pecaId, Integer quantidade) {
+        return pecaRepository.liberarReserva(pecaId, quantidade);
+    }
+
     public List<Peca> findAll(int page, int size) {
         return pecaRepository.findAll(page, size);
     }

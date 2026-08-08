@@ -16,5 +16,9 @@ public interface PecaRepositoryPort {
     boolean debitarSaldo(UUID pecaId, Integer quantidade);
     void creditarSaldo(UUID pecaId, Integer quantidade);
 
+    boolean reservarSaldo(UUID pecaId, Integer quantidade);
+    boolean debitarSaldoReservado(UUID pecaId, Integer quantidade);
+    boolean liberarReserva(UUID pecaId, Integer quantidade);
+
     void remover(UUID id);
 }
