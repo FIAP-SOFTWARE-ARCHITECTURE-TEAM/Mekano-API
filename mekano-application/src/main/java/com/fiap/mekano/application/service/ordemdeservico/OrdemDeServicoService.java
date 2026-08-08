@@ -123,7 +123,16 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
     @Transactional
     public OrdemDeServico cancelar(UUID id, String motivo) {
         OrdemDeServico os = findById(id);
-        liberarEstoque(os);
+        // D-08: cancelamento libera reserva (não credita saldo — peças nunca saíram do físico)
+        if (os.getOrcamentoUuid() != null) {
+            orcamentoRepository.findByUuid(os.getOrcamentoUuid()).ifPresent(orcamento -> {
+                for (ItemOrcamento item : orcamento.getItens()) {
+                    if (item.getPecaId() != null) {
+                        pecaRepository.liberarReserva(item.getPecaId(), item.getQuantidade().intValue());
+                    }
+                }
+            });
+        }
         os.cancelar(motivo);
         return repository.save(os);
     }
@@ -145,6 +154,23 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
         if (os.getStatus() != com.fiap.mekano.domain.model.StatusOS.AGUARDANDO_EXECUCAO) {
             throw new AppException(400, Messages.get("os.execucao.status.invalido.iniciar", os.getStatus()));
         }
+
+        // D-04: debitar reserva dos itens de peça do orçamento antes de iniciar execução
+        if (os.getOrcamentoUuid() != null) {
+            orcamentoRepository.findByUuid(os.getOrcamentoUuid()).ifPresent(orcamento -> {
+                for (ItemOrcamento item : orcamento.getItens()) {
+                    if (item.getPecaId() != null) {
+                        boolean ok = pecaRepository.debitarSaldoReservado(
+                                item.getPecaId(), item.getQuantidade().intValue());
+                        if (!ok) {
+                            throw new AppException(409, Messages.get("peca.saldo.insuficiente",
+                                    item.getDescricao(), 0, item.getQuantidade()));
+                        }
+                    }
+                }
+            });
+        }
+
         os.iniciarExecucao(mecanicoUuid, observacao);
         return repository.save(os);
     }
@@ -187,16 +213,5 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
     @Override
     public boolean clientePossuiOsAtiva(UUID clienteUuid) {
         return repository.existsByClienteUuidAndStatusIn(clienteUuid, List.of("EM_EXECUCAO", "AGUARDANDO_APROVACAO"));
-    }
-
-    private void liberarEstoque(OrdemDeServico os) {
-        if (os.getOrcamentoUuid() == null) return;
-        orcamentoRepository.findByUuid(os.getOrcamentoUuid()).ifPresent(orcamento -> {
-            for (ItemOrcamento item : orcamento.getItens()) {
-                pecaRepository.buscarPorDescricao(item.getDescricao()).ifPresent(peca -> {
-                    pecaRepository.creditarSaldo(peca.getId(), item.getQuantidade().intValue());
-                });
-            }
-        });
     }
 }

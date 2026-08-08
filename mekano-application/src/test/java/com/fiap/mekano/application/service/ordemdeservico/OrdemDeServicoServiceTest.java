@@ -1,10 +1,13 @@
 package com.fiap.mekano.application.service.ordemdeservico;
 
 import com.fiap.mekano.domain.event.DiagnosticoFinalizadoEvent;
+import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.model.ItemOrcamento;
+import com.fiap.mekano.domain.model.Orcamento;
 import com.fiap.mekano.domain.model.OrdemDeServico;
 import com.fiap.mekano.domain.model.Peca;
 import com.fiap.mekano.domain.model.Servico;
+import com.fiap.mekano.domain.model.StatusOS;
 import com.fiap.mekano.domain.port.in.FinalizarDiagnosticoCommand;
 import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
@@ -21,6 +24,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -32,6 +38,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("OrdemDeServicoService")
 class OrdemDeServicoServiceTest {
 
@@ -116,5 +123,97 @@ class OrdemDeServicoServiceTest {
         ItemOrcamento item = event.itens().get(0);
         assertNull(item.getPecaId());
         assertEquals("Troca de Óleo", item.getDescricao());
+    }
+
+    @Test
+    @DisplayName("iniciarExecucao deve debitar reserva dos itens de peça do orçamento")
+    void iniciarExecucaoDebitaReserva() {
+        UUID pecaId = UUID.randomUUID();
+        UUID orcamentoUuid = UUID.randomUUID();
+
+        OrdemDeServico osExec = OrdemDeServico.create(UUID.randomUUID(), UUID.randomUUID(), "Problema");
+        osExec.iniciarDiagnostico();
+        osExec.finalizarDiagnostico();
+        // Simular aprovação de orçamento que define orcamentoUuid
+        osExec.aprovarOrcamento(orcamentoUuid);
+        assertEquals(StatusOS.AGUARDANDO_EXECUCAO, osExec.getStatus());
+
+        var orcamento = Orcamento.create("Orçamento",
+                List.of(
+                        new ItemOrcamento("Peça A", 2L, BigDecimal.TEN, pecaId),
+                        new ItemOrcamento("Serviço B", 1L, BigDecimal.valueOf(50))
+                ));
+        orcamento.aprovar();
+
+        when(repository.findById(osId)).thenReturn(Optional.of(osExec));
+        when(pecaRepository.debitarSaldoReservado(pecaId, 2)).thenReturn(true);
+        when(orcamentoRepository.findByUuid(orcamentoUuid)).thenReturn(Optional.of(orcamento));
+
+        service.iniciarExecucao(osId, UUID.randomUUID(), "Iniciando execução");
+
+        verify(pecaRepository).debitarSaldoReservado(pecaId, 2);
+    }
+
+    @Test
+    @DisplayName("iniciarExecucao com reserva insuficiente deve lançar AppException 409 e save nunca chamado")
+    void iniciarExecucaoReservaInsuficienteLanca409() {
+        UUID pecaId = UUID.randomUUID();
+        UUID orcamentoUuid = UUID.randomUUID();
+
+        OrdemDeServico osExec = OrdemDeServico.create(UUID.randomUUID(), UUID.randomUUID(), "Problema");
+        osExec.iniciarDiagnostico();
+        osExec.finalizarDiagnostico();
+        osExec.aprovarOrcamento(orcamentoUuid);
+
+        var orcamento = Orcamento.create("Orçamento",
+                List.of(new ItemOrcamento("Peça A", 5L, BigDecimal.TEN, pecaId)));
+        orcamento.aprovar();
+
+        when(repository.findById(osId)).thenReturn(Optional.of(osExec));
+        when(pecaRepository.debitarSaldoReservado(pecaId, 5)).thenReturn(false);
+        when(orcamentoRepository.findByUuid(orcamentoUuid)).thenReturn(Optional.of(orcamento));
+
+        var ex = assertThrows(AppException.class,
+                () -> service.iniciarExecucao(osId, UUID.randomUUID(), "Iniciando"));
+        assertEquals(409, ex.getStatus());
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("cancelar deve liberar reserva e nunca creditar saldo")
+    void cancelarLiberaReservaNaoCredita() {
+        UUID pecaId = UUID.randomUUID();
+        UUID orcamentoUuid = UUID.randomUUID();
+
+        OrdemDeServico osCancel = OrdemDeServico.create(UUID.randomUUID(), UUID.randomUUID(), "Problema");
+        osCancel.iniciarDiagnostico();
+        osCancel.finalizarDiagnostico();
+        osCancel.aprovarOrcamento(orcamentoUuid);
+
+        var orcamento = Orcamento.create("Orçamento",
+                List.of(new ItemOrcamento("Peça A", 3L, BigDecimal.TEN, pecaId)));
+        orcamento.aprovar();
+
+        when(repository.findById(osId)).thenReturn(Optional.of(osCancel));
+        when(orcamentoRepository.findByUuid(orcamentoUuid)).thenReturn(Optional.of(orcamento));
+
+        service.cancelar(osId, "Cliente desistiu");
+
+        verify(pecaRepository).liberarReserva(pecaId, 3);
+        verify(pecaRepository, never()).creditarSaldo(any(), any());
+    }
+
+    @Test
+    @DisplayName("cancelar sem orçamento não deve chamar repo de peça")
+    void cancelarSemOrcamentoNaoChamaPecaRepo() {
+        OrdemDeServico osSemOrc = OrdemDeServico.create(UUID.randomUUID(), UUID.randomUUID(), "Problema");
+        osSemOrc.iniciarDiagnostico();
+        osSemOrc.finalizarDiagnostico();
+
+        when(repository.findById(osId)).thenReturn(Optional.of(osSemOrc));
+
+        service.cancelar(osId, "Desistiu");
+
+        verify(pecaRepository, never()).liberarReserva(any(), anyInt());
     }
 }
