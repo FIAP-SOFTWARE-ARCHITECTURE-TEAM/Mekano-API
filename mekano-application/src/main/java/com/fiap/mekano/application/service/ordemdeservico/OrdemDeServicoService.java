@@ -246,6 +246,11 @@ private final OrdemDeServicoRepositoryPort repository;
     }
 
     @Override
+    public Map<UUID, Double> calcularTempoMedioPorMecanico(LocalDateTime dataInicio, LocalDateTime dataFim) {
+        return repository.calcularTempoMedioPorMecanico(dataInicio, dataFim);
+    }
+
+    @Override
     public boolean clientePossuiOsAtiva(UUID clienteUuid) {
         return repository.existsByClienteUuidAndStatusIn(clienteUuid, List.of("EM_EXECUCAO", "AGUARDANDO_APROVACAO"));
     }

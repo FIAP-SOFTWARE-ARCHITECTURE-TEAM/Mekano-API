@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 import org.eclipse.microprofile.openapi.annotations.Operation;
@@ -261,7 +262,7 @@ public class OrdemDeServicoResource {
     @Path("/tempo-medio")
     @Produces(MediaType.APPLICATION_JSON)
     @RolesAllowed({"admin", "atendente"})
-    @Operation(summary = "Tempo médio de execução de OS")
+    @Operation(summary = "Tempo médio de execução de OS com breakdown por mecânico")
     @APIResponse(responseCode = "200", description = "Tempo médio calculado")
     public Response getTempoMedio(
             @QueryParam("dataInicio") LocalDate dataInicio,
@@ -269,7 +270,29 @@ public class OrdemDeServicoResource {
         LocalDateTime inicio = dataInicio != null ? dataInicio.atStartOfDay() : null;
         LocalDateTime fim = dataFim != null ? dataFim.atTime(LocalTime.MAX) : null;
         var tempoMedio = osService.calcularTempoMedioExecucao(inicio, fim);
-        return Response.ok(new TempoMedioResponse(tempoMedio.orElse(null))).build();
+        var breakdown = osService.calcularTempoMedioPorMecanico(inicio, fim);
+        return Response.ok(new TempoMedioResponse(tempoMedio.orElse(null), breakdown)).build();
+    }
+
+    @GET
+    @Path("/filtro")
+    @Produces(MediaType.APPLICATION_JSON)
+    @RolesAllowed({"admin", "atendente"})
+    @Operation(summary = "Listar OS com filtros (status, cliente, veículo, data)")
+    @APIResponse(responseCode = "200", description = "Lista filtrada de OS")
+    public Response findAllWithFilters(
+            @QueryParam("status") String status,
+            @QueryParam("clienteId") UUID clienteId,
+            @QueryParam("veiculoId") UUID veiculoId,
+            @QueryParam("dataInicio") LocalDate dataInicio,
+            @QueryParam("dataFim") LocalDate dataFim,
+            @QueryParam("page") @DefaultValue("0") int page,
+            @QueryParam("size") @DefaultValue("10") int size) {
+        LocalDateTime inicio = dataInicio != null ? dataInicio.atStartOfDay() : null;
+        LocalDateTime fim = dataFim != null ? dataFim.atTime(LocalTime.MAX) : null;
+        var content = osService.findAllWithFilters(status, clienteId, veiculoId, inicio, fim, page, size)
+                .stream().map(this::toResponse).toList();
+        return Response.ok(new OrdemDeServicoPageResponse(content, page, size, content.size(), 1)).build();
     }
 
     // ─────────────── Helper ───────────────

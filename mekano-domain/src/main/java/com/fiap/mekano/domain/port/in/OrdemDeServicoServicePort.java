@@ -2,6 +2,7 @@ package com.fiap.mekano.domain.port.in;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -26,5 +27,6 @@ public interface OrdemDeServicoServicePort {
     Optional<OrdemDeServico> findByIdWithItems(UUID id);
     Optional<UUID> findOrcamentoUuidByOsId(UUID osId);
     Optional<Double> calcularTempoMedioExecucao(LocalDateTime dataInicio, LocalDateTime dataFim);
+    Map<UUID, Double> calcularTempoMedioPorMecanico(LocalDateTime dataInicio, LocalDateTime dataFim);
     boolean clientePossuiOsAtiva(UUID clienteUuid);
 }

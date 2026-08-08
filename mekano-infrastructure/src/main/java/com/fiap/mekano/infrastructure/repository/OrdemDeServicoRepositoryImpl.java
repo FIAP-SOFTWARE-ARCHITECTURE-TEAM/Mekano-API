@@ -3,11 +3,13 @@ package com.fiap.mekano.infrastructure.repository;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.eclipse.microprofile.faulttolerance.Retry;
 
@@ -183,6 +185,36 @@ public class OrdemDeServicoRepositoryImpl implements OrdemDeServicoRepositoryPor
                 .orElse(0.0);
 
         return Optional.of(media);
+    }
+
+    @Override
+    public Map<UUID, Double> calcularTempoMedioPorMecanico(LocalDateTime dataInicio, LocalDateTime dataFim) {
+        StringBuilder query = new StringBuilder("status = ?1 AND isActive = ?2 AND mecanicoUuid IS NOT NULL");
+        List<Object> params = new java.util.ArrayList<>();
+        params.add("FINALIZADA");
+        params.add(true);
+
+        if (dataInicio != null) {
+            query.append(" AND execucaoFinalizadaEm >= ?").append(params.size() + 1);
+            params.add(dataInicio);
+        }
+        if (dataFim != null) {
+            query.append(" AND execucaoFinalizadaEm <= ?").append(params.size() + 1);
+            params.add(dataFim);
+        }
+
+        List<OrdemDeServicoEntity> finalizadas = panacheRepository
+                .find(query.toString(), params.toArray()).list();
+
+        return finalizadas.stream()
+                .filter(e -> e.getMecanicoUuid() != null
+                        && e.getExecucaoIniciadaEm() != null
+                        && e.getExecucaoFinalizadaEm() != null)
+                .collect(Collectors.groupingBy(
+                        OrdemDeServicoEntity::getMecanicoUuid,
+                        LinkedHashMap::new,
+                        Collectors.averagingDouble(e ->
+                                ChronoUnit.HOURS.between(e.getExecucaoIniciadaEm(), e.getExecucaoFinalizadaEm()))));
     }
 
     @Override
