@@ -271,7 +271,7 @@ public class OrdemDeServico {
      */
     public void cancelarPorSLA() {
         transicionar(StatusOS.CANCELADA);
-        this.motivoCancelamento = "Cancelamento automático por SLA";
+        this.motivoCancelamento = "SLA expirado";
         cancelarPagamentoEEntrega();
     }
 

@@ -158,7 +158,7 @@ class OrdemDeServicoTest {
         OrdemDeServico os = criarOS();
         os.cancelarPorSLA();
         assertEquals(StatusOS.CANCELADA, os.getStatus());
-        assertEquals("Cancelamento automático por SLA", os.getMotivoCancelamento());
+        assertEquals("SLA expirado", os.getMotivoCancelamento());
     }
 
     @Test
