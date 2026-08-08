@@ -170,22 +170,26 @@
 **Depends on:** Phase 3 (Pagamento & Delivery)
 **Requirements:** AUTH-03, AUTH-04, OS-02, OS-10, OS-11, OS-12, OS-15, EST-02, EST-03, EST-04, EST-07, EST-08, EST-09, PAG-02, DOC-01, DOC-02, DOC-03
 **Time allocation:** closure phase (pós-milestone)
-**Plans:** 6 plans
+**Plans:** 5/7 plans executed
 
 **Wave 1**
 
-- [ ] 03.1-01-PLAN.md - Acesso público (status/aprovar/reprovar) + updateCliente + shared AppException + rate limit
-- [ ] 03.1-02-PLAN.md - Reserva de estoque: V34 saldo_reservado, Peca/Entity/Port/Impl atômico, PecaService wrappers, ItemOrcamento.pecaId, finalizarDiagnostico
+- [x] 03.1-01-PLAN.md - Acesso público (status/aprovar/reprovar) + updateCliente + shared AppException + rate limit
+- [x] 03.1-02-PLAN.md - Reserva de estoque: V34 saldo_reservado, Peca/Entity/Port/Impl atômico, PecaService wrappers, ItemOrcamento.pecaId, finalizarDiagnostico
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 03.1-03-PLAN.md - EST-07: evento estoque mínimo na NF + observer reposição; EST-02: PUT/DELETE de peças
-- [ ] 03.1-04-PLAN.md - EST-03/04/08: OrcamentoAprovadoEvent + reserva + requisição de compra + débito na execução + liberação no cancelamento; PAG-02: ProcessedEventRepositoryImpl ativo + MockPaymentService idempotente
+- [x] 03.1-03-PLAN.md - EST-07: evento estoque mínimo na NF + observer reposição; EST-02: PUT/DELETE de peças
+- [x] 03.1-04-PLAN.md - EST-03/04/08: OrcamentoAprovadoEvent + reserva + requisição de compra + débito na execução + liberação no cancelamento; PAG-02: ProcessedEventRepositoryImpl ativo + MockPaymentService idempotente
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 03.1-05-PLAN.md - D-11/12: OsAuditEventPublisher nas 7 transições + ENTREGA_REALIZADA via evento real; OS-12/D-13: SLA cancela a OS + audita
+- [x] 03.1-05-PLAN.md - D-11/12: OsAuditEventPublisher nas 7 transições + ENTREGA_REALIZADA via evento real; OS-12/D-13: SLA cancela a OS + audita
 
 **Wave 4** *(blocked on Wave 3 completion)*
+
+- [x] 03.1-07-PLAN.md - Gaps residuais: OS-07 (validação cliente/veículo no create), OS-16/18 (testes filtros + tempo médio por tipo), OS-17 (detalhamento real), EST-06 (assert de crédito NF), remoção EntregaService
+
+**Wave 5** *(blocked on Wave 4 completion)*
 
 - [ ] 03.1-06-PLAN.md - Verificação formal retroativa: VERIFICATION.md 01/02/03 + nyquist true + traceability 37/37 Complete
