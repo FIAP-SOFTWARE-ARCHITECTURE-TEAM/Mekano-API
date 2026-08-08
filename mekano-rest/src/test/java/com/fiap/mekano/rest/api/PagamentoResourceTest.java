@@ -1,10 +1,15 @@
 package com.fiap.mekano.rest.api;
 
+import com.fiap.mekano.domain.model.Cliente;
+import com.fiap.mekano.domain.model.Veiculo;
+import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;
 import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
+import com.fiap.mekano.domain.port.out.VeiculoRepositoryPort;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
 import io.restassured.http.ContentType;
 import jakarta.inject.Inject;
+import jakarta.transaction.UserTransaction;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -25,14 +30,25 @@ class PagamentoResourceTest {
 
     private static String osId;
     private static String pecaId;
+    private static String clienteId;
+    private static String veiculoId;
 
     @Inject
     PecaRepositoryPort pecaRepository;
 
+    @Inject
+    ClienteRepositoryPort clienteRepository;
+
+    @Inject
+    VeiculoRepositoryPort veiculoRepository;
+
+    @Inject
+    UserTransaction utx;
+
     @Test
     @Order(1)
     @TestSecurity(user = "admin", roles = {"admin"})
-    void createPecaEOS() {
+    void createPecaEOS() throws Exception {
         pecaId = given()
                 .contentType(ContentType.JSON)
                 .body("""
@@ -45,15 +61,30 @@ class PagamentoResourceTest {
                 .statusCode(201)
                 .extract().path("id");
 
-        // Creditar saldo para viabilizar o pipeline de reserva/débito
         pecaRepository.creditarSaldo(UUID.fromString(pecaId), 10);
+
+        utx.begin();
+        try {
+            Cliente cliente = Cliente.create("Cliente E2E", "52998224725", "cliente@e2e.com",
+                    "51999999999", "Rua A", "100", "Centro", "Porto Alegre", "RS", "90010000");
+            cliente = clienteRepository.save(cliente);
+            clienteId = cliente.getId().toString();
+
+            Veiculo veiculo = Veiculo.create(cliente.getId(), "ABC1234", "Fiat", "Uno", 2020);
+            veiculo = veiculoRepository.save(veiculo);
+            veiculoId = veiculo.getId().toString();
+            utx.commit();
+        } catch (Exception e) {
+            utx.rollback();
+            throw e;
+        }
 
         osId = given()
                 .contentType(ContentType.JSON)
                 .body("""
                         {"clienteId": "%s", "veiculoId": "%s", \
                          "descricaoProblema": "E2E fluxo pagamento"}
-                        """.formatted(UUID.randomUUID(), UUID.randomUUID()))
+                        """.formatted(clienteId, veiculoId))
                 .when()
                 .post(OS_PATH)
                 .then()
@@ -209,13 +240,30 @@ class PagamentoResourceTest {
     @Test
     @Order(10)
     @TestSecurity(user = "admin", roles = {"admin"})
-    void pagamentoSemCobranca_retorna409() {
+    void pagamentoSemCobranca_retorna409() throws Exception {
+        utx.begin();
+        String cId;
+        String vId;
+        try {
+            Cliente c = Cliente.create("Cliente 409", "57738361069", "cliente409@e2e.com",
+                    "51999999998", "Rua B", "200", "Centro", "POA", "RS", "90020000");
+            c = clienteRepository.save(c);
+            cId = c.getId().toString();
+            Veiculo v = Veiculo.create(c.getId(), "DEF5678", "VW", "Gol", 2021);
+            v = veiculoRepository.save(v);
+            vId = v.getId().toString();
+            utx.commit();
+        } catch (Exception e) {
+            utx.rollback();
+            throw e;
+        }
+
         String novaOsId = given()
                 .contentType(ContentType.JSON)
                 .body("""
                         {"clienteId": "%s", "veiculoId": "%s", \
                          "descricaoProblema": "Erro pagamento"}
-                        """.formatted(UUID.randomUUID(), UUID.randomUUID()))
+                        """.formatted(cId, vId))
                 .when()
                 .post(OS_PATH)
                 .then()
