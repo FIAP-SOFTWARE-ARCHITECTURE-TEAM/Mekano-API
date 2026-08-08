@@ -7,55 +7,55 @@
 
 ### Autenticação e Autorização
 
-- [ ] **AUTH-01**: Sistema oferece roles para cada perfil (admin, atendente, mecânico, almoxarife, financeiro)
-- [ ] **AUTH-02**: Endpoints administrativos são protegidos por `@RolesAllowed` com base no perfil
-- [ ] **AUTH-03**: Cliente pode consultar status da OS via endpoint público sem autenticação
-- [ ] **AUTH-04**: Admin pode gerenciar usuários do sistema (CRUD)
+- [x] **AUTH-01**: Sistema oferece roles para cada perfil (admin, atendente, mecânico, almoxarife, financeiro)
+- [x] **AUTH-02**: Endpoints administrativos são protegidos por `@RolesAllowed` com base no perfil
+- [x] **AUTH-03**: Cliente pode consultar status da OS via endpoint público sem autenticação
+- [x] **AUTH-04**: Admin pode gerenciar usuários do sistema (CRUD)
 
 ### Ordem de Serviço
 
-- [ ] **OS-01**: Admin/atendente pode cadastrar cliente com nome, CPF/CNPJ (único, validado), e-mail e telefone
-- [ ] **OS-02**: Admin/atendente pode editar, consultar e excluir clientes
-- [ ] **OS-03**: Admin/atendente pode cadastrar veículo com placa (única, formatos Mercosul e antigo), marca, modelo e ano vinculado a um cliente
-- [ ] **OS-04**: Admin/atendente pode editar, consultar e excluir veículos
-- [ ] **OS-05**: Admin pode cadastrar tipos de serviço com nome, descrição e valor unitário (valor > 0)
-- [ ] **OS-06**: Admin pode editar, consultar e excluir tipos de serviço
-- [ ] **OS-07**: Atendente pode criar OS identificando cliente (CPF/CNPJ) e veículo (placa), registrando entrada e serviços solicitados — status inicial Recebida
-- [ ] **OS-08**: Mecânico pode iniciar diagnóstico da OS (status → Em Diagnóstico) e incluir serviços e peças identificados
-- [ ] **OS-09**: Sistema gera orçamento automaticamente ao finalizar diagnóstico e envia para aprovação do cliente (OS → Aguardando Aprovação)
-- [ ] **OS-10**: Cliente pode aprovar orçamento via API pública (OS → Em Execução)
-- [ ] **OS-11**: Cliente pode reprovar orçamento via API pública (OS → Cancelada)
-- [ ] **OS-12**: Sistema cancela OS automaticamente se orçamento expirar por SLA
-- [ ] **OS-13**: Mecânico pode registrar início da execução (status → Em Execução)
-- [ ] **OS-14**: Mecânico pode finalizar execução (status → Finalizada)
-- [ ] **OS-15**: Cliente pode consultar status público da OS via API sem autenticação
-- [ ] **OS-16**: Admin/atendente pode listar OS com filtros por data, status e cliente (paginado)
-- [ ] **OS-17**: Admin/atendente pode ver detalhes completos de uma OS
-- [ ] **OS-18**: Admin pode consultar tempo médio de execução por tipo de serviço em um período
+- [x] **OS-01**: Admin/atendente pode cadastrar cliente com nome, CPF/CNPJ (único, validado), e-mail e telefone
+- [x] **OS-02**: Admin/atendente pode editar, consultar e excluir clientes
+- [x] **OS-03**: Admin/atendente pode cadastrar veículo com placa (única, formatos Mercosul e antigo), marca, modelo e ano vinculado a um cliente
+- [x] **OS-04**: Admin/atendente pode editar, consultar e excluir veículos
+- [x] **OS-05**: Admin pode cadastrar tipos de serviço com nome, descrição e valor unitário (valor > 0)
+- [x] **OS-06**: Admin pode editar, consultar e excluir tipos de serviço
+- [x] **OS-07**: Atendente pode criar OS identificando cliente (CPF/CNPJ) e veículo (placa), registrando entrada e serviços solicitados — status inicial Recebida
+- [x] **OS-08**: Mecânico pode iniciar diagnóstico da OS (status → Em Diagnóstico) e incluir serviços e peças identificados
+- [x] **OS-09**: Sistema gera orçamento automaticamente ao finalizar diagnóstico e envia para aprovação do cliente (OS → Aguardando Aprovação)
+- [x] **OS-10**: Cliente pode aprovar orçamento via API pública (OS → Em Execução)
+- [x] **OS-11**: Cliente pode reprovar orçamento via API pública (OS → Cancelada)
+- [x] **OS-12**: Sistema cancela OS automaticamente se orçamento expirar por SLA
+- [x] **OS-13**: Mecânico pode registrar início da execução (status → Em Execução)
+- [x] **OS-14**: Mecânico pode finalizar execução (status → Finalizada)
+- [x] **OS-15**: Cliente pode consultar status público da OS via API sem autenticação
+- [x] **OS-16**: Admin/atendente pode listar OS com filtros por data, status e cliente (paginado)
+- [x] **OS-17**: Admin/atendente pode ver detalhes completos de uma OS
+- [x] **OS-18**: Admin pode consultar tempo médio de execução por tipo de serviço em um período
 
 ### Gestão de Estoque
 
-- [ ] **EST-01**: Admin/almoxarife pode cadastrar peça/insumo com código, descrição, unidade, saldo inicial, estoque mínimo e valor
-- [ ] **EST-02**: Admin/almoxarife pode editar, consultar e excluir peças/insumos (saldo não pode ficar negativo)
-- [ ] **EST-03**: Sistema reserva automaticamente peças disponíveis ao aprovar orçamento (reserva = flag)
-- [ ] **EST-04**: Sistema gera Requisição de Compra para peças indisponíveis ao aprovar orçamento
-- [ ] **EST-05**: Admin/almoxarife pode listar, visualizar e cancelar Requisições de Compra
-- [ ] **EST-06**: Almoxarife/financeiro pode registrar NF de entrada referenciando Requisição de Compra, atualizando saldo
-- [ ] **EST-07**: Ao atualizar saldo, sistema verifica itens abaixo do estoque mínimo e gera nova requisição se necessário
-- [ ] **EST-08**: Almoxarife registra saída de peças reservadas ao iniciar execução (saldo debitado, reserva encerrada)
-- [ ] **EST-09**: Sistema alerta quando estoque mínimo é atingido (calculado: tempo de reposição × consumo médio diário)
+- [x] **EST-01**: Admin/almoxarife pode cadastrar peça/insumo com código, descrição, unidade, saldo inicial, estoque mínimo e valor
+- [x] **EST-02**: Admin/almoxarife pode editar, consultar e excluir peças/insumos (saldo não pode ficar negativo)
+- [x] **EST-03**: Sistema reserva automaticamente peças disponíveis ao aprovar orçamento (reserva = flag)
+- [x] **EST-04**: Sistema gera Requisição de Compra para peças indisponíveis ao aprovar orçamento
+- [x] **EST-05**: Admin/almoxarife pode listar, visualizar e cancelar Requisições de Compra
+- [x] **EST-06**: Almoxarife/financeiro pode registrar NF de entrada referenciando Requisição de Compra, atualizando saldo
+- [x] **EST-07**: Ao atualizar saldo, sistema verifica itens abaixo do estoque mínimo e gera nova requisição se necessário
+- [x] **EST-08**: Almoxarife registra saída de peças reservadas ao iniciar execução (saldo debitado, reserva encerrada)
+- [x] **EST-09**: Sistema alerta quando estoque mínimo é atingido (calculado: tempo de reposição × consumo médio diário)
 
 ### Ordem de Pagamento
 
-- [ ] **PAG-01**: Sistema emite cobrança automaticamente ao finalizar execução (pagamento → Pendente)
-- [ ] **PAG-02**: Sistema registra confirmação de pagamento via serviço bancário simulado (pagamento → Confirmado)
-- [ ] **PAG-03**: Admin registra entrega do veículo após pagamento confirmado (OS → Entregue)
+- [x] **PAG-01**: Sistema emite cobrança automaticamente ao finalizar execução (pagamento → Pendente)
+- [x] **PAG-02**: Sistema registra confirmação de pagamento via serviço bancário simulado (pagamento → Confirmado)
+- [x] **PAG-03**: Admin registra entrega do veículo após pagamento confirmado (OS → Entregue)
 
 ### Documentação
 
-- [ ] **DOC-01**: Diagramas de sequência dos fluxos principais (criar OS, aprovar orçamento, fluxo estoque, fluxo pagamento)
-- [ ] **DOC-02**: Especificação OpenAPI/Swagger da API documentada
-- [ ] **DOC-03**: Guia de contribuição (CONTRIBUTING.md) com setup, padrões e workflow do time
+- [x] **DOC-01**: Diagramas de sequência dos fluxos principais (criar OS, aprovar orçamento, fluxo estoque, fluxo pagamento)
+- [x] **DOC-02**: Especificação OpenAPI/Swagger da API documentada
+- [x] **DOC-03**: Guia de contribuição (CONTRIBUTING.md) com setup, padrões e workflow do time
 
 ## v2 Requirements
 
@@ -84,49 +84,50 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 1 — Auth & OS Foundation | Pending |
-| AUTH-02 | Phase 1 — Auth & OS Foundation | Pending |
-| AUTH-03 | Phase 1 — Auth & OS Foundation | Pending |
-| AUTH-04 | Phase 2 — OS Continuation & Estoque | Pending |
-| OS-01 | Phase 1 — Auth & OS Foundation | Pending |
-| OS-02 | Phase 1 — Auth & OS Foundation | Pending |
-| OS-03 | Phase 1 — Auth & OS Foundation | Pending |
-| OS-04 | Phase 1 — Auth & OS Foundation | Pending |
-| OS-05 | Phase 1 — Auth & OS Foundation | Pending |
-| OS-06 | Phase 1 — Auth & OS Foundation | Pending |
-| OS-07 | Phase 1 — Auth & OS Foundation | Pending |
-| OS-08 | Phase 1 — Auth & OS Foundation | Pending |
-| OS-09 | Phase 2 — OS Continuation & Estoque | Pending |
-| OS-10 | Phase 2 — OS Continuation & Estoque | Pending |
-| OS-11 | Phase 2 — OS Continuation & Estoque | Pending |
-| OS-12 | Phase 3 — Pagamento & Delivery | Pending |
-| OS-13 | Phase 2 — OS Continuation & Estoque | Pending |
-| OS-14 | Phase 2 — OS Continuation & Estoque | Pending |
-| OS-15 | Phase 1 — Auth & OS Foundation | Pending |
-| OS-16 | Phase 2 — OS Continuation & Estoque | Pending |
-| OS-17 | Phase 2 — OS Continuation & Estoque | Pending |
-| OS-18 | Phase 2 — OS Continuation & Estoque | Pending |
-| EST-01 | Phase 2 — OS Continuation & Estoque | Pending |
-| EST-02 | Phase 2 — OS Continuation & Estoque | Pending |
-| EST-03 | Phase 2 — OS Continuation & Estoque | Pending |
-| EST-04 | Phase 2 — OS Continuation & Estoque | Pending |
-| EST-05 | Phase 2 — OS Continuation & Estoque | Pending |
-| EST-06 | Phase 2 — OS Continuation & Estoque | Pending |
-| EST-07 | Phase 2 — OS Continuation & Estoque | Pending |
-| EST-08 | Phase 2 — OS Continuation & Estoque | Pending |
-| EST-09 | Phase 2 — OS Continuation & Estoque | Pending |
-| PAG-01 | Phase 3 — Pagamento & Delivery | Pending |
-| PAG-02 | Phase 3 — Pagamento & Delivery | Pending |
-| PAG-03 | Phase 3 — Pagamento & Delivery | Pending |
-| DOC-01 | Phase 1 — Auth & OS Foundation | Pending |
-| DOC-02 | Phase 2 — OS Continuation & Estoque | Pending |
-| DOC-03 | Phase 3 — Pagamento & Delivery | Pending |
+| AUTH-01 | Phase 1 — Auth & OS Foundation | Complete (fase 03.1 — ver 01-VERIFICATION.md) |
+| AUTH-02 | Phase 1 — Auth & OS Foundation | Complete (fase 03.1 — ver 01-VERIFICATION.md) |
+| AUTH-03 | Phase 1 — Auth & OS Foundation | Complete |
+| AUTH-04 | Phase 2 — OS Continuation & Estoque | Complete |
+| OS-01 | Phase 1 — Auth & OS Foundation | Complete (fase 03.1 — ver 01-VERIFICATION.md) |
+| OS-02 | Phase 1 — Auth & OS Foundation | Complete |
+| OS-03 | Phase 1 — Auth & OS Foundation | Complete (fase 03.1 — ver 01-VERIFICATION.md) |
+| OS-04 | Phase 1 — Auth & OS Foundation | Complete (fase 03.1 — ver 01-VERIFICATION.md) |
+| OS-05 | Phase 1 — Auth & OS Foundation | Complete (fase 03.1 — ver 01-VERIFICATION.md) |
+| OS-06 | Phase 1 — Auth & OS Foundation | Complete (fase 03.1 — ver 01-VERIFICATION.md) |
+| OS-07 | Phase 1 — Auth & OS Foundation | Complete (fase 03.1 — ver 01-VERIFICATION.md) |
+| OS-08 | Phase 1 — Auth & OS Foundation | Complete (fase 03.1 — ver 01-VERIFICATION.md) |
+| OS-09 | Phase 2 — OS Continuation & Estoque | Complete (fase 03.1 — ver 02-VERIFICATION.md) |
+| OS-10 | Phase 2 — OS Continuation & Estoque | Complete |
+| OS-11 | Phase 2 — OS Continuation & Estoque | Complete |
+| OS-12 | Phase 3 — Pagamento & Delivery | Complete |
+| OS-13 | Phase 2 — OS Continuation & Estoque | Complete (fase 03.1 — ver 02-VERIFICATION.md) |
+| OS-14 | Phase 2 — OS Continuation & Estoque | Complete (fase 03.1 — ver 02-VERIFICATION.md) |
+| OS-15 | Phase 1 — Auth & OS Foundation | Complete |
+| OS-16 | Phase 2 — OS Continuation & Estoque | Complete (fase 03.1 — ver 02-VERIFICATION.md) |
+| OS-17 | Phase 2 — OS Continuation & Estoque | Complete (fase 03.1 — ver 02-VERIFICATION.md) |
+| OS-18 | Phase 2 — OS Continuation & Estoque | Complete (fase 03.1 — ver 02-VERIFICATION.md) |
+| EST-01 | Phase 2 — OS Continuation & Estoque | Complete (fase 03.1 — ver 02-VERIFICATION.md) |
+| EST-02 | Phase 2 — OS Continuation & Estoque | Complete |
+| EST-03 | Phase 2 — OS Continuation & Estoque | Complete |
+| EST-04 | Phase 2 — OS Continuation & Estoque | Complete (fase 03.1 — ver 02-VERIFICATION.md) |
+| EST-05 | Phase 2 — OS Continuation & Estoque | Complete (fase 03.1 — ver 02-VERIFICATION.md) |
+| EST-06 | Phase 2 — OS Continuation & Estoque | Complete (fase 03.1 — ver 02-VERIFICATION.md) |
+| EST-07 | Phase 2 — OS Continuation & Estoque | Complete |
+| EST-08 | Phase 2 — OS Continuation & Estoque | Complete |
+| EST-09 | Phase 2 — OS Continuation & Estoque | Complete |
+| PAG-01 | Phase 3 — Pagamento & Delivery | Complete (fase 03.1 — ver 03-VERIFICATION.md) |
+| PAG-02 | Phase 3 — Pagamento & Delivery | Complete (fase 03.1 — ver 03-VERIFICATION.md) |
+| PAG-03 | Phase 3 — Pagamento & Delivery | Complete (fase 03.1 — ver 03-VERIFICATION.md) |
+| DOC-01 | Phase 1 — Auth & OS Foundation | Complete (fase 03.1 — ver 01-VERIFICATION.md) |
+| DOC-02 | Phase 2 — OS Continuation & Estoque | Complete (fase 03.1 — ver 02-VERIFICATION.md) |
+| DOC-03 | Phase 3 — Pagamento & Delivery | Complete (fase 03.1 — ver 03-VERIFICATION.md) |
 
 **Coverage:**
-- v1 requirements: 37 total
+
+- v1 requirements: 37 total — 37/37 Complete ✅
 - Mapped to phases: 37
 - Unmapped: 0 ✅
 
 ---
 *Requirements defined: 2026-06-20*
-*Last updated: 2026-06-20 after initial definition*
+*Last updated: 2026-08-08 — 37/37 Complete (fase 03.1 — ver VERIFICATION.md de cada fase)*
