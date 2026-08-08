@@ -2,7 +2,9 @@ package com.fiap.mekano.rest.api;
 
 import com.fiap.mekano.application.service.peca.CreatePecaResponse;
 import com.fiap.mekano.application.service.peca.PecaService;
+import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.model.Peca;
+import com.fiap.mekano.domain.port.in.UpdatePecaCommand;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
@@ -22,6 +24,8 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -29,13 +33,16 @@ class PecaResourceTest {
 
     private static final String BASE_PATH = "/api/v1/pecas";
     private static final UUID PECA_UUID = UUID.randomUUID();
+    private static final UUID OTHER_UUID = UUID.randomUUID();
+
+    private static Peca mockPeca;
 
     @InjectMock
     PecaService pecaService;
 
     @BeforeEach
     void setUp() {
-        var mockPeca = Peca.reconstitute(
+        mockPeca = Peca.reconstitute(
                 PECA_UUID, "PEA-001", "Óleo do Motor 5W30",
                 new BigDecimal("45.90"),
                 50L, 10L, LocalDateTime.now(), 0L);
@@ -48,7 +55,20 @@ class PecaResourceTest {
                 .thenReturn(mockPeca);
 
         Mockito.when(pecaService.buscarPorId(Mockito.argThat(id -> !id.equals(PECA_UUID))))
-                .thenThrow(new com.fiap.mekano.domain.exception.AppException(404, "Peça não encontrada"));
+                .thenThrow(new AppException(404, "Peça não encontrada"));
+
+        Mockito.when(pecaService.updatePeca(eq(PECA_UUID), any(UpdatePecaCommand.class)))
+                .thenAnswer(invocation -> {
+                    UpdatePecaCommand cmd = invocation.getArgument(1);
+                    return Peca.reconstitute(
+                            PECA_UUID, cmd.codigo(), cmd.descricao(), cmd.valorUnitario(),
+                            50L, cmd.estoqueMinimo(), mockPeca.getCreatedAt(), 0L);
+                });
+
+        Mockito.doNothing().when(pecaService).excluir(PECA_UUID);
+
+        Mockito.doThrow(new AppException(409, "Peça vinculada a OS ativa"))
+                .when(pecaService).excluir(OTHER_UUID);
     }
 
     @Test
@@ -129,6 +149,90 @@ class PecaResourceTest {
         given()
                 .when()
                 .get(BASE_PATH + "/" + PECA_UUID)
+                .then()
+                .statusCode(403);
+    }
+
+    @Test
+    @Order(7)
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void put_existing_updatesFieldsAndReturns200() {
+        given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {"codigo": "PEA-002", "descricao": "Filtro de Óleo", "valorUnitario": 29.90, "estoqueMinimo": 5}
+                        """)
+                .when()
+                .put(BASE_PATH + "/" + PECA_UUID)
+                .then()
+                .statusCode(200)
+                .body("codigo", equalTo("PEA-002"))
+                .body("descricao", equalTo("Filtro de Óleo"))
+                .body("valorUnitario", equalTo(29.90f))
+                .body("estoqueMinimo", equalTo(5));
+    }
+
+    @Test
+    @Order(8)
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void put_preservesSaldoAtual() {
+        given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {"codigo": "PEA-003", "descricao": "Pastilha de Freio", "valorUnitario": 89.90, "estoqueMinimo": 3}
+                        """)
+                .when()
+                .put(BASE_PATH + "/" + PECA_UUID)
+                .then()
+                .statusCode(200)
+                .body("saldoAtual", equalTo(50));
+    }
+
+    @Test
+    @Order(9)
+    @TestSecurity(user = "atendente", roles = {"user"})
+    void put_asAtendente_returns403() {
+        given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {"codigo": "PEA-004", "descricao": "Teste", "valorUnitario": 10.00}
+                        """)
+                .when()
+                .put(BASE_PATH + "/" + PECA_UUID)
+                .then()
+                .statusCode(403);
+    }
+
+    @Test
+    @Order(10)
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void delete_existing_returns204() {
+        given()
+                .when()
+                .delete(BASE_PATH + "/" + PECA_UUID)
+                .then()
+                .statusCode(204);
+    }
+
+    @Test
+    @Order(11)
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void delete_linkedToActiveOS_returns409() {
+        given()
+                .when()
+                .delete(BASE_PATH + "/" + OTHER_UUID)
+                .then()
+                .statusCode(409)
+                .contentType(containsString("application/problem+json"));
+    }
+
+    @Test
+    @Order(12)
+    @TestSecurity(user = "atendente", roles = {"user"})
+    void delete_asAtendente_returns403() {
+        given()
+                .when()
+                .delete(BASE_PATH + "/" + PECA_UUID)
                 .then()
                 .statusCode(403);
     }

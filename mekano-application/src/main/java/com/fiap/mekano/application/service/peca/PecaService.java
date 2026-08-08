@@ -5,6 +5,7 @@ import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.domain.model.Peca;
 import com.fiap.mekano.domain.port.in.CreatePecaCommand;
+import com.fiap.mekano.domain.port.in.UpdatePecaCommand;
 import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
 import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
@@ -12,6 +13,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @ApplicationScoped
@@ -42,6 +44,15 @@ public class PecaService {
                 saved.getValorUnitario(),
                 saved.getSaldoAtual(), saved.getEstoqueMinimo(), saved.getCreatedAt()
         );
+    }
+
+    @Transactional
+    public Peca updatePeca(UUID id, UpdatePecaCommand command) {
+        Peca atual = buscarPorId(id);
+        Peca atualizada = Peca.reconstitute(
+                id, command.codigo(), command.descricao(), command.valorUnitario(),
+                atual.getSaldoAtual(), command.estoqueMinimo(), atual.getCreatedAt(), atual.getSaldoReservado());
+        return pecaRepository.salvar(atualizada);
     }
 
     public Peca buscarPorId(UUID id) {
