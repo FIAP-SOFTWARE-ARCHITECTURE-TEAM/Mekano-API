@@ -61,7 +61,11 @@
   1. Cliente recebe notificação WhatsApp com link para aprovar/recusar orçamento quando orçamento é gerado
   2. Cliente recebe notificação WhatsApp informando que veículo está pronto para retirada quando OS é finalizada
   3. Escopo de atualização de status via ferramenta externa verificado e documentado (aplicável somente a aprovar/recusar orçamento)
-**Plans**: TBD
+**Plans**: 3 plans
+**Plan list**:
+  - [ ] 05-01-PLAN.md — WhatsApp notifier port + Evolution API REST Client + docker-compose + orçamento observer (Wave 1)
+  - [ ] 05-02-PLAN.md — WhatsApp retirada notification + webhook endpoint for interactive approve/reject (Wave 2)
+  - [ ] 05-03-PLAN.md — Verify and document scope of external status update via WhatsApp (Wave 3)
 **UI hint**: no
 
 ---
@@ -114,7 +118,7 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 4. Infrastructure Foundation | 0/2 | Planning complete | - |
-| 5. WhatsApp Integration | 0/0 | Not started | - |
+| 5. WhatsApp Integration | 0/3 | Plans created | - |
 | 6. Quality & Bug Fixes | 0/0 | Not started | - |
 | 7. API Improvements | 0/0 | Not started | - |
 | 8. Documentation & Polish | 0/0 | Not started | - |
