@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: "gaps: estoque pipeline, pagamento/audit, requisitos publicos e SLA"
-status: Awaiting next milestone
-last_updated: "2026-08-08T16:36:17.429Z"
-last_activity: 2026-08-08 — Milestone v1.0 completed and archived
+milestone: v2.0
+milestone_name: infra-docs-quality-whatsapp
+status: planning
+last_updated: "2026-08-08T18:13:57.954Z"
+last_activity: 2026-08-08 — Phase 4 plans created (04-01 Docker refine, 04-02 ADO tasks for Elias)
 progress:
-  total_phases: 1
-  completed_phases: 1
-  total_plans: 7
-  completed_plans: 7
-  percent: 100
+  total_phases: 5
+  completed_phases: 0
+  total_plans: 2
+  completed_plans: 0
+  percent: 0
 ---
 
 # STATE: Mekano
@@ -28,127 +28,66 @@ progress:
 | Architecture | Clean Architecture (domain → application → infrastructure → rest) |
 | Bounded Contexts | User/Auth, OS, Estoque, Pagamento (todos implementados) |
 | Team | 5 developers |
-| Timeline | 10 days (Dias 1-10 decorridos) |
+| Timeline | 10 days |
 | Granularity | standard |
-| Mode | mvp |
+| Milestone | v2.0 infra-docs-quality-whatsapp |
 
 ## Current Position
 
-Phase: Milestone v1.0 complete
-Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-08-08 — Milestone v1.0 completed and archived
+Phase: 4 of 5 (Infrastructure Foundation)
+Plan: 04-01, 04-02
+Status: Planning complete — ready to execute
+Last activity: 2026-08-08 — Phase 4 plans created (04-01 Docker refine, 04-02 ADO tasks for Elias)
+
+Progress: [████████░░] 80% (planning complete)
 
 ## Performance Metrics
 
-| Metric | Current | Target | Notes |
-|--------|---------|--------|-------|
-| Issues fechadas | 28/28 | 28 | ✓ Todas as fases completas (+#58 fix) |
-| Requirements mapped | 37/37 | 37 | ✓ Full coverage |
-| Phases defined | 3 | — | Auth & OS → OS Cont. & Estoque → Pagamento & Delivery |
-| Fases concluídas | 3/3 | 3 | ✓ Milestone entregue |
-| Phase 03.1 P01 | 6.5 | 3 tasks | 8 files |
-| Phase 03.1 P02 | 12min | 2 tasks | 17 files |
-| Phase 03.1 P03 | 10 | 2 tasks | 10 files |
-| Phase 03.1 P04 | 25min | 3 tasks | 14 files |
-| Phase 03.1 P05 | 18min | 2 tasks | 10 files |
-| Phase 03.1 P06 | 12min | 2 tasks | 8 files |
-| Phase 03.1 P07 | 8min | 2 tasks (T2+T3) | 11 files |
+**By Phase:**
+
+| Phase | Plans | Total | Avg/Plan |
+|-------|-------|-------|----------|
+| 4. Infrastructure Foundation | TBD | - | - |
+| 5. WhatsApp Integration | TBD | - | - |
+| 6. Quality & Bug Fixes | TBD | - | - |
+| 7. API Improvements | TBD | - | - |
+| 8. Documentation & Polish | TBD | - | - |
 
 ## Accumulated Context
 
-### Key Decisions (from research/planning)
+### Decisions
 
 | Decision | Rationale | Status |
 |----------|-----------|--------|
-| Vertical slice strategy | Avoids integration chaos with 5 devs in parallel | Executado |
-| OS state machine with transition matrix | Prevents illegal state transitions | Implementado |
-| CDI events for inter-context comm | Decoupled contexts without Kafka overengineering | Implementado |
-| Orcamento as separate aggregate | Prevents mega-aggregate (Pitfall 1) | Implementado |
-| Atomic stock reservation (UPDATE ... WHERE saldo >= qtd) | Prevents race condition (Pitfall 3) | Implementado |
-| Payment idempotency via processed_events table | Prevents double-processing (Pitfall 4) | Implementado (V30, ProcessedEventRepositoryImpl) |
-| Auth construído como task da Phase 1 | Não revisar codebase existente, tratar como task | Implementado |
-| JWT Ed25519 | Ed25519/EdDSA por segurança e performance | Implementado |
-| Refresh rotation com PESSIMISTIC_WRITE | Previne ataque de reuse | Implementado |
-| Pagamento como campos da OS (D-01) | Evita aggregate gigante | Implementado |
-| JaCoCo 80% LINE + OWASP CVSS≥7 | Gates de qualidade | Configurado (ci.yml) |
+| WhatsApp como port/adapter em infrastructure | Segue padrão hexagonal existente, sem novo módulo | Pendente |
+| JaCoCo report-aggregate em mekano-rest | Evita false pass de 80% por módulo individual | Pendente |
+| Terraform S3 backend desde o dia 1 | Previne perda/corrupção de estado | Pendente |
+| CDI events com AFTER_SUCCESS para WhatsApp | HTTP fora de @Transactional, previne pool exhaustion | Pendente |
+| Clean Code refactoring com lista fixa 5-10 itens | Previne scope creep e regressões | Pendente |
+| Kind para cluster K8s local | Docker-based, 30s startup, sem Helm | Pendente |
+| Vídeo gravado por último (dia 9-10) | Documentação reflete estado final do sistema | Pendente |
 
-### Pending Decisions
+### Pending Todos
 
-- [x] D-10: Duplicata de pagamento = 200 no-op
-- [x] D-09: ProcessedEventRepositoryImpl ativo como bean real
-- [x] D-08: Cancelamento libera reserva (n�o credita saldo)
-- [x] D-07: Requisi��o de compra gerada no observer quando reserva falha
-- [x] D-06: Segunda chamada de pagamento retorna 200 (no-op idempotente)
-- [x] D-04: Reserva na aprova��o, d�bito na execu��o
-- [x] **Roles**: admin, atendente, mecanico, almoxarife, financeiro, cliente — confirmadas e implementadas
-- [x] **JWT strategy**: Ed25519 existente reutilizado
-- [x] **SLA policy values**: Implementado na Fase 3
-- [x] **Simulated bank service**: MockPaymentService com delay 2s + idempotência (#34, #37)
+Nenhum ainda.
 
-### Open Todos
+### Blockers/Concerns
 
-- [x] Criar AGENTS.md para aplicar engenharia de contexto no projeto
-- [x] PLAN.md: Phase 1 — Auth & OS Foundation (6 planos executados)
-- [x] PLAN.md: Phase 2 — OS Continuation & Estoque (8 planos executados)
-- [x] Criar tasks individuais para GitHub Issues
-- [x] Fechar Issues #33 (idempotência real), #37 (REST pagamento/entrega)
-- [x] Atualizar README.md com arquitetura e módulos
-- [x] Criar CI/CD pipeline (.github/workflows/ci.yml)
-- [x] Alinhar branches main/develop
-- [x] Criar CONTRIBUTING.md (DOC-03) — fechado na sessão de resume
+- WhatsApp template approval na Meta pode levar horas-dias (submeter dia 1)
+- OIDC GitHub Actions ↔ AWS pode estar bloqueado por permissões (fallback: GHCR + kubectl manual)
+- Kind não vem com metrics-server — necessário para testar HPA localmente
 
-### Blockers
+## Deferred Items
 
-- Nenhum — milestone completo. Tech debt conhecido: `StatusPagamento` duplicado (`domain/model/` e `domain/os/`), `ProcessedEventsRepositoryStub` ainda presente (inativo), mappers vazios (Peca/RequisicaoCompra/NfEntrada), bug NfEntradaRepositoryImpl `pecaId`/`requisicaoCompraId`.
+| Category | Item | Status | Deferred At |
+|----------|------|--------|-------------|
+| Monitoramento | Prometheus/Grafana (MON-01, MON-02) | Deferred to v2.x | v2.0 init |
+| Integrações | Gateway de pagamento real (INT-02) | Deferred to v2.x | v2.0 init |
+| Push | Notificação push mobile (INT-01) | Deferred to v2.x | v2.0 init |
+| WhatsApp | Two-way conversation, payment links, multi-branch | Beyond v2.0 scope | v2.0 init |
 
 ## Session Continuity
 
-**Last session:** 2026-08-08T01:15:00Z
-**Next action:** All 7 plans executed — re-audit and milestone completion
-
-### Threads
-
-| Thread | Phase | Status | Owner | Context |
-|--------|-------|--------|-------|---------|
-| Roadmap restructured | 1-3 | ✅ Done | GSD | All 37 v1 mapped, 3 phases, vertical slices |
-| Phase 1 execution | 1 | ✅ Done | Equipe | 12 issues fechadas, 6 planos |
-| Phase 2 execution | 2 | ✅ Done | Equipe | 9 issues fechadas, 8 planos |
-| Phase 3 execution | 3 | ✅ Done | Equipe | 7 issues fechadas (#32-#38) + #58 |
-| Milestone v1.0 close-out | 3 | ✅ Done | GSD | SUMMARY + ROADMAP/STATE atualizados (2026-08-07) |
-
-### Next Phase Brief
-
-**Fase 03.1 — Close v1.0 gaps (INSERTED, urgente):** a auditoria (`v1.0-MILESTONE-AUDIT.md`) encontrou 7 requisitos unsatisfied e 8 partial. Gaps:
-
-1. **Estoque pipeline (EST-03/04/07/08/09):** `OrcamentoAprovadoEvent` nunca publicado; reserva atômica, requisição de compra e débito na execução são dead code
-2. **Pagamento + audit (PAG-02):** `ProcessedEventsRepositoryStub` ativo — idempotência fake; `OsAuditEventPublisher` nunca invocado
-3. **Requisitos públicos/SLA/bugs (AUTH-03, OS-15, OS-12, OS-02, AUTH-04):** status público exige auth; SLA não cancela OS; `updateCliente` no-op; shared AppException → 500
-4. **Verificação formal:** VERIFICATION.md 0/3 fases; nyquist 2 partial + 1 missing; traceability 0/37
-
-### Roadmap Evolution
-
-- Phase 03.1 (INSERTED, URGENT) — after Phase 3: "Close v1.0 gaps: estoque pipeline, pagamento/audit, requisitos publicos e SLA"
-
-**Caminho:** ~~`/gsd-discuss-phase 03.1`~~ → ~~`/gsd-plan-phase 03.1`~~ (7 planos prontos) → `/gsd-execute-phase 03.1` → re-audit → `/gsd-complete-milestone v1.0`
-
-## Decisions
-
-- [Phase ?]: D-01: @PermitAll no método sobrepõe @RolesAllowed da classe
-- [Phase 03.1]: D-02: UUID da OS/orçamento é a chave de acesso para endpoints públicos; risco aceito para MVP
-- [Phase 03.1]: D-03: Demais endpoints continuam exigindo autenticação (teste negativo 401)
-- [Phase 03.1]: D-15: updateCliente aplica campos via Cliente.reconstitute + save, preservando CPF e createdAt
-- [Phase 03.1]: D-17: VERIFICATION.md retroativo para fases 01/02/03 + nyquist true + traceability 37/37 Complete
-- [Phase 03.1]: D-01: @PermitAll no método sobrepõe @RolesAllowed da classe (Jakarta Security)
-- [Phase ?]: D-04: Semântica reserva na aprovação, débito no início da execução (fiel à spec EST-03/EST-08)
-- [Phase ?]: D-05: Reserva modelada como coluna saldoReservado na peça (V34), estoque mínimo = função do saldo disponível
-- [Phase ?]: D-06/D-07 base: pecaId disponível no ItemOrcamento e no itens_json para conectar OrcamentoAprovadoEvent
-- [Phase ?]: D-05 confirmado: qtd reposicao = estoqueMinimo - disponivel (plano 03.1-03)
-- [Phase ?]: D-11: auditar todas as transições da OS
-- [Phase ?]: D-12: ENTREGA_REALIZADA via EntregaConfirmadaEvent
-- [Phase ?]: D-13: job SLA a cada 12h, motivo SLA expirado
-- [Phase ?]: D-14: cancelamento SLA libera reserva de estoque
-
-## Operator Next Steps
-
-- Start the next milestone with /gsd-new-milestone
+**Last session:** 2026-08-08T18:13:57.949Z
+**Next action:** Plan Phase 4 — `/gsd-plan-phase 4`
+**Resume file:** .planning/phases/04-infrastructure-foundation/04-CONTEXT.md
