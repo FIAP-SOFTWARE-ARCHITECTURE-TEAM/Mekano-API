@@ -236,6 +236,7 @@ public class OrdemDeServicoResource {
     public Response getDetalhamento(@PathParam("id") UUID id) {
         OrdemDeServico os = osService.findById(id);
         var orcamentoUuid = osService.findOrcamentoUuidByOsId(id);
+        var itensOrcados = osService.buscarItensOrcados(id);
         var response = new OrdemDeServicoDetailResponse(
                 os.getId(), os.getClienteId(), os.getVeiculoId(),
                 os.getDescricaoProblema(), os.getStatus().name(),
@@ -251,7 +252,7 @@ public class OrdemDeServicoResource {
                 os.getRecebidoPor(),
                 os.getPagamentoConfirmadoEm(),
                 os.getEntregueEm(),
-                Collections.singletonList("Itens orçados disponíveis no orçamento"),
+                itensOrcados,
                 Collections.emptyList(),
                 os.getCreatedAt()
         );

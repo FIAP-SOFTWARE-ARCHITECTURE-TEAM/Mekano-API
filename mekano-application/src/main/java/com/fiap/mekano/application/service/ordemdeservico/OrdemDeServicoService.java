@@ -2,6 +2,7 @@ package com.fiap.mekano.application.service.ordemdeservico;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -253,5 +254,22 @@ private final OrdemDeServicoRepositoryPort repository;
     @Override
     public boolean clientePossuiOsAtiva(UUID clienteUuid) {
         return repository.existsByClienteUuidAndStatusIn(clienteUuid, List.of("EM_EXECUCAO", "AGUARDANDO_APROVACAO"));
+    }
+
+    @Override
+    public List<String> buscarItensOrcados(UUID osId) {
+        Optional<UUID> orcamentoUuid = repository.findOrcamentoUuidByOsId(osId);
+        if (orcamentoUuid.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return orcamentoRepository.findByUuid(orcamentoUuid.get())
+                .map(orcamento -> orcamento.getItens().stream()
+                        .map(item -> {
+                            String tipo = item.getPecaId() != null ? "Peça" : "Serviço";
+                            return String.format("%s: %s x%d (R$ %.2f)",
+                                    tipo, item.getDescricao(), item.getQuantidade(), item.calcularSubtotal());
+                        })
+                        .toList())
+                .orElse(Collections.emptyList());
     }
 }

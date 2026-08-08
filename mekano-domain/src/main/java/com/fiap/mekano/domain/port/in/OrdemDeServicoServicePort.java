@@ -29,4 +29,10 @@ public interface OrdemDeServicoServicePort {
     Optional<Double> calcularTempoMedioExecucao(LocalDateTime dataInicio, LocalDateTime dataFim);
     Map<UUID, Double> calcularTempoMedioPorMecanico(LocalDateTime dataInicio, LocalDateTime dataFim);
     boolean clientePossuiOsAtiva(UUID clienteUuid);
+
+    /**
+     * Retorna os itens orçados de uma OS como lista de strings descritivas.
+     * Se a OS não tiver orçamento, retorna lista vazia.
+     */
+    List<String> buscarItensOrcados(UUID osId);
 }

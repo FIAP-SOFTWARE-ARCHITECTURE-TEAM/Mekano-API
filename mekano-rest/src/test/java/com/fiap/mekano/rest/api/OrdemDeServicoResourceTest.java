@@ -1,8 +1,11 @@
 package com.fiap.mekano.rest.api;
 
 import com.fiap.mekano.domain.model.Cliente;
+import com.fiap.mekano.domain.model.ItemOrcamento;
+import com.fiap.mekano.domain.model.Orcamento;
 import com.fiap.mekano.domain.model.Veiculo;
 import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;
+import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
 import com.fiap.mekano.domain.port.out.VeiculoRepositoryPort;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
@@ -14,13 +17,17 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -40,6 +47,11 @@ class OrdemDeServicoResourceTest {
     @InjectMock
     VeiculoRepositoryPort veiculoRepository;
 
+    @InjectMock
+    OrcamentoRepositoryPort orcamentoRepository;
+
+    private static final UUID ORCAMENTO_UUID = UUID.randomUUID();
+
     @BeforeEach
     void setup() {
         var fakeCliente = Cliente.reconstitute(
@@ -54,6 +66,15 @@ class OrdemDeServicoResourceTest {
         when(clienteRepository.findById(any(UUID.class))).thenReturn(Optional.of(fakeCliente));
         when(veiculoRepository.findById(VEICULO_UUID)).thenReturn(Optional.of(fakeVeiculo));
         when(veiculoRepository.findById(any(UUID.class))).thenReturn(Optional.of(fakeVeiculo));
+
+        // Mock orcamento with real items for detalhamento tests
+        var itemServico = new ItemOrcamento("Troca de óleo", 1L, new BigDecimal("150.00"));
+        var itemPeca = new ItemOrcamento("Óleo 5W30", 4L, new BigDecimal("45.90"), UUID.randomUUID());
+        var mockOrcamento = Orcamento.reconstitute(
+                ORCAMENTO_UUID, "Diagnóstico completo",
+                List.of(itemServico, itemPeca),
+                new BigDecimal("333.60"), LocalDateTime.now());
+        when(orcamentoRepository.findByUuid(ORCAMENTO_UUID)).thenReturn(Optional.of(mockOrcamento));
     }
 
     // ─────────────── CREATE ───────────────
@@ -273,5 +294,38 @@ class OrdemDeServicoResourceTest {
                 .then()
                 .statusCode(200)
                 .body("breakdownPorMecanico", notNullValue());
+    }
+
+    // ─────────────── DETALHAMENTO ───────────────
+
+    @Test
+    @Order(30)
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void getDetalhamento_retornaEstruturaCorreta() {
+        // Criar OS para testar detalhamento
+        String osId = given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {"clienteId": "%s", "veiculoId": "%s", "descricaoProblema": "Problema para detalhamento"}
+                        """.formatted(CLIENTE_UUID, VEICULO_UUID))
+                .when()
+                .post(BASE_PATH)
+                .then().statusCode(201).extract().path("id");
+
+        // Avançar para EM_DIAGNOSTICO
+        given().put(BASE_PATH + "/" + osId + "/iniciar-diagnostico").then().statusCode(200);
+
+        // GET detalhamento — verifica que a estrutura está correta e sem placeholder
+        given()
+                .when()
+                .get(BASE_PATH + "/" + osId + "/detalhamento")
+                .then()
+                .statusCode(200)
+                .body("id", equalTo(osId))
+                .body("status", equalTo("EM_DIAGNOSTICO"))
+                .body("itensOrcados", notNullValue())
+                .body("itensOrcados", hasSize(0))
+                .body("itensExecutados", notNullValue())
+                .body("itensExecutados", hasSize(0));
     }
 }
