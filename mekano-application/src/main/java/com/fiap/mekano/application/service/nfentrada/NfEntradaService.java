@@ -1,11 +1,14 @@
 package com.fiap.mekano.application.service.nfentrada;
 
+import com.fiap.mekano.domain.event.EstoqueMinimoAtingidoEvent;
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.domain.model.NfEntrada;
+import com.fiap.mekano.domain.model.Peca;
 import com.fiap.mekano.domain.model.RequisicaoCompra;
 import com.fiap.mekano.domain.model.StatusRequisicao;
 import com.fiap.mekano.domain.port.in.CreateNfEntradaCommand;
+import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.NfEntradaRepositoryPort;
 import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
 import com.fiap.mekano.domain.port.out.RequisicaoCompraRepositoryPort;
@@ -13,6 +16,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @ApplicationScoped
@@ -21,12 +25,14 @@ public class NfEntradaService {
     private final NfEntradaRepositoryPort nfRepository;
     private final PecaRepositoryPort pecaRepository;
     private final RequisicaoCompraRepositoryPort requisicaoRepository;
+    private final EventPublisher eventPublisher;
 
     public NfEntradaService(NfEntradaRepositoryPort nfRepository, PecaRepositoryPort pecaRepository,
-            RequisicaoCompraRepositoryPort requisicaoRepository) {
+                            RequisicaoCompraRepositoryPort requisicaoRepository, EventPublisher eventPublisher) {
         this.nfRepository = nfRepository;
         this.pecaRepository = pecaRepository;
         this.requisicaoRepository = requisicaoRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -46,6 +52,14 @@ public class NfEntradaService {
         var saved = nfRepository.salvar(nfEntrada);
 
         pecaRepository.creditarSaldo(requisicao.getPecaId(), requisicao.getQuantidade().intValue());
+
+        Optional<Peca> pecaOpt = pecaRepository.buscarPorId(requisicao.getPecaId());
+        pecaOpt.ifPresent(peca -> {
+            if (peca.isEstoqueMinimoAtingido()) {
+                eventPublisher.publish(new EstoqueMinimoAtingidoEvent(
+                        peca.getId(), peca.disponivel().intValue(), peca.getEstoqueMinimo().intValue()));
+            }
+        });
 
         var atualizada = RequisicaoCompra.reconstitute(
                 requisicao.getId(), requisicao.getPecaId(), requisicao.getQuantidade(),

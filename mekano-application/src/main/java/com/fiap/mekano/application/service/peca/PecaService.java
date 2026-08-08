@@ -55,9 +55,10 @@ public class PecaService {
         boolean sucesso = pecaRepository.debitarSaldo(pecaId, quantidade);
         if (sucesso) {
             Long novoSaldo = peca.getSaldoAtual() - quantidade;
-            if (peca.getEstoqueMinimo() != null && novoSaldo <= peca.getEstoqueMinimo()) {
+            Long novoDisponivel = novoSaldo - peca.getSaldoReservado();
+            if (peca.getEstoqueMinimo() != null && novoDisponivel < peca.getEstoqueMinimo()) {
                 eventPublisher.publish(new EstoqueMinimoAtingidoEvent(
-                        pecaId, novoSaldo.intValue(), peca.getEstoqueMinimo().intValue()));
+                        pecaId, novoDisponivel.intValue(), peca.getEstoqueMinimo().intValue()));
             }
         }
         return sucesso;
