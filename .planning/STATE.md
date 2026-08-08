@@ -2,11 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: "gaps: estoque pipeline, pagamento/audit, requisitos publicos e SLA"
-status: Ready to execute
-last_updated: "2026-08-08T01:15:00.000Z"
+status: Awaiting next milestone
+last_updated: "2026-08-08T16:36:17.429Z"
+last_activity: 2026-08-08 — Milestone v1.0 completed and archived
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 7
   completed_plans: 7
   percent: 100
@@ -33,14 +34,10 @@ progress:
 
 ## Current Position
 
-Phase: 03.1 (close-v1-0-gaps-estoque-pipeline-pagamento-audit-requisitos-) — COMPLETE
-Plan: 7 of 7 (all completed)
-| Attribute | Value |
-|-----------|-------|
-| **Phase** | 03.1 — Close v1.0 gaps (INSERTED após Fase 3) |
-| **Status** | ⚠️ Auditoria v1.0 encontrou gaps — fase de closure inserida |
-| **Progress** | ████████████████████ 100% (v1.0) → gaps em fechamento |
-| **Milestone** | v1 |
+Phase: Milestone v1.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-08-08 — Milestone v1.0 completed and archived
 
 ## Performance Metrics
 
@@ -151,3 +148,7 @@ Plan: 7 of 7 (all completed)
 - [Phase ?]: D-12: ENTREGA_REALIZADA via EntregaConfirmadaEvent
 - [Phase ?]: D-13: job SLA a cada 12h, motivo SLA expirado
 - [Phase ?]: D-14: cancelamento SLA libera reserva de estoque
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
