@@ -10,6 +10,7 @@ import com.fiap.mekano.domain.port.in.UpdateClienteCommand;
 import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;
 import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
@@ -42,9 +43,57 @@ public class ClienteService implements ClienteServicePort {
     }
 
     @Override
+    @Transactional
     public Cliente updateCliente(UUID id, UpdateClienteCommand command) {
-        return clienteRepository.findById(id)
+        Cliente existente = clienteRepository.findById(id)
             .orElseThrow(() -> new AppException(404, Messages.get("cliente.not.found", id)));
+
+        // Validar campos obrigatórios
+        validarUpdate(command);
+
+        Cliente atualizado = Cliente.reconstitute(
+                id,
+                command.nome(),
+                existente.getCpf().getValue(),
+                command.email(),
+                command.telefone(),
+                command.logradouro(),
+                command.numero(),
+                command.bairro(),
+                command.cidade(),
+                command.uf(),
+                command.cep(),
+                existente.getCreatedAt()
+        );
+
+        return clienteRepository.save(atualizado);
+    }
+
+    private void validarUpdate(UpdateClienteCommand command) {
+        if (command.nome() == null || command.nome().isBlank()) {
+            throw new AppException(400, Messages.get("cliente.name.required"));
+        }
+        if (command.email() == null || command.email().isBlank()) {
+            throw new AppException(400, "E-mail é obrigatório");
+        }
+        if (command.logradouro() == null || command.logradouro().isBlank()) {
+            throw new AppException(400, "Logradouro é obrigatório");
+        }
+        if (command.numero() == null || command.numero().isBlank()) {
+            throw new AppException(400, "Número é obrigatório");
+        }
+        if (command.bairro() == null || command.bairro().isBlank()) {
+            throw new AppException(400, "Bairro é obrigatório");
+        }
+        if (command.cidade() == null || command.cidade().isBlank()) {
+            throw new AppException(400, "Cidade é obrigatória");
+        }
+        if (command.uf() == null || command.uf().isBlank()) {
+            throw new AppException(400, "UF é obrigatória");
+        }
+        if (command.cep() == null || command.cep().isBlank()) {
+            throw new AppException(400, "CEP é obrigatório");
+        }
     }
 
     @Override
