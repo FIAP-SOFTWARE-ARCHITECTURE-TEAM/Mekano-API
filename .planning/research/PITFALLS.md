@@ -1,395 +1,288 @@
 # Pitfalls Research
 
-**Domain:** Mechanical Workshop Management System (Mekano)
-**Researched:** 2026-06-20
-**Confidence:** HIGH (multi-source verified)
+**Domain:** Quarkus Clean Architecture API + WhatsApp/K8s/Terraform infra
+**Researched:** 2026-08-08
+**Confidence:** HIGH (verified against context7 docs, official Quarkus guides, JaCoCo docs, Terraform docs)
 
 ## Critical Pitfalls
 
-### Pitfall 1: Mega-Aggregate OS — Putting Everything Inside OrdemDeServico
+### Pitfall 1: WhatsApp Token Expiration — 24h Short-Lived Token
 
 **What goes wrong:**
-The `OrdemDeServico` aggregate root absorbs `Cliente`, `Veiculo`, `Orcamento`, all `ItemOS` entries, and `PoliticaSLA` into a single monolithic aggregate. This creates:
-- Transaction contention: every OS update locks the entire aggregate
-- Performance degradation as OS history grows (hundreds of items per OS)
-- Concurrent modification failures when mechanics, atendentes, and the SLA timer all touch the same OS simultaneously
-- Painful loading: every OS query fetches the entire object graph
+The WhatsApp Cloud API access token expires **every 24 hours**. If you hardcode the token or store it without a rotation mechanism, notifications stop silently after 24h. The system appears to work in dev (where you refresh manually) but breaks in production after day one.
 
 **Why it happens:**
-Vaughn Vernon's "Aggregate Design" papers (DDDCommunity, 2011) identify this as the #1 DDD mistake: treating the aggregate as a "cluster" rather than a **consistency boundary**. Teams model the real-world concept of "ordem de serviço" as a single document because a physical OS paper form contains all this info. The Event Storming class diagram in this project shows `OrdemDeServico` with direct composition of `ItemOS` (0..\*), `Orcamento` (0..1), `Cliente` (1), and `Veiculo` (1) — this is the classic trap.
+WhatsApp Cloud API uses Facebook access tokens with a maximum lifetime of 24 hours. Developers test by copying a fresh token from the Meta Developer dashboard, forget about it, and deploy. The integration fails silently because REST clients typically receive a 401 or 403 but most teams don't have monitoring on WhatsApp responses.
 
 **How to avoid:**
-- Split `OrdemDeServico` into **two aggregates**:
-  - `OrdemDeServico` (AR) — identity, status, dates, references to ClienteId and VeiculoId (not the entities themselves)
-  - `Orcamento` (separate AR with its own lifecycle and identity)
-- `ItemOS` becomes a **value object collection** within `OrdemDeServico`, but only the subset needed for the current state (not all items ever)
-- `Cliente` and `Veiculo` are separate aggregates referenced by ID only — never embedded
-- Use eventual consistency: when `Orcamento` is approved, ORdemDeServico transitions via domain event, not within the same transaction
+1. Implement a **token refresh service** that uses `app_id` + `app_secret` to exchange for a new token before expiry (Meta's long-lived token endpoint supports 60-day tokens — use that instead).
+2. Store the token in **Kubernetes Secret** (not ConfigMap) and reference via environment variable — NOT in application.properties.
+3. Add a **health check** (`@Readiness`) that pings WhatsApp API's test endpoint to verify the token is still valid. If the health check fails, the pod is taken out of rotation.
+4. Monitor HTTP 401 responses from WhatsApp API with a metric + alert.
 
 **Warning signs:**
-- OS repository methods loading the entire graph for every operation
-- Tests that need to construct deep object hierarchies to test simple status transitions
-- Optimistic locking exceptions in production when two people work on the same OS
-- `@Transactional` spans spanning multiple unrelated tables in a single transaction
+- Notifications work on day 1, stop on day 2
+- No WhatsApp API responses are logged or monitored
+- Token is stored in application.properties or hardcoded
 
 **Phase to address:**
-OS Foundation Phase (aggregate modeling session before writing code). Enforce with ArchUnit test: `classes().that().areAnnotatedWith(OrdemDeServico.class).should().not().dependOn(Cliente.class)`
+WhatsApp Integration Phase — make the TokenManager service the first component built, not an afterthought.
 
 ---
 
-### Pitfall 2: Incomplete State Machine — Missing Transitions and Illegal Flows
+### Pitfall 2: WhatsApp Rate Limits — 1K Messages/Day Per Phone Number
 
 **What goes wrong:**
-The OS lifecycle has 7 statuses (RECEBIDA → EM_DIAGNOSTICO → AGUARDANDO_APROVACAO → EM_EXECUCAO → FINALIZADA → ENTREGUE, with CANCELADA as dead end). Two specific failure modes:
-
-1. **Missing edges**: Forgetting that OS can be cancelled from EM_DIAGNOSTICO (customer changes mind before orçamento) or that EM_EXECUCAO might need to go back to AGUARDANDO_APROVACAO if additional services are discovered mid-work (re-orçamento)
-2. **Illegal transitions not enforced**: Letting a service call transition from RECEBIDA directly to FINALIZADA without going through the pipeline. Or allowing ENTREGUE → EM_EXECUCAO (re-opening delivered OS)
-3. **No guard conditions**: `iniciarExecucao()` succeeds even when `orcamento` is not approved, or `finalizar()` succeeds when not all required `ItemOS` are marked complete
-4. **Orcamento and OS status coupling**: The `Orcamento` (separate entity) has its own status (GERADO, ENVIADO, APROVADO, REPROVADO, EXPIRADO). When these get out of sync with the OS status, the system enters an unrecoverable state (e.g., orçamento = APROVADO but OS = AGUARDANDO_APROVACAO)
+WhatsApp Cloud API limits marketing messages to **1,000 per day per phone number** in the free tier (Tier 1). If the notification system sends bulk messages (e.g., "OS finalizada" to all customers at once), it hits the limit and messages are silently rejected.
 
 **Why it happens:**
-State machines look simple on paper (7 states, ~10 transitions) but the combinatorial explosion of edge cases is deceptive. Teams implement status as a simple enum field + setters, then add `if/else` guards incrementally. Each guard is tested individually, but the **matrix** of all possible transitions is never exhaustively tested. The `Orcamento` entity sharing lifecycle with OS means changes can happen in one without the other.
+Meta enforces rate limits based on business account quality rating. The limit is not documented in the "quick start" guides — you only discover it when the API starts returning code `130429` (rate overlimit). The limit scales with account quality but starts very low.
 
 **How to avoid:**
-- Implement a **transition matrix** as a single source of truth:
-```java
-enum StatusOS {
-    RECEBIDA,
-    EM_DIAGNOSTICO,
-    AGUARDANDO_APROVACAO,
-    APROVADO,  // split this from AGUARDANDO_APROVACAO
-    EM_EXECUCAO,
-    FINALIZADA,
-    ENTREGUE,
-    CANCELADA;
-
-    private static final Map<StatusOS, Set<StatusOS>> ALLOWED_TRANSITIONS = Map.of(
-        RECEBIDA, Set.of(EM_DIAGNOSTICO, CANCELADA),
-        EM_DIAGNOSTICO, Set.of(AGUARDANDO_APROVACAO, CANCELADA),
-        AGUARDANDO_APROVACAO, Set.of(APROVADO, CANCELADA),
-        APROVADO, Set.of(EM_EXECUCAO, CANCELADA),
-        EM_EXECUCAO, Set.of(FINALIZADA, AGUARDANDO_APROVACAO), // re-orçamento
-        FINALIZADA, Set.of(ENTREGUE),
-        ENTREGUE, Set.of(), // terminal
-        CANCELADA, Set.of() // terminal
-    );
-
-    public boolean canTransitionTo(StatusOS target) {
-        return ALLOWED_TRANSITIONS.getOrDefault(this, Set.of()).contains(target);
-    }
-}
-```
-- Write a single **parameterized test** that validates EVERY possible transition in the matrix (7×7 = 49 cases, trivially covered)
-- Keep `Orcamento` status as a separate concern — OS status should derive from the aggregate's own state, not duplicate the orçamento status. When orçamento expires, a domain event handler transitions OS independently
-- Make `StatusOS` a value object on the aggregate, not a simple String — guard transitions in the domain entity, not in the service layer
+1. Implement a **rate limiter** in the WhatsApp service that tracks daily send count per phone number.
+2. Use **message templates** for all notifications — template messages have higher throughput than free-form. Pre-approve templates in Meta Business Manager.
+3. Queue notifications via CDI events (`Event<NotificacaoWhatsAppEvent>`) with a **background processor** that respects rate limits, rather than sending synchronously.
+4. Log API error code `130429` and retry with exponential backoff — do not discard.
+5. If approaching the limit, fall back gracefully (log + alert admin) rather than crashing.
 
 **Warning signs:**
-- `if (status == RECEBIDA)` scattered across Services instead of centralized
-- Switch statements without `default` that throws for illegal states
-- Integration tests that test "happy path" status transitions but never test illegal transition rejection (400 response)
-- Two boolean fields that together encode 4 states but don't map cleanly to the domain
+- No rate limit tracking logic in the WhatsApp service
+- All notifications are sent synchronously (blocking the request thread)
+- No error handling for code `130429`
+- No daily count reset logic
 
 **Phase to address:**
-OS Foundation Phase — build transition matrix before implementing any Service.
+WhatsApp Integration Phase — build the rate limiter BEFORE the sender. It's harder to retroactively add throttling than to have it from the start.
 
 ---
 
-### Pitfall 3: Inventory Reservation Race Conditions (Double-Reservation / Overselling)
+### Pitfall 3: K8s Liveness vs Readiness Probe Confusion (Pod Restart Loops)
 
 **What goes wrong:**
-Two OS are approved simultaneously for the same rare part. Both pass the `if (estoque.saldoAtual >= quantidade)` check because both read `saldoAtual = 5` before either writes. Result: both OS reserve the same 3 units, committing 6 when only 5 exist. The system allows negative stock — or worse, silently oversells.
+Confusing liveness (`/q/health/live`) and readiness (`/q/health/ready`) probes causes pod restart loops. If you set the **liveness check to depend on database connectivity**, a temporary DB blip restarts the pod — restarting the pod doesn't fix the DB. The pod enters CrashLoopBackoff unnecessarily.
 
 **Why it happens:**
-The "read-check-write" pattern (read stock → check if enough → decrement) is inherently non-atomic. In a monolith with Panache and implicit optimistic locking, two threads can read the same version of `ItemEstoque`, both pass the check, then both write. The second write succeeds because Hibernate's optimistic locking operates at the `ItemEstoque` entity level, but the business logic check was done on stale data. NET: two transactions both see `saldoAtual >= quantidade`, both decrement, and both commit if they loaded the entity with the same version.
+Developers default to checking "everything is OK" in both probes. The Quarkus guide warns: liveness = "is the app running?"; readiness = "can the app handle traffic?" Many teams copy-paste health check code without understanding the distinction.
 
 **How to avoid:**
-- Use **atomic database-level operations** for stock deduction, not application-level read-check-write:
-```sql
-UPDATE item_estoque 
-SET saldo_atual = saldo_atual - :quantidade, 
-    version = version + 1 
-WHERE id = :itemId 
-  AND saldo_atual >= :quantidade
-  AND version = :expectedVersion
-```
-If `rowCount == 0`, the reservation failed — roll back the entire OS approval transaction.
-- In JPA/Hibernate: use `@Version` on `ItemEstoque` and perform the update with a **pessimistic lock** (`LockModeType.PESSIMISTIC_WRITE`) on the specific `ItemEstoque` entities within the reservation transaction. This serializes access to that specific SKU.
-- Keep reservations as a simple **flag** model: `reservas` table with OS ID, item ID, quantity, status. The authoritative stock calculation is always `saldoAtual - SUM(quantidade WHERE status = 'ATIVA')`, computed at query time or through a materialized view.
-- Use `SERIALIZABLE` isolation level for the reservation transaction only — forces the DB to detect conflicting read/write sets.
+1. **Liveness probe** (`/q/health/live`): Only verify the JVM/Quarkus is alive (the existing `ApplicationLivenessCheck` is correct — it always returns `up`).
+2. **Readiness probe** (`/q/health/ready`): Check database connectivity, WhatsApp API connectivity, and other external dependencies.
+3. **Startup probe** (`/q/health/started`): Use `@Startup` for slow-starting containers (Quarkus starts in <1s so this is less critical, but useful if Flyway migrations take time).
+4. Set `initialDelaySeconds` to at least 10s for readiness — Quarkus starts fast but Flyway migrations + database warmup can take 5-10s.
+5. **Never** make liveness dependent on external services.
 
 **Warning signs:**
-- `ItemEstoque.saldoAtual` being decremented in application code after `findById()` instead of in a single JPQL `UPDATE SET saldo = saldo - :qtd WHERE saldo >= :qtd`
-- No `@Version` column on `ItemEstoque` entity
-- Unit tests that never test concurrent reservation (race conditions are invisible in sequential tests)
-- `saldoAtual` can go negative
+- `@Liveness` annotated beans check database connections
+- Both probes have the same checks (copy-paste)
+- Pods restart during routine DB maintenance
 
 **Phase to address:**
-Estoque Foundation Phase. Must include a concurrent test that fires 10 parallel reservation requests for the same item and asserts exactly N reservations succeed (where N = available stock).
-
-**Confidence:** HIGH (well-documented distributed systems race condition pattern — sources: O'Reilly "Designing Data-Intensive Applications", Vaughn Vernon IDDD)
+K8s Manifests Phase — define probe paths and thresholds in application.properties BEFORE generating manifests.
 
 ---
 
-### Pitfall 4: Payment Confirmation Webhook — Idempotency and Race with OS Status
+### Pitfall 4: JaCoCo Multi-Module Coverage — Per-Module 80% Is Not 80% Total
 
 **What goes wrong:**
-The system calls an external bank service (Pagamento context) to process payment. When the bank confirms (webhook callback or polling), multiple failure modes emerge:
-
-1. **Duplicate webhook**: Bank sends the same "payment confirmed" notification twice (common in production). First call updates OS to ENTREGUE. Second call throws 500 because OS is already ENTREGUE — or worse, tries to double-deduct inventory
-2. **Timing race**: "Finalizar OS" (OS→FINALIZADA) and "Payment confirmed callback" arrive simultaneously. The payment confirms before cobranca is emitted. The cobrança emission sees OS=FINALIZADA but Pagamento status is already CONFIRMADO (inconsistent)
-3. **Payment confirmed for wrong OS**: Bank callback doesn't carry the OS ID explicitly, only a transaction reference. If the mapping is stored in a local table and two payments for different OS process concurrently, the callback can match the wrong OS
-4. **Partial confirmations**: Pix or boleto payments sometimes arrive as partial amounts (bank fees deducted, installments). System assumes full payment or nothing, creating reconciliation nightmares
+The current JaCoCo config uses `<element>BUNDLE</element>` which checks coverage **per Maven module**. Module `mekano-domain` might have 95%, `mekano-rest` 70%. The build passes each module independently, but **overall project coverage could be below 80%** because small modules with low coverage don't fail the build.
 
 **Why it happens:**
-Payment integration is treated as a simple synchronous call rather than an asynchronous distributed workflow. The architecture assumes "request → response" when real bank integrations are "request → (hours/days later) → callback with webhook". The transaction boundary is unclear: does payment confirmation belong in the OS aggregate or the Pagamento aggregate?
+The `jacoco:check` goal with `BUNDLE` element runs once per module that has the plugin configured. Each module's check sees only its own classes. There's no **cross-module aggregation** that produces a single project-wide number. Developers optimize coverage in the wrong modules.
 
 **How to avoid:**
-- **Idempotency key on payment callback**: Each Cobranca has a UUID `idempotencyKey`. The bank returns this key in the callback. Before processing any callback, check if this key was already processed. If yes, return 200 OK (idempotent replay) without side effects.
-```java
-// Payment confirmation handler
-@Transactional
-public void handlePaymentConfirmation(PaymentConfirmationEvent event) {
-    if (processedEvents.exists(event.idempotencyKey())) {
-        return; // Already processed, idempotent
-    }
-    OrdemDePagamento pagamento = pagamentoRepository.findByCobrancaId(event.cobrancaId());
-    pagamento.confirmar(event.valor(), event.dataConfirmacao());
-    // The pagamento aggregate emits PagamentoConfirmadoEvent
-    // which the OS bounded context consumes asynchronously
-    processedEvents.record(event.idempotencyKey());
-}
-```
-- **Async boundary between Pagamento and OS**: `Pagamento.confirmar()` emits a `PagamentoConfirmadoEvent`. A separate handler (in the infrastructure event layer) listens for this event and calls `OrdemDeServico.registrarEntrega()`. This decouples the transaction — payment confirmation doesn't need OS to be in the same transaction.
-- **Valor validation**: Always validate that `event.valor() >= pagamento.valorTotal()`. If partial, flag the payment as `PARCIAL` and require manual reconciliation (do not release the vehicle).
-- **Reference mapping**: Store the external transaction reference in the Cobranca entity. Always query by `cobrancaId` (our domain ID) not the external reference.
-- **Timeout + fallback**: If payment is not confirmed within 7 days (or defined SLA), emit `PagamentoVencidoEvent` and notify admin.
+1. Configure a **dedicated aggregation module** or use `jacoco:report-aggregate` in the parent POM to produce a single report across ALL modules. This requires the `report-aggregate` goal (available since JaCoCo 0.7.7) which collects `.exec` files from dependent projects.
+2. OR move the `jacoco:check` execution to the **parent POM** with `<element>BUNDLE</element>` pointing at the aggregated report, not individual modules.
+3. Set `<dataFileIncludes>` to collect all `jacoco.exec` files from child modules.
+4. Run coverage check at the **verify phase** of `mekano-rest` (which depends on all other modules) so it sees the full picture.
+
+**Exclude generated code:**
+- MapStruct implementation classes (suffixed `Impl`, generated in `target/generated-sources/`)
+- Lombok-generated methods (JaCoCo sees these as covered/uncovered lines)
+- Add `**/*MapperImpl.class` and `**/generated/**` to exclusions
 
 **Warning signs:**
-- Payment handler directly calls `ordemDeServico.entregar()` in the same transaction
-- No `processed_events` or idempotency table
-- Payment endpoint is HTTP POST that mutates state without checking for duplicates
-- No validation comparing payment amount to cobranca amount
+- Each module reports >80% individually but `mvn verify` passes despite obvious test gaps in some modules
+- MapStruct `*MapperImpl` classes appear as uncovered in the report
+- No aggregated report is generated during builds
+- The existing exclusions (`*Dto.class`, `*Entity.class`, `*Resource.class`) are correct but need to add MapStruct Impl classes
 
 **Phase to address:**
-Pagamento Foundation Phase. Design the async event flow between Pagamento and OS before implementing any endpoint.
+JaCoCo Coverage Gate Phase — reconfigure the aggregation strategy FIRST, then measure. Measuring without aggregation gives false confidence.
 
 ---
 
-### Pitfall 5: Concurrent Status Writes on the Same OS (Atendente + Mecânico + SLA Timer)
+### Pitfall 5: Clean Code Refactoring Scope Creep (Rewriting Working Code)
 
 **What goes wrong:**
-Three actors can mutate the same OS concurrently:
-- **Atendente** calls `iniciarDiagnostico()` (RECEBIDA → EM_DIAGNOSTICO)
-- **SLA timer** (scheduled job) checks if orçamento expired and calls `cancelar()` (AGUARDANDO_APROVACAO → CANCELADA)
-- **Mecânico** calls `incluirServicosInsumos()` while diagnosing
-
-Without proper locking, the following scenario corrupts state: Atendente transitions OS to EM_DIAGNOSTICO while SLA timer simultaneously tries to cancel the same OS. Both read `RECEBIDA`, both pass their guard conditions, both write. The last writer wins — OS ends up in CANCELADA even though the atendente already started diagnosis.
+The "Clean Code and SOLID" task (QLD-02) devolves into rewriting working code for stylistic preferences. Developers rename variables, extract methods, reorder imports, add interfaces "just in case" — introducing bugs in code that had 517 passing tests.
 
 **Why it happens:**
-The team assumes that because it's a monolith, "transactions will serialize." But `@Transactional` with default `READ_COMMITTED` isolation does NOT prevent the lost update problem. Two transactions can both read the same version of OS, pass their guards, and commit — last writer wins.
+Clean Code is subjective. Without a defined scope (what patterns to fix, what to leave alone), each developer applies their own standards. The existing code is already Clean Architecture — the remaining issues are minor naming inconsistencies and documentation gaps, not architectural problems.
 
 **How to avoid:**
-- **Optimistic locking with `@Version`**: Add a `version` column to the OS table. Hibernate's `@Version` forces `UPDATE ... WHERE id = ? AND version = ?`. If the version has changed since the aggregate was loaded, the transaction throws `OptimisticLockException` → catch and retry or return 409 Conflict.
-- **Decompose OS operations into fine-grained commands**: Each status transition should be an explicit method on the aggregate root that takes a lock on the aggregate. Do NOT use generic `atualizarStatus(novoStatus)` — this hides the intent and bypasses business logic.
-- **SLA timer design**: Instead of a batch job that scans for expired OS, use a **scheduled deadline** stored on the aggregate (`dataExpiracaoOrcamento`). The SLA expiration check should only succeed if the OS is still in AGUARDANDO_APROVACAO:
-```java
-public void cancelarPorExpiracaoSLA() {
-    if (this.status != AGUARDANDO_APROVACAO) {
-        throw new IllegalStateException("Só pode cancelar OS em aguardo de aprovação");
-    }
-    if (LocalDateTime.now().isBefore(this.dataExpiracaoOrcamento)) {
-        throw new IllegalStateException("SLA ainda não expirou");
-    }
-    this.status = CANCELADA;
-    // register event
-}
-```
+1. Define a **fixed list of refactoring targets** before starting: no more than 5-10 specific issues (e.g., "fix Placa/PlacaVeiculo VO duplication", "rename salvar→save in PecaRepositoryPort", "remove dead mapper classes").
+2. **Ban stylistic changes** — no renaming, reformatting, or method extraction unless it's on the list.
+3. Run the full test suite (`./mvnw verify -pl mekano-rest -am`) after EVERY change. A clean code change that breaks tests is not clean code.
+4. Use a linter (Checkstyle or ErrorProne) instead of manual review for code style — automate it.
+5. **Accept good enough.** The project has 10 days left. Perfect code is the enemy of done code.
 
 **Warning signs:**
-- OS entity does not have `@Version` column
-- Generic `setStatus()` or `atualizarStatus()` method instead of explicit business methods
-- Scheduled job that does bulk `UPDATE ordem_servico SET status = 'CANCELADA'` without per-row guard checks
-- No tests for concurrent status transitions
+- PRs that touch 20+ files for "clean code" with test changes
+- Discussion shifting from "does it work" to "is it elegant"
+- Refactoring identified issues that weren't on the original backlog
 
 **Phase to address:**
-OS Foundation Phase (include `@Version` and explicit transition methods in the first OS implementation).
+QLD-02 Refactoring Phase — create a strict refactoring scope document FIRST, get team sign-off, then execute.
 
 ---
 
-### Pitfall 6: Brazilian Document Validation — Regex-Only CPF/CNPJ and the July 2026 Alphanumeric CNPJ
+### Pitfall 6: Tech Debt Shortcut — Mocking WhatsApp Instead of Building Real Integration
 
 **What goes wrong:**
-The system validates CPF and CNPJ using:
-1. **Regex only** (e.g., `\d{11}` or `\d{14}`) — accepts "000.000.000-00" (all zeros, valid format but invalid document) and rejects valid documents with formatting
-2. **Check-digit algorithm incorrect** — CPF uses modulo 11 with specific weights; copying from the internet often gets the weight sequence wrong, especially for CNPJ's second check digit
-3. **Alphanumeric CNPJ ignored** — Instrução Normativa RFB 2.229 (October 2024) mandates alphanumeric CNPJ from **July 2026**. New CNPJs will contain letters A-Z in the first 12 positions. Any validator using `\d{14}` will silently reject valid CNPJs from July 2026 onward. The existing codebase is being built during the transition period.
-4. **CNPJ and CPF mixed up** — The `Cliente` entity allows either CPF or CNPJ. The system tries to validate both fields, or requires both, or doesn't enforce that at least one must be present.
+To save time, the team builds a `WhatsAppNotifierMock` implementation that logs to console and calls it "done". The real WhatsApp API has different error codes, rate limits, token behavior, and message format requirements. The integration works in dev but fails in production.
 
 **Why it happens:**
-Brazilian document validation is deceptively simple — the modulo 11 algorithm is well-documented but the implementation details (weight factors, digit calculation for 10/11 remainder = 0) have edge cases. Most developers copy-paste from StackOverflow or GitHub gists without testing edge cases. The alphanumeric CNPJ change is recent (announced October 2024, effective July 2026) and many libraries haven't updated. The project documentation (`MEKANO_DOCUMENTATION.md` RF01) says "validar formato de CPF e CNPJ" but doesn't specify alphanumeric.
+The 10-day deadline pressures the team to cut corners. Mocking is tempting because the real API requires a Meta Business Account, template approval, and webhook verification. The mock hides all the complexity that WILL bite in production.
 
 **How to avoid:**
-- **Use a maintained library, not custom code**: For Java, use `io.github.felseje:cpf-cnpj-utils` (v1.0.0-alpha supports alphanumeric CNPJ, BSD 3-Clause, available on Maven Central). Alternatively, implement the algorithm as a Value Object in the domain layer with full test coverage.
-- **Implement CPF/CNPJ as a single `Documento` value object** that detects the type based on length (11=CPF, 14=CNPJ) and validates check digits using the Módulo 11 algorithm. Include alphanumeric mapping: letters A-Z map to values 17-42 before the weighted sum (ASCII value - 48).
-- **Accept formatted input**: Allow dots, dashes, and slashes (`123.456.789-09`, `11.222.333/0001-81`). Strip formatting before validation. Store normalized (digits/letters only).
-- **Edge case tests**:
-  - All same digits (000.000.000-00) → INVALID
-  - Valid CPF with known check digits → VALID
-  - CPF with swapped digits → INVALID
-  - Alphanumeric CNPJ (e.g., `12.ABC.345/01DE-35`) → VALID (from July 2026)
-  - CNPJ with formatting → VALID
+1. Use **WhatsApp Cloud API's sandbox** (free, no real phone numbers needed) for testing — it behaves like the real API with rate limits, token checks, and error codes.
+2. If sandbox is not available, use **WireMock** to simulate the real API responses, including error scenarios (401, 429, 500) — not a no-op mock.
+3. Build the `WhatsAppApiClient` as a **Quarkus REST Client** (`@RegisterRestClient`) against the real endpoint URL, configurable via `application.properties`. Swap the base URI for sandbox vs production.
+4. Write **at least one integration test** that calls the sandbox API and verifies the full send + webhook callback flow.
 
 **Warning signs:**
-- Validation regex: `\d{11}` or `\d{14}` (will break July 2026)
-- No test for "all same digit" edge case
-- `Long.parseLong()` on CNPJ without catching `NumberFormatException` (will throw July 2026)
-- CPF validation in the infrastructure layer instead of domain value object
-- No `Documento` value object — CPF and CNPJ stored as raw strings everywhere
+- The WhatsApp client has no HTTP calls to external services
+- No WhatsApp API dependency is declared in `pom.xml`
+- The test for WhatsApp is `assertDoesNotThrow()` on a mock that does nothing
 
 **Phase to address:**
-OS Foundation Phase (Cliente aggregate includes Documento value object). Create and test the Documento VO before any Service that accepts CPF/CNPJ.
+WhatsApp Integration Phase — build against the sandbox API from day 1. A mock-only strategy will fail at production integration testing.
 
 ---
 
-### Pitfall 7: Mercosul License Plate — Only Supporting One Format
+### Pitfall 7: Terraform State Management — Local State Checked Into Git
 
 **What goes wrong:**
-Brazil has two active license plate formats:
-- **Old format** (pre-2018): `ABC-1234` (3 letters + hyphen + 4 digits)
-- **Mercosul format** (2018+): `ABC1D23` (3 letters + 1 digit + 1 letter + 2 digits)
-
-The system only supports the old format. When a user enters a Mercosul plate, validation fails. Or the system only supports Mercosul, rejecting older vehicles still in circulation. The regex `[A-Z]{3}-\d{4}` matches neither format fully.
+Team uses local `terraform.tfstate` files that get committed to git or, worse, ignored by `.gitignore` and lost. When two devs run `terraform apply` simultaneously, the state corrupts. When the CI/CD pipeline runs, it has a stale local state or no state at all, causing resource duplication.
 
 **Why it happens:**
-The migration to Mercosul plates is gradual — new vehicles get Mercosul, existing vehicles keep old format until re-registration. Both formats are valid and will coexist for years. Developers often design for "the new standard" and forget the transition period.
+Terraform works fine locally with local state for the first few applies. The project has no cloud account (K8s via Minikube), so the team doesn't see the need for remote state. By the time the CI/CD pipeline needs to update infrastructure, the local state is outdated or lost.
 
 **How to avoid:**
-- Create a `PlacaVeiculo` value object that accepts both formats:
-  - Old: `[A-Z]{3}-\d{4}` (or `[A-Z]{3}\d{4}` without hyphen)
-  - Mercosul: `[A-Z]{3}\d[A-Z]\d{2}` (e.g., ABC1D23)
-- Normalize to **uppercase without formatting** for storage — always store as `ABC1234` (old) or `ABC1D23` (Mercosul)
-- Validate that the plate is unique (requirement RF02: "Placa deve ser única no sistema")
-- Combined regex: `^[A-Z]{3}[-\s]?\d{4}$|^[A-Z]{3}\d[A-Z]\d{2}$`
-- Test data should include both format examples
+1. Use a **remote backend** from the start — even for local development. Options:
+   - **S3 backend** (AWS): `terraform { backend "s3" { bucket = "...", key = "mekano/terraform.tfstate", region = "...", use_lockfile = true } }`
+   - **Local file backend** with consistent path: Shared network drive or WSL-mounted volume if no cloud is available.
+2. Enable **state locking** to prevent concurrent modifications. The S3 backend supports `use_lockfile = true` for S3-based locking (DynamoDB is deprecated).
+3. Add **`terraform.tfstate*` to `.gitignore`** (CRITICAL — do NOT commit state files, they contain secrets).
+4. Pin the **Terraform provider versions** with `required_providers`:
+   ```hcl
+   terraform {
+     required_providers {
+       kubernetes = {
+         source  = "hashicorp/kubernetes"
+         version = "~> 2.35.0"
+       }
+     }
+     required_version = "~> 1.9.0"
+   }
+   ```
+5. Run `terraform plan` in CI/CD with `-out=tfplan` and `terraform apply tfplan` to prevent drift.
 
 **Warning signs:**
-- Plate regex only matches old format (`ABC-1234`)
-- Plate regex only matches Mercosul format (`ABC1D23`)
-- No normalization before uniqueness check — `ABC-1234` and `ABC1234` treated as different plates
-- Plate stored with hyphen or formatting in database
+- `terraform.tfstate` appears in git commits
+- No `.gitignore` entry for `*.tfstate*`
+- Two developers can run `terraform apply` simultaneously without errors (means no locking)
+- No `required_providers` block in `.tf` files
 
 **Phase to address:**
-OS Foundation Phase (Veiculo aggregate includes PlacaVeiculo value object).
+Terraform Provisioning Phase — configure backend and locking BEFORE writing the first resource. Migrating from local to remote state mid-project is painful.
 
 ---
 
-### Pitfall 8: Quarkus Multi-Module CDI Failures (Compile-OK, Runtime-Break)
+### Pitfall 8: Test Coverage Glut — Writing Low-Value Tests to Hit 80%
 
 **What goes wrong:**
-The application compiles and starts in dev mode, but tests fail or the production build produces `UnsatisfiedResolutionException` or `ClassNotFoundException`. Examples:
-- Beans in `mekano-application` not discovered by CDI in `mekano-rest`
-- MapStruct mappers returning null fields at runtime because annotation processor order is wrong
-- Jandex index not generated for new modules
-- `@ApplicationScoped` on REST resources with JWT injection causes ClassCastException with `_ClientProxy`
+To meet the 80% coverage gate, developers write getter/setter tests, no-op tests, and "test framework initialized" tests. The coverage number goes up but the test suite doesn't catch regressions. The build passes with 80% coverage but bugs slip through because the wrong code is tested.
 
 **Why it happens:**
-Quarkus uses build-time CDI bytecode processing, not runtime classpath scanning. This means:
-1. Classes in non-root modules are invisible unless indexed by Jandex
-2. Annotation processor order in `pom.xml` is strict: Lombok → MapStruct binding → MapStruct processor
-3. `@ApplicationScoped` creates a client proxy; JWT claims injection requires `@RequestScoped` or the proxy fails class cast
-The project already has documented gotchas (G1-G10 in CLAUDE.md) but these are easy to reintroduce when adding the 3 new contexts.
+JaCoCo LINE coverage counts every executed line equally. A test that calls `entity.getId()` and asserts it's non-null "covers" the line but provides zero regression protection. Teams optimize for the metric instead of the outcome.
 
 **How to avoid:**
-- **Verify Jandex on every module**: Run `mvn compile` and check that `target/classes/META-INF/jandex.idx` exists in `mekano-application`, `mekano-infrastructure`, and `mekano-rest`. Add `mekano-domain` if it contains CDI producers.
-- **ArchUnit test**: Write a test that asserts every module (except domain) has a `jandex.idx` file:
-```java
-@Test
-void allModulesExceptDomainShouldHaveJandex() {
-    assertThat(Files.exists(Paths.get("mekano-application/target/classes/META-INF/jandex.idx"))).isTrue();
-    // ...
-}
-```
-- **Resource scoping**: Verify ALL new JAX-RS resources use `@RequestScoped`, not `@ApplicationScoped`. Enforce with ArchUnit: `classes().that().areAnnotatedWith(Path.class).should().notBeAnnotatedWith(ApplicationScoped.class)`
-- **Annotation processor order**: When adding MapStruct mappers for new entities (e.g., `OrdemDeServicoEntity`, `ItemEstoqueEntity`), verify the `<annotationProcessorPaths>` order in the POM matches the required sequence.
-- **Integration test in CI**: At least one `@QuarkusTest` that loads the full application context (all beans) and verifies all injections resolve. A simple "GET /health" test suffices.
+1. Use **BRANCH coverage instead of LINE** as the primary metric (change `<counter>BRANCH</counter>`) — it's harder to game and correlates better with test quality. Set the minimum to 65-70% for BRANCH.
+2. Exclude generated code, DTOs, and trivial getters/setters from the coverage check (already done for `*Dto.class`, `*Entity.class` — verify the exclusions work).
+3. Add **mutations testing** (Pitest) as a quality signal without a hard gate — it catches tests that assert without verifying.
+4. Focus new tests on:
+   - **Domain logic** (value objects validation, entity state machines, business rules) — currently the HIGHEST value per line of test
+   - **Edge cases** in application services (null inputs, duplicates, concurrent modifications)
+   - **Error paths** in resources (validation errors, 404, 409)
+5. Do NOT write tests for:
+   - MapStruct mappers (test the behavior, not the mapping)
+   - JPA repository methods (unless custom query)
+   - Generated code
 
 **Warning signs:**
-- `mvn compile quarkus:dev` works but `mvn package` fails
-- New module added without `jandex-maven-plugin`
-- Resource classes annotated `@ApplicationScoped` instead of `@RequestScoped`
-- MapStruct mappers not placed in the `infrastructure` module alongside JPA entities
+- Tests are titled "testGettersAndSetters" or "testEntityCreation"
+- Coverage report shows 100% on entity classes
+- New tests don't assert behavior, only that "no exception was thrown"
+- Coverage went up but no new business logic is tested
 
 **Phase to address:**
-OS Foundation Phase (initial build setup verification). Must be caught before any business logic is written.
-
-**Confidence:** HIGH (confirmed by Quarkus documentation, StackOverflow multi-module CDI issues \#55513502, and project's own G1-G10 gotcha list)
+JaCoCo Coverage Gate Phase — define test quality criteria alongside coverage targets. Use branch coverage for the gate.
 
 ---
 
-### Pitfall 9: Deadline Rush — Building All 3 Contexts in Parallel Without Vertical Slicing
+### Pitfall 9: HPA Misconfiguration — Autoscaling on Wrong Metrics
 
 **What goes wrong:**
-With 10 days and 5 developers, the team splits into 3 groups (OS, Estoque, Pagamento) and works in parallel from day 1. By day 8:
-- OS context: 70% done but has no items/peças working because Estoque API is not ready
-- Estoque context: 80% done but has no way to test reservation because OS approval (which triggers reservation) isn't fully implemented
-- Pagamento context: 60% done, cobrança endpoint works but OS → Pagamento integration is incomplete
-- Integration is 0% — nothing connects, no end-to-end flow works for demo
-- The last 2 days are a frantic integration scramble producing fragile, untested code
+The HPA is configured to scale on CPU utilization, but Quarkus on Java 17 with a JVM heap of 512MB typically sits at 30-50% CPU under normal load. The HPA never triggers scaling, so during peak traffic the application melts down. OR: the HPA scales based on memory, but the JVM heap pre-allocates and never releases memory, so it scales up infinitely.
 
 **Why it happens:**
-"Divide and conquer" seems logical for 5 people in 10 days. But in a Clean Architecture monolith, the **integration points** between contexts (domain events, transaction boundaries, shared repositories) are where 80% of the complexity lives. Building contexts in isolation defers the hardest problems to the end. The team optimizes for parallel work ("everyone has something to do") instead of optimizing for **delivered value** ("a single working flow end-to-end").
+Kubernetes HPA defaults are CPU-based. Java applications have a different resource profile than Go/Node.js apps — the JVM uses steady CPU and memory even at low request rates. Default thresholds (CPU 80%) may never be reached for a Quarkus app serving 100 requests/second on a single core.
 
 **How to avoid:**
-- **Vertical slice strategy**: Deliver ONE complete flow from start to finish, then iterate:
-  - **Slice 1 (Days 1-4)**: Full OS lifecycle for a simple service-only OS (no parts). Recebida → Em Diagnóstico → Aguardando Aprovação → Aprovado auto → Em Execução → Finalizada → Entregue. No estoque, no pagamento real (auto-confirm).
-  - **Slice 2 (Days 5-7)**: Add Estoque (reservation on approval, deduction on execução start, NF-e registration).
-  - **Slice 3 (Days 8-10)**: Add Pagamento (cobrança emission on finalização, payment confirmation, integration with simulated bank).
-- **Team allocation**: First 2 days: ALL 5 developers work on OS context to establish patterns. Then split: 3 people continue OS improvements, 2 people start Estoque. On day 5, the OS people are familiar enough to guide Estoque integration, share patterns, and write the integration tests.
-- **Integration-first testing**: Write the integration contract (domain events, interfaces) BEFORE implementing either side. "Orçamento Aprovado" event is the contract between OS and Estoque — define its shape on day 1, implement both sides on day 3-7.
-- **Daily working demo**: Every day at 5pm, the system should be deployable and demonstrate something. If no new flow works end-to-end by day 4, the parallel plan is failing — regroup.
+1. **Benchmark before configuring HPA**: Run a load test (`hey` or `k6`) against the app to measure baseline CPU/memory at various request rates.
+2. Set **realistic thresholds**:
+   - CPU target: 70% (not 80%) — Quarkus uses more CPU than memory
+   - Add memory target if the app allocates per-request objects (likely with JPA + MapStruct)
+3. **Test the HPA** with `kubectl run -i --tty load-generator --image=busybox -- /bin/sh -c "while true; do wget -q -O- http://mekano-api:8080/api/v1/servicos; done"` and verify `kubectl get hpa` shows scaling.
+4. Consider using **KEDA** if the app's load pattern is event-driven (CDI events for WhatsApp notifications + OS status transitions), which scales on event queue depth rather than CPU.
+5. Set `minReplicas` to at least 2 and `maxReplicas` to 5-10 for reasonable cost vs performance.
 
 **Warning signs:**
-- Task assignments split strictly by bounded context on day 1
-- No end-to-end integration test passing by day 4
-- "We'll integrate everything on the last 2 days" attitude
-- PRs that only touch a single module (rest, application, OR infrastructure — but not all three for a single feature)
-- Shared domain events are designed independently by each subteam without a sync session
+- HPA configured before any load testing was done
+- No resource `requests`/`limits` set on the container (HPA can't scale without resource metrics)
+- CPU target is the default 80% without understanding the app's profile
+- The app runs on Minikube (single node) where HPA is less meaningful
 
 **Phase to address:**
-Project Planning (before any coding). The roadmap must define vertical slices, not horizontal layers.
+K8s Manifests Phase — run load tests to determine baseline metrics, then configure HPA. Don't guess the thresholds.
 
 ---
 
-### Pitfall 10: Soft Delete and Unique Constraints — Inconsistent Behavior
+### Pitfall 10: Documentation Drift — README Goes Stale Within Days
 
 **What goes wrong:**
-The project uses soft delete (`isActive` + `deletedAt`) on entities. When a user soft-deletes a `Cliente` and then tries to register a new client with the same CPF, the unique constraint on `cpf` in the database fires — the new registration fails with a 500 error instead of being allowed (because the old record's CPF is still in the table, just soft-deleted).
+The team invests time creating beautiful README, Mermaid diagrams, Swagger docs, and a Miro board. Two days later, someone changes an endpoint path or adds a new migration, and the docs are outdated. By week 2, nobody trusts the docs, so nobody reads them, so nobody updates them — dead documents.
 
 **Why it happens:**
-Soft delete and unique constraints are fundamentally in tension. The entity is "logically deleted" but the database row still exists. The constraint was designed for the logical model ("CPF must be unique") but implemented on the physical model where deleted rows still exist.
+Documentation has no **update trigger** tied to code changes. Code is reviewed in PRs; docs are not. There's no CI check that verifies documentation matches the current state of the code.
 
 **How to avoid:**
-- **Composite unique constraint**: Make the unique constraint include `isActive`:
-```sql
-CREATE UNIQUE INDEX idx_cliente_cpf_active ON cliente(cpf) WHERE is_active = true;
-```
-This is a **partial index** — only rows with `is_active = true` participate in uniqueness. Deleted rows are ignored.
-- **Application-level check**: If partial indexes aren't available (or not portable), the application must do a soft-delete-aware uniqueness check before persisting:
-```java
-if (clienteRepository.existsByCpfAndIsActive(cpf, true)) {
-    throw new AppException(409, "CPF já cadastrado");
-}
-```
-But this has a race condition (see Pitfall 3) — use a partial unique index as the source of truth.
-- Apply this pattern consistently: `Veiculo` plate uniqueness, `User` email uniqueness (already using soft delete on User).
+1. **Link docs to code** — Swagger/OpenAPI should be auto-generated by Quarkus (`quarkus-swagger-ui` and `quarkus-smallrye-openapi`), never manually maintained.
+2. Put **Mermaid diagrams in the README** that are generated from code or verified in CI. Use a tool like `mermaid-cli` to snapshot-check diagram changes.
+3. Add a **CI step** that warns if README hasn't been updated when API changes are detected (`git diff --name-only HEAD~1 | grep -q "src/main/java"`).
+4. Keep the **Miro board** as a high-level architecture overview only — don't put implementation details there. Accept that it will be slightly out of sync and document the date of last update.
+5. For the **video demo** (DOC-04): record it LAST (on day 9-10), not first. Record fresh after all code changes are done.
+6. Write documentation as **HOWTO guides** (task-oriented) rather than reference docs — they're more useful and more frequently updated.
 
 **Warning signs:**
-- Unique indexes on columns without `WHERE is_active = true` filter
-- Unit tests that soft-delete then re-create the same natural key — and fail with constraint violation
-- `@Column(unique = true)` annotation on JPA entity instead of manual schema migration
+- The README endpoint list doesn't match `mekano-rest/src/main/java/com/fiap/mekano/rest/api/`
+- Swagger UI shows different contracts than the README
+- Miro board has no "last updated" date
+- PRs don't include documentation updates
 
 **Phase to address:**
-OS Foundation Phase (database schema design). Review all Flyway migrations for partial unique index usage.
+Documentation Phase — generate API docs from code, keep architecture docs high-level, and add a CI warning for doc drift.
 
 ---
 
@@ -397,126 +290,123 @@ OS Foundation Phase (database schema design). Review all Flyway migrations for p
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Generic `atualizarStatus()` instead of explicit business methods | Faster to write OS transitions | Opaque state machine, no audit trail of "what triggered this transition" | NEVER — explicit business methods are the same LOC count and provide domain clarity |
-| Skipping `@Version` on aggregates because "it's a monolith" | Saves 1 annotation per entity | Lost update bugs in production as soon as any concurrent access occurs | NEVER — Hibernate `@Version` is one line per entity and prevents a whole class of bugs |
-| CPF/CNPJ validation as static utility method in infrastructure | Fast to implement | Can't be enforced in domain layer; easy to forget validation in new endpoints; hard to test | NEVER — must be a domain Value Object (Documento) |
-| No domain events between contexts (direct service call) | Simpler initial code | Tight coupling: OS calls Estoque directly, changes in one force changes in the other | MVP only — but must refactor to events by the end of the 10-day sprint |
-| Storing monetary values as `Double` | Faster to code | Floating-point rounding errors in invoice totals, NF-e values (1.99 becomes 1.9899999) | NEVER — use `BigDecimal` or `long` (cents) for all monetary amounts |
-| Single `application.properties` for all contexts | One file to manage | Merge conflicts, hard to find context-specific config, accidental cross-module config leaks | Acceptable for MVP (10 days) but must split by context in a fast-follow |
-| Sharing the same DB schema for `domain` entities and `infrastructure` entities (no mapping) | No MapStruct mapper to write | Domain model leaks JPA annotations; infrastructure changes force domain changes | NEVER — the project already has a clean separation pattern (User ↔ UserEntity); maintain it |
-
----
+| Mock WhatsApp instead of real API | Saves 2-3 days on Meta Business setup | Integration fails in production, 5+ days to fix | NEVER — use sandbox or WireMock |
+| JaCoCo per-module (no aggregation) | Simple config, works now | False 80% pass, real coverage may be 60% | NEVER for a release — fix before coverage gate |
+| Terraform local state | Works immediately, no cloud setup | State loss, concurrent corruption, CI fails | Only for first 2 applies, migrate ASAP |
+| Manual token refresh (WhatsApp) | Quick implementation | 24h expiry == silent failure in production | NEVER — build the refresh service |
+| Stylistic code refactoring | Feels productive | Introduces bugs, breaks tests, burns time | NEVER in a 10-day milestone |
+| Resource resources without limits | Easy, no tuning needed | No HPA metric data, pods can OOM | Temporary during initial deployment, fix before HPA |
+| README with hand-typed endpoints | Looks complete | Drifts immediately, loses trust | NEVER — use auto-generated Swagger for API docs |
+| Single replica K8s deployment | Simple, uses less resources | HPA can't scale, single point of failure | Only for dev/Minikube, never for staging/prod |
 
 ## Integration Gotchas
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| **OS → Estoque (reservar peças ao aprovar orçamento)** | OS directly calls Estoque service synchronously in the same `@Transactional` | OS publishes `OrcamentoAprovadoEvent` via EventPublisher. Estoque handler listens, reserves parts, publishes `ReservaEfeturadaEvent` or `EstoqueInsuficienteEvent`. OS reacts to event. |
-| **OS → Pagamento (emitir cobrança ao finalizar)** | Pagamento endpoint called directly from OS Service | OS → FINALIZADA triggers `OSTerminadaEvent`. Pagamento handler emits cobrança. Pagamento doesn't need to know about OS internals. |
-| **Mock/ServicoBancario (payment gateway)** | No retry logic; assumes bank always responds in < 1 second | Implement `@Retry`, `@Timeout`, and a simulated delay (2-5s) in the mock. Test with network failures. |
-| **Nota Fiscal de Entrada** | Trying to validate NF-e XML locally against SEFAZ | Validate NF-e by verifying the SEFAZ authorization protocol (chave de acesso + protocolo). Do NOT re-implement SEFAZ validation. |
-| **Flyway migrations across contexts** | One monolithic migration file per version (e.g., `V5__create_all_tables.sql`) | One migration per table/feature. Use naming: `V5__create_ordem_servico.sql`, `V6__create_item_os.sql`, `V7__create_estoque.sql`. Makes rollbacks and understanding history possible. |
-
----
+| **WhatsApp Cloud API** | Storing token in `application.properties` (committed to git) | Store in K8s Secret, inject via env var, rotate programmatically |
+| **WhatsApp Cloud API** | Sending sync HTTP request on the Quarkus REST thread | Use `@Asynchronous` or CDI event + background processor |
+| **WhatsApp Cloud API** | Ignoring webhook signature validation | Validate `X-Hub-Signature-256` HMAC-SHA256 on every webhook callback |
+| **WhatsApp Cloud API** | Using free-form messages instead of templates | Templates: pre-approved, higher throughput, required for business-initiated messages |
+| **K8s ConfigMap** | Storing DB passwords in ConfigMap (plaintext) | Use K8s Secret with `opaque` type, reference via `env.valueFrom.secretKeyRef` |
+| **K8s HPA** | Forgetting `requests` in container spec | HPA requires resource requests to calculate target utilization — limits alone are insufficient |
+| **K8s health probes** | Using same path for liveness and readiness | Liveness = `/q/health/live`, Readiness = `/q/health/ready` — they have different purposes |
+| **Terraform S3 backend** | Not enabling `use_lockfile` | Without locking, concurrent `apply` destroys state |
+| **Terraform providers** | No version constraint (`version = "~> X.Y"`) | Unpinned providers can upgrade automatically and break infrastructure |
+| **JaCoCo + MapStruct** | Not excluding `*MapperImpl.class` | Generated mapper implementations show as 0% coverage and drag down the aggregate number |
 
 ## Performance Traps
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| **OS aggregate loads ALL items every time** | OS detail endpoint takes >500ms for OS with 50+ items | Add pagination for items within OS; load only active items when status list is requested; separate "OS summary" query from "OS detail" query | ~200 items per OS |
-| **Estoque saldo calculated by SUM over reservas table** | Stock check takes >100ms for high-turnover parts | Use a materialized or cached saldo_atual column, updated via DB trigger or application event; recalculate periodically | ~10,000 reservas per item |
-| **Soft-delete filter on every query** | `WHERE is_active = true` added to every query, even when not needed | Use separate tables or schemas for historical data; add index on `(is_active, id)` combination; Hibernate `@Where` annotation | General performance degradation; breakpoint is DB-specific and query-pattern-specific |
-| **No caching on Veiculo/Cliente lookups** | Repeated DB calls for the same customer/vehicle data in a single request | Use Caffeine cache (already configured for User — extend pattern to Cliente and Veiculo) with `@CacheResult` | >3 repeated lookups per request (this project won't hit scale issues; this is about response time consistency) |
-| **NF-e entry scanning entire estoque** | After registering a NF-e, the system recalculates all stock alerts | Trigger stock alert check only for items that were in the NF-e, not the entire catalog | ~1000+ items in inventory |
-
-Note: For a workshop-scale system (1-5 mechanics, <100 OS/month), most performance traps won't manifest. The traps above are listed for awareness when the system scales. Do NOT pre-optimize — but DO use patterns that don't paint you into a corner (pagination, selective loading, proper indexing).
-
----
+| **Sync WhatsApp API call** | REST endpoint latency spikes to 500ms-2s per notification | Use `@Asynchronous` or event queue + batch sender | At 10+ concurrent notifications (during OS batch finalization) |
+| **Database-read in every health probe** | Readiness probe queries DB every 10s, adds 6 queries/min per pod | Cache probe status or use a simple connection check (not a full query) | At 5+ pods, the extra probe load is visible in DB metrics |
+| **JVM heap > container limit** | Pod gets OOMKilled because JVM heap exceeds container memory limit | Set `-Xmx` to 70% of container memory limit (e.g., `-Xmx300m` for 512Mi limit) | At any scale — JVM doesn't respect cgroup limits by default on Java 17 (use `-XX:+UseContainerSupport`, which is on by default in Java 17, but DOUBLE CHECK your `-Xmx` doesn't exceed the limit) |
+| **No connection pooling tuning** | DB connections exhausted during HPA scale-up | Tune `quarkus.datasource.jdbc.max-size` relative to `maxReplicas` | At 3+ pods with default 20 connections each = 60 connections to a small PostgreSQL |
+| **Vanity refactoring (renaming)** | Renames cascade through 15+ files, test changes for the same logic | Ban stylistic changes, measure refactoring value in "bugs caught" not "lines changed" | Immediately — wastes 1-2 days of a 10-day milestone |
+| **Full test suite on every commit** | PR CI takes 15+ minutes for 517 tests | Split CI: fast unit tests on commit, full suite on merge to main | When CI pipeline blocks merges repeatedly |
 
 ## Security Mistakes
 
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| **Exposing OS public endpoint without rate limiting** | Malicious client can enumerate OS by UUID (even UUIDs are guessable if using sequential or time-based UUID v1) | Use UUID v4 (random) for public OS identifiers. Implement rate limiting at the HTTP level via Quarkus filter or reverse proxy. |
-| **Returning `Cliente` CPF/CNPJ in public OS status response** | Customer privacy leak — anyone with the OS number can see the customer's CPF | Mask CPF/CNPJ in public endpoints: show only last 3 digits (e.g., `***.123.456-**`). Expose full document only on authenticated admin endpoints. |
-| **SLA timer job with broad update scope** | SQL injection or mass-update failure corrupts all OS | Each SLA expiration check should be a scoped query: `SELECT FROM ordem_servico WHERE status = 'AGUARDANDO_APROVACAO' AND data_expiracao < NOW()`. Update one by one within `@Transactional` with version check. |
-| **Payment webhook unauthenticated** | Anyone can call the payment callback endpoint and change OS status | Protect the webhook endpoint with HMAC signature verification (shared secret between our system and the bank service). For the mock, use a static token in the request header. |
-| **Soft delete revealing deleted records** | Deleted clients/vehicles could be queried via direct API calls | Ensure ALL repository methods include `is_active = true` filter by default. Do NOT expose a "list deleted" endpoint without explicit admin authentication. |
-| **No input sanitization on Veiculo placa** | Cross-site scripting (XSS) if placa is later rendered in a management UI | Validate placa format strictly (only letters and digits in uppercase). Strip any HTML/special characters. Already mitigated by regex validation. |
-
----
+| **WhatsApp token in application.properties** | Token leaked in git history; any developer can send messages as the business | Store in K8s Secret or env var; NEVER commit tokens |
+| **No webhook signature validation** | Attacker can send fake status updates ("pagamento recusado") to the webhook endpoint | Validate `X-Hub-Signature-256` with HMAC-SHA256 using the app secret |
+| **Terraform state file in git** | State contains DB connection strings, possibly passwords | Add `*.tfstate*` to `.gitignore`; use remote backend |
+| **Checkstyle/linter bypass during refactoring** | Security-relevant warnings (injection, null safety) are hidden in unrelated formatting changes | Run linter AFTER refactoring, not before — or skip formatting-only commits |
+| **No rate limiting on webhook endpoint** | Attacker floods webhook endpoint, causing resource exhaustion or triggering fake notifications | Apply `@RateLimit` (or filter) on the webhook POST endpoint |
+| **Exposing internal UUIDs in WhatsApp messages** | UUIDs are guessable; attacker can infer system structure | Send only display-friendly IDs or short codes in WhatsApp notifications |
 
 ## UX Pitfalls
 
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| **Orçamento approval flow has no estimated completion time** | Customer can't decide because they don't know when the car will be ready | Include estimated completion date/time in the orçamento response. Calculate based on service duration estimates. |
-| **OS status doesn't communicate nuance** | Customer sees "Em Execução" but doesn't know if it's 10% or 90% done | Add optional percent-complete to OS status response (managed by mechanic). Even a rough indicator helps. |
-| **Error messages in English** | Brazilian mechanics don't read English | All error messages in the RFC 7807 Problem Details response must be in Brazilian Portuguese. The project uses `Messages` resource bundle — maintain it. |
-| **API returns 500 instead of 400 for domain validation** | Client can't fix their request because the error is opaque | Always throw `AppException` with specific status code and message. The existing `ApiExceptionMapper` handles this — use it consistently. |
-| **Orçamento values shown without discounts** | Customer sees the raw total and rejects because it's too expensive | Consider adding optional "discount" field to OS (percentage or fixed amount) for negotiation. This is a differentiator, not MVP. |
-
----
+| **Generic WhatsApp message** | Customer doesn't know what "OS #42" refers to | Include vehicle model + plate and a readable status description: "Seu Fiat Uno (ABC-1234) está pronto para retirada" |
+| **No opt-out from WhatsApp notifications** | Customer receives unwanted messages | Add a `notificationPrefs` field to Cliente — none/OFF by default |
+| **Portuguese text with proper encoding issues** | Accented characters display as garbage | Ensure WhatsApp message sender uses UTF-8 and the template is submitted with proper charset |
+| **Unclear document phase in audio/video** | Viewers can't tell which code version the video demonstrates | Include a prominent "Recorded for v2.0" caption in the video, and update the README with the recording date |
+| **Mermaid diagram with stale endpoint paths** | Developer tries a documented endpoint that 404s | Autogenerate from Quarkus OpenAPI spec; if manual, add a CI check for drift |
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **OS Status Transitions**: Verify ALL 49 transitions in the matrix — not just the happy path. Test that `CANCELADA` cannot transition to anything. Test that `ENTREGUE` cannot be re-opened.
-- [ ] **CPF/CNPJ Validation**: Test with all-zero, valid known numbers, alphanumeric CNPJ (from July 2026), formatted with mask, unformatted. Test that `Long.parseLong()` is NOT used.
-- [ ] **Mercosul Plate**: Test with old format (`ABC-1234`), Mercosul format (`ABC1D23`), lowercase input (`abc1d23`), with/without hyphen. Normalize all to uppercase without separators.
-- [ ] **Inventory Reservation**: Run concurrent test: 10 parallel requests for the same single-unit item. Assert exactly 1 succeeds, 9 fail. Then assert the item is reserved for the successful OS.
-- [ ] **Payment Confirmation Idempotency**: Send the same webhook twice. Assert payment processed once. Assert OS delivered once. Assert no exception on second call.
-- [ ] **Soft Delete + Unique**: Soft-delete a Cliente, then create a new Cliente with the same CPF. Must succeed. Delete a Veiculo, create with same plate. Must succeed.
-- [ ] **Event Flow End-to-End**: Create OS with parts → approve orçamento → verify reservation in estoque → finalize OS → verify cobrança emitted → confirm payment → verify OS becomes ENTREGUE. All in one integration test.
-- [ ] **Cache Invalidation**: Create user, query user (cache hit), update user, query again (must return updated data, not stale cache). Extend same pattern to Cliente, Veiculo, Estoque.
-- [ ] **SLA Expiration**: Create OS with approval deadline 1 minute in the future. Wait 61 seconds. Assert SLA timer cancels the OS. Assert no double-cancel if timer runs again.
-- [ ] **Jandex Index**: After `mvn clean compile`, verify `jandex.idx` exists in `application`, `infrastructure`, and `rest` modules.
-
----
+- **[ ] WhatsApp Integration:** Often missing token refresh logic — verify the token is rotated programmatically before 24h expiry
+- **[ ] WhatsApp Integration:** Often missing `X-Hub-Signature-256` validation — verify webhook endpoint validates every incoming request
+- **[ ] K8s Manifests:** Often missing resource requests/limits — verify every container has both `requests` and `limits` (HPA needs them)
+- **[ ] K8s Manifests:** Often missing ConfigMap/Secret names for WhatsApp tokens — verify secrets are referenced, not hardcoded
+- **[ ] K8s HPA:** Often missing `minReplicas`/`maxReplicas` or set to `minReplicas: 1` (no HA) — verify at least 2 replicas
+- **[ ] Terraform:** Often missing `required_providers` version constraints — verify every provider has a version pin
+- **[ ] Terraform:** Often missing backend config — verify `terraform init` asks for a backend or shows remote state
+- **[ ] JaCoCo:** Often missing MapStruct `*MapperImpl` exclusions — verify the coverage report doesn't include generated mapper classes
+- **[ ] JaCoCo:** Often missing aggregation for multi-module — verify the coverage number covers ALL modules, not just one
+- **[ ] Clean Code refactoring:** Often missing a defined scope — verify there's a written list of exactly what to refactor before starting
+- **[ ] README:** Often missing Swagger link — verify the README links to `/q/swagger-ui/` (auto-generated, always up-to-date)
+- **[ ] README:** Often missing HPA load testing instructions — verify there's a "how to test autoscaling" section with `kubectl run load-generator` command
+- **[ ] Video demo:** Often recorded too early — verify the video is recorded AFTER all code changes are merged
+- **[ ] CD pipeline:** Often missing `terraform plan` — verify the pipeline runs `terraform plan` before `terraform apply`
 
 ## Recovery Strategies
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| OS aggregate too large | HIGH (requires schema migration, data migration, API versioning) | 1. Identify which sub-entities are accessed independently. 2. Split into separate aggregates (Orcamento gets its own repository). 3. Add migration script to backfill references. 4. Deploy with backward-compatible API for 1 release cycle. |
-| Inventory oversell due to race condition | MEDIUM (requires manual order cancellation + customer notification) | 1. Run reconciliation query: `WHERE reservation > actual_parts_received`. 2. Contact affected customers for affected OS. 3. Add optimistic locking. 4. Implement the atomic UPDATE pattern. |
-| Payment confirmed but OS not delivered | MEDIUM (manual delivery release) | 1. Admin endpoint to force-release delivery for confirmed payments. 2. Add idempotency table retroactively. 3. Write a one-time reconciliation script. |
-| CPF/CNPJ validator breaks for alphanumeric CNPJ | LOW (update one Value Object + re-test) | 1. Update regex from `\d{14}` to alphanumeric-compatible. 2. Update check-digit algorithm for letter mapping. 3. Redeploy. No data migration needed (new CNPJs only). |
-| Soft-delete unique constraint violation | MEDIUM (need to migrate constraint) | 1. Add partial unique index with `WHERE is_active = true`. 2. Remove the old unique constraint. 3. Run deduplication script if conflicts exist. |
-| Quarkus CDI UnsatisfiedResolutionException | LOW (add missing Jandex) | 1. Add `jandex-maven-plugin` to the module. 2. `mvn clean compile`. 3. Redeploy. No code changes needed. |
-
----
+| WhatsApp token expired | LOW | Refresh via `app_id` + `app_secret` endpoint; add health check monitoring |
+| WhatsApp rate limit hit | MEDIUM | Wait 24h for quota reset; implement queuing; request tier upgrade in Meta dashboard |
+| K8s pod crash loop from wrong probes | LOW | `kubectl edit deployment` to fix probe config; no redeploy needed |
+| HPA not scaling | MEDIUM | Run load test to find real resource usage; adjust target metrics; verify `requests` are set |
+| Terraform state corrupt | HIGH | Restore from S3 versioned backups or last known-good state; manual resource reconciliation |
+| Terraform local state lost | HIGH | `terraform import` every resource; manual reconciliation; takes hours |
+| JaCoCo false 80% pass | MEDIUM | Add `report-aggregate` goal; add MapStruct exclusions; re-run and find real number |
+| Refactoring broke tests | LOW | `git checkout .` on the refactored files; re-run tests; restrict refactoring scope |
+| README out of sync with API | LOW | Point readers to Swagger UI as source of truth; remove endpoint listing from README |
+| CD pipeline failed on Terraform | MEDIUM | Check backend state; `terraform init -reconfigure`; ensure service principal has correct permissions |
 
 ## Pitfall-to-Phase Mapping
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Mega-Aggregate OS | OS Foundation (modeling) | ArchUnit test checking entity references |
-| Incomplete State Machine | OS Foundation (transition matrix) | Parameterized test covering all 49 transitions |
-| Inventory Reservation Race Condition | Estoque Foundation | Concurrent reservation test (10 parallel requests) |
-| Payment Webhook Idempotency | Pagamento Foundation | Duplicate webhook test (send same callback twice) |
-| Concurrent OS Status Writes | OS Foundation | Concurrent status transition test (3 parallel actors) |
-| CPF/CNPJ Validation (incl. alphanumeric) | OS Foundation (Documento VO) | Edge case test suite (all-zero, alpha CNPJ, etc.) |
-| Mercosul Plate Format | OS Foundation (PlacaVeiculo VO) | Format acceptance test (old + Mercosul) |
-| Quarkus Multi-Module CDI | Build Setup / OS Foundation | `@QuarkusTest` full context load + ArchUnit resource scope check |
-| Deadline Rush / Wrong Prioritization | Project Planning (vertical slice definition) | Day-4 working demo check |
-| Soft Delete + Unique Constraints | OS Foundation (Flyway migrations) | Integration test: delete → recreate with same natural key |
-
----
+| WhatsApp token expiration | WhatsApp Integration | TokenManager integration test that verifies token refresh before expiry |
+| WhatsApp rate limits | WhatsApp Integration | Rate limiter unit test with daily quota boundary conditions |
+| Liveness vs readiness confusion | K8s Manifests | `kubectl describe pod` shows different probe paths; health check tests pass |
+| JaCoCo multi-module aggregation | JaCoCo Coverage Gate | `./mvnw verify -pl mekano-rest -am` produces ONE aggregated report with MapStruct excluded |
+| Clean Code scope creep | QLD-02 Refactoring | Refactoring PR touches only files on the pre-approved scope list |
+| Mock-only WhatsApp (no real integration) | WhatsApp Integration | WireMock integration test verifies HTTP call signatures and error handling |
+| Terraform local state | Terraform Provisioning | `terraform init` prompts for backend; `terraform.tfstate*` in `.gitignore` |
+| Low-value tests for coverage | JaCoCo Coverage Gate | New tests don't test getters/setters; branch coverage >65% |
+| HPA wrong metrics | K8s Manifests | Load test produces HPA scaling event within 2 minutes |
+| Documentation drift | Documentation | CI warns on README mismatch; Swagger is auto-generated |
+| WhatsApp token in application.properties | WhatsApp Integration | No token string found in any `.properties` or `.yaml` file (only env var refs) |
+| No webhook signature validation | WhatsApp Integration | Exists: test verifies 401 response when signature is missing/invalid |
+| No container resource requests | K8s Manifests | Every Deployment container has both `requests.cpu` and `requests.memory` |
 
 ## Sources
 
-- **DDD Aggregate Design**: Vaughn Vernon "Effective Aggregate Design" (DDDCommunity, 2011) — Parts I, II, III. HIGH confidence. [https://www.dddcommunity.org/library/vernon_2011/](https://www.dddcommunity.org/library/vernon_2011/)
-- **Inventory Reservation Race Conditions**: James Hickey "DDD Aggregates: Consistency Boundary" (2020). HIGH confidence. [https://www.jamesmichaelhickey.com/consistency-boundary/](https://www.jamesmichaelhickey.com/consistency-boundary/)
-- **Quarkus Multi-Module CDI**: Quarkus CDI Reference Guide + StackOverflow: "How to create a Jandex index in Quarkus for classes in a external module." HIGH confidence. [https://stackoverflow.com/questions/55513502](https://stackoverflow.com/questions/55513502)
-- **Brazilian CNPJ Alphanumeric**: IN RFB 2.229 (Oct 2024), effective July 2026. HIGH confidence. [https://www.gov.br/receitafederal/pt-br/assuntos/noticias/2024/outubro/cnpj-tera-letras-e-numeros-a-partir-de-julho-de-2026](https://www.gov.br/receitafederal/pt-br/assuntos/noticias/2024/outubro/cnpj-tera-letras-e-numeros-a-partir-de-julho-de-2026)
-- **cpf-cnpj-utils Java library**: Maven Central, supports alphanumeric CNPJ. MEDIUM confidence (pre-release 1.0.0-alpha). [https://mvnrepository.com/artifact/io.github.felseje/cpf-cnpj-utils/1.0.0-alpha](https://mvnrepository.com/artifact/io.github.felseje/cpf-cnpj-utils/1.0.0-alpha)
-- **Mercosul Plate Regex**: GitHub Gist (leonardortlima) + Regex101 community regex. MEDIUM confidence (community-maintained). [https://gist.github.com/leonardortlima/9f0be71bca4e505d3c0f58f98b73bec0](https://gist.github.com/leonardortlima/9f0be71bca4e505d3c0f58f98b73bec0)
-- **Payment Idempotency Patterns**: Stripe API documentation, Razorpay integration patterns. HIGH confidence.
-- **NF-e/SEFAZ Integration**: Portal da Nota Fiscal Eletrônica — Manual de Orientação ao Contribuinte v.7.0. HIGH confidence. [https://www.nfe.fazenda.gov.br/portal/listaConteudo.aspx?tipoConteudo=ndIjl+iEFdE=](https://www.nfe.fazenda.gov.br/portal/listaConteudo.aspx?tipoConteudo=ndIjl+iEFdE=)
-- **Project Gotchas (G1-G10)**: Project's own CLAUDE.md — derived from actual experience building the auth subsystem. HIGH confidence. [https://github.com/fiap-mekano/mekano/CLAUDE.md](https://github.com/fiap-mekano/mekano/CLAUDE.md)
-- **Software Project Deadline Mistakes**: Corcodia Blog "Common Pitfalls in Software Projects" (2026). MEDIUM confidence. [https://corcodia.com/blog/common-pitfalls-in-software-projects-and-how-to-avoid-them](https://corcodia.com/blog/common-pitfalls-in-software-projects-and-how-to-avoid-them)
+- **WhatsApp Cloud API:** Meta official docs via Context7 (`/fbsamples/whatsapp-api-examples`) — rate limits, token types, webhook signature validation, message templates
+- **Quarkus K8s:** Official Quarkus guides — "Deploying to Kubernetes" (health probes, ConfigMap/Secret, env vars, HPA), "SmallRye Health" (liveness/readiness/startup distinction), "Kubernetes Config" (external configuration from ConfigMaps/Secrets)
+- **JaCoCo:** Official JaCoCo docs via Context7 (`/websites/jacoco_jacoco_trunk_doc`) — `report-aggregate` goal, excludes for coverage checks, FAQ on exclude behavior (agent vs report)
+- **Terraform:** HashiCorp official docs via Context7 (`/websites/developer_hashicorp_terraform`) — S3 backend, state locking, `required_providers`, `use_lockfile` for S3 locking
+- **Project AGENTS.md:** Verified codebase analysis — existing JaCoCo config (BUNDLE element, per-module), existing health check (ApplicationLivenessCheck with `@Liveness`), existing exclusion patterns
+- **PROJECT.md:** Milestone requirements — 10-day deadline, 5 developers, WhatsApp notifications, K8s manifests, Terraform, 80% coverage, Clean Code refactoring
+- **Personal experience:** Common Quarkus K8s deployment issues, WhatsApp integration patterns, JaCoCo multi-module aggregation failings, Clean Code refactoring scope creep
 
 ---
 
-*Pitfalls research for: Mekano — Mechanical Workshop Management System*
-*Researched: 2026-06-20*
+*Pitfalls research for: Mekano v2.0 infra-docs-quality-whatsapp milestone*
+*Researched: 2026-08-08*
