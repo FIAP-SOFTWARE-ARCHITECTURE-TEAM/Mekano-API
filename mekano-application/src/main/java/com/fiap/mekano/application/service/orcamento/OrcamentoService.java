@@ -1,12 +1,15 @@
 package com.fiap.mekano.application.service.orcamento;
 
+import com.fiap.mekano.domain.event.OrcamentoAprovadoEvent;
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.exception.Messages;
+import com.fiap.mekano.domain.model.ItemOrcamento;
 import com.fiap.mekano.domain.model.Orcamento;
 import com.fiap.mekano.domain.model.OrdemDeServico;
 import com.fiap.mekano.domain.port.in.AprovarOrcamentoCommand;
 import com.fiap.mekano.domain.port.in.OrcamentoServicePort;
 import com.fiap.mekano.domain.port.in.ReprovarOrcamentoCommand;
+import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -20,11 +23,14 @@ public class OrcamentoService implements OrcamentoServicePort {
 
     private final OrcamentoRepositoryPort orcamentoRepository;
     private final OrdemDeServicoRepositoryPort ordemDeServicoRepository;
+    private final EventPublisher eventPublisher;
 
     public OrcamentoService(OrcamentoRepositoryPort orcamentoRepository,
-                            OrdemDeServicoRepositoryPort ordemDeServicoRepository) {
+                            OrdemDeServicoRepositoryPort ordemDeServicoRepository,
+                            EventPublisher eventPublisher) {
         this.orcamentoRepository = orcamentoRepository;
         this.ordemDeServicoRepository = ordemDeServicoRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -42,7 +48,17 @@ public class OrcamentoService implements OrcamentoServicePort {
             ordemDeServicoRepository.save(os);
         }
 
-        return orcamentoRepository.save(orcamento);
+        Orcamento saved = orcamentoRepository.save(orcamento);
+
+        List<OrcamentoAprovadoEvent.ItemOrcamento> itens = saved.getItens().stream()
+                .filter(i -> i.getPecaId() != null)
+                .map(i -> new OrcamentoAprovadoEvent.ItemOrcamento(i.getPecaId(), i.getQuantidade().intValue()))
+                .toList();
+        if (!itens.isEmpty()) {
+            eventPublisher.publish(new OrcamentoAprovadoEvent(saved.getId(), itens));
+        }
+
+        return saved;
     }
 
     @Override

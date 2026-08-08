@@ -1,5 +1,6 @@
 package com.fiap.mekano.application.service.orcamento;
 
+import com.fiap.mekano.domain.event.OrcamentoAprovadoEvent;
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.model.ItemOrcamento;
 import com.fiap.mekano.domain.model.Orcamento;
@@ -8,11 +9,13 @@ import com.fiap.mekano.domain.model.StatusOS;
 import com.fiap.mekano.domain.model.StatusOrcamento;
 import com.fiap.mekano.domain.port.in.AprovarOrcamentoCommand;
 import com.fiap.mekano.domain.port.in.ReprovarOrcamentoCommand;
+import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -36,8 +39,62 @@ class OrcamentoServiceTest {
     @Mock
     OrdemDeServicoRepositoryPort ordemDeServicoRepository;
 
+    @Mock
+    EventPublisher eventPublisher;
+
     @InjectMocks
     OrcamentoService orcamentoService;
+
+    @Test
+    @DisplayName("aprovar() deve publicar OrcamentoAprovadoEvent com itens de peça")
+    void devePublicarEventoAprovacaoComItensPeca() {
+        var os = OrdemDeServico.create(UUID.randomUUID(), UUID.randomUUID(), "Problema");
+        os.iniciarDiagnostico();
+        os.finalizarDiagnostico();
+        var osUuid = os.getId();
+        UUID pecaId = UUID.randomUUID();
+        var orcamento = Orcamento.create("Teste",
+                List.of(
+                        new ItemOrcamento("Peça A", 2L, BigDecimal.TEN, pecaId),
+                        new ItemOrcamento("Serviço B", 1L, BigDecimal.valueOf(50))
+                ), osUuid);
+
+        when(orcamentoRepository.findByUuid(orcamento.getId())).thenReturn(Optional.of(orcamento));
+        when(ordemDeServicoRepository.findById(osUuid)).thenReturn(Optional.of(os));
+        when(orcamentoRepository.save(any(Orcamento.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(ordemDeServicoRepository.save(any(OrdemDeServico.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        orcamentoService.aprovar(new AprovarOrcamentoCommand(orcamento.getId()));
+
+        ArgumentCaptor<OrcamentoAprovadoEvent> captor = ArgumentCaptor.forClass(OrcamentoAprovadoEvent.class);
+        verify(eventPublisher).publish(captor.capture());
+
+        OrcamentoAprovadoEvent evento = captor.getValue();
+        assertEquals(orcamento.getId(), evento.orcamentoId());
+        assertEquals(1, evento.itens().size());
+        assertEquals(pecaId, evento.itens().get(0).pecaId());
+        assertEquals(2, evento.itens().get(0).quantidade());
+    }
+
+    @Test
+    @DisplayName("aprovar() não deve publicar evento quando orçamento não tem itens de peça")
+    void naoDevePublicarEventoSeSemItensPeca() {
+        var os = OrdemDeServico.create(UUID.randomUUID(), UUID.randomUUID(), "Problema");
+        os.iniciarDiagnostico();
+        os.finalizarDiagnostico();
+        var osUuid = os.getId();
+        var orcamento = Orcamento.create("Teste",
+                List.of(new ItemOrcamento("Serviço", 1L, BigDecimal.TEN)), osUuid);
+
+        when(orcamentoRepository.findByUuid(orcamento.getId())).thenReturn(Optional.of(orcamento));
+        when(ordemDeServicoRepository.findById(osUuid)).thenReturn(Optional.of(os));
+        when(orcamentoRepository.save(any(Orcamento.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(ordemDeServicoRepository.save(any(OrdemDeServico.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        orcamentoService.aprovar(new AprovarOrcamentoCommand(orcamento.getId()));
+
+        verify(eventPublisher, never()).publish(any());
+    }
 
     @Test
     @DisplayName("aprovar() deve aprovar orçamento e transicionar OS para AGUARDANDO_EXECUCAO")
