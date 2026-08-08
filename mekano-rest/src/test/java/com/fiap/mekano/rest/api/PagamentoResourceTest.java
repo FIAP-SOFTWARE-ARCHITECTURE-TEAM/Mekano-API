@@ -1,8 +1,10 @@
 package com.fiap.mekano.rest.api;
 
+import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
 import io.restassured.http.ContentType;
+import jakarta.inject.Inject;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -24,6 +26,9 @@ class PagamentoResourceTest {
     private static String osId;
     private static String pecaId;
 
+    @Inject
+    PecaRepositoryPort pecaRepository;
+
     @Test
     @Order(1)
     @TestSecurity(user = "admin", roles = {"admin"})
@@ -39,6 +44,9 @@ class PagamentoResourceTest {
                 .then()
                 .statusCode(201)
                 .extract().path("id");
+
+        // Creditar saldo para viabilizar o pipeline de reserva/débito
+        pecaRepository.creditarSaldo(UUID.fromString(pecaId), 10);
 
         osId = given()
                 .contentType(ContentType.JSON)
@@ -219,5 +227,18 @@ class PagamentoResourceTest {
                 .patch(OS_PATH + "/" + novaOsId + "/confirmar-pagamento")
                 .then()
                 .statusCode(409);
+    }
+
+    @Test
+    @Order(11)
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void confirmarPagamentoDuplicado_retorna200() {
+        // D-06: segunda confirmação deve retornar 200 (idempotente), não 409
+        given()
+                .when()
+                .patch(OS_PATH + "/" + osId + "/confirmar-pagamento")
+                .then()
+                .statusCode(200)
+                .body("status", equalTo("CONFIRMADO"));
     }
 }
