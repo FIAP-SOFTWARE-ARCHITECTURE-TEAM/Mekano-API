@@ -3,9 +3,11 @@ package com.fiap.mekano.application.service.ordemdeservico;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.fiap.mekano.application.service.os.OsAuditEventPublisher;
 import com.fiap.mekano.domain.event.DiagnosticoFinalizadoEvent;
 import com.fiap.mekano.domain.event.OSFinalizadaEvent;
 import com.fiap.mekano.domain.event.OrdemDeServicoCriadaEvent;
@@ -15,6 +17,7 @@ import com.fiap.mekano.domain.model.ItemOrcamento;
 import com.fiap.mekano.domain.model.OrdemDeServico;
 import com.fiap.mekano.domain.model.Peca;
 import com.fiap.mekano.domain.model.Servico;
+import com.fiap.mekano.domain.os.OsAuditAction;
 import com.fiap.mekano.domain.port.in.CreateOrdemDeServicoCommand;
 import com.fiap.mekano.domain.port.in.FinalizarDiagnosticoCommand;
 import com.fiap.mekano.domain.port.in.OrdemDeServicoServicePort;
@@ -34,20 +37,23 @@ import jakarta.transaction.Transactional;
 @ApplicationScoped
 public class OrdemDeServicoService implements OrdemDeServicoServicePort {
 
-    private final OrdemDeServicoRepositoryPort repository;
+private final OrdemDeServicoRepositoryPort repository;
     private final EventPublisher eventPublisher;
     private final PecaRepositoryPort pecaRepository;
     private final ServicoRepositoryPort servicoRepository;
     private final OrcamentoRepositoryPort orcamentoRepository;
+    private final OsAuditEventPublisher osAuditEventPublisher;
 
     public OrdemDeServicoService(OrdemDeServicoRepositoryPort repository, EventPublisher eventPublisher,
-                                 PecaRepositoryPort pecaRepository, ServicoRepositoryPort servicoRepository,
-                                 OrcamentoRepositoryPort orcamentoRepository) {
+                                  PecaRepositoryPort pecaRepository, ServicoRepositoryPort servicoRepository,
+                                  OrcamentoRepositoryPort orcamentoRepository,
+                                  OsAuditEventPublisher osAuditEventPublisher) {
         this.repository = repository;
         this.eventPublisher = eventPublisher;
         this.pecaRepository = pecaRepository;
         this.servicoRepository = servicoRepository;
         this.orcamentoRepository = orcamentoRepository;
+        this.osAuditEventPublisher = osAuditEventPublisher;
     }
 
     @Override
@@ -56,6 +62,8 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
         OrdemDeServico os = OrdemDeServico.create(command.clienteId(), command.veiculoId(), command.descricaoProblema());
         OrdemDeServico saved = repository.save(os);
         eventPublisher.publish(OrdemDeServicoCriadaEvent.of(saved));
+        osAuditEventPublisher.publish(saved.getId(), OsAuditAction.CRIAR, null,
+                OsAuditAction.CRIAR.getObservacaoDefault(), Map.of());
         return saved;
     }
 
@@ -88,7 +96,10 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
     public OrdemDeServico iniciarDiagnostico(UUID id) {
         OrdemDeServico os = findById(id);
         os.iniciarDiagnostico();
-        return repository.save(os);
+        OrdemDeServico saved = repository.save(os);
+        osAuditEventPublisher.publish(saved.getId(), OsAuditAction.DIAGNOSTICAR, null,
+                OsAuditAction.DIAGNOSTICAR.getObservacaoDefault(), Map.of());
+        return saved;
     }
 
     @Override
@@ -116,6 +127,8 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
         os.finalizarDiagnostico();
         repository.save(os);
         eventPublisher.publish(DiagnosticoFinalizadoEvent.of(os.getId(), command.descricao(), itens));
+        osAuditEventPublisher.publish(os.getId(), OsAuditAction.ORCAR, null,
+                OsAuditAction.ORCAR.getObservacaoDefault(), Map.of("itens", itens.size()));
         return os;
     }
 
@@ -134,7 +147,9 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
             });
         }
         os.cancelar(motivo);
-        return repository.save(os);
+        OrdemDeServico saved = repository.save(os);
+        osAuditEventPublisher.publish(saved.getId(), OsAuditAction.CANCELAR, null, motivo, Map.of());
+        return saved;
     }
 
     @Override
@@ -144,6 +159,7 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
         var event = os.entregar(recebidoPor);
         OrdemDeServico saved = repository.save(os);
         eventPublisher.publish(event);
+        osAuditEventPublisher.publish(saved.getId(), OsAuditAction.ENTREGAR, null, recebidoPor, Map.of());
         return saved;
     }
 
@@ -172,7 +188,11 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
         }
 
         os.iniciarExecucao(mecanicoUuid, observacao);
-        return repository.save(os);
+        OrdemDeServico saved = repository.save(os);
+        osAuditEventPublisher.publish(saved.getId(), OsAuditAction.EXECUTAR, null,
+                OsAuditAction.EXECUTAR.getObservacaoDefault(),
+                Map.of("mecanico", mecanicoUuid.toString()));
+        return saved;
     }
 
     @Override
@@ -185,6 +205,8 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
         os.finalizarExecucao(observacao);
         OrdemDeServico saved = repository.save(os);
         eventPublisher.publish(OSFinalizadaEvent.of(saved.getId()));
+        osAuditEventPublisher.publish(saved.getId(), OsAuditAction.FINALIZAR, null,
+                OsAuditAction.FINALIZAR.getObservacaoDefault(), Map.of());
         return saved;
     }
 

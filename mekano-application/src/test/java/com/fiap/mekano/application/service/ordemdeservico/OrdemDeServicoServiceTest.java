@@ -1,5 +1,6 @@
 package com.fiap.mekano.application.service.ordemdeservico;
 
+import com.fiap.mekano.application.service.os.OsAuditEventPublisher;
 import com.fiap.mekano.domain.event.DiagnosticoFinalizadoEvent;
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.model.ItemOrcamento;
@@ -8,6 +9,7 @@ import com.fiap.mekano.domain.model.OrdemDeServico;
 import com.fiap.mekano.domain.model.Peca;
 import com.fiap.mekano.domain.model.Servico;
 import com.fiap.mekano.domain.model.StatusOS;
+import com.fiap.mekano.domain.os.OsAuditAction;
 import com.fiap.mekano.domain.port.in.FinalizarDiagnosticoCommand;
 import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
@@ -30,11 +32,12 @@ import org.mockito.quality.Strictness;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -56,6 +59,9 @@ class OrdemDeServicoServiceTest {
 
     @Mock
     OrcamentoRepositoryPort orcamentoRepository;
+
+    @Mock
+    OsAuditEventPublisher osAuditEventPublisher;
 
     @InjectMocks
     OrdemDeServicoService service;
@@ -215,5 +221,131 @@ class OrdemDeServicoServiceTest {
         service.cancelar(osId, "Desistiu");
 
         verify(pecaRepository, never()).liberarReserva(any(), anyInt());
+    }
+
+    // ─────────────── Testes de auditoria (D-11) ───────────────
+
+    @Test
+    @DisplayName("create deve auditar CRIAR")
+    void createAuditaCRIAR() {
+        var cmd = new com.fiap.mekano.domain.port.in.CreateOrdemDeServicoCommand(
+                UUID.randomUUID(), UUID.randomUUID(), "Teste");
+        var novaOs = OrdemDeServico.create(cmd.clienteId(), cmd.veiculoId(), cmd.descricaoProblema());
+        when(repository.save(any())).thenReturn(novaOs);
+
+        service.create(cmd);
+
+        verify(osAuditEventPublisher).publish(novaOs.getId(), OsAuditAction.CRIAR, null,
+                OsAuditAction.CRIAR.getObservacaoDefault(), Map.of());
+    }
+
+    @Test
+    @DisplayName("iniciarDiagnostico deve auditar DIAGNOSTICAR")
+    void iniciarDiagnosticoAuditaDIAGNOSTICAR() {
+        // OS precisa estar em RECEBIDA
+        OrdemDeServico osNova = OrdemDeServico.create(UUID.randomUUID(), UUID.randomUUID(), "Teste");
+        UUID novoId = UUID.randomUUID();
+        when(repository.findById(novoId)).thenReturn(Optional.of(osNova));
+
+        service.iniciarDiagnostico(novoId);
+
+        verify(osAuditEventPublisher).publish(any(), eq(OsAuditAction.DIAGNOSTICAR), isNull(),
+                eq(OsAuditAction.DIAGNOSTICAR.getObservacaoDefault()), eq(Map.of()));
+    }
+
+    @Test
+    @DisplayName("finalizarDiagnostico deve auditar ORCAR com metadata itens.size")
+    void finalizarDiagnosticoAuditaORCAR() {
+        UUID pecaId = UUID.randomUUID();
+        Peca peca = Peca.reconstitute(pecaId, "PEA-001", "Óleo Motor 5W30",
+                new BigDecimal("45.50"), 50L, 10L, LocalDateTime.now(), 0L);
+        when(pecaRepository.buscarPorId(pecaId)).thenReturn(Optional.of(peca));
+
+        var command = new FinalizarDiagnosticoCommand(
+                osId, "Troca de óleo",
+                List.of(new FinalizarDiagnosticoCommand.ItemDiagnostico(pecaId, "PECA", 2L)));
+
+        service.finalizarDiagnostico(command);
+
+        verify(osAuditEventPublisher).publish(any(), eq(OsAuditAction.ORCAR), isNull(),
+                eq(OsAuditAction.ORCAR.getObservacaoDefault()), eq(Map.of("itens", 1)));
+    }
+
+    @Test
+    @DisplayName("iniciarExecucao deve auditar EXECUTAR com metadata mecanico")
+    void iniciarExecucaoAuditaEXECUTAR() {
+        UUID mecanicoId = UUID.randomUUID();
+        UUID orcamentoUuid = UUID.randomUUID();
+        UUID pecaId = UUID.randomUUID();
+
+        OrdemDeServico osExec = OrdemDeServico.create(UUID.randomUUID(), UUID.randomUUID(), "Problema");
+        osExec.iniciarDiagnostico();
+        osExec.finalizarDiagnostico();
+        osExec.aprovarOrcamento(orcamentoUuid);
+
+        var orcamento = Orcamento.create("Orçamento",
+                List.of(new ItemOrcamento("Peça A", 2L, BigDecimal.TEN, pecaId)));
+        orcamento.aprovar();
+
+        when(repository.findById(osId)).thenReturn(Optional.of(osExec));
+        when(pecaRepository.debitarSaldoReservado(pecaId, 2)).thenReturn(true);
+        when(orcamentoRepository.findByUuid(orcamentoUuid)).thenReturn(Optional.of(orcamento));
+
+        service.iniciarExecucao(osId, mecanicoId, null);
+
+        verify(osAuditEventPublisher).publish(any(), eq(OsAuditAction.EXECUTAR), isNull(),
+                eq(OsAuditAction.EXECUTAR.getObservacaoDefault()), eq(Map.of("mecanico", mecanicoId.toString())));
+    }
+
+    @Test
+    @DisplayName("finalizarExecucao deve auditar FINALIZAR")
+    void finalizarExecucaoAuditaFINALIZAR() {
+        OrdemDeServico osEmExec = OrdemDeServico.create(UUID.randomUUID(), UUID.randomUUID(), "Problema");
+        osEmExec.iniciarDiagnostico();
+        osEmExec.finalizarDiagnostico();
+        osEmExec.aprovarOrcamento(UUID.randomUUID());
+        osEmExec.iniciarExecucao(UUID.randomUUID(), null);
+
+        when(repository.findById(osId)).thenReturn(Optional.of(osEmExec));
+
+        service.finalizarExecucao(osId, "Finalizado");
+
+        verify(osAuditEventPublisher).publish(any(), eq(OsAuditAction.FINALIZAR), isNull(),
+                eq(OsAuditAction.FINALIZAR.getObservacaoDefault()), eq(Map.of()));
+    }
+
+    @Test
+    @DisplayName("cancelar deve auditar CANCELAR com motivo como observacao")
+    void cancelarAuditaCANCELAR() {
+        OrdemDeServico osCancel = OrdemDeServico.create(UUID.randomUUID(), UUID.randomUUID(), "Problema");
+        osCancel.iniciarDiagnostico();
+        osCancel.finalizarDiagnostico();
+
+        when(repository.findById(osId)).thenReturn(Optional.of(osCancel));
+
+        service.cancelar(osId, "Cliente desistiu");
+
+        verify(osAuditEventPublisher).publish(any(), eq(OsAuditAction.CANCELAR), isNull(),
+                eq("Cliente desistiu"), eq(Map.of()));
+    }
+
+    @Test
+    @DisplayName("entregar deve auditar ENTREGAR com recebidoPor como observacao")
+    void entregarAuditaENTREGAR() {
+        OrdemDeServico osEntregue = OrdemDeServico.create(UUID.randomUUID(), UUID.randomUUID(), "Problema");
+        osEntregue.iniciarDiagnostico();
+        osEntregue.finalizarDiagnostico();
+        osEntregue.aprovarOrcamento(UUID.randomUUID());
+        osEntregue.iniciarExecucao(UUID.randomUUID(), null);
+        osEntregue.finalizarExecucao(null);
+        osEntregue.gerarCobranca();
+        osEntregue.confirmarPagamento("ref-123");
+
+        when(repository.findById(osId)).thenReturn(Optional.of(osEntregue));
+
+        service.entregar(osId, "João");
+
+        verify(osAuditEventPublisher).publish(any(), eq(OsAuditAction.ENTREGAR), isNull(),
+                eq("João"), eq(Map.of()));
     }
 }

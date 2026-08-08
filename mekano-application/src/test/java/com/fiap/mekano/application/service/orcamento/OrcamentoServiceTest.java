@@ -1,5 +1,6 @@
 package com.fiap.mekano.application.service.orcamento;
 
+import com.fiap.mekano.application.service.os.OsAuditEventPublisher;
 import com.fiap.mekano.domain.event.OrcamentoAprovadoEvent;
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.model.ItemOrcamento;
@@ -7,6 +8,7 @@ import com.fiap.mekano.domain.model.Orcamento;
 import com.fiap.mekano.domain.model.OrdemDeServico;
 import com.fiap.mekano.domain.model.StatusOS;
 import com.fiap.mekano.domain.model.StatusOrcamento;
+import com.fiap.mekano.domain.os.OsAuditAction;
 import com.fiap.mekano.domain.port.in.AprovarOrcamentoCommand;
 import com.fiap.mekano.domain.port.in.ReprovarOrcamentoCommand;
 import com.fiap.mekano.domain.port.out.EventPublisher;
@@ -22,11 +24,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -41,6 +44,9 @@ class OrcamentoServiceTest {
 
     @Mock
     EventPublisher eventPublisher;
+
+    @Mock
+    OsAuditEventPublisher osAuditEventPublisher;
 
     @InjectMocks
     OrcamentoService orcamentoService;
@@ -185,5 +191,63 @@ class OrcamentoServiceTest {
 
         assertThrows(AppException.class,
                 () -> orcamentoService.reprovar(new ReprovarOrcamentoCommand(uuid, "motivo")));
+    }
+
+    // ─────────────── Testes de auditoria (D-11) ───────────────
+
+    @Test
+    @DisplayName("aprovar() deve auditar APROVAR quando OS associada")
+    void aprovarAuditaAPROVAR() {
+        var os = OrdemDeServico.create(UUID.randomUUID(), UUID.randomUUID(), "Problema");
+        os.iniciarDiagnostico();
+        os.finalizarDiagnostico();
+        var osUuid = os.getId();
+        var orcamento = Orcamento.create("Teste",
+                List.of(new ItemOrcamento("Item", 1L, BigDecimal.TEN)), osUuid);
+
+        when(orcamentoRepository.findByUuid(orcamento.getId())).thenReturn(Optional.of(orcamento));
+        when(ordemDeServicoRepository.findById(osUuid)).thenReturn(Optional.of(os));
+        when(orcamentoRepository.save(any(Orcamento.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(ordemDeServicoRepository.save(any(OrdemDeServico.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        orcamentoService.aprovar(new AprovarOrcamentoCommand(orcamento.getId()));
+
+        verify(osAuditEventPublisher).publish(osUuid, OsAuditAction.APROVAR, null,
+                OsAuditAction.APROVAR.getObservacaoDefault(), Map.of());
+    }
+
+    @Test
+    @DisplayName("aprovar() não deve auditar APROVAR quando OS não associada")
+    void aprovarNaoAuditaSemOS() {
+        var orcamento = Orcamento.create("Teste",
+                List.of(new ItemOrcamento("Item", 1L, BigDecimal.TEN)));
+
+        when(orcamentoRepository.findByUuid(orcamento.getId())).thenReturn(Optional.of(orcamento));
+        when(orcamentoRepository.save(any(Orcamento.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        orcamentoService.aprovar(new AprovarOrcamentoCommand(orcamento.getId()));
+
+        verify(osAuditEventPublisher, never()).publish(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("reprovar() deve auditar CANCELAR com observação de reprovação")
+    void reprovarAuditaCANCELAR() {
+        var os = OrdemDeServico.create(UUID.randomUUID(), UUID.randomUUID(), "Problema");
+        os.iniciarDiagnostico();
+        os.finalizarDiagnostico();
+        var osUuid = os.getId();
+        var orcamento = Orcamento.create("Teste",
+                List.of(new ItemOrcamento("Item", 1L, BigDecimal.TEN)), osUuid);
+
+        when(orcamentoRepository.findByUuid(orcamento.getId())).thenReturn(Optional.of(orcamento));
+        when(ordemDeServicoRepository.findById(osUuid)).thenReturn(Optional.of(os));
+        when(orcamentoRepository.save(any(Orcamento.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(ordemDeServicoRepository.save(any(OrdemDeServico.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        orcamentoService.reprovar(new ReprovarOrcamentoCommand(orcamento.getId(), "Cliente desistiu"));
+
+        verify(osAuditEventPublisher).publish(osUuid, OsAuditAction.CANCELAR, null,
+                "Orçamento reprovado pelo cliente", Map.of());
     }
 }
