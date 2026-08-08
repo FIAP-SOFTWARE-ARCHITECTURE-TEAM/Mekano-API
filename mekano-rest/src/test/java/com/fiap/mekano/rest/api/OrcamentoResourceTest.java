@@ -24,6 +24,7 @@ import java.util.UUID;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
 
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -130,5 +131,46 @@ class OrcamentoResourceTest {
                 .then()
                 .statusCode(404)
                 .contentType(containsString("application/problem+json"));
+    }
+
+    // ─────────────── ANÔNIMOS (públicos) ───────────────
+
+    @Test
+    @Order(5)
+    void aprovar_anonimo_retorna200() {
+        given()
+                .contentType(ContentType.JSON)
+                .when()
+                .post(BASE_PATH + "/" + ORCAMENTO_UUID + "/aprovar")
+                .then()
+                .statusCode(200)
+                .body("id", equalTo(ORCAMENTO_UUID.toString()))
+                .body("status", equalTo("APROVADO"));
+    }
+
+    @Test
+    @Order(6)
+    void reprovar_anonimo_retorna200() {
+        given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {"motivo": "Orçamento muito caro"}
+                        """)
+                .when()
+                .post(BASE_PATH + "/" + ORCAMENTO_UUID + "/reprovar")
+                .then()
+                .statusCode(200)
+                .body("id", equalTo(ORCAMENTO_UUID.toString()))
+                .body("status", equalTo("REPROVADO"));
+    }
+
+    @Test
+    @Order(7)
+    void buscarPorOS_withoutAuth_returns401() {
+        given()
+                .when()
+                .get(BASE_PATH + "?osUuid=" + UUID.randomUUID())
+                .then()
+                .statusCode(401);
     }
 }

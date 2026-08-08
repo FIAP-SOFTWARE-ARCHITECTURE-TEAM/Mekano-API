@@ -16,6 +16,7 @@ import com.fiap.mekano.rest.api.dto.OrcamentoResponse;
 import com.fiap.mekano.rest.api.dto.ReprovarMotivoRequest;
 import com.fiap.mekano.rest.api.exception.ProblemDetail;
 
+import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
@@ -64,7 +65,7 @@ public class OrcamentoResource {
     @POST
     @Path("/{uuid}/aprovar")
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({ "admin", "cliente"})
+    @PermitAll
     @Operation(summary = "Aprovar orçamento", description = "Cliente aprova o orçamento — OS transiciona para EM_EXECUCAO")
     @APIResponse(responseCode = "200", description = "Orçamento aprovado",
             content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = OrcamentoResponse.class)))
@@ -79,7 +80,7 @@ public class OrcamentoResource {
     @Path("/{uuid}/reprovar")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({ "admin", "cliente" })
+    @PermitAll
     @Operation(summary = "Reprovar orçamento", description = "Cliente reprova o orçamento — OS transiciona para CANCELADA")
     @APIResponse(responseCode = "200", description = "Orçamento reprovado",
             content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = OrcamentoResponse.class)))

@@ -163,6 +163,19 @@ class OrdemDeServicoResourceTest {
                 .body("dataEntrada", notNullValue());
     }
 
+    @Test
+    @Order(4)
+    void getStatus_anonimo_retorna200() {
+        given()
+                .when()
+                .get(BASE_PATH + "/" + createdUuid + "/status")
+                .then()
+                .statusCode(200)
+                .body("id", equalTo(createdUuid))
+                .body("status", equalTo("EM_DIAGNOSTICO"))
+                .body("dataEntrada", notNullValue());
+    }
+
     // ─────────────── AUTORIZAÇÃO ───────────────
 
     @Test
