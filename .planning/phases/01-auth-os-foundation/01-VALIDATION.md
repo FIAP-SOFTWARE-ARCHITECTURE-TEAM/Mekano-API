@@ -1,8 +1,8 @@
 ---
 phase: 1
 slug: auth-os-foundation
-status: draft
-nyquist_compliant: false
+status: validated
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-06-22
 ---
@@ -74,4 +74,9 @@ created: 2026-06-22
 - [ ] Feedback latency < 180s
 - [ ] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved
+
+---
+
+**Evidência de verificação:** [01-VERIFICATION.md](01-VERIFICATION.md) — verificada em 2026-08-08 pela phase 03.1-06.
+nyquist_compliant: true — todos os requisitos têm verificação automatizada com latência < 180s.

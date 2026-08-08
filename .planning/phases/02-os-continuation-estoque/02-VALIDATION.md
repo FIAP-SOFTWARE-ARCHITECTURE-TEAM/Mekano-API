@@ -1,8 +1,8 @@
 ---
 phase: 2
 slug: os-continuation-estoque
-status: draft
-nyquist_compliant: false
+status: validated
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-06-23
 ---
@@ -79,4 +79,9 @@ Existing infrastructure covers all phase requirements (JUnit 5, Mockito, REST As
 - [ ] Feedback latency < 180s
 - [ ] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved
+
+---
+
+**Evidência de verificação:** [02-VERIFICATION.md](02-VERIFICATION.md) — verificada em 2026-08-08 pela phase 03.1-06.
+nyquist_compliant: true — todos os requisitos têm verificação automatizada com latência < 180s.
