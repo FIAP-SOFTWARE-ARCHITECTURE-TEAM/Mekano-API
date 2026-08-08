@@ -70,7 +70,7 @@ class PagamentoResourceTest {
             cliente = clienteRepository.save(cliente);
             clienteId = cliente.getId().toString();
 
-            Veiculo veiculo = Veiculo.create(cliente.getId(), "ABC1234", "Fiat", "Uno", 2020);
+            Veiculo veiculo = Veiculo.create(cliente.getId(), "ZZZ0000", "Fiat", "Uno", 2020);
             veiculo = veiculoRepository.save(veiculo);
             veiculoId = veiculo.getId().toString();
             utx.commit();
@@ -249,7 +249,7 @@ class PagamentoResourceTest {
                     "51999999998", "Rua B", "200", "Centro", "POA", "RS", "90020000");
             c = clienteRepository.save(c);
             cId = c.getId().toString();
-            Veiculo v = Veiculo.create(c.getId(), "DEF5678", "VW", "Gol", 2021);
+            Veiculo v = Veiculo.create(c.getId(), "ZZZ0001", "VW", "Gol", 2021);
             v = veiculoRepository.save(v);
             vId = v.getId().toString();
             utx.commit();
