@@ -14,7 +14,7 @@
 
 - [x] **Phase 1: Auth & OS Foundation** — Auth/roles + Cliente/Veiculo/Serviço CRUD + OS criação/diagnóstico + consulta pública
 - [x] **Phase 2: OS Continuation & Estoque** — Fluxo de orçamento/aprovação + execução/finalização + estoque completo + métricas
-- [ ] **Phase 3: Pagamento & Delivery** — Cobrança + pagamento simulado + entrega + docs finais (parcial: 50%)
+- [x] **Phase 3: Pagamento & Delivery** — Cobrança + pagamento simulado + entrega + docs finais
 
 ---
 
@@ -110,7 +110,7 @@
   4. Admin registra entrega do veículo somente após pagamento confirmado (OS → ENTREGUE); sistema bloqueia entrega se pendente
   5. Guia de contribuição (CONTRIBUTING.md) com setup, padrões e workflow do time
 
-**Plans:** TBD
+**Plans:** 20 tasks / 7 issues (03-SUMMARY.md)
 
 ---
 
@@ -120,7 +120,9 @@
 |-------|----------------|--------|-----------|
 | 1. Auth & OS Foundation | 6/6 | ✅ Complete | 2026-06-28 |
 | 2. OS Continuation & Estoque | 8/8 | ✅ Complete | 2026-06-29 |
-| 3. Pagamento & Delivery | TBD (parcial) | 🔄 In progress — 3/6 issues | - |
+| 3. Pagamento & Delivery | 7/7 issues | ✅ Complete | 2026-06-30 |
+
+> **Milestone v1.0 completo** — 3/3 fases, 28/28 issues fechadas. Resumo: `03-SUMMARY.md`.
 
 ---
 
@@ -160,3 +162,30 @@
 
 ✓ **37/37 v1 requirements mapped to phases**
 ✓ **No orphaned requirements**
+
+### Phase 03.1: Close v1.0 gaps: estoque pipeline, pagamento/audit, requisitos publicos e SLA (INSERTED)
+
+**Goal:** Fechar os gaps v1.0 da auditoria: pipeline de estoque funcionando (reserva na aprovação, débito na execução, requisição de compra), idempotência de pagamento real, audit trail completo, SLA cancela a OS, endpoints públicos do cliente e verificação formal (VERIFICATION.md + traceability 37/37)
+**Mode:** mvp
+**Depends on:** Phase 3 (Pagamento & Delivery)
+**Requirements:** AUTH-03, AUTH-04, OS-02, OS-10, OS-11, OS-12, OS-15, EST-02, EST-03, EST-04, EST-07, EST-08, EST-09, PAG-02, DOC-01, DOC-02, DOC-03
+**Time allocation:** closure phase (pós-milestone)
+**Plans:** 6 plans
+
+**Wave 1**
+
+- [ ] 03.1-01-PLAN.md - Acesso público (status/aprovar/reprovar) + updateCliente + shared AppException + rate limit
+- [ ] 03.1-02-PLAN.md - Reserva de estoque: V34 saldo_reservado, Peca/Entity/Port/Impl atômico, PecaService wrappers, ItemOrcamento.pecaId, finalizarDiagnostico
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 03.1-03-PLAN.md - EST-07: evento estoque mínimo na NF + observer reposição; EST-02: PUT/DELETE de peças
+- [ ] 03.1-04-PLAN.md - EST-03/04/08: OrcamentoAprovadoEvent + reserva + requisição de compra + débito na execução + liberação no cancelamento; PAG-02: ProcessedEventRepositoryImpl ativo + MockPaymentService idempotente
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 03.1-05-PLAN.md - D-11/12: OsAuditEventPublisher nas 7 transições + ENTREGA_REALIZADA via evento real; OS-12/D-13: SLA cancela a OS + audita
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 03.1-06-PLAN.md - Verificação formal retroativa: VERIFICATION.md 01/02/03 + nyquist true + traceability 37/37 Complete
