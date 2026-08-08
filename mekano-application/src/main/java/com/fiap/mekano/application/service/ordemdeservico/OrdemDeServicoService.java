@@ -102,7 +102,7 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
                 case "PECA" -> {
                     Peca peca = pecaRepository.buscarPorId(item.referenciaUuid())
                             .orElseThrow(() -> new AppException(404, "Peça não encontrada: " + item.referenciaUuid()));
-                    itens.add(new ItemOrcamento(peca.getDescricao(), item.quantidade(), peca.getValorUnitario()));
+                    itens.add(new ItemOrcamento(peca.getDescricao(), item.quantidade(), peca.getValorUnitario(), peca.getId()));
                 }
                 case "SERVICO" -> {
                     Servico servico = servicoRepository.findById(item.referenciaUuid())

@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.ToString;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 /**
  * Value Object que representa um item individual dentro de um Orcamento.
@@ -28,9 +29,10 @@ public class ItemOrcamento {
     private final String descricao;
     private final Long quantidade;
     private final BigDecimal valorUnitario;
+    private final UUID pecaId;
 
     /**
-     * Construtor com validação.
+     * Construtor com validação (sem pecaId — retrocompatível com itens de SERVICO).
      *
      * @param descricao nome/descrição do item (peça ou serviço)
      * @param quantidade quantidade do item
@@ -38,9 +40,23 @@ public class ItemOrcamento {
      * @throws AppException se validações falharem
      */
     public ItemOrcamento(String descricao, Long quantidade, BigDecimal valorUnitario) {
+        this(descricao, quantidade, valorUnitario, null);
+    }
+
+    /**
+     * Construtor completo com validação e pecaId opcional.
+     *
+     * @param descricao nome/descrição do item
+     * @param quantidade quantidade do item
+     * @param valorUnitario valor unitário do item
+     * @param pecaId UUID da peça (null para itens de serviço)
+     * @throws AppException se validações falharem
+     */
+    public ItemOrcamento(String descricao, Long quantidade, BigDecimal valorUnitario, UUID pecaId) {
         this.descricao = validateDescricao(descricao);
         this.quantidade = validateQuantidade(quantidade);
         this.valorUnitario = validateValorUnitario(valorUnitario);
+        this.pecaId = pecaId;
     }
 
     private static String validateDescricao(String descricao) {
