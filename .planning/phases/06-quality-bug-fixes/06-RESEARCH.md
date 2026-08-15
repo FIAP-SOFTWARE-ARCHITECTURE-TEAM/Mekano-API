@@ -259,7 +259,7 @@ public class UserEntity extends BaseEntity {
 | A4 | `domain.model.StatusPagamento` is dead code | Common Pitfalls | LOW — zero references confirmed by grep |
 | A5 | `Placa.java` is dead code | Common Pitfalls | LOW — zero non-test references confirmed by grep |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **NfEntradaRepositoryImpl bug — is it actually fixed or still broken in a subtle way?**
    - What we know: Source lines 39-40 use `nfEntrada.getPecaId()` and `nfEntrada.getRequisicaoCompraId()` — these look correct. But D-04 prescribes using `requisicao.getPecaId()` and `requisicao.getId()`, which requires changing the repository method signature to accept RequisicaoCompra.
