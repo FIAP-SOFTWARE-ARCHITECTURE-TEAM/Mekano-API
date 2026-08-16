@@ -44,7 +44,7 @@ class RequisicaoCompraResourceTest {
     void setUp() {
         var mockPeca = Peca.reconstitute(
                 PECA_UUID, "PEA-001", "Óleo do Motor 5W30",
-                new BigDecimal("45.90"), 50L, 10L, LocalDateTime.now());
+                new BigDecimal("45.90"), 50L, 10L, LocalDateTime.now(), 0L);
 
         var mockRequisicao = RequisicaoCompra.reconstitute(
                 REQUISICAO_UUID, PECA_UUID, 10L,

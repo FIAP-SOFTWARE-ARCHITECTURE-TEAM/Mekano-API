@@ -5,6 +5,7 @@ import com.fiap.mekano.domain.port.in.AdminCreatedUser;
 import com.fiap.mekano.domain.port.in.AdminUserServicePort;
 import com.fiap.mekano.domain.port.in.AdminUserSummary;
 import com.fiap.mekano.domain.port.in.CreateAdminUserCommand;
+import com.fiap.mekano.shared.exception.AppException;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -127,5 +129,27 @@ class AdminUserResourceTest {
                 .statusCode(204);
 
         verify(adminUserService).deletar(userUuid);
+    }
+
+    @Test
+    void post_emailDuplicado_retorna409() {
+        when(adminUserService.criarUsuario(any(CreateAdminUserCommand.class)))
+                .thenThrow(new AppException(409, "Usuário já existe com o email: duplicado@mekano.com"));
+
+        given()
+                .contentType("application/json")
+                .body("""
+                      {
+                        "name": "Duplicado",
+                        "email": "duplicado@mekano.com",
+                        "role": "admin"
+                      }
+                      """)
+        .when()
+                .post("/api/v1/admin/usuarios")
+        .then()
+                .statusCode(409)
+                .contentType(containsString("application/problem+json"))
+                .body("status", equalTo(409));
     }
 }

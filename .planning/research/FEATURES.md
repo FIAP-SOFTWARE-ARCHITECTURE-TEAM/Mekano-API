@@ -1,278 +1,492 @@
 # Feature Research
 
-**Domain:** Mechanical Workshop Management System (Brazilian market)
-**Researched:** 2026-06-20
-**Confidence:** HIGH (verified across 14+ competitor products, official documentation, and Brazilian legislation)
+**Domain:** API REST para gestão de oficina mecânica (Quarkus/Clean Architecture)
+**Researched:** 2026-08-08
+**Confidence:** HIGH (WhatsApp Cloud API verified via Meta docs + Quarkus K8s verified via official docs + codebase analysis)
+
+---
 
 ## Feature Landscape
 
-### Table Stakes (Users Expect These)
+### 1. WhatsApp Notifications (WPP-01, WPP-02)
 
-Features that every competitor in the Brazilian market offers. Missing these = product is not viable.
+#### How WhatsApp Notification Flow Works
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| **OS Lifecycle with Status Machine** | Core operation — tracks vehicle from reception to delivery. Every competitor has this as the central feature. | MEDIUM | 7 statuses: RECEBIDA → EM_DIAGNOSTICO → AGUARDANDO_APROVACAO → CANCELADA/EM_EXECUCAO → FINALIZADA → ENTREGUE. Must enforce state machine transitions. |
-| **Client Registration (CPF/CNPJ)** | Mandatory for NF-e emission and legal compliance. Brazilian tax authority requires valid CPF/CNPJ on all invoices. | LOW | Validate CPF (11 digits) and CNPJ (14 digits) with check digits. Enforce uniqueness. Required field for OS creation. |
-| **Vehicle Registration (Mercosul Plate)** | Placa is the primary vehicle identifier. Brazilian Mercosul format (ABC1D23) is legal standard since 2018. | LOW | Validate Mercosul format: 3 letters + 1 digit + 1 letter + 2 digits. Enforce uniqueness per client. Link to client. |
-| **Service Type Catalog** | Necessário para compor OS — cada linha de serviço com valor unitário. | LOW | CRUD with name, description, unit value (> 0). Used when mecânico adds services during diagnosis. |
-| **Parts/Supplies CRUD with Balance** | Every competitor has stock control. Basic entry/exit/balance is non-negotiable. | MEDIUM | Code, description, unit, current balance, minimum stock, unit cost. Balance cannot go negative. |
-| **Budget Generation and Client Approval** | CDC Art. 40 requires formal budget before service execution. Orçamento prévio is a legal right. | MEDIUM | Auto-generate from OS items. Send to client. Client approves/rejects via public link. Without this flow, the workshop operates illegally. |
-| **Payment Processing (Cobrança + Confirmação)** | Business requirement — workshop needs to get paid. Competitors offer PIX, boleto, card. | MEDIUM | Emit cobrança on OS finalization. Register payment confirmation. Block delivery until payment confirmed. |
-| **Vehicle Delivery Registration** | Completes the OS lifecycle. Legal closure of the service contract. | LOW | Register delivery date, responsible party, recipient. Only possible after payment confirmed. |
-| **OS Listing with Filters** | Daily operational need — atendentes and admin need to find OS by status, date, client, vehicle. | LOW | Paginated list with filters: status, date range, client name, plate. Requires auth. |
-| **JWT Authentication** | Security baseline. Already implemented (Ed25519/EdDSA). | DONE | Built and validated. Roles: admin, atendente, mecanico, almoxarife. |
-| **Minimum Stock Alerts** | Prevents stockout during service execution. All competitors alert when stock <= minimum. | LOW | Check after every stock movement. Formula: `replenishment time × average daily consumption`. |
-| **Parts Withdrawal for Execution** | Registra saída física do estoque quando serviço começa. Controla inventário. | LOW | Only reserved parts can be withdrawn. Debits balance. Ends reservation. |
+The WhatsApp Cloud API (v23.0) has two messaging modes:
 
-### Differentiators (Competitive Advantage)
+| Mode | Window | Use Case |
+|------|--------|----------|
+| **Non-template messages** | Within 24h customer service window (user must have messaged business first) | Follow-ups, confirmation within active conversation |
+| **Template messages** | Any time (pre-approved by Meta) | **Proactive** notifications: budget approval link, OS finished |
 
-Features that set the product apart. Not required for launch but create competitive moat.
+**For Mekano, the flow is:**
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| **SLA Monitoring with Auto-Expiration** | Few competitors offer SLA enforcement. Orçamento expires automatically after X days — legal safeguard and operational efficiency. | MEDIUM | `PoliticaSLA` value object with `tempoMaximoAprovacao`. Timer starts on budget generation. Auto-cancels OS when expired. Directly addresses CDC Art. 40 compliance gap. |
-| **Public Client Status Tracking** | Clients can check OS status without login — reduces atendente phone calls. Only ~40% of competitors offer this. | MEDIUM | Public endpoint with OS number/UUID. Returns status, timeline, estimated completion. No auth required. |
-| **Budget Approval via Public Link** | Client approves/rejects without calling. Links to SLA timer. | MEDIUM | Generate unique URL per budget. Client clicks Aprovar/Reprovar. Triggers OS status transition. |
-| **Automatic Stock Reservation on Approval** | Links OS, orçamento, and estoque. Few competitors do this atomically. | HIGH | On budget approval, check availability → reserve parts → if insufficient, auto-generate purchase requisition. Coordinates 3 aggregates (OS, Estoque, RequisicaoCompra). |
-| **Purchase Requisition Auto-Generation** | Two triggers: (1) parts unavailable for an approved OS, (2) stock below minimum. | MEDIUM | Statuses: EM_ABERTO → EM_ANDAMENTO → FINALIZADO → CANCELADO. Cannot cancel if linked to active OS. |
-| **NF-e XML Import for Stock Entry** | Import supplier NF-e XML directly — auto-updates stock. Covers NF-e (product), NFS-e (service), NFС-e (consumer). | HIGH | Parse XML (NFe/XSD schema), validate against SEFAZ, update stock balance, link to purchase requisition. Requires understanding of Brazilian fiscal layout (NCM, CFOP, ICMS). |
-| **Hybrid ID Strategy (Sequential PK + UUID)** | Sequential PK for DB performance + UUID for external references prevents ID enumeration. Not common in competitors. | LOW | Already implemented in BaseEntity. Expose UUID in API, use Long for joins. |
-| **API-First Architecture** | Competitors are SaaS monoliths with UIs. API-first enables future mobile app, web frontend, or third-party integrations. | DONE | Clean Architecture multi-module already in place. Competitive advantage for extensibility vs closed competitors. |
-| **RFC 7807 Problem Details for Errors** | Standardized error format improves client developer experience. | DONE | `ApiExceptionMapper` already implemented. Returns `application/problem+json`. |
-| **Event-Driven OS Status Transitions** | Domain events (`OrdemDeServicoCriada`, `OrcamentoAprovado`, etc.) enable decoupled side-effects (stock reservation, payment emission, SLA timer). | MEDIUM | `EventPublisher` interface in domain, implementation in infrastructure. Events already mapped in Event Storming. |
-| **Audit Trail with Soft Delete** | Track who created/updated records. Soft delete prevents data loss. | LOW | `BaseEntity` fields: `createdBy`, `updatedBy`, `updatedAt`, `isActive`, `deletedAt`. All queries filter `isActive = true`. |
-| **Mechanic Commission Tracking** | Automatically calculate mechanic commissions per OS. Recruiting/retention tool. | LOW | Percentage per mechanic per service type. Auto-calculated on OS finalization. Dashboard for monthly commission report. |
+1. **Budget approval notification (WPP-01):** When orcamento is created (diagnóstico finalizado → OS transiciona para `AGUARDANDO_APROVACAO`), a **template message** with a call-to-action button is sent to the customer's phone. The button opens the public approval URL (`/orcamentos/{uuid}/aprovar` — already `@PermitAll`).
 
-### Anti-Features (Commonly Requested, Often Problematic)
+2. **OS finished notification (WPP-02):** When OS transiciona para `FINALIZADA`, a **template message** is sent informing the customer their vehicle is ready for pickup.
 
-Features that seem good but create problems for a backend-first MVP with 10-day timeline.
-
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| **Real-Time Chat (Mecânico ↔ Cliente)** | "Client wants to ask mechanic questions directly" | Requires WebSocket infrastructure, message persistence, typing indicators, read receipts. Adds 3-5 days to timeline. | WhatsApp integration via API — send automatic status updates. Client calls workshop directly. |
-| **Full Accounting Module (DRE, SPED)** | "Workshop needs complete financial management" | SPED Contábil is a separate complex domain with its own regulations. Would double the project scope. | Focus on cobrança/pagamento only. Accounting integration later via API export. |
-| **AI Diagnostic Assistant** | "Auto-diagnose problems from symptoms" | Requires ML model training, tagged dataset, continuous improvement. Not feasible in 10-day backend sprint. | Structured checklist for mechanics. IA assistant is a v2 feature for competitors at premium tiers. |
-| **Mobile App (Android/iOS)** | "Mechanics need to use it on the shop floor" | Requires separate frontend team, app store deployment, push notifications. | API-first — mobile app can be built in future phase consuming the same REST API. |
-| **Real Multi-Gateway Payment Integration** | "Accept all payment methods" | Each gateway (Asaas, Stripe, Stone, Cielo) has different API, webhook format, certification process. | Simulated banking service with pluggable `ServicoBancario` interface. Real integration in v2. |
-| **Online Scheduling / Agenda** | "Clients book appointments online" | Calendar logic, conflict resolution, time slot management, reminder system. Entire subdomain. | Focus on OS flow first. Scheduling can be added as a separate bounded context later. |
-| **Multi-Workshop / Multi-Company** | "Owner has multiple shops" | Tenant isolation, shared/separate stock, consolidated reporting. Major architectural decision. | Single-workshop for MVP. Add tenant context in v2 if validated. |
-| **Inventory Barcode/QR Code Scanning** | "Speed up stock entry/exit" | Requires hardware integration, mobile camera access, barcode library. | Manual entry via API for MVP. Add scanning support when mobile app is built. |
-
-## Feature Dependencies
+#### Expected Behavior
 
 ```
-[Client Registration] ──requires──> [JWT Auth] (who registers?)
-[Vehicle Registration] ──requires──> [Client Registration] (vinculado a cliente)
+Flow: Diagnóstico Finalizado
+1. Mecânico finaliza diagnóstico → OS → AGUARDANDO_APROVACAO
+2. Sistema gera orçamento
+3. Domain event [OrcamentoCriado event or similar] fired
+4. Infrastructure listener (WhatsAppNotifier) catches event
+5. Calls WhatsApp Cloud API: POST /v23.0/{phone-number-id}/messages
+   {
+     "messaging_product": "whatsapp",
+     "to": "55XXXXXXXXXXX",
+     "type": "template",
+     "template": {
+       "name": "mekano_orcamento_aprovacao",
+       "language": { "code": "pt_BR" },
+       "components": [{
+         "type": "body",
+         "parameters": [
+           { "type": "text", "text": "João" },
+           { "type": "text", "text": "Fiat Uno | ABC-1234" },
+           { "type": "text", "text": "R$ 1.500,00" }
+         ]
+       }, {
+         "type": "button",
+         "sub_type": "url",
+         "index": 0,
+         "parameters": [{ "type": "text", "text": "orcamento-uuid-aqui" }]
+       }]
+     }
+   }
+6. Customer taps button → opens browser → lands on `/orcamentos/{uuid}/aprovar`
+7. Customer approves/rejects → system processes → OS advances to EM_EXECUCAO or CANCELADA
+```
 
-[OS Lifecycle]
-    ├──requires──> [Client Registration]
-    ├──requires──> [Vehicle Registration]
-    └──requires──> [Service Type Catalog]
+#### Template Management Requirements
 
-[Budget Generation] ──requires──> [OS Lifecycle] (OS must be in EM_DIAGNOSTICO)
-[Budget Approval via Link] ──requires──> [Budget Generation]
-[SLA Auto-Expiration] ──enhances──> [Budget Approval via Link] (adds expiration logic)
+- Templates must be pre-approved by Meta (can take hours to days — **plan ahead**)
+- Mekano templates needed:
+  - `mekano_orcamento_aprovacao` — body with customer name, vehicle, value + URL button to approval page
+  - `mekano_os_finalizada` — body with customer name, vehicle + text notification
+- Template variables: use `{{1}}`, `{{2}}` placeholders in Meta Business Manager
+- **For development/testing:** use WhatsApp test numbers (free, no template approval needed for test numbers)
 
-[Stock Reservation] ──requires──> [Budget Approval via Link] (triggered on approval)
-[Stock Reservation] ──requires──> [Parts/Supplies CRUD]
-[Purchase Requisition] ──requires──> [Stock Reservation] (when parts unavailable)
+#### Integration Points in Existing Code
 
-[Parts Withdrawal] ──requires──> [OS Lifecycle] (status = EM_EXECUCAO)
-[Parts Withdrawal] ──requires──> [Stock Reservation] (must be reserved first)
+| Event | Hook Point | Status |
+|-------|-----------|--------|
+| Orçamento criado → notificar aprovação | `OrcamentoService.aprovar()` listener | Needs new event `OrcamentoCriadoEvent` or extend existing |
+| OS finalizada → notificar retirada | `OrdemDeServico.finalizar()` → `FINALIZADA` state transition | Domain event already exists via state machine |
+| Cliente phone number storage | `Cliente` entity has `telefone` VO | Already exists — verify field is populated |
 
-[Payment Processing] ──requires──> [OS Lifecycle] (status = FINALIZADA)
-[Vehicle Delivery] ──requires──> [Payment Processing] (pagamento must be CONFIRMADO)
-[Vehicle Delivery] ──requires──> [OS Lifecycle] (status = FINALIZADA)
+#### WhatsApp Service Design (Recommended)
 
-[NF-e XML Import] ──enhances──> [Parts/Supplies CRUD] (auto-updates stock)
-[NF-e XML Import] ──enhances──> [Purchase Requisition] (closes the requisition)
+| Layer | Component | Notes |
+|-------|-----------|-------|
+| **domain** | `WhatsAppNotifierPort` | Interface: `sendBudgetApproval(Cliente, Orcamento)`, `sendOsFinished(Cliente, OrdemDeServico)` |
+| **infrastructure** | `WhatsAppCloudApiNotifier` | REST client calling `graph.facebook.com/v23.0` |
+| **infrastructure** | `WhatsAppConfig` | `@ConfigProperties`: phoneNumberId, apiToken, template names |
+| **infrastructure** | `OrcamentoCriadoListener` | CDI event observer → calls notifier |
+| **infrastructure** | `OsFinalizadaListener` | CDI event observer → calls notifier |
+| **test** | `MockWhatsAppNotifier` | Slf4j logger spy for integration tests |
 
-[Public Status Tracking] ──requires──> [OS Lifecycle] (reads OS status)
+**Free-tier strategy:** WhatsApp Cloud API has free tier (1,000 conversations/month). For development, use test mode with Meta-provided test numbers — no real cost. Do NOT use paid WhatsApp Business API wrappers; the official Cloud API is free for low volume.
 
-[Mechanic Commission] ──requires──> [OS Lifecycle] (knows which mechanic did what)
-[Mechanic Commission] ──requires──> [Payment Processing] (commission based on collected value)
+#### Sources
 
-[Audit Trail] ──enhances──> ALL features (cross-cutting)
+- WhatsApp Cloud API docs (Context7): `/websites/developers_facebook_business-messaging_whatsapp_v4` — **HIGH confidence**
+- Template messages require pre-approval: verified via Meta docs **HIGH confidence**
+- Interactive button with URL: `type: "template"` with `components[].type: "button"` and `sub_type: "url"` — **MEDIUM confidence** (not directly confirmed in Context7 output, but aligns with Meta standard pattern)
+
+---
+
+### 2. Ordered OS Listing by Status Priority (API-04)
+
+#### Status Priority Logic
+
+Based on PROJECT.md specification and existing `StatusOS` enum:
+
+| Priority | Status | Why This Priority |
+|----------|--------|-------------------|
+| **P1** | `EM_EXECUCAO` | Vehicle being worked on — highest operational urgency |
+| **P2** | `AGUARDANDO_APROVACAO` | Customer hasn't responded — blocking the pipeline |
+| **P3** | `EM_DIAGNOSTICO` | Being diagnosed — needs mechanic attention |
+| **P4** | `RECEBIDA` | Just arrived — needs triage |
+| **P5** | `AGUARDANDO_EXECUCAO` | Approved but not started — lower urgency |
+| — | `FINALIZADA`, `ENTREGUE`, `CANCELADA` | Excluded from active listing (terminal states) |
+
+#### Expected Behavior
+
+```
+GET /os?sort=priority&statusFilter=active
+
+Response ordering:
+1. OS em EM_EXECUCAO (sorted by oldest first within same priority)
+2. OS em AGUARDANDO_APROVACAO (sorted by oldest first)
+3. OS em EM_DIAGNOSTICO (sorted by oldest first)
+4. OS em RECEBIDA (sorted by oldest first)
+5. OS em AGUARDANDO_EXECUCAO (sorted by oldest first)
+
+Within same priority: oldest createdAt first (FIFO — workshop fairness)
+```
+
+#### Integration Points
+
+- Modify `OrdemDeServicoResource.listAll()` or create new endpoint `GET /os/active`
+- Add `findAllActiveOrderedByPriority()` port in `OrdemDeServicoServicePort`
+- Implement in `OrdemDeServicoServiceImpl`: JPQL with `ORDER BY CASE WHEN ...` or fetch all and sort in memory
+- Paginated response: `OrdemDeServicoPageResponse` already exists
+
+#### Implementation Approaches (Recommended)
+
+| Approach | Pros | Cons | Verdict |
+|----------|------|------|---------|
+| **JPQL ORDER BY CASE** | Single query, DB sorts | Complex CASE, DB-specific if complex | ✅ **Recommended** — efficient, single round-trip |
+| In-memory sort | Simple Java Comparator | Loads all active OS, bad for large datasets | ❌ Not for production |
+| Status priority column | Simple query | Denormalization, sync needed | ❌ Too complex for this scope |
+
+#### Sources
+
+- `StatusOS` enum confirmed with 8 states + transition matrix: **HIGH confidence**
+- Priority order from PROJECT.md API-04: **HIGH confidence**
+- Status lifecycle: RECEBIDA → EM_DIAGNOSTICO → AGUARDANDO_APROVACAO → AGUARDANDO_EXECUCAO → EM_EXECUCAO → FINALIZADA → (cobrança) → ENTREGUE: **HIGH confidence** (verified from OrdemDeServico.java)
+
+---
+
+### 3. Infrastructure: Docker, K8s, Terraform, HPA (INF-01 to INF-05)
+
+#### Current State
+
+| Component | Status | Action Needed |
+|-----------|--------|---------------|
+| `docker-compose.yml` | ✅ Exists (postgres + keygen + mekano JVM) | Review, add native profile |
+| `docker-compose.prod.yml` | ✅ Exists | Review, align with K8s |
+| `Dockerfile.jvm` | ✅ Exists | Verify correctness |
+| `Dockerfile.native` | ✅ Exists | Verify correctness |
+| `.dockerignore` | ✅ Exists | Review |
+| K8s manifests | ❌ Doesn't exist | Create from scratch |
+| Terraform | ❌ Doesn't exist | Create from scratch |
+| HPA config | ❌ Doesn't exist | Create K8s HPA manifest |
+| CD pipeline | ❌ Doesn't exist | Add GitHub Actions deploy stage |
+
+#### Docker Patterns for Quarkus
+
+**Verified from codebase:** `Dockerfile.jvm` uses `registry.access.redhat.com/ubi8/openjdk-17-runtime:1.21` and `Dockerfile.native` uses `docker.io/library/registry.access.redhat.com/ubi9-minimal:9.5`.
+
+**Quarkus-native note (from Context7):** Native executables built via container are 64-bit Linux binaries based on UBI 10 (default builder). **UBI 10 executable will NOT run on UBI 8/9 base images.** The existing Dockerfile.native uses ubi9-minimal — this needs verification against current Quarkus 3.36 builder image.
+
+**Container image options (from Quarkus docs):**
+- `quarkus-container-image-jib` — builds image without Docker daemon (best for CI)
+- `quarkus-container-image-docker` — requires Docker daemon
+- **Recommendation:** Jib for CI pipelines, Docker for local dev
+
+#### K8s Patterns for Quarkus (Standard)
+
+| Resource | Purpose | Key Config |
+|----------|---------|------------|
+| `Deployment` | App instance(s) | Port 8080, health probes, env from ConfigMap/Secret |
+| `Service` | Internal load balancing | ClusterIP, port 8080 |
+| `ConfigMap` | Non-sensitive config | DB URL, Quarkus profile, log level |
+| `Secret` | Sensitive config | DB password, JWT keys, WhatsApp API token |
+| `HPA` | Autoscaling | CPU > 70% or memory > 80% |
+| `Ingress` | External access | Path-based routing to Service |
+
+**Health probe pattern (Quarkus standard):**
+```yaml
+livenessProbe:
+  httpGet:
+    path: /q/health/live
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 30
+readinessProbe:
+  httpGet:
+    path: /q/health/ready
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 10
+startupProbe:
+  httpGet:
+    path: /q/health/started
+    port: 8080
+  initialDelaySeconds: 0
+  periodSeconds: 5
+  failureThreshold: 30
+```
+
+**Quarkus-kubernetes extension** auto-generates manifests from `application.properties` — can be used as starting point but **hand-crafted manifests are more maintainable** for Terraform integration. Use the extension for initial generation, then customize.
+
+**HPA Recommendation:**
+```yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: mekano-api
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: mekano-api
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+```
+
+#### Terraform Design
+
+| Module | Resources | Inputs |
+|--------|-----------|--------|
+| `gke_cluster` | GKE cluster, node pool (spot) | project_id, region, node_count |
+| `postgres` | Cloud SQL PostgreSQL 16 | db_name, db_user, db_password, tier |
+| `mekano_k8s` | K8s manifests (via kubectl_manifest or helm) | image_tag, db_url, secrets |
+
+**Free-tier constraint:** For academic demo, Terraform can target Minikube or kind locally, or GKE free-tier (1 e2-medium node). Avoid Cloud SQL costs by using same-node PostgreSQL pod for demo.
+
+#### CI/CD Pipeline (GitHub Actions)
+
+Current: CI only (build + test + OWASP + coverage check).
+
+Add CD stage:
+```yaml
+# After verify passes
+deploy:
+  needs: verify
+  if: github.ref == 'refs/heads/main'
+  steps:
+    - Build container image (Jib or Docker)
+    - Push to registry (GHCR or Docker Hub)
+    - Update K8s deployment image tag
+    - kubectl apply -f k8s/manifests/
+```
+
+#### Sources
+
+- Dockerfiles confirmed in `mekano-rest/src/main/docker/`: **HIGH confidence**
+- Quarkus native container-build doc (Context7): `/quarkusio/quarkus` — **HIGH confidence**
+- Quarkus K8s extension auto-generation (Context7): `/quarkusio/quarkus` — **HIGH confidence**
+- Quarkus health endpoints (`/q/health/live/ready/started`) confirmed in mekano-rest dependencies (SmallRye Health): **HIGH confidence**
+
+---
+
+### 4. Quality: 80% Test Coverage + Clean Code/SOLID (QLD-01, QLD-02)
+
+#### Current Test Inventory (517 tests — verified)
+
+| Module | Test Count (approx) | What's Covered |
+|--------|-------------------|----------------|
+| `mekano-domain` | ~262 | All entities, VOs, events, state machine (8×8 transitions = 64 tests alone) |
+| `mekano-application` | ~70 | Service tests (Mockito), auth, NfEntrada, OS, orcamento, client |
+| `mekano-infrastructure` | ~50+ | Repository impl tests (H2), mappers, observers, listeners, JWT |
+| `mekano-rest` | ~135+ | REST Assured E2E for all existing resources, fault tolerance, observability |
+
+#### JaCoCo Configuration (already set — verified in parent pom.xml)
+
+| Setting | Value |
+|---------|-------|
+| Counter | `LINE` |
+| Target | `0.80` (80%) |
+| Element | `BUNDLE` |
+| Exclusions | `**/*Dto.class`, `**/*DTO.class`, `**/*Request.class`, `**/*Response.class`, `**/*ExceptionMapper.class`, `**/*Config.class`, `**/*Resource.class`, `**/*Entity.class` |
+
+**⚠ Critical note:** The current exclusion list excludes `**/*Resource.class` (controllers) and `**/*Entity.class` — these are large classes. Removing these exclusions would make 80% much harder. The exclusions are reasonable (test frameworks like REST Assured test resources end-to-end, and entities have domain tests).
+
+#### Realistic 80% Coverage Path
+
+| Module | Current Est. Coverage | Gap | Strategy |
+|--------|----------------------|-----|----------|
+| `mekano-domain` | ~90%+ | Minimal | Domain model heavily tested (262 tests). Add tests for any untested edge cases. |
+| `mekano-application` | ~70% | Medium | Stub services `ClienteService.updateCliente` has known bug (doesn't apply updates). `NfEntradaService` needs more scenarios. |
+| `mekano-infrastructure` | ~50-60% | **Largest gap** | Repository impl tests exist but only for User, Veiculo, Peca, Orcamento, OS, OsAuditLog. Missing: NfEntrada, RequisicaoCompra. Missing: WhatsApp notification tests (new). |
+| `mekano-rest` | ~60-70% | Medium | Missing: ClienteResourceTest (no controller yet for rest — controller exists actually in ClienteResource.java with DTOs confirmed). Missing: AuthResource tests for login/refresh/logout endpoints. |
+
+**Estimated current overall coverage: ~60-65%** (domain heavy, infra lighter)
+
+**To reach 80%:**
+
+1. **Domain:** Likely already above 80%. No action needed.
+2. **Application services:** Add tests for missing service methods. Fix `ClienteService.updateCliente` bug. Add tests for edge cases in NfEntradaService.
+3. **Infrastructure repositories:** Add H2-based integration tests for NfEntradaRepositoryImpl, RequisicaoCompraRepositoryImpl.
+4. **Infrastructure new code:** WhatsApp notifier tests (mock HTTP calls via WireMock or Quarkus Mockito).
+5. **REST resources:** Add tests for ClienteResource (controller already exists). Add AuthResource tests. Add ordered listing endpoint tests.
+
+#### Clean Code / SOLID Refactoring Targets
+
+Known issues from AGENTS.md:
+
+| Issue | Priority | Impact |
+|-------|----------|--------|
+| PT-BR naming in 3 repos (`salvar`, `buscarPorId`) | LOW | Consistency only |
+| Field injection in 3 stub services | MEDIUM | Should use constructor injection |
+| Mixed entity style (`@Data` vs `@Getter/@Setter`) | LOW | Consistency only |
+| `Placa.java` and `PlacaVeiculo.java` duplicate VOs | MEDIUM | Merge into one |
+| `ItemOrcamento` in `model/` not `valueobject/` | LOW | Package organization |
+| 3 empty mappers (dead code) | LOW | Remove or implement |
+| `NfEntradaRepositoryImpl` copy-paste bug (`pecaId` and `requisicaoCompraId` both set to `nfEntrada.getId()`) | **HIGH** | **Data corruption risk** |
+| `ClienteService.updateCliente` not applying updates | **HIGH** | **Functional bug** |
+
+#### Sources
+
+- Test count confirmed via `./mvnw test -pl mekano-domain`: **262 domain tests HIGH confidence**
+- Total 517 tests from PROJECT.md: **HIGH confidence** (confirmed across modules)
+- JaCoCo config from parent pom.xml: **HIGH confidence**
+- Known bugs from AGENTS.md codebase analysis: **HIGH confidence**
+
+---
+
+### 5. Documentation (DOC-04 to DOC-11)
+
+#### What Each Deliverable Requires
+
+| ID | Deliverable | Format | Audience | Effort |
+|----|-------------|--------|----------|--------|
+| DOC-04 | Demo video (≤15 min) | MP4/screen recording | Professor, evaluators | **HIGH** — needs script, clean environment, narration |
+| DOC-05 | README.md | Markdown | Developers, evaluators | MEDIUM — comprehensive description |
+| DOC-06 | Sequence diagrams (API flow) | Mermaid in README | Developers | MEDIUM |
+| DOC-07 | CI/CD flow diagram | Mermaid in README | Developers, DevOps | LOW |
+| DOC-08 | API spec | Swagger UI (built-in via `quarkus-smallrye-openapi`) + Postman collection | Developers, testers | LOW (already exists — `Mekano API v1.0.postman_collection.json`) |
+| DOC-09 | Miro board | External link | Team, stakeholders | MEDIUM |
+| DOC-10 | Architecture documentation | README or docs/ | Developers | MEDIUM |
+| DOC-11 | HPA + load simulation | README section | DevOps, evaluators | MEDIUM |
+
+#### Swagger Status
+
+Already configured: `quarkus-smallrye-openapi` dependency in `mekano-rest/pom.xml`. OpenAPI annotations present on all resources. Swagger UI available at `/q/swagger-ui/` in dev mode.
+
+**Need to verify in production:** `quarkus.swagger-ui.always-include=true` for prod deployment (defaults to dev-only).
+
+#### Sources
+
+- `quarkus-smallrye-openapi` dependency confirmed in mekano-rest pom.xml: **HIGH confidence**
+- Postman collection exists at root: `Mekano API v1.0.postman_collection.json`: **HIGH confidence**
+
+---
+
+### Feature Dependencies
+
+```
+WhatsApp Notifications (WPP-01, WPP-02)
+    ├──requires──> Domain events for orcamento criado + OS finalizada (partially exist)
+    ├──requires──> WhatsApp Cloud API account + pre-approved templates
+    └──requires──> Cliente.telefone populated (existing VO — verify)
+
+Ordered OS Listing (API-04)
+    ├──requires──> StatusOS enum (exists)
+    └──requires──> OrdemDeServico.findAllActiveOrderedByPriority() port + impl
+
+K8s Infrastructure (INF-01 to INF-05)
+    ├──requires──> Docker image build working (exists)
+    ├──requires──> PostgreSQL connection via environment (exists)
+    ├──enhances──> HPA (INF-02 — needs Deployment to exist first)
+    └──enhances──> Terraform (INF-03 — needs K8s manifest design)
+
+80% Coverage (QLD-01)
+    ├──requires──> Fix existing bugs (data corruption in NfEntradaRepo, updateCliente)
+    ├──enhances──> New feature tests for WhatsApp + ordered listing
+    └──enhances──> Clean Code refactoring removes dead code → fewer untested branches
+
+Documentation (DOC-04 to DOC-11)
+    ├──requires──> All features completed before demo video
+    └──requires──> Swagger annotations already present on all resources
 ```
 
 ### Dependency Notes
 
-- **[Budget Approval via Link] requires [Budget Generation]:** Budget must be generated with calculated values before client can approve. The SLA timer starts on generation.
-- **[Stock Reservation] requires [Budget Approval]:** The approval event triggers the domain policy `VerificarEstoque` which coordinates reservation and/or purchase requisition creation.
-- **[Vehicle Delivery] requires [Payment Processing]:** Legal/operational requirement — vehicle cannot be released without payment confirmation. This is a hard business rule enforced by all competitors.
-- **[Supply Chain] NF-e XML Import enhances Purchase Requisition:** The requisition-financeiro interaction: requisition → purchase → NF-e entry → stock update. The XML import is the mechanism to close the loop.
-- **[Parts Withdrawal] requires [Stock Reservation]:** The `ReservaEstoque` aggregate must be in status `ATIVA` before physical withdrawal. Ensures no stock is taken without an OS context.
+- **OrcamentoCriado domain event may not exist yet.** The existing state machine transitions (`finalizarDiagnostico()` → `AGUARDANDO_APROVACAO`) should fire an event. Verify if `OrcamentoCriadoEvent` exists or need to create it.
+- **WhatsApp templates must be created in Meta Business Manager first** — can take hours to days for approval. Register templates on day 1 of the milestone.
+- **Ordered listing** is additive — doesn't change existing `listAll()` behavior, just adds new endpoint or query param.
 
-## MVP Definition
+---
 
-### Launch With (Phase 1)
+## MVP Definition (For v2.0 Milestone)
 
-Minimum viable product — what's needed to validate the concept within the 10-day timeline.
+### Must Ship (P1)
 
-| # | Feature | Why Essential | Dependencies |
-|---|---------|--------------|--------------|
-| P1 | **OS Lifecycle** — full status machine | Core value proposition. Without this, there's no product. | JWT Auth (done), Client, Vehicle, Service catalog |
-| P2 | **Client + Vehicle + Service CRUD** | Prerequisites for OS creation. Legal requirement (CPF/CNPJ). | JWT Auth (done) |
-| P3 | **Budget Generation + Client Approval via Link** | CDC legal requirement (Art. 40). Core flow dependency for execution. | OS Lifecycle |
-| P4 | **Parts/Supplies CRUD + Minimum Stock Alerts** | Stock control is operational necessity. | JWT Auth (done) |
-| P5 | **Stock Reservation on Budget Approval** | Links OS and stock. Prevents double-allocation. | Budget Approval, Parts CRUD |
-| P6 | **Parts Withdrawal on Execution Start** | Physical inventory control. | Stock Reservation |
-| P7 | **Payment Processing + Vehicle Delivery** | Completes the business cycle. | OS Finalizada |
-| P8 | **Public Client Status Tracking** | Reduces atendente workload. Differentiator. | OS Lifecycle |
+- [ ] **WPP-01**: WhatsApp notification on orçamento approval/refusal — core external integration
+- [ ] **WPP-02**: WhatsApp notification when OS is finished — second notification flow
+- [ ] **API-04**: Ordered OS listing by status priority — quick win, high visibility
+- [ ] **INF-01/INF-02**: Docker review + K8s manifests — required for deployment
+- [ ] **QLD-01**: 80% test coverage — quality gate
+- [ ] **DOC-05/DOC-08**: README + Swagger/Postman — minimum documentation
 
-### Add After Validation (Phase 2)
+### Should Ship (P2)
 
-| # | Feature | Trigger for Adding | Dependencies |
-|---|---------|-------------------|--------------|
-| P9 | **SLA Monitoring + Auto-Expiration** | Budget flow stabilized. Adds legal compliance layer. | Budget Generation |
-| P10 | **Purchase Requisition Auto-Generation** | Stock reservation working, need to handle insufficient stock. | Stock Reservation |
-| P11 | **Mechanic Commission Tracking** | Payment flow validated, need to calculate team compensation. | Payment Processing |
-| P12 | **Audit Trail Complete** | System in production, need traceability for disputes. | Cross-cutting |
+- [ ] **INF-03**: Terraform scripts — needed for cloud provisioning demo
+- [ ] **INF-04**: CD pipeline — needed for deployment automation
+- [ ] **QLD-02**: Clean Code/SOLID refactoring — quality improvement
+- [ ] **DOC-06/DOC-07**: Sequence + CI/CD diagrams — documentation depth
 
-### Future Consideration (Phase 3+)
+### Nice to Have (P3)
 
-| # | Feature | Why Defer |
-|---|---------|-----------|
-| P13 | **NF-e XML Import for Stock Entry** | Requires deep SEFAZ integration knowledge, XML parsing, fiscal layout mapping. Critical for production but can be simulated for MVP. |
-| P14 | **Online Scheduling / Agenda** | Separate bounded context. OS flow must be solid first. |
-| P15 | **Multi-Workshop Support** | Architectural decision (tenant isolation). Validate single-tenant first. |
-| P16 | **Real Payment Gateway Integration** | Simulated `ServicoBancario` suffices for MVP. Real integration per-gateway per-phase. |
-| P17 | **Mobile App** | API-first design enables this. Requires separate frontend team. |
+- [ ] **INF-05**: HPA + load simulation — advanced infra demo
+- [ ] **DOC-04**: Demo video — requires all other features done
+- [ ] **DOC-09/DOC-10/DOC-11**: Miro, architecture doc, HPA explanation — polish
+
+---
 
 ## Feature Prioritization Matrix
 
-| Feature | User Value | Implementation Cost | Priority |
-|---------|------------|---------------------|----------|
-| OS Lifecycle (Status Machine) | CRITICAL | HIGH (7 states, domain events, state validation) | **P1** |
-| Client Registration (CPF/CNPJ) | CRITICAL | LOW (validate + unique) | **P1** |
-| Vehicle Registration (Mercosul Plate) | CRITICAL | LOW (validate + unique per client) | **P1** |
-| Service Type Catalog | HIGH | LOW (CRUD) | **P1** |
-| Budget Generation + Client Approval | CRITICAL | MEDIUM (public link, status transition) | **P1** |
-| Parts/Supplies CRUD with Balance | HIGH | MEDIUM (balance invariants) | **P1** |
-| Stock Reservation on Approval | HIGH | HIGH (cross-aggregate coordination) | **P1** |
-| Parts Withdrawal on Execution | HIGH | LOW (validate reservation, debit) | **P1** |
-| Payment Processing + Cobrança | CRITICAL | MEDIUM (cobrança emit + payment confirm) | **P1** |
-| Vehicle Delivery Registration | HIGH | LOW | **P1** |
-| OS Listing with Filters | HIGH | LOW | **P1** |
-| Public Client Status Tracking | MEDIUM | MEDIUM (public endpoint) | **P1** |
-| Minimum Stock Alerts | MEDIUM | LOW (check after movements) | **P1** |
-| SLA Monitoring + Auto-Expiration | MEDIUM | MEDIUM (timer, policy) | **P2** |
-| Purchase Requisition Auto-Generation | MEDIUM | MEDIUM | **P2** |
-| Mechanic Commission Tracking | LOW | LOW | **P2** |
-| Audit Trail with Soft Delete | MEDIUM | LOW (cross-cutting, already started) | **P2** |
-| NF-e XML Import | HIGH | HIGH (SEFAZ schema, validation) | **P3** |
-| Online Scheduling/Agenda | MEDIUM | HIGH (new bounded context) | **P3** |
-| Multi-Workshop | MEDIUM | HIGH (tenant architecture) | **P3** |
-| Real Payment Gateway | MEDIUM | HIGH (per-gateway certification) | **P3** |
-| Mobile App | HIGH | VERY HIGH (frontend team needed) | **P3** |
-| AI Diagnostics | LOW | VERY HIGH (requires ML infra) | **P3** |
-| Real-Time Chat | LOW | HIGH (websocket infra) | **Anti-feature** |
-| Full Accounting (DRE/SPED) | LOW | VERY HIGH | **Anti-feature** |
+| Feature | User Value | Implementation Cost | Priority | Phase |
+|---------|------------|---------------------|----------|-------|
+| WhatsApp orcamento notification (WPP-01) | HIGH | MEDIUM (new HTTP client + template setup) | P1 | Phase 1 |
+| WhatsApp OS finished (WPP-02) | HIGH | LOW (reuses same infrastructure) | P1 | Phase 1 |
+| Ordered OS listing (API-04) | HIGH | LOW (single repository method + endpoint param) | P1 | Phase 1 |
+| Docker review (INF-01) | MEDIUM | LOW | P1 | Phase 1 |
+| K8s manifests (INF-02) | HIGH | MEDIUM (3-5 YAML files) | P1 | Phase 2 |
+| 80% coverage (QLD-01) | MEDIUM | MEDIUM (fix bugs + add ~150 tests) | P1 | Phase 2 |
+| README + docs (DOC-05, DOC-08) | MEDIUM | MEDIUM | P1 | Phase 2 |
+| Clean Code refactoring (QLD-02) | MEDIUM | MEDIUM (fix known bugs) | P2 | Phase 2 |
+| CD pipeline (INF-04) | MEDIUM | LOW | P2 | Phase 3 |
+| Terraform (INF-03) | MEDIUM | MEDIUM | P2 | Phase 3 |
+| HPA + load sim (INF-05) | MEDIUM | LOW | P3 | Phase 3 |
+| Demo video (DOC-04) | HIGH (academic) | HIGH (editing) | P3 | Phase 3 |
+| Miro + architecture doc (DOC-09/10/11) | MEDIUM | LOW | P3 | Phase 3 |
 
-**Priority key:**
-- P1: Must have for launch (MVP)
-- P2: Should have, add in next iteration
-- P3: Nice to have, future consideration
+---
 
-## Competitor Feature Analysis
+## Key Design Decisions
 
-| Feature | MecPro | Ultracar | Garage | AutoERP | MecânicaFlow | Our Approach |
-|---------|--------|----------|--------|---------|-------------|--------------|
-| **OS Digital Lifecycle** | ✅ Full Kanban | ✅ 30+ anos | ✅ Full | ✅ Full | ✅ Kanban | ✅ API-first, 7-status machine with domain events |
-| **WhatsApp Integration** | ✅ Auto + Bot IA | ✅ Basic | ❌ No | ✅ Auto messages | ✅ Auto updates | ❌ Not in MVP — simulated email notification |
-| **PIX Integration** | ✅ QR Code + Webhook | ✅ | ❌ | ✅ Asaas | ✅ | ⚠️ Simulated bank service for MVP |
-| **NF-e / NFS-e / NFC-e** | ✅ All 3 (Premium) | ✅ | ✅ NF-e + NFC-e | ✅ NF-e + NFS-e | ✅ All 3 | ⚠️ Simulated in MVP, real XML in Phase 2-3 |
-| **Budget Approval via Link** | ✅ WhatsApp link | ✅ | ✅ Online | ✅ WhatsApp link | ✅ Online link | ✅ Public link with SLA timer |
-| **Public Status Tracking** | ❌ Not explicit | ❌ Not explicit | ❌ Not explicit | ❌ Not explicit | ✅ Link público | ✅ Public endpoint (differentiator) |
-| **SLA Auto-Expiration** | ❌ Not explicit | ❌ | ❌ | ❌ | ❌ | ✅ SLA Policy (key differentiator) |
-| **Stock XML Import** | ✅ Via NF XML | ⚠️ | ❌ | ✅ | ✅ Via XML | ⚠️ Phase 2-3 |
-| **Auto Purchase Requisition** | ✅ By OS or min stock | ❌ | ❌ | ✅ By OS | ✅ By OS | ✅ Auto-generate on approval + min stock |
-| **Mechanic Commission** | ✅ Ranking + % | ✅ | ✅ | ✅ | ✅ | ✅ Phase 2 |
-| **API for Integration** | ✅ Planos superiores | ⚠️ Limited | ✅ Plano Master | ❌ | ❌ | ✅ API-first — core architectural principle |
-| **Mobile App** | ✅ App Mecânico | ⚠️ | ❌ | ✅ Android | ❌ | ❌ API-first, defer |
-| **AI Diagnostics** | ✅ IA Diagnóstica | ❌ | ❌ | ✅ Consultor IA | ❌ | ❌ Out of scope |
-| **Multi-Company** | ✅ Multi-unidade | ✅ Redes | ❌ | ❌ | ❌ | ❌ Phase 3+ |
+| Decision | Option Chosen | Rationale |
+|----------|--------------|-----------|
+| WhatsApp provider | **Official Cloud API** (free tier) | No third-party cost, official Meta API, 1,000 free conversations/month. Avoids Twilio/SDK paid tiers. |
+| WhatsApp template approach | **URL button template** for orçamento, **text template** for OS finished | URL button allows one-click approval. Text notification sufficient for pickup info. |
+| Ordered listing implementation | **JPQL ORDER BY CASE** | Single query, correct ordering, no denormalization needed. |
+| Container image strategy | **Jib for CI**, **Docker for local dev** | Jib doesn't require Docker daemon — ideal for GitHub Actions. Docker is simpler for local testing. |
+| K8s manifest approach | **Hand-crafted** (not Quarkus auto-generation) | More maintainable, explicit, Terraform-ready. Auto-generation as reference only. |
+| Test strategy for WhatsApp | **MockWhatsAppNotifier** in unit tests, **WireMock** for integration | No actual WhatsApp calls in CI. Verify message format and content via mocks. |
+| 80% coverage exclusions | **Keep current exclusions** (DTOs, Resources, Entities, Mappers, ExceptionMappers, Config) | These classes are tested end-to-end via REST Assured + H2. Excluding them from JaCoCo check prevents double-counting issues. |
 
-### Key Takeaways from Competitor Analysis
+---
 
-1. **No competitor offers SLA auto-expiration** — this is a genuine differentiator for Mekano. Competitors rely on manual SLA tracking.
-2. **Public status tracking is rare** (~20% of competitors) — strong differentiator that reduces operational overhead for atendentes.
-3. **API-first is our architectural moat** — competitors are closed SaaS. Our Clean Architecture multi-module API enables mobile/web/third-party adoption that competitors cannot match without rewriting.
-4. **WhatsApp integration is becoming table stakes** in the Brazilian market (70%+ of competitors). We omit it from MVP but it must be the first Phase 2 addition after payment validation.
-5. **NF-e emission is table stakes but XML import is differentiating** — every competitor can emit, but fewer auto-import supplier XML for stock entry. This is our Phase 2-3 priority.
-6. **PIX integration with webhook auto-reconciliation** is a strong expectation. Our simulated bank service must anticipate the webhook callback pattern.
+## Anti-Features
 
-## Brazilian Market Specifics
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| Full WhatsApp two-way conversation | "Customer can reply and chat" | Requires 24h session management, webhook server, message parsing, NLP. Massively complex. | One-way notification only. Customer action is via URL click in browser. |
+| Real-time OS status via WhatsApp | "Customer asks 'where's my car'" | Would require webhook handling + query processing. Not justified for MVP. | Customer uses existing `/os/{id}/status` public endpoint. Add WhatsApp query in future. |
+| WhatsApp payment link | "Customer pays via WhatsApp" | PCI compliance, payment processing in chat. High risk. | Use existing idempotent payment endpoint. Notify via WhatsApp to check app/web. |
+| Multiple WhatsApp business numbers | "Each branch has its own number" | Multiple phone number IDs, template management complexity. Not needed for MVP. | Single number. Multi-branch support is v3+ scope. |
+| Prometheus/Grafana monitoring | "Production monitoring" | Beyond current scope (PROJECT.md explicit: "além do escopo atual"). | Use Quarkus Micrometer metrics (`/q/metrics`) which already exist. Add monitoring later. |
 
-### Legal Requirements (Must Implement Correctly)
-
-| Requirement | Source | Impact on Features |
-|-------------|--------|-------------------|
-| **Orçamento prévio detalhado** | CDC Art. 40 | Budget must include: service description, parts list, labor cost, total value, payment terms, start/end dates, validity period. Client must explicitly approve. |
-| **Proibição de serviços não autorizados** | CDC Art. 39, VI | Any service not in the approved budget is "free" — client can refuse payment. OS must prevent adding items after approval without re-authorization. |
-| **Garantia mínima de 90 dias** | CDC Art. 26 | Services and parts have 90-day warranty. OS must record warranty start date and duration per item. |
-| **CPF/CNPJ validation** | Receita Federal | Validate check digits. CPF: 11 digits. CNPJ: 14 digits. Block duplicates. |
-| **Placa Mercosul format** | DENATRAN Res. 780/2019 | Format: `ABC1D23` (3 letters, 1 digit, 1 letter, 2 digits). Validate regex. |
-| **NF-e/NFS-e fiscal emission** | SEFAZ (state) / Prefeitura (city) | Requires Certificado Digital ICP-Brasil. NF-e = ICMS (state), NFS-e = ISS (city). Workshop needs both Inscrição Estadual and Inscrição Municipal. Reforma Tributária 2026 changing layouts. |
-| **NFS-e Nacional (mandatory Jan 2026)** | Lei Complementar 214/2024 | Unified national NFS-e standard. Municipalities must adopt or lose federal transfers. Our implementation must target the national standard API. |
-
-### Fiscal Document Types Relevant to Workshops
-
-| Type | Scope | Tax | Authority | When to Use |
-|------|-------|-----|-----------|-------------|
-| **NF-e (Modelo 55)** | Products | ICMS | SEFAZ (state) | Parts sale B2B, stock movement between branches |
-| **NFS-e** | Services | ISS | Prefeitura (city) / National (2026) | Labor, diagnosis, maintenance service — this is the primary fiscal document for workshops |
-| **NFC-e (Modelo 65)** | Consumer products | ICMS | SEFAZ (state) | Parts sale at counter (balcão) to end consumer |
-
-**Key insight for workshops:** In most cases, the workshop issues a **NFS-e** for the total service (labor + parts considered inputs), not separate NF-e for parts. The dominant model is: service is the main activity, parts are inputs to the service. This simplifies fiscal logic but requires correct LC 116/2003 service code mapping.
-
-### Currency and Payment Specifics
-
-| Aspect | Brazilian Practice | Implementation Impact |
-|--------|-------------------|----------------------|
-| **PIX** | Instant payment, QR Code dynamic or static, webhook callback | Simulated in MVP, real integration must anticipate webhook reconciliation |
-| **Boleto** | 1-3 business day settlement, API generation via banks | Simulated in MVP |
-| **Credit Card** | Installments (parcelamento) common, 2-6% MDR | Parcelamento adds complexity — Tabela Price for interest calculation |
-| **Payment Methods enum** | PIX, BOLETO, CARTAO_CREDITO, CARTAO_DEBITO, DINHEIRO | Already modeled in Event Storming as `MetodoPagamento` |
+---
 
 ## Sources
 
-### Competitor Products Analyzed
-- **MecPro** (MagoWeb) — https://oficina.saas.magoweb.com.br/ (HIGH confidence, current site)
-- **Ultracar** (Pareto) — https://ultracar.com.br/ (HIGH confidence, 30+ years, Bosch partner)
-- **Garage** (Lumma Software) — https://garage.lummasoftware.com/ (HIGH confidence)
-- **AutoERP** — https://www.autoerp.app.br/ (HIGH confidence, changelog public)
-- **Orbicar** — https://orbicar.com.br/ (HIGH confidence)
-- **MotorSW** — https://motorsw.com.br/ (HIGH confidence)
-- **MecânicaFlow** — https://mecanicaflow.sistemasaas.com.br/ (HIGH confidence)
-- **Wüst Software** — https://wust.dev.br/oficina (HIGH confidence, at R$79.90/m)
-- **Automotive System** — https://www.automotivesystem.com.br/ (MEDIUM confidence)
-- **Syscar** (Mc Cloud) — https://syscar.com.br/ (HIGH confidence, detailed plan comparison)
-- **Manager Full** — https://managerfull.com/ (MEDIUM confidence)
-- **Krossfy** — https://krossfy.com.br/ (MEDIUM confidence)
-- **Gaud ERP** — https://gauderp.com.br/ (HIGH confidence, blog with fiscal expertise)
-- **Mekanos** — https://www.mekanos.com.br/ (MEDIUM confidence)
-
-### Legal / Regulatory Sources
-- **CDC Lei 8.078/90** — Art. 35, 39, 40 — Consumer protection for workshop services (HIGH confidence)
-- **LC 116/2003** — ISS service list for NFS-e classification (HIGH confidence)
-- **LC 214/2024** — Reforma Tributária, NFS-e Nacional mandatory Jan 2026 (HIGH confidence, gov.br)
-- **DENATRAN Res. 780/2019** — Mercosul plate format (HIGH confidence)
-- **Portal NF-e** (SEFAZ) — https://www.nfe.fazenda.gov.br/ (HIGH confidence, technical notes 2025.002 for Reforma Tributária)
-- **Portal NFS-e** (Receita Federal) — https://www.gov.br/nfse/ (HIGH confidence)
-- **Guia CDC Oficinas** — https://blog.texaco.com.br/havoline/direitos-consumidor-oficinas-mecanicas/ (MEDIUM confidence)
-
-### Domain-Specific References
-- **Guia de Gestão de Oficina** (Sults) — https://www.sults.com.br/blog/gestao-de-oficina-mecanica/ (MEDIUM confidence, practical KPIs and SLA suggestions)
-- **Orçamento Prévio Obrigatoriedade** — https://advogadospirituba.com.br/orcamento-previo-oficina-obrigatorio-direitos-consumidor/ (MEDIUM confidence, legal analysis)
-- **OS Digital para Oficinas** (Ultracar blog) — https://ultracar.com.br/ordem-de-servico-digital-oficinas-mecanicas/ (MEDIUM confidence)
-
-### Project Documentation
-- **PROJECT.md** — `.planning/PROJECT.md` (HIGH confidence, current project context)
-- **MEKANO_DOCUMENTATION.md** — `docs/MEKANO_DOCUMENTATION.md` (HIGH confidence, functional requirements)
-- **Event Storming** — `docs/EventStorming_Mermaid.md` (HIGH confidence, aggregate definitions, 3 bounded contexts)
+- **WhatsApp Cloud API**: Meta official docs via Context7 library `/websites/developers_facebook_business-messaging_whatsapp_v4` — **HIGH confidence**
+- **Quarkus K8s deployment**: Context7 `/quarkusio/quarkus` — Kubernetes extension, container-image, native build — **HIGH confidence**
+- **Quarkus health probes**: SmallRye Health extension in mekano-rest dependencies — **HIGH confidence**
+- **JaCoCo coverage check**: Verified in parent pom.xml — `LINE:COVEREDRATIO:0.80` — **HIGH confidence**
+- **Existing test structure**: Full file listing across all 4 modules — **HIGH confidence**
+- **StatusOS enum**: Read from `mekano-domain/src/main/java/.../StatusOS.java` — **HIGH confidence**
+- **OrcamentoResource endpoints**: `@PermitAll` on aprovar/reprovar — **HIGH confidence**
+- **OS lifecycle**: Read from `OrdemDeServico.java` — **HIGH confidence**
+- **Known bugs**: AGENTS.md analysis of codebase — **HIGH confidence**
+- **PROJECT.md**: All requirements and decisions — **HIGH confidence**
 
 ---
-*Feature research for: Mekano — Mechanical Workshop Management System*
-*Researched: 2026-06-20*
+
+*Feature research for: Mekano v2.0 infra-docs-quality-whatsapp milestone*
+*Researched: 2026-08-08*

@@ -2,10 +2,13 @@ package com.fiap.mekano.application.service.ordemdeservico;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.fiap.mekano.application.service.os.OsAuditEventPublisher;
 import com.fiap.mekano.domain.event.DiagnosticoFinalizadoEvent;
 import com.fiap.mekano.domain.event.OSFinalizadaEvent;
 import com.fiap.mekano.domain.event.OrdemDeServicoCriadaEvent;
@@ -15,14 +18,17 @@ import com.fiap.mekano.domain.model.ItemOrcamento;
 import com.fiap.mekano.domain.model.OrdemDeServico;
 import com.fiap.mekano.domain.model.Peca;
 import com.fiap.mekano.domain.model.Servico;
+import com.fiap.mekano.domain.os.OsAuditAction;
 import com.fiap.mekano.domain.port.in.CreateOrdemDeServicoCommand;
 import com.fiap.mekano.domain.port.in.FinalizarDiagnosticoCommand;
 import com.fiap.mekano.domain.port.in.OrdemDeServicoServicePort;
+import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;
 import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
 import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
 import com.fiap.mekano.domain.port.out.ServicoRepositoryPort;
+import com.fiap.mekano.domain.port.out.VeiculoRepositoryPort;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
@@ -34,28 +40,44 @@ import jakarta.transaction.Transactional;
 @ApplicationScoped
 public class OrdemDeServicoService implements OrdemDeServicoServicePort {
 
-    private final OrdemDeServicoRepositoryPort repository;
+private final OrdemDeServicoRepositoryPort repository;
     private final EventPublisher eventPublisher;
     private final PecaRepositoryPort pecaRepository;
     private final ServicoRepositoryPort servicoRepository;
     private final OrcamentoRepositoryPort orcamentoRepository;
+    private final OsAuditEventPublisher osAuditEventPublisher;
+    private final ClienteRepositoryPort clienteRepository;
+    private final VeiculoRepositoryPort veiculoRepository;
 
     public OrdemDeServicoService(OrdemDeServicoRepositoryPort repository, EventPublisher eventPublisher,
-                                 PecaRepositoryPort pecaRepository, ServicoRepositoryPort servicoRepository,
-                                 OrcamentoRepositoryPort orcamentoRepository) {
+                                  PecaRepositoryPort pecaRepository, ServicoRepositoryPort servicoRepository,
+                                  OrcamentoRepositoryPort orcamentoRepository,
+                                  OsAuditEventPublisher osAuditEventPublisher,
+                                  ClienteRepositoryPort clienteRepository,
+                                  VeiculoRepositoryPort veiculoRepository) {
         this.repository = repository;
         this.eventPublisher = eventPublisher;
         this.pecaRepository = pecaRepository;
         this.servicoRepository = servicoRepository;
         this.orcamentoRepository = orcamentoRepository;
+        this.osAuditEventPublisher = osAuditEventPublisher;
+        this.clienteRepository = clienteRepository;
+        this.veiculoRepository = veiculoRepository;
     }
 
     @Override
     @Transactional
     public OrdemDeServico create(CreateOrdemDeServicoCommand command) {
+        // OS-07: validar existência de clienteId e veiculoId antes de criar
+        clienteRepository.findById(command.clienteId())
+                .orElseThrow(() -> new AppException(404, Messages.get("cliente.not.found", command.clienteId())));
+        veiculoRepository.findById(command.veiculoId())
+                .orElseThrow(() -> new AppException(404, Messages.get("veiculo.not.found", command.veiculoId())));
         OrdemDeServico os = OrdemDeServico.create(command.clienteId(), command.veiculoId(), command.descricaoProblema());
         OrdemDeServico saved = repository.save(os);
         eventPublisher.publish(OrdemDeServicoCriadaEvent.of(saved));
+        osAuditEventPublisher.publish(saved.getId(), OsAuditAction.CRIAR, null,
+                OsAuditAction.CRIAR.getObservacaoDefault(), Map.of());
         return saved;
     }
 
@@ -88,7 +110,10 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
     public OrdemDeServico iniciarDiagnostico(UUID id) {
         OrdemDeServico os = findById(id);
         os.iniciarDiagnostico();
-        return repository.save(os);
+        OrdemDeServico saved = repository.save(os);
+        osAuditEventPublisher.publish(saved.getId(), OsAuditAction.DIAGNOSTICAR, null,
+                OsAuditAction.DIAGNOSTICAR.getObservacaoDefault(), Map.of());
+        return saved;
     }
 
     @Override
@@ -102,7 +127,7 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
                 case "PECA" -> {
                     Peca peca = pecaRepository.buscarPorId(item.referenciaUuid())
                             .orElseThrow(() -> new AppException(404, "Peça não encontrada: " + item.referenciaUuid()));
-                    itens.add(new ItemOrcamento(peca.getDescricao(), item.quantidade(), peca.getValorUnitario()));
+                    itens.add(new ItemOrcamento(peca.getDescricao(), item.quantidade(), peca.getValorUnitario(), peca.getId()));
                 }
                 case "SERVICO" -> {
                     Servico servico = servicoRepository.findById(item.referenciaUuid())
@@ -116,6 +141,8 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
         os.finalizarDiagnostico();
         repository.save(os);
         eventPublisher.publish(DiagnosticoFinalizadoEvent.of(os.getId(), command.descricao(), itens));
+        osAuditEventPublisher.publish(os.getId(), OsAuditAction.ORCAR, null,
+                OsAuditAction.ORCAR.getObservacaoDefault(), Map.of("itens", itens.size()));
         return os;
     }
 
@@ -123,9 +150,20 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
     @Transactional
     public OrdemDeServico cancelar(UUID id, String motivo) {
         OrdemDeServico os = findById(id);
-        liberarEstoque(os);
+        // D-08: cancelamento libera reserva (não credita saldo — peças nunca saíram do físico)
+        if (os.getOrcamentoUuid() != null) {
+            orcamentoRepository.findByUuid(os.getOrcamentoUuid()).ifPresent(orcamento -> {
+                for (ItemOrcamento item : orcamento.getItens()) {
+                    if (item.getPecaId() != null) {
+                        pecaRepository.liberarReserva(item.getPecaId(), item.getQuantidade().intValue());
+                    }
+                }
+            });
+        }
         os.cancelar(motivo);
-        return repository.save(os);
+        OrdemDeServico saved = repository.save(os);
+        osAuditEventPublisher.publish(saved.getId(), OsAuditAction.CANCELAR, null, motivo, Map.of());
+        return saved;
     }
 
     @Override
@@ -135,6 +173,7 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
         var event = os.entregar(recebidoPor);
         OrdemDeServico saved = repository.save(os);
         eventPublisher.publish(event);
+        osAuditEventPublisher.publish(saved.getId(), OsAuditAction.ENTREGAR, null, recebidoPor, Map.of());
         return saved;
     }
 
@@ -145,8 +184,29 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
         if (os.getStatus() != com.fiap.mekano.domain.model.StatusOS.AGUARDANDO_EXECUCAO) {
             throw new AppException(400, Messages.get("os.execucao.status.invalido.iniciar", os.getStatus()));
         }
+
+        // D-04: debitar reserva dos itens de peça do orçamento antes de iniciar execução
+        if (os.getOrcamentoUuid() != null) {
+            orcamentoRepository.findByUuid(os.getOrcamentoUuid()).ifPresent(orcamento -> {
+                for (ItemOrcamento item : orcamento.getItens()) {
+                    if (item.getPecaId() != null) {
+                        boolean ok = pecaRepository.debitarSaldoReservado(
+                                item.getPecaId(), item.getQuantidade().intValue());
+                        if (!ok) {
+                            throw new AppException(409, Messages.get("peca.saldo.insuficiente",
+                                    item.getDescricao(), 0, item.getQuantidade()));
+                        }
+                    }
+                }
+            });
+        }
+
         os.iniciarExecucao(mecanicoUuid, observacao);
-        return repository.save(os);
+        OrdemDeServico saved = repository.save(os);
+        osAuditEventPublisher.publish(saved.getId(), OsAuditAction.EXECUTAR, null,
+                OsAuditAction.EXECUTAR.getObservacaoDefault(),
+                Map.of("mecanico", mecanicoUuid.toString()));
+        return saved;
     }
 
     @Override
@@ -159,6 +219,8 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
         os.finalizarExecucao(observacao);
         OrdemDeServico saved = repository.save(os);
         eventPublisher.publish(OSFinalizadaEvent.of(saved.getId()));
+        osAuditEventPublisher.publish(saved.getId(), OsAuditAction.FINALIZAR, null,
+                OsAuditAction.FINALIZAR.getObservacaoDefault(), Map.of());
         return saved;
     }
 
@@ -185,18 +247,29 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
     }
 
     @Override
+    public Map<UUID, Double> calcularTempoMedioPorMecanico(LocalDateTime dataInicio, LocalDateTime dataFim) {
+        return repository.calcularTempoMedioPorMecanico(dataInicio, dataFim);
+    }
+
+    @Override
     public boolean clientePossuiOsAtiva(UUID clienteUuid) {
         return repository.existsByClienteUuidAndStatusIn(clienteUuid, List.of("EM_EXECUCAO", "AGUARDANDO_APROVACAO"));
     }
 
-    private void liberarEstoque(OrdemDeServico os) {
-        if (os.getOrcamentoUuid() == null) return;
-        orcamentoRepository.findByUuid(os.getOrcamentoUuid()).ifPresent(orcamento -> {
-            for (ItemOrcamento item : orcamento.getItens()) {
-                pecaRepository.buscarPorDescricao(item.getDescricao()).ifPresent(peca -> {
-                    pecaRepository.creditarSaldo(peca.getId(), item.getQuantidade().intValue());
-                });
-            }
-        });
+    @Override
+    public List<String> buscarItensOrcados(UUID osId) {
+        Optional<UUID> orcamentoUuid = repository.findOrcamentoUuidByOsId(osId);
+        if (orcamentoUuid.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return orcamentoRepository.findByUuid(orcamentoUuid.get())
+                .map(orcamento -> orcamento.getItens().stream()
+                        .map(item -> {
+                            String tipo = item.getPecaId() != null ? "Peça" : "Serviço";
+                            return String.format("%s: %s x%d (R$ %.2f)",
+                                    tipo, item.getDescricao(), item.getQuantidade(), item.calcularSubtotal());
+                        })
+                        .toList())
+                .orElse(Collections.emptyList());
     }
 }

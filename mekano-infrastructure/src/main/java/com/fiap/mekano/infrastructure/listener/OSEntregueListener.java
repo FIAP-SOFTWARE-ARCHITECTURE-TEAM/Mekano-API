@@ -1,6 +1,6 @@
 package com.fiap.mekano.infrastructure.listener;
 
-import com.fiap.mekano.domain.event.OSEntregueEvent;
+import com.fiap.mekano.domain.event.EntregaConfirmadaEvent;
 import com.fiap.mekano.domain.os.OsAuditAction;
 import com.fiap.mekano.domain.port.out.OsAuditLogRepositoryPort;
 import io.quarkus.logging.Log;
@@ -10,9 +10,12 @@ import jakarta.enterprise.event.TransactionPhase;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
+import java.time.format.DateTimeFormatter;
+import java.util.Map;
+
 /**
- * Listener para consumo de OSEntregueEvent.
- * Registra na trilha de auditoria para rastreabilidade operacional (D-20).
+ * Listener para consumo de EntregaConfirmadaEvent (evento REALMENTE publicado por OrdemDeServicoService.entregar).
+ * Registra ENTREGA_REALIZADA na trilha de auditoria.
  */
 @ApplicationScoped
 public class OSEntregueListener {
@@ -21,18 +24,22 @@ public class OSEntregueListener {
     OsAuditLogRepositoryPort auditRepository;
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
-    public void onOSEntregue(
-            @Observes(during = TransactionPhase.AFTER_SUCCESS) OSEntregueEvent event
+    public void onEntregaConfirmada(
+            @Observes(during = TransactionPhase.AFTER_SUCCESS) EntregaConfirmadaEvent event
     ) {
-        Log.infof("OS %s entregue ao cliente — observação: %s",
-                event.osUuid(), event.observacao());
+        Log.infof("OS %s entregue ao cliente — recebido por: %s",
+                event.osUuid(), event.recebidoPor());
+
+        String dataEntrega = event.occurredAt() != null
+                ? event.occurredAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                : java.time.LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 
         auditRepository.save(new OsAuditLogRepositoryPort.CreateOsAuditLogCommand(
                 event.osUuid(),
                 OsAuditAction.ENTREGA_REALIZADA,
                 "sistema",
-                event.observacao() != null ? event.observacao() : "Entrega realizada",
-                String.format("{\"dataEntrega\":\"%s\"}", event.dataEntrega())
+                event.recebidoPor() != null ? event.recebidoPor() : "Entrega realizada",
+                String.format("{\"dataEntrega\":\"%s\"}", dataEntrega)
         ));
     }
 }

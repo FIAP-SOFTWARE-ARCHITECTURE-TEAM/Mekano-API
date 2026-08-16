@@ -25,6 +25,9 @@ public class ApiExceptionMapper implements ExceptionMapper<Exception> {
         if (exception instanceof AppException ex) {
             return build(ex.getStatus(), ex.getMessage());
         }
+        if (exception instanceof com.fiap.mekano.shared.exception.AppException ex) {
+            return build(ex.getStatus(), ex.getMessage());
+        }
         if (exception instanceof WebApplicationException ex) {
             int status = ex.getResponse() != null ? ex.getResponse().getStatus() : 500;
             String detail = ex.getMessage();

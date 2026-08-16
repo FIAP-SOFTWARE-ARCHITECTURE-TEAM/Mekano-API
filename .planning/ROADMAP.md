@@ -3,114 +3,124 @@
 **Core Value:** Gerenciar o ciclo de vida completo das Ordens de Serviço — do recebimento do veículo à entrega — com rastreabilidade, controle de estoque e cobrança integrados.
 
 **Granularity:** standard
-**Mode:** mvp
-**Total v1 Requirements:** 37
+**Total v1 Requirements:** 37 (Complete)
+**Total v2 Requirements:** 22
 **Timeline:** 10 days
 **Team:** 5 developers
 
 ---
 
+## Milestones
+
+- ✅ **v1.0 MVP** — Phases 1-3.1 (shipped 2026-08-08)
+- 🚧 **v2.0 infra-docs-quality-whatsapp** — Phases 4-8 (in progress)
+
+---
+
 ## Phases
 
-- [x] **Phase 1: Auth & OS Foundation** — Auth/roles + Cliente/Veiculo/Serviço CRUD + OS criação/diagnóstico + consulta pública
-- [x] **Phase 2: OS Continuation & Estoque** — Fluxo de orçamento/aprovação + execução/finalização + estoque completo + métricas
-- [ ] **Phase 3: Pagamento & Delivery** — Cobrança + pagamento simulado + entrega + docs finais (parcial: 50%)
+- [ ] **Phase 4: Infrastructure Foundation** — Docker revisado, manifestos K8s, Terraform, pipeline CD
+- [ ] **Phase 5: WhatsApp Integration** — Notificação via WhatsApp para orçamento e OS finalizada
+- [ ] **Phase 6: Quality & Bug Fixes** — 80% cobertura JaCoCo, refactoring Clean Code + SOLID
+- [ ] **Phase 7: API Improvements** — Listagem ordenada de OS por prioridade, verificação de endpoints
+- [ ] **Phase 8: Documentation & Polish** — README completo, diagramas, Swagger, Miro, vídeo demonstrativo
 
 ---
 
 ## Phase Details
 
-### Phase 1: Auth & OS Foundation
+### 🚧 v2.0 infra-docs-quality-whatsapp (In Progress)
 
-**Goal:** Sistema com autenticação JWT por perfis; admin gerencia clientes, veículos e serviços; atendente cria OS e mecânico realiza diagnóstico com consulta pública de status
-**Mode:** mvp
-**Depends on:** Nothing (auth construído do zero como parte da fase)
-**Requirements:** AUTH-01, AUTH-02, AUTH-03, OS-01, OS-02, OS-03, OS-04, OS-05, OS-06, OS-07, OS-08, OS-15, DOC-01
-**Time allocation:** Days 1-4, all 5 devs
-**Success Criteria** (what must be TRUE):
-
-  1. Sistema tem roles (admin, atendente, mecanico, almoxarife, financeiro) com JWT — endpoints protegidos por `@RolesAllowed`
-  2. Admin/atendente pode cadastrar, editar, consultar e excluir clientes (CPF/CNPJ único validado), veículos (placa única, Mercosul+antigo) e serviços (valor > 0)
-  3. Atendente pode criar OS (RECEBIDA) identificando cliente e veículo; mecânico inicia diagnóstico (EM_DIAGNOSTICO) com inclusão de serviços e peças
-  4. Cliente pode consultar status público da OS via endpoint sem autenticação
-  5. Diagramas de sequência dos fluxos principais documentados
-
-**Plans:** 6 plansPlans:
-**Wave 1**
-
-- [x] 01-01-PLAN.md — Auth Foundation: JWT Ed25519, roles, refresh rotation, walking skeleton
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 01-02-PLAN.md — Cliente CRUD: domain, infra, REST com update
-- [x] 01-03-PLAN.md — Veiculo CRUD: domain, infra, REST com update
-- [x] 01-04-PLAN.md — Servico CRUD: domain, infra, REST (admin-only)
-
-**Wave 3** *(blocked on Wave 2 completion)*
-
-- [x] 01-05-PLAN.md — OrdemDeServico: state machine, child entities, public status
-
-**Wave 4** *(blocked on Wave 3 completion)*
-
-- [x] 01-06-PLAN.md — Sequence diagrams: Mermaid docs dos fluxos da OS
+**Milestone Goal:** Evoluir o projeto de uma API funcional para um produto entregável com infraestrutura de produção, documentação completa, qualidade assegurada e integração externa com WhatsApp.
 
 ---
 
-### Phase 2: OS Continuation & Estoque
-
-**Goal:** Orçamento gerado e aprovado/reprovado pelo cliente, OS executada até finalização; estoque controlado com reserva atômica, requisições de compra e entrada NF
-**Mode:** mvp
-**Depends on:** Phase 1 (OS Aggregate root, Cliente/Veiculo/Servico endpoints)
-**Requirements:** AUTH-04, OS-09, OS-10, OS-11, OS-13, OS-14, OS-16, OS-17, OS-18, EST-01, EST-02, EST-03, EST-04, EST-05, EST-06, EST-07, EST-08, EST-09, DOC-02
-**Time allocation:** Days 5-7, 3 devs on OS + 2 devs on Estoque
+### Phase 4: Infrastructure Foundation
+**Goal**: Infraestrutura de produção validada: Docker revisado, cluster K8s com manifests, Terraform para provisionamento, pipeline CD funcional
+**Depends on**: Nothing (infra foundation — paralelizável com Phase 5)
+**Requirements**: INF-01, INF-02, INF-03, INF-04, INF-05
 **Success Criteria** (what must be TRUE):
-
-   1. Sistema gera orçamento automaticamente ao finalizar diagnóstico (AGUARDANDO_APROVACAO); cliente aprova (EM_EXECUCAO) ou reprova (CANCELADA) via API pública
-   2. Mecânico inicia execução (EM_EXECUCAO) e finaliza (FINALIZADA); admin lista/filtra OS com paginação e consulta tempo médio de execução
-   3. Admin/almoxarife cadastra peças/insumos com saldo não-negativo; sistema reserva peças atomicamente ao aprovar orçamento (`OrcamentoAprovadoEvent`)
-   4. Sistema gera Requisição de Compra para peças indisponíveis; almoxarife registra NF de entrada atualizando saldo; sistema verifica estoque mínimo e gera nova requisição se necessário
-   5. Admin gerencia usuários do sistema (CRUD); especificação OpenAPI/Swagger documentada
-
-**Plans:** 8 plans
-
-**Wave 1** *(infrastructure foundation)*
-
-- [x] PLAN-01-entity-base.md — Entities, VOs, Flyway V6-V11, domain models, ports, mappers
-
-**Wave 2** *(application services — parallel: 3 devs OS + 2 devs Estoque)*
-
-- [x] PLAN-02-estoque-domain-services.md — Peca/Req/Nf domain + services + atomic stock + CDI events
-- [x] PLAN-03-orcamento-domain-services.md — Orcamento aggregate + OS state machine + SLA job + CDI events
-- [x] PLAN-05-admin-users.md — Admin user CRUD service + role 'cliente' auth (fits in Wave 2)
-
-**Wave 3** *(services + REST — parallel)*
-
-- [x] PLAN-04-ordemservico-execucao.md — OS execution start/finish + metrics + detail + list filters
-- [x] PLAN-06-estoque-rest.md — REST endpoints for Peca, RequisicaoCompra, NfEntrada, Alertas
-
-**Wave 4** *(REST + cross-cutting)*
-
-- [x] PLAN-07-orcamento-rest.md — REST for Orcamento approval/rejection + OS execution endpoints
-- [x] PLAN-08-audit-openapi-build.md — Audit log, OpenAPI annotations, JaCoCo 80%, OWASP DC, README
+  1. Dockerfile e docker-compose revisados funcionam em produção (JVM e Native builds)
+  2. Manifestos K8s (Deployment, Service, ConfigMap, Secret, HPA, Ingress) aplicáveis em cluster Kind, com health probes configuradas
+  3. Scripts Terraform provisionam cluster EKS e banco RDS com backend S3 e state locking
+  4. Pipeline CD no GitHub Actions faz build, push para registry e deploy automático no cluster
+  5. Pipeline CI/CD documentada com diagrama Mermaid no repositório
+**Plans**: 2 plans
+**Plan list**:
+  - [ ] 04-01-PLAN.md — Docker compose refinement (restart policies, .dockerignore, .env.example, troubleshooting README)
+  - [ ] 04-02-PLAN.md — Azure DevOps task descriptions for Elias (K8s, Terraform, CD pipeline, Mermaid)
+**UI hint**: no
 
 ---
 
-### Phase 3: Pagamento & Delivery
-
-**Goal:** Cobrança emitida ao finalizar OS, pagamento confirmado via banco simulado, veículo entregue — ciclo completo da OS finalizado
-**Mode:** mvp
-**Depends on:** Phase 1 (OS Aggregate root), Phase 2 (OS finalization working, estoque integrado)
-**Requirements:** OS-12, PAG-01, PAG-02, PAG-03, DOC-03
-**Time allocation:** Days 8-10, 3 devs on OS finalization + 2 devs on Pagamento
+### Phase 5: WhatsApp Integration
+**Goal**: Clientes notificados via WhatsApp sobre aprovação/recusa de orçamento e finalização de OS
+**Depends on**: Nothing (port/adapter pattern — paralelizável com Phase 4)
+**Requirements**: WPP-01, WPP-02, API-05
 **Success Criteria** (what must be TRUE):
+  1. Cliente recebe notificação WhatsApp com link para aprovar/recusar orçamento quando orçamento é gerado
+  2. Cliente recebe notificação WhatsApp informando que veículo está pronto para retirada quando OS é finalizada
+  3. Escopo de atualização de status via ferramenta externa verificado e documentado (aplicável somente a aprovar/recusar orçamento)
+**Plans**: 3 plans
+**Plan list**:
+  - [ ] 05-01-PLAN.md — WhatsApp notifier port + Evolution API REST Client + docker-compose + orçamento observer (Wave 1)
+  - [ ] 05-02-PLAN.md — WhatsApp retirada notification + webhook endpoint for interactive approve/reject (Wave 2)
+  - [ ] 05-03-PLAN.md — Verify and document scope of external status update via WhatsApp (Wave 3)
+**UI hint**: no
 
-  1. SLA de orçamento expira automaticamente e cancela OS sem aprovação no prazo
-  2. Sistema emite cobrança automaticamente ao finalizar execução (`OSFinalizadaEvent` → OrdemDePagamento Pendente)
-  3. Sistema registra pagamento via banco simulado com idempotência (webhooks duplicados não geram efeito colateral)
-  4. Admin registra entrega do veículo somente após pagamento confirmado (OS → ENTREGUE); sistema bloqueia entrega se pendente
-  5. Guia de contribuição (CONTRIBUTING.md) com setup, padrões e workflow do time
+---
 
-**Plans:** TBD
+### Phase 6: Quality & Bug Fixes
+**Goal**: Código com 80% de cobertura de testes (JaCoCo LINE) e aderente a princípios Clean Code e SOLID
+**Depends on**: Phase 4 (infra CI para gate de qualidade), Phase 5 (testes do adapter WhatsApp)
+**Requirements**: QLD-01, QLD-02
+**Success Criteria** (what must be TRUE):
+  1. Relatório JaCoCo `report-aggregate` mostra ≥80% LINE coverage no projeto completo (excluindo DTOs, Entities, Mappers gerados, REST Client proxies)
+  2. Pipeline CI falha se cobertura ficar abaixo de 80%
+  3. Revisão geral de código concluída: inconsistências de naming (PT-BR vs EN), field injection, estilo de entidades, mappers vazios, VOs duplicados e packages incorretos endereçados sem introduzir regressões
+**Plans**: 5 plans
+**Plan list**:
+  - [ ] 06-01-PLAN.md — JaCoCo aggregated coverage gating (report-aggregate + exclusions) — Wave 1
+  - [ ] 06-02-PLAN.md — PT-BR→EN port rename (Peca, NfEntrada, RequisicaoCompra) — Wave 2
+  - [ ] 06-03-PLAN.md — Dead code removal, entity style, VO unification — Wave 2
+  - [ ] 06-04-PLAN.md — FT/Cache additions to remaining repos — Wave 3
+  - [ ] 06-05-PLAN.md — Open-ended findings + ItemOrcamento move — Wave 4
+**UI hint**: no
+
+---
+
+### Phase 7: API Improvements
+**Goal**: API de listagem de OS ordenada por prioridade de status; verificação de endpoints existentes concluída
+**Depends on**: Phase 6 (testes garantem que refatoração não quebrou endpoints existentes)
+**Requirements**: API-01, API-02, API-03, API-04
+**Success Criteria** (what must be TRUE):
+  1. Verificação documentada se "APIs" refere-se a endpoints ou múltiplas APIs (API-01)
+  2. Existência de endpoint de abertura de OS verificada e documentada (API-02)
+  3. Existência de endpoint de consulta de status da OS verificada e documentada (API-03)
+  4. Listagem de OS retorna ordenada por prioridade: Em Execução > Aguardando Aprovação > Diagnóstico > Recebida, mais antigas primeiro, omitindo finalizadas/entregues
+**Plans**: 2 plans
+**Plan list**:
+  - [ ] 07-01-PLAN.md — Document endpoint verification (API-01 pending, API-02 verified, API-03 verified)
+  - [ ] 07-02-PLAN.md — Implement status priority ordering + terminal exclusion in findAllWithFilters (API-04)
+**UI hint**: no
+
+---
+
+### Phase 8: Documentation & Polish
+**Goal**: Documentação completa e profissional: README, diagramas, Swagger, Miro, vídeo demonstrativo
+**Depends on**: Phase 4 (infra para docs de deploy), Phase 5 (WhatsApp para diagramas de sequência), Phase 7 (API final para Swagger)
+**Requirements**: DOC-04, DOC-05, DOC-06, DOC-07, DOC-08, DOC-09, DOC-10, DOC-11
+**Success Criteria** (what must be TRUE):
+  1. README.md contém descrição da solução, objetivos da v2, instruções de execução local, deploy K8s e Terraform
+  2. Diagrama de sequência do fluxo de consumo de endpoints e Mermaid do fluxo de CI/CD estão no README
+  3. Collection Postman/Swagger revisada e link disponível; Miro atualizado em relação à API
+  4. Documentação da API com componentes, infraestrutura provisionada e fluxo de deploy; explicação de HPA e simulação de carga
+  5. Vídeo demonstrativo (até 15 min) gravado e disponibilizado mostrando ambiente em execução
+**Plans**: 2 plans
+**Plan list**:
+  - [ ] 08-01-PLAN.md — README restructure, Mermaid diagrams, Swagger bump, Postman update, Miro, component docs, HPA, video task (Wave 1)
+  - [ ] 08-02-PLAN.md — CI/CD Mermaid (deferred — depends on INF-04) (Wave 2)
+**UI hint**: no
 
 ---
 
@@ -118,19 +128,27 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Auth & OS Foundation | 6/6 | ✅ Complete | 2026-06-28 |
-| 2. OS Continuation & Estoque | 8/8 | ✅ Complete | 2026-06-29 |
-| 3. Pagamento & Delivery | TBD (parcial) | 🔄 In progress — 3/6 issues | - |
+| 4. Infrastructure Foundation | 0/2 | Planning complete | - |
+| 5. WhatsApp Integration | 0/3 | Plans created | - |
+| 6. Quality & Bug Fixes | 0/5 | Plans created | - |
+| 7. API Improvements | 0/2 | Plans created | - |
+| 8. Documentation & Polish | 0/0 | Not started | - |
 
 ---
 
-## Day-by-Day Allocation
+## Requirement Coverage
 
-| Day | Phase | Team Split | Deliverable |
-|-----|-------|------------|-------------|
-| 1-4 | 1 | 5/5 Auth & OS | Auth JWT + roles + Cliente/Veiculo/Servico CRUD + OS create/diagnose + public status |
-| 5-7 | 2 | 3/5 OS + 2/5 Estoque | Budget/approval + execution/finalization + full Estoque CRUD + reservation + NF |
-| 8-10 | 3 | 3/5 OS + 2/5 Pagamento | SLA, cobrança, payment mock, delivery, CONTRIBUTING.md |
+| Category | Total | Phase 4 | Phase 5 | Phase 6 | Phase 7 | Phase 8 |
+|----------|-------|---------|---------|---------|---------|---------|
+| Documentação | 8 | 0 | 0 | 0 | 0 | 8 |
+| Qualidade | 2 | 0 | 0 | 2 | 0 | 0 |
+| Infraestrutura | 5 | 5 | 0 | 0 | 0 | 0 |
+| WhatsApp | 2 | 0 | 2 | 0 | 0 | 0 |
+| API | 5 | 0 | 1 | 0 | 4 | 0 |
+| **Total** | **22** | **5** | **3** | **2** | **4** | **8** |
+
+✓ **22/22 v2 requirements mapped to phases**
+✓ **No orphaned requirements**
 
 ---
 
@@ -138,25 +156,21 @@
 
 | Risk | Impact | Mitigation | Phase |
 |------|--------|------------|-------|
-| Mega-aggregate OS (Pitfall 1) | Transaction contention, perf degradation | Split Orcamento as separate AR; reference Cliente/Veiculo by UUID only; ArchUnit enforcement | 1 |
-| Incomplete state machine (Pitfall 2) | Illegal transitions corrupt OS | Transition matrix `Map<StatusOS, Set<StatusOS>>` as single source of truth; parameterized test covering all 49 transitions | 1 |
-| Inventory race condition (Pitfall 3) | Overselling stock | Atomic `UPDATE saldo = saldo - qtd WHERE saldo >= qtd`; `@Version` + `PESSIMISTIC_WRITE`; concurrent test | 2 |
-| Payment idempotency (Pitfall 4) | Double-processing on duplicate webhook | Idempotency key on every cobrança; `processedEvents` table check before processing | 3 |
-| Concurrent OS writes (Pitfall 5) | Lost updates | `@Version` on OS aggregate; explicit transition methods (no `setStatus()`) | 1 |
-| Parallel dev integration chaos (Pitfall 9) | Day-8 integration scramble | Vertical slices: first 4 days all-hands on OS Core; day 5 split 3/2 | All |
+| WhatsApp token expira 24h | Notificações param silenciosamente | TokenManager no primeiro componente WhatsApp; token em K8s Secret; readiness check | 5 |
+| JaCoCo multi-module false pass | 80% reportado mas real <80% | `report-aggregate` em mekano-rest; exclusions para MapperImpl e REST Client proxies | 6 |
+| Clean Code refactoring scope creep | Bugs em 517+ testes | Lista fixa de 5-10 itens; sem mudanças estilísticas; full test suite após cada alteração | 6 |
+| Notificação dentro de @Transactional | Conexão DB retida durante latência HTTP | CDI events com `TransactionPhase.AFTER_SUCCESS` | 5 |
+| Terraform state local versionado | Perda/corrupção de estado | S3 backend + `use_lockfile` + .gitignore desde o primeiro init | 4 |
+| Documentação drift | README desatualizado em dias | Swagger auto-gerado; gravar vídeo por último; docs de alto nível | 8 |
 
 ---
 
-## Requirement Coverage
+## Day-by-Day Allocation
 
-| Category | Total | Phase 1 | Phase 2 | Phase 3 |
-|----------|-------|---------|---------|---------|
-| Auth | 4 | 3 | 1 | 0 |
-| OS | 18 | 7 | 9 | 2 |
-| Estoque | 9 | 0 | 9 | 0 |
-| Pagamento | 3 | 0 | 0 | 3 |
-| Documentação | 3 | 1 | 1 | 1 |
-| **Total** | **37** | **11** | **20** | **6** |
-
-✓ **37/37 v1 requirements mapped to phases**
-✓ **No orphaned requirements**
+| Day | Phase Focus | Team Split | Deliverable |
+|-----|-------------|------------|-------------|
+| 1-2 | 4 (Infra) + 5 (WhatsApp) | 3/5 Infra + 2/5 WhatsApp | Docker revisado, K8s manifests, Terraform scaffold, WhatsApp port/adapter |
+| 3-6 | 5 (WhatsApp) + 6 (Quality) | 3/5 Quality + 2/5 WhatsApp | WhatsApp notifs funcionando, JaCoCo 80%, bugs corrigidos, CD pipeline |
+| 5-7 | 6 (Quality) + 7 (API) | 3/5 Quality + 2/5 API | Coverage gate, OS listing prioritizada, endpoints verificados |
+| 7-9 | 8 (Documentation) + 7 (API) | 3/5 Docs + 2/5 API | README, diagramas, Swagger, Miro |
+| 9-10 | 8 (Documentation) | 5/5 Docs | Vídeo demonstrativo, revisão final, entrega |

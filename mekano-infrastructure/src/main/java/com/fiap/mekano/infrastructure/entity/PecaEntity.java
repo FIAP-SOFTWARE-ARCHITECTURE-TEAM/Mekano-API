@@ -36,4 +36,6 @@ public class PecaEntity extends BaseEntity {
 
     @Column(name = "estoque_minimo", nullable = false)
     public Integer estoqueMinimo;
+@Column(name = "saldo_reservado", nullable = false)
+    public Integer saldoReservado = 0;
 }

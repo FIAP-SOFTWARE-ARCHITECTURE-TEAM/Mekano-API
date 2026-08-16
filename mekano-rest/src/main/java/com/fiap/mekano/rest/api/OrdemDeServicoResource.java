@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 import org.eclipse.microprofile.openapi.annotations.Operation;
@@ -54,7 +55,7 @@ import jakarta.ws.rs.core.UriInfo;
  * Roles mistas (D-14, D-15):
  * - POST: admin, atendente
  * - PUT transições: mecanico, admin
-     * - GET /status: @RolesAllowed (autenticado, AUTH-03)
+     * - GET /status: @PermitAll (público, D-01/AUTH-03 — UUID é a chave de acesso, D-02)
  * - GET lista: admin, atendente
  */
 @Path("/os")
@@ -100,9 +101,9 @@ public class OrdemDeServicoResource {
     @GET
     @Path("/{id}/status")
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({"admin", "atendente", "mecanico", "cliente", "financeiro", "user"})
-    @Operation(summary = "Consultar status da OS")
-    @APIResponse(responseCode = "200", description = "Status da OS")
+    @PermitAll
+    @Operation(summary = "Consultar status da OS", description = "Consulta pública de status — UUID da OS é a chave de acesso (D-02)")
+    @APIResponse(responseCode = "200", description = "Status da OS (consulta pública)")
     public Response getStatus(@PathParam("id") UUID id) {
         OrdemDeServico os = osService.findById(id);
         var response = new OrdemDeServicoStatusResponse(os.getId(), os.getStatus().name(), os.getCreatedAt());
@@ -235,6 +236,7 @@ public class OrdemDeServicoResource {
     public Response getDetalhamento(@PathParam("id") UUID id) {
         OrdemDeServico os = osService.findById(id);
         var orcamentoUuid = osService.findOrcamentoUuidByOsId(id);
+        var itensOrcados = osService.buscarItensOrcados(id);
         var response = new OrdemDeServicoDetailResponse(
                 os.getId(), os.getClienteId(), os.getVeiculoId(),
                 os.getDescricaoProblema(), os.getStatus().name(),
@@ -250,7 +252,7 @@ public class OrdemDeServicoResource {
                 os.getRecebidoPor(),
                 os.getPagamentoConfirmadoEm(),
                 os.getEntregueEm(),
-                Collections.singletonList("Itens orçados disponíveis no orçamento"),
+                itensOrcados,
                 Collections.emptyList(),
                 os.getCreatedAt()
         );
@@ -261,7 +263,7 @@ public class OrdemDeServicoResource {
     @Path("/tempo-medio")
     @Produces(MediaType.APPLICATION_JSON)
     @RolesAllowed({"admin", "atendente"})
-    @Operation(summary = "Tempo médio de execução de OS")
+    @Operation(summary = "Tempo médio de execução de OS com breakdown por mecânico")
     @APIResponse(responseCode = "200", description = "Tempo médio calculado")
     public Response getTempoMedio(
             @QueryParam("dataInicio") LocalDate dataInicio,
@@ -269,7 +271,29 @@ public class OrdemDeServicoResource {
         LocalDateTime inicio = dataInicio != null ? dataInicio.atStartOfDay() : null;
         LocalDateTime fim = dataFim != null ? dataFim.atTime(LocalTime.MAX) : null;
         var tempoMedio = osService.calcularTempoMedioExecucao(inicio, fim);
-        return Response.ok(new TempoMedioResponse(tempoMedio.orElse(null))).build();
+        var breakdown = osService.calcularTempoMedioPorMecanico(inicio, fim);
+        return Response.ok(new TempoMedioResponse(tempoMedio.orElse(null), breakdown)).build();
+    }
+
+    @GET
+    @Path("/filtro")
+    @Produces(MediaType.APPLICATION_JSON)
+    @RolesAllowed({"admin", "atendente"})
+    @Operation(summary = "Listar OS com filtros (status, cliente, veículo, data)")
+    @APIResponse(responseCode = "200", description = "Lista filtrada de OS")
+    public Response findAllWithFilters(
+            @QueryParam("status") String status,
+            @QueryParam("clienteId") UUID clienteId,
+            @QueryParam("veiculoId") UUID veiculoId,
+            @QueryParam("dataInicio") LocalDate dataInicio,
+            @QueryParam("dataFim") LocalDate dataFim,
+            @QueryParam("page") @DefaultValue("0") int page,
+            @QueryParam("size") @DefaultValue("10") int size) {
+        LocalDateTime inicio = dataInicio != null ? dataInicio.atStartOfDay() : null;
+        LocalDateTime fim = dataFim != null ? dataFim.atTime(LocalTime.MAX) : null;
+        var content = osService.findAllWithFilters(status, clienteId, veiculoId, inicio, fim, page, size)
+                .stream().map(this::toResponse).toList();
+        return Response.ok(new OrdemDeServicoPageResponse(content, page, size, content.size(), 1)).build();
     }
 
     // ─────────────── Helper ───────────────

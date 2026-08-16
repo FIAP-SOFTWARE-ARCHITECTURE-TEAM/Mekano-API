@@ -6,18 +6,24 @@ import com.fiap.mekano.domain.model.MotivoRequisicao;
 import com.fiap.mekano.domain.port.in.CreateRequisicaoCompraCommand;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
-import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 @ApplicationScoped
 public class EstoqueMinimoObserver {
 
-    @Inject
-    RequisicaoCompraService requisicaoService;
+    private final RequisicaoCompraService requisicaoService;
+
+    public EstoqueMinimoObserver(RequisicaoCompraService requisicaoService) {
+        this.requisicaoService = requisicaoService;
+    }
 
     @Transactional
     void aoAtingirEstoqueMinimo(@Observes EstoqueMinimoAtingidoEvent event) {
-        var command = new CreateRequisicaoCompraCommand(event.pecaId(), 100, MotivoRequisicao.ESTOQUE_MINIMO);
+        int qtd = event.estoqueMinimo() - event.saldoAtual();
+        if (qtd <= 0) {
+            return;
+        }
+        var command = new CreateRequisicaoCompraCommand(event.pecaId(), qtd, MotivoRequisicao.ESTOQUE_MINIMO);
         requisicaoService.criar(command);
     }
 }

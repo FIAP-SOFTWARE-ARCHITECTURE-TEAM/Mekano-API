@@ -9,6 +9,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 @ApplicationScoped
@@ -64,7 +65,9 @@ public class OrcamentoEntityMapperImpl implements OrcamentoEntityMapper {
                     .append('|')
                     .append(item.getQuantidade())
                     .append('|')
-                    .append(item.getValorUnitario());
+                    .append(item.getValorUnitario())
+                    .append('|')
+                    .append(item.getPecaId() != null ? item.getPecaId() : "");
         }
         return sb.toString();
     }
@@ -75,12 +78,22 @@ public class OrcamentoEntityMapperImpl implements OrcamentoEntityMapper {
         }
         List<ItemOrcamento> itens = new ArrayList<>();
         for (String part : ITEM_PATTERN.split(json)) {
-            String[] fields = FIELD_PATTERN.split(part, 3);
-            if (fields.length == 3) {
+            String[] fields = FIELD_PATTERN.split(part, 4);
+            if (fields.length >= 3) {
+                UUID pecaId = null;
+                if (fields.length == 4 && fields[3] != null && !fields[3].isBlank()) {
+                    try {
+                        pecaId = UUID.fromString(fields[3].strip());
+                    } catch (IllegalArgumentException e) {
+                        throw new com.fiap.mekano.domain.exception.AppException(400,
+                                "UUID de peça inválido no item do orçamento: " + fields[3]);
+                    }
+                }
                 itens.add(new ItemOrcamento(
                         unescape(fields[0]),
                         Long.parseLong(fields[1]),
-                        new BigDecimal(fields[2])
+                        new BigDecimal(fields[2]),
+                        pecaId
                 ));
             }
         }
