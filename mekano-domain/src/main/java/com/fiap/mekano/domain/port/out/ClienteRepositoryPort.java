@@ -14,6 +14,8 @@ public interface ClienteRepositoryPort {
 
     Optional<Cliente> findByCpf(String cpf);
 
+    Optional<Cliente> findByTelefone(String telefone);
+
     boolean existsByCpf(String cpf);
 
     List<Cliente> findAll(int page, int size, String sort);

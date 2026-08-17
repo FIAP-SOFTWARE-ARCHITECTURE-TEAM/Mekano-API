@@ -75,6 +75,31 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
     }
 
     @Override
+    public Optional<Cliente> findByTelefone(String telefone) {
+        if (telefone == null || telefone.isBlank()) {
+            return Optional.empty();
+        }
+
+        String digits = telefone.replaceAll("\\D", "");
+        Optional<ClienteEntity> exact = panacheRepository
+                .find("telefone = ?1 and isActive = ?2", digits, true)
+                .firstResultOptional();
+        if (exact.isPresent()) {
+            return exact.map(clienteEntityMapper::toDomain);
+        }
+
+        if (digits.length() >= 8) {
+            String suffix = digits.substring(digits.length() - 8);
+            return panacheRepository
+                    .find("telefone like ?1 and isActive = ?2", "%" + suffix, true)
+                    .firstResultOptional()
+                    .map(clienteEntityMapper::toDomain);
+        }
+
+        return Optional.empty();
+    }
+
+    @Override
     public boolean existsByCpf(String cpf) {
         if (cpf == null || cpf.isBlank()) {
             return false;

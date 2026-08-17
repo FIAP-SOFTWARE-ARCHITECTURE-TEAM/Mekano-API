@@ -12,3 +12,14 @@ quarkus:
       access-control-max-age: 24H
   jackson:
     timezone: America/Sao_Paulo
+  rest-client:
+    evolution-api:
+      url: ${EVOLUTION_API_URL:http://localhost:5033}
+      connect-timeout: 5000
+      read-timeout: 15000
+
+# Evolution API — WhatsApp integration (WPP-01)
+evolution:
+  api-key: ${EVOLUTION_API_KEY:dev-key}
+  instance-name: ${EVOLUTION_INSTANCE_NAME:mekano}
+  webhook-token: ${EVOLUTION_WEBHOOK_TOKEN:}
