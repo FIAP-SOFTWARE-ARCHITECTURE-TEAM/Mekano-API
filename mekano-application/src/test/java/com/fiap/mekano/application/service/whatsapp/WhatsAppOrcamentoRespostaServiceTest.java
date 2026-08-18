@@ -132,6 +132,47 @@ class WhatsAppOrcamentoRespostaServiceTest {
     }
 
     @Test
+    @DisplayName("texto iniciado com 'não' mas sem ser resposta exata deve ser ignorado (WR-03)")
+    void deveIgnorarTextoQueApenasComecaComNao() {
+        boolean processado = service.processarResposta("559184847811@s.whatsapp.net", "não entendi o valor");
+
+        assertFalse(processado);
+        verifyNoInteractions(clienteRepository);
+        verifyNoInteractions(orcamentoService);
+        verifyNoInteractions(notifier);
+    }
+
+    @Test
+    @DisplayName("texto iniciado com 'sim' mas sem ser resposta exata deve ser ignorado (WR-03)")
+    void deveIgnorarTextoQueApenasComecaComSim() {
+        boolean processado = service.processarResposta("559184847811@s.whatsapp.net", "simples assim");
+
+        assertFalse(processado);
+        verifyNoInteractions(clienteRepository);
+        verifyNoInteractions(orcamentoService);
+        verifyNoInteractions(notifier);
+    }
+
+    @Test
+    @DisplayName("'sim, pode aprovar' deve aprovar — primeira palavra exata (WR-03)")
+    void deveAprovarQuandoPrimeiraPalavraExata() {
+        Cliente cliente = clienteComTelefone();
+        OrdemDeServico os = osAguardandoAprovacao();
+        com.fiap.mekano.domain.model.Orcamento orcamento = orcamentoComId();
+        when(clienteRepository.findByTelefone(TELEFONE_NORMALIZADO)).thenReturn(Optional.of(cliente));
+        when(osRepository.findAllWithFilters("AGUARDANDO_APROVACAO", CLIENTE_UUID, null, null, null, 0, 1))
+                .thenReturn(List.of(os));
+        when(orcamentoRepository.findByOrdemServicoUuid(OS_UUID))
+                .thenReturn(Optional.of(orcamento));
+
+        boolean processado = service.processarResposta("559184847811@s.whatsapp.net", "sim, pode aprovar");
+
+        assertTrue(processado);
+        verify(orcamentoService).aprovar(any(AprovarOrcamentoCommand.class));
+        verify(orcamentoService, never()).reprovar(any());
+    }
+
+    @Test
     @DisplayName("telefone sem cliente cadastrado deve ser ignorado")
     void deveIgnorarTelefoneSemCliente() {
         when(clienteRepository.findByTelefone(TELEFONE_NORMALIZADO)).thenReturn(Optional.empty());
