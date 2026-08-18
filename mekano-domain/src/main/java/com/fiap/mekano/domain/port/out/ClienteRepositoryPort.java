@@ -8,7 +8,9 @@ import java.util.UUID;
 
 public interface ClienteRepositoryPort {
 
-    Cliente save(Cliente cliente);
+    Cliente create(Cliente cliente);
+
+    Cliente update(Cliente cliente);
 
     Optional<Cliente> findById(UUID id);
 

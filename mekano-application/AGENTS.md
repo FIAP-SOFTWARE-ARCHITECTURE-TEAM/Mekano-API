@@ -13,9 +13,10 @@ com.fiap.mekano.application
     │   │                                constructor injection, @Transactional on execute/deleteUser
     │   │                                creates User, hashes password, publishes UserCreatedEvent
     │   └── CreateUserResponse.java    — record(UUID id, String name, String email, LocalDateTime createdAt)
-    ├── cliente/                 ## IMPLEMENTED (with bug)
+    ├── cliente/                 ## FULLY IMPLEMENTED
     │   ├── ClienteService.java        — @ApplicationScoped, implements ClienteServicePort
-    │   │                                ⚠ updateCliente() finds entity but DOES NOT APPLY updates (bug)
+    │   │                                constructor injection, @Transactional on execute/update/delete
+    │   │                                validates required fields, preserves cpf/createdAt on update
     │   └── CreateClienteResponse.java — record
     ├── vehicle/                 ## FULLY IMPLEMENTED
     │   ├── VeiculoService.java        — @ApplicationScoped, implements VeiculoServicePort
@@ -58,9 +59,6 @@ The 3 stub services (`PecaService`, `NfEntradaService`, `RequisicaoCompraService
 - Return hardcoded values
 
 These are placeholders awaiting real implementation.
-
-## Known Bug
-- `ClienteService.updateCliente(UUID, UpdateClienteCommand)` — finds entity but does not apply update fields from command
 
 ## Dependencies
 - **compile**: mekano-domain, quarkus-arc
