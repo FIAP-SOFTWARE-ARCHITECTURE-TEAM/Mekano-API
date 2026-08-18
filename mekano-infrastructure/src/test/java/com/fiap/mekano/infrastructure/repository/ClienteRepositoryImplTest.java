@@ -7,6 +7,7 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -21,7 +22,7 @@ class ClienteRepositoryImplTest {
     private Cliente cliente(String nome, String telefone, String cpf) {
         return Cliente.reconstitute(UUID.randomUUID(), nome, cpf,
                 nome.toLowerCase().replace(" ", "") + "@test.com", telefone,
-                "Rua A", "100", "Centro", "São Paulo", "SP", "01001000", null);
+                "Rua A", "100", "Centro", "São Paulo", "SP", "01001000", LocalDateTime.now());
     }
 
     @Test
