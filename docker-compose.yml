@@ -128,7 +128,13 @@ services:
       CACHE_REDIS_KEY_PREFIX: mekano
       CACHE_LOCAL_ENABLED: "true"
       CACHE_LOCAL_TTL: 3600
-      WEBHOOK_GLOBAL_ENABLED: "false"
+      # WR-06: webhook global habilitado — instâncias criadas via API/manager
+      # herdam esta config e entregam eventos MESSAGES_UPSERT ao Mekano.
+      # O header x-webhook-token deve ser configurado na instância
+      # (webhookHeaders) com o mesmo valor de EVOLUTION_WEBHOOK_TOKEN (CR-02).
+      WEBHOOK_GLOBAL_ENABLED: "true"
+      WEBHOOK_GLOBAL_URL: http://mekano:8080/api/v1/webhooks/evolution
+      WEBHOOK_GLOBAL_EVENTS: MESSAGES_UPSERT
     depends_on:
       evolution-postgres:
         condition: service_healthy
