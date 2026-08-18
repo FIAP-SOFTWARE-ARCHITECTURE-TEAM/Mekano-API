@@ -34,6 +34,10 @@ public class ClienteService implements ClienteServicePort {
     @Override
     @Transactional
     public Cliente execute(CreateClienteCommand command) {
+        if (clienteRepository.existsByCpf(command.cpf())) {
+            throw new AppException(409, Messages.get("cliente.already.exists", command.cpf()));
+        }
+
         Cliente cliente = Cliente.create(command.nome(), command.cpf(), command.email(),
             command.telefone(), command.logradouro(), command.numero(), command.bairro(),
             command.cidade(), command.uf(), command.cep());

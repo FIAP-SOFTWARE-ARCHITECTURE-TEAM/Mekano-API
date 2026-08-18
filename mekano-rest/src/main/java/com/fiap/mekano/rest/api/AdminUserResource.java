@@ -6,6 +6,7 @@ import com.fiap.mekano.rest.dto.admin.AdminCreateUserRequest;
 import com.fiap.mekano.rest.dto.admin.AdminCreateUserResponse;
 import com.fiap.mekano.rest.dto.admin.AdminUserSummaryResponse;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.DELETE;
@@ -21,6 +22,7 @@ import java.net.URI;
 import java.util.UUID;
 
 @Path("/admin/usuarios")
+@RequestScoped
 @RolesAllowed("admin")
 public class AdminUserResource {
 
