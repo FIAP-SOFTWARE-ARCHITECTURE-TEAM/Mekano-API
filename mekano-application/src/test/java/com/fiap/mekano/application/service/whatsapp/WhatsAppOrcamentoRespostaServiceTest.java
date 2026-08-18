@@ -93,7 +93,7 @@ class WhatsAppOrcamentoRespostaServiceTest {
         var captor = ArgumentCaptor.forClass(AprovarOrcamentoCommand.class);
         verify(orcamentoService).aprovar(captor.capture());
         assertEquals(ORCAMENTO_UUID, captor.getValue().orcamentoUuid());
-        verify(notifier).notificarRespostaOrcamento(TELEFONE, "Teste 91", true);
+        verify(notifier).notificarRespostaOrcamento(TELEFONE, true);
         verify(orcamentoService, never()).reprovar(any());
     }
 
@@ -116,7 +116,7 @@ class WhatsAppOrcamentoRespostaServiceTest {
         verify(orcamentoService).reprovar(captor.capture());
         assertEquals(ORCAMENTO_UUID, captor.getValue().orcamentoUuid());
         assertEquals("Reprovado via WhatsApp", captor.getValue().motivo());
-        verify(notifier).notificarRespostaOrcamento(TELEFONE, "Teste 91", false);
+        verify(notifier).notificarRespostaOrcamento(TELEFONE, false);
         verify(orcamentoService, never()).aprovar(any());
     }
 

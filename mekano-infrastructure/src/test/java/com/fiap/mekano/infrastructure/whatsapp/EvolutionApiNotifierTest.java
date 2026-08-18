@@ -42,7 +42,7 @@ class EvolutionApiNotifierTest {
     @Test
     @DisplayName("notificarRespostaOrcamento deve enviar confirmação de aprovação")
     void notificarRespostaOrcamento_aprovado_enviaConfirmacao() {
-        notifier.notificarRespostaOrcamento("11999999999", "João", true);
+        notifier.notificarRespostaOrcamento("11999999999", true);
 
         ArgumentCaptor<SendTextRequest> captor = ArgumentCaptor.forClass(SendTextRequest.class);
         verify(restClient).sendText(eq(INSTANCE), eq(API_KEY), captor.capture());
@@ -50,12 +50,13 @@ class EvolutionApiNotifierTest {
         SendTextRequest request = captor.getValue();
         assertEquals("5511999999999", request.number());
         assertTrue(request.text().contains("aprovado"));
+        assertFalse(request.text().contains("Olá"));
     }
 
     @Test
     @DisplayName("notificarRespostaOrcamento deve enviar confirmação de reprovação")
     void notificarRespostaOrcamento_reprovado_enviaConfirmacao() {
-        notifier.notificarRespostaOrcamento("11999999999", "João", false);
+        notifier.notificarRespostaOrcamento("11999999999", false);
 
         ArgumentCaptor<SendTextRequest> captor = ArgumentCaptor.forClass(SendTextRequest.class);
         verify(restClient).sendText(eq(INSTANCE), eq(API_KEY), captor.capture());
@@ -63,6 +64,7 @@ class EvolutionApiNotifierTest {
         SendTextRequest request = captor.getValue();
         assertEquals("5511999999999", request.number());
         assertTrue(request.text().contains("não aprovado"));
+        assertFalse(request.text().contains("Olá"));
     }
 
     @Test

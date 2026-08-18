@@ -31,10 +31,9 @@ public interface WhatsAppNotifierPort {
      * Notifica o cliente sobre a resposta SIM/NÃO ao orçamento enviado via WhatsApp.
      *
      * @param telefone     dígitos crus (10-11), sem máscara nem DDI
-     * @param nomeCliente  nome para saudação na mensagem
      * @param aprovado     true = orçamento aprovado, false = reprovado
      */
-    void notificarRespostaOrcamento(String telefone, String nomeCliente, boolean aprovado);
+    void notificarRespostaOrcamento(String telefone, boolean aprovado);
 
     /**
      * Notifica o cliente que o veículo está pronto para retirada.

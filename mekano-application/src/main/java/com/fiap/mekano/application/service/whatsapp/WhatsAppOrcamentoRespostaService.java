@@ -103,7 +103,7 @@ public class WhatsAppOrcamentoRespostaService {
             log.info("Orçamento {} reprovado via WhatsApp pelo cliente {}", orcamentoUuid, cliente.getId());
         }
 
-        notifier.notificarRespostaOrcamento(cliente.getTelefone().getValue(), cliente.getNome(), aprovado);
+        notifier.notificarRespostaOrcamento(cliente.getTelefone().getValue(), aprovado);
         return true;
     }
 

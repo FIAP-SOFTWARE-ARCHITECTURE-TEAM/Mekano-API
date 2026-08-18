@@ -64,12 +64,12 @@ public class EvolutionApiNotifier implements WhatsAppNotifierPort {
     @Override
     @Retry(maxRetries = 2, delay = 1000)
     @Fallback(fallbackMethod = "logFailureRespostaOrcamento")
-    public void notificarRespostaOrcamento(String telefone, String nomeCliente, boolean aprovado) {
+    public void notificarRespostaOrcamento(String telefone, boolean aprovado) {
         String number = formatPhone(telefone);
         String mensagem = aprovado
                 ? "Orçamento aprovado! Sua ordem de serviço será iniciada em breve."
                 : "Orçamento não aprovado. Se precisar de ajustes, fale conosco.";
-        var request = new SendTextRequest(number, "Olá " + nomeCliente + ", " + mensagem);
+        var request = new SendTextRequest(number, mensagem);
         log.info("Enviando confirmação de {} de orçamento para {} (instance={})",
                 aprovado ? "aprovação" : "reprovação", maskPhone(number), instanceName);
         restClient.sendText(instanceName, apiKey, request);
@@ -116,7 +116,7 @@ public class EvolutionApiNotifier implements WhatsAppNotifierPort {
                 maskPhone(telefone), ex.getMessage());
     }
 
-    private void logFailureRespostaOrcamento(String telefone, String nomeCliente, boolean aprovado,
+    private void logFailureRespostaOrcamento(String telefone, boolean aprovado,
                                              Throwable ex) {
         log.warn("Falha ao notificar confirmação de orçamento para {} — Evolution API indisponível: {}",
                 maskPhone(telefone), ex.getMessage());
