@@ -95,4 +95,24 @@ class WhatsAppOrcamentoObserverTest {
         verify(notifier, never()).notificarOrcamento(anyString(), anyString(), anyString(), anyString(),
                 anyString(), any(BigDecimal.class));
     }
+
+    @Test
+    @DisplayName("lookup com erro não deve propagar exceção após commit (WR-05)")
+    void erroNoLookup_naoDevePropagar() {
+        UUID osUuid = UUID.randomUUID();
+        UUID clienteUuid = UUID.randomUUID();
+
+        OrdemDeServico os = stubOs(osUuid, clienteUuid, UUID.randomUUID());
+
+        when(osRepository.findById(osUuid)).thenReturn(Optional.of(os));
+        when(clienteRepository.findById(clienteUuid))
+                .thenThrow(new com.fiap.mekano.domain.exception.AppException(404, "cliente não encontrado"));
+
+        var event = new DiagnosticoFinalizadoEvent(osUuid, "Diagnóstico", List.of(), LocalDateTime.now());
+
+        assertDoesNotThrow(() -> observer.aoFinalizarDiagnostico(event));
+
+        verify(notifier, never()).notificarOrcamento(anyString(), anyString(), anyString(), anyString(),
+                anyString(), any(BigDecimal.class));
+    }
 }
