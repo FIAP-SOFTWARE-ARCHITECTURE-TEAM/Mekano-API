@@ -74,9 +74,9 @@ public class WebhookEvolutionResource {
                     }""")))
     @APIResponse(responseCode = "200", description = "Evento recebido (200 mesmo quando ignorado)")
     @APIResponse(responseCode = "401", description = "Token inválido")
-    public Response receberEvento(JsonNode payload,
-                                  @HeaderParam(HEADER_WEBHOOK_TOKEN) String token) {
-        if (!tokenValido(token)) {
+public Response receberEvento(JsonNode payload,
+                                   @HeaderParam(HEADER_WEBHOOK_TOKEN) String token) {
+        if (!tokenValido(token, payload)) {
             Log.warnf("Webhook Evolution rejeitado: token ausente ou inválido");
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
@@ -102,14 +102,28 @@ public class WebhookEvolutionResource {
      * Fail closed (CR-02): token obrigatório — 401 quando ausente, vazio ou
      * inválido. Comparação em tempo constante via {@link MessageDigest#isEqual}
      * para evitar timing side channel (IN-08).
+     *
+     * <p>Aceita duas formas de autenticação:
+     * <ol>
+     *   <li>Header {@code x-webhook-token} — usado quando a Evolution API tem
+     *       webhook configurado por instância com headers customizados.</li>
+     *   <li>Campo {@code apikey} do corpo JSON — a Evolution API envia
+     *       automaticamente sua {@code AUTHENTICATION_API_KEY} no payload
+     *       do webhook global.</li>
+     * </ol>
      */
-    private boolean tokenValido(String token) {
-        if (token == null || webhookToken.isEmpty() || webhookToken.get().isBlank()) {
+    private boolean tokenValido(String headerToken, JsonNode payload) {
+        if (webhookToken.isEmpty() || webhookToken.get().isBlank()) {
             return false;
         }
-        return MessageDigest.isEqual(
-                webhookToken.get().getBytes(StandardCharsets.UTF_8),
-                token.getBytes(StandardCharsets.UTF_8));
+        byte[] expected = webhookToken.get().getBytes(StandardCharsets.UTF_8);
+
+        if (headerToken != null && MessageDigest.isEqual(expected, headerToken.getBytes(StandardCharsets.UTF_8))) {
+            return true;
+        }
+
+        String bodyApikey = payload != null ? payload.path("apikey").asText(null) : null;
+        return bodyApikey != null && MessageDigest.isEqual(expected, bodyApikey.getBytes(StandardCharsets.UTF_8));
     }
 
     /**

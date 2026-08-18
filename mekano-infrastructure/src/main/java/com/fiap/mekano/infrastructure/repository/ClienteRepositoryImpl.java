@@ -82,7 +82,8 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
 
         String digits = telefone.replaceAll("\\D", "");
         Optional<ClienteEntity> exact = panacheRepository
-                .find("telefone = ?1 and isActive = ?2", digits, true)
+                .find("telefone = ?1 and isActive = ?2",
+                        Sort.by("createdAt").descending(), digits, true)
                 .firstResultOptional();
         if (exact.isPresent()) {
             return exact.map(clienteEntityMapper::toDomain);
