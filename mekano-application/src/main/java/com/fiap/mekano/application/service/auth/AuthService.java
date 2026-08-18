@@ -87,6 +87,9 @@ public class AuthService implements AuthServicePort {
     @Override
     @Transactional
     public void logout(String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new AppException(400, "refresh_token é obrigatório");
+        }
         String tokenHash = RefreshTokenService.sha256(refreshToken);
         refreshTokenService.invalidateByUser(tokenHash);
     }

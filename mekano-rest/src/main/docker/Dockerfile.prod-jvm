@@ -7,7 +7,7 @@ RUN microdnf install -y unzip && microdnf clean all
 WORKDIR /app
 COPY --chown=185:0 --chmod=755 . .
 USER 185
-RUN ./mvnw package -pl mekano-rest -am -DskipTests -B -q
+RUN ./mvnw install -pl mekano-rest -am -DskipTests -B -q
 
 # --- Stage 2: Runtime ---
 FROM registry.access.redhat.com/ubi9/openjdk-17-runtime:1.24
