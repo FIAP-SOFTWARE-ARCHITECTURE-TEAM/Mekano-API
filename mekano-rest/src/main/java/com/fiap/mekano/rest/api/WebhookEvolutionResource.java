@@ -5,7 +5,6 @@ import com.fiap.mekano.application.service.whatsapp.WhatsAppOrcamentoRespostaSer
 import io.quarkus.logging.Log;
 import jakarta.annotation.security.PermitAll;
 import jakarta.enterprise.context.RequestScoped;
-import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.POST;
@@ -20,6 +19,8 @@ import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Optional;
 
 /**
@@ -29,7 +30,11 @@ import java.util.Optional;
  * do cliente ao orçamento via {@link WhatsAppOrcamentoRespostaService}.
  *
  * <p>{@code @PermitAll} (G8): a Evolution API não envia JWT — a autenticação
- * é feita pelo header {@code x-webhook-token} quando configurado.
+ * é feita pelo header {@code x-webhook-token} (CR-02).
+ *
+ * <p><b>Fail closed (CR-02)</b>: sem token configurado ({@code evolution.webhook-token})
+ * ou com token ausente/vazio/incorreto, retorna 401 — o evento nunca é processado
+ * anonimamente.
  *
  * <p>Retorna 200 sempre (mesmo ignorando o evento) para não gerar retries.
  */
@@ -41,12 +46,16 @@ public class WebhookEvolutionResource {
 
     private static final String EVENT_MESSAGES_UPSERT = "MESSAGES_UPSERT";
     private static final String EVENT_MESSAGES_UPSERT_EVOLUTION = "messages.upsert";
+    private static final String HEADER_WEBHOOK_TOKEN = "x-webhook-token";
 
-    @Inject
-    WhatsAppOrcamentoRespostaService respostaService;
+    private final WhatsAppOrcamentoRespostaService respostaService;
+    private final Optional<String> webhookToken;
 
-    @ConfigProperty(name = "evolution.webhook-token")
-    Optional<String> webhookToken;
+    public WebhookEvolutionResource(WhatsAppOrcamentoRespostaService respostaService,
+                                    @ConfigProperty(name = "evolution.webhook-token") Optional<String> webhookToken) {
+        this.respostaService = respostaService;
+        this.webhookToken = webhookToken;
+    }
 
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
@@ -66,9 +75,9 @@ public class WebhookEvolutionResource {
     @APIResponse(responseCode = "200", description = "Evento recebido (200 mesmo quando ignorado)")
     @APIResponse(responseCode = "401", description = "Token inválido")
     public Response receberEvento(JsonNode payload,
-                                  @HeaderParam("x-webhook-token") String token) {
-        if (webhookToken.isPresent() && !webhookToken.get().isBlank()
-                && !webhookToken.get().equals(token)) {
+                                  @HeaderParam(HEADER_WEBHOOK_TOKEN) String token) {
+        if (!tokenValido(token)) {
+            Log.warnf("Webhook Evolution rejeitado: token ausente ou inválido");
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
 
@@ -87,6 +96,20 @@ public class WebhookEvolutionResource {
             Log.warnf("Falha ao processar webhook Evolution: %s", ex.getMessage());
         }
         return Response.ok().build();
+    }
+
+    /**
+     * Fail closed (CR-02): token obrigatório — 401 quando ausente, vazio ou
+     * inválido. Comparação em tempo constante via {@link MessageDigest#isEqual}
+     * para evitar timing side channel (IN-08).
+     */
+    private boolean tokenValido(String token) {
+        if (token == null || webhookToken.isEmpty() || webhookToken.get().isBlank()) {
+            return false;
+        }
+        return MessageDigest.isEqual(
+                webhookToken.get().getBytes(StandardCharsets.UTF_8),
+                token.getBytes(StandardCharsets.UTF_8));
     }
 
     /**

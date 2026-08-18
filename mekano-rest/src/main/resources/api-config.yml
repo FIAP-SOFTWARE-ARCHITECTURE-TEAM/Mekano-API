@@ -22,4 +22,9 @@ quarkus:
 evolution:
   api-key: ${EVOLUTION_API_KEY:dev-key}
   instance-name: ${EVOLUTION_INSTANCE_NAME:mekano}
+  # CR-02: fail closed — sem EVOLUTION_WEBHOOK_TOKEN o webhook rejeita tudo com 401
   webhook-token: ${EVOLUTION_WEBHOOK_TOKEN:}
+
+"%test":
+  evolution:
+    webhook-token: test-webhook-token

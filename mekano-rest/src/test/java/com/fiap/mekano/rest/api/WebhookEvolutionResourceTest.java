@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 
 import static io.restassured.RestAssured.given;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -18,6 +19,8 @@ import static org.mockito.Mockito.verify;
 class WebhookEvolutionResourceTest {
 
     private static final String BASE_PATH = "/api/v1/webhooks/evolution";
+    private static final String TOKEN = "test-webhook-token";
+    private static final String HEADER_TOKEN = "x-webhook-token";
 
     @InjectMock
     WhatsAppOrcamentoRespostaService respostaService;
@@ -39,6 +42,7 @@ class WebhookEvolutionResourceTest {
 
         given()
                 .contentType("application/json")
+                .header(HEADER_TOKEN, TOKEN)
                 .body(payload)
                 .when().post(BASE_PATH)
                 .then().statusCode(200);
@@ -62,12 +66,12 @@ class WebhookEvolutionResourceTest {
 
         given()
                 .contentType("application/json")
+                .header(HEADER_TOKEN, TOKEN)
                 .body(payload)
                 .when().post(BASE_PATH)
                 .then().statusCode(200);
 
-        verify(respostaService, never()).processarResposta(org.mockito.ArgumentMatchers.anyString(),
-                org.mockito.ArgumentMatchers.anyString());
+        verify(respostaService, never()).processarResposta(anyString(), anyString());
     }
 
     @Test
@@ -87,6 +91,7 @@ class WebhookEvolutionResourceTest {
 
         given()
                 .contentType("application/json")
+                .header(HEADER_TOKEN, TOKEN)
                 .body(payload)
                 .when().post(BASE_PATH)
                 .then().statusCode(200);
@@ -107,11 +112,58 @@ class WebhookEvolutionResourceTest {
 
         given()
                 .contentType("application/json")
+                .header(HEADER_TOKEN, TOKEN)
                 .body(payload)
                 .when().post(BASE_PATH)
                 .then().statusCode(200);
 
-        verify(respostaService, never()).processarResposta(org.mockito.ArgumentMatchers.anyString(),
-                org.mockito.ArgumentMatchers.anyString());
+        verify(respostaService, never()).processarResposta(anyString(), anyString());
+    }
+
+    @Test
+    @Order(5)
+    @DisplayName("sem token deve retornar 401 e não processar (fail closed)")
+    void semToken_deveRetornar401() {
+        String payload = """
+                {
+                  "event": "MESSAGES_UPSERT",
+                  "instance": "mekano",
+                  "data": {
+                    "key": { "remoteJid": "5591984847811@s.whatsapp.net", "fromMe": false },
+                    "message": { "conversation": "sim" }
+                  }
+                }""";
+
+        given()
+                .contentType("application/json")
+                .body(payload)
+                .when().post(BASE_PATH)
+                .then().statusCode(401);
+
+        verify(respostaService, never()).processarResposta(anyString(), anyString());
+    }
+
+    @Test
+    @Order(6)
+    @DisplayName("token incorreto deve retornar 401 e não processar")
+    void tokenIncorreto_deveRetornar401() {
+        String payload = """
+                {
+                  "event": "MESSAGES_UPSERT",
+                  "instance": "mekano",
+                  "data": {
+                    "key": { "remoteJid": "5591984847811@s.whatsapp.net", "fromMe": false },
+                    "message": { "conversation": "sim" }
+                  }
+                }""";
+
+        given()
+                .contentType("application/json")
+                .header(HEADER_TOKEN, "token-errado")
+                .body(payload)
+                .when().post(BASE_PATH)
+                .then().statusCode(401);
+
+        verify(respostaService, never()).processarResposta(anyString(), anyString());
     }
 }

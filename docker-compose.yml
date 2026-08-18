@@ -58,6 +58,7 @@ services:
       EVOLUTION_API_URL: http://evolution-api:5033
       EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-dev-key}
       EVOLUTION_INSTANCE_NAME: ${EVOLUTION_INSTANCE_NAME:-mekano}
+      EVOLUTION_WEBHOOK_TOKEN: ${EVOLUTION_WEBHOOK_TOKEN:-change_me_webhook_token}
     volumes:
       - mekano_secrets:/home/jboss/.mekano/secrets:ro
     depends_on:
