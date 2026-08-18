@@ -78,7 +78,7 @@ class ClienteServiceTest {
         when(clienteRepository.findById(CLIENTE_UUID))
                 .thenReturn(Optional.of(existente));
 
-        when(clienteRepository.save(any(Cliente.class)))
+        when(clienteRepository.update(any(Cliente.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         UpdateClienteCommand command = new UpdateClienteCommand(
@@ -98,7 +98,7 @@ class ClienteServiceTest {
 
         // Assert
         assertNotNull(resultado);
-        verify(clienteRepository, times(1)).save(clienteCaptor.capture());
+        verify(clienteRepository, times(1)).update(clienteCaptor.capture());
 
         Cliente capturado = clienteCaptor.getValue();
         assertEquals(CLIENTE_UUID, capturado.getId());
@@ -140,7 +140,7 @@ class ClienteServiceTest {
         );
 
         assertEquals(404, ex.getStatus());
-        verify(clienteRepository, never()).save(any());
+        verify(clienteRepository, never()).update(any());
     }
 
     @Test
@@ -168,7 +168,7 @@ class ClienteServiceTest {
         );
 
         assertEquals(409, ex.getStatus());
-        verify(clienteRepository, never()).save(any());
+        verify(clienteRepository, never()).create(any());
         verify(eventPublisher, never()).publish(any());
     }
 }
