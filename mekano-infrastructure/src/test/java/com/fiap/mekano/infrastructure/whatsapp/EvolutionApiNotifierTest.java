@@ -84,12 +84,32 @@ class EvolutionApiNotifierTest {
     }
 
     @Test
-    @DisplayName("telefone com 55 já incluído não deve duplicar prefixo")
+    @DisplayName("telefone com 13 dígitos (DDI 55 já incluído) não deve duplicar prefixo")
     void telefoneCom55_naoDuplicaPrefixo() {
         notifier.notificarRetirada("5511999999999", "João", "ABC1D23", UUID.randomUUID());
 
         ArgumentCaptor<SendTextRequest> captor = ArgumentCaptor.forClass(SendTextRequest.class);
         verify(restClient).sendText(eq(INSTANCE), eq(API_KEY), captor.capture());
         assertEquals("5511999999999", captor.getValue().number());
+    }
+
+    @Test
+    @DisplayName("celular com DDD 55 (11 dígitos) deve receber prefixo 55 — não é DDI")
+    void celularDDD55_deveReceberPrefixo55() {
+        notifier.notificarRetirada("55991234567", "João", "ABC1D23", UUID.randomUUID());
+
+        ArgumentCaptor<SendTextRequest> captor = ArgumentCaptor.forClass(SendTextRequest.class);
+        verify(restClient).sendText(eq(INSTANCE), eq(API_KEY), captor.capture());
+        assertEquals("5555991234567", captor.getValue().number());
+    }
+
+    @Test
+    @DisplayName("fixo com DDD 55 (10 dígitos) deve receber prefixo 55 — não é DDI")
+    void fixoDDD55_deveReceberPrefixo55() {
+        notifier.notificarRetirada("5533344556", "Maria", "ABC1D23", UUID.randomUUID());
+
+        ArgumentCaptor<SendTextRequest> captor = ArgumentCaptor.forClass(SendTextRequest.class);
+        verify(restClient).sendText(eq(INSTANCE), eq(API_KEY), captor.capture());
+        assertEquals("555533344556", captor.getValue().number());
     }
 }

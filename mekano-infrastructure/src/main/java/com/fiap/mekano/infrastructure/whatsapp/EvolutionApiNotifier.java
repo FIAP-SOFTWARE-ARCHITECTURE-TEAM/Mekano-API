@@ -93,11 +93,15 @@ public class EvolutionApiNotifier implements WhatsAppNotifierPort {
 
     /**
      * Formata telefone para E.164: dígitos (ex.: 11999999999) → 55 + número.
-     * Se já vier com 55, não duplica o prefixo.
+     *
+     * <p>Trata "55" como DDI apenas quando o número excede o máximo nacional
+     * (11 dígitos) — i.e. 12/13 dígitos já em E.164. DDD 55 é um DDD válido
+     * (RS), então 55991234567 (11 dígitos) NÃO pode ser interpretado como
+     * DDI+DDD 99: o prefixo 55 é adicionado (5555991234567) — CR-01.
      */
     private String formatPhone(String telefone) {
         String digits = telefone.replaceAll("\\D", "");
-        return digits.startsWith(COUNTRY_CODE) ? digits : COUNTRY_CODE + digits;
+        return (digits.length() > 11 && digits.startsWith(COUNTRY_CODE)) ? digits : COUNTRY_CODE + digits;
     }
 
     /**
