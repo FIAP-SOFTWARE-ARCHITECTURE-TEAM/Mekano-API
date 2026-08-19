@@ -67,7 +67,7 @@ class PagamentoResourceTest {
         try {
             Cliente cliente = Cliente.create("Cliente E2E", "52998224725", "cliente@e2e.com",
                     "51999999999", "Rua A", "100", "Centro", "Porto Alegre", "RS", "90010000");
-            cliente = clienteRepository.save(cliente);
+            cliente = clienteRepository.create(cliente);
             clienteId = cliente.getId().toString();
 
             Veiculo veiculo = Veiculo.create(cliente.getId(), "ZZZ0000", "Fiat", "Uno", 2020);
@@ -247,7 +247,7 @@ class PagamentoResourceTest {
         try {
             Cliente c = Cliente.create("Cliente 409", "57738361069", "cliente409@e2e.com",
                     "51999999998", "Rua B", "200", "Centro", "POA", "RS", "90020000");
-            c = clienteRepository.save(c);
+            c = clienteRepository.create(c);
             cId = c.getId().toString();
             Veiculo v = Veiculo.create(c.getId(), "ZZZ0001", "VW", "Gol", 2021);
             v = veiculoRepository.save(v);

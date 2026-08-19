@@ -58,7 +58,22 @@ public class ClienteEntityMapperImpl implements ClienteEntityMapper {
                 entity.getEnderecoCidade(),
                 entity.getEnderecoUf(),
                 entity.getEnderecoCep(),
-                entity.getCreatedAt()
-        );
+                entity.getCreatedAt());
+    }
+
+    @Override
+    public void updateEntity(Cliente cliente, ClienteEntity entity) {
+        if (cliente == null || entity == null) {
+            return;
+        }
+        entity.setNome(cliente.getNome());
+        entity.setEmail(cliente.getEmail().getValue());
+        entity.setTelefone(cliente.getTelefone() == null ? null : cliente.getTelefone().getValue());
+        entity.setEnderecoLogradouro(cliente.getEndereco().getLogradouro());
+        entity.setEnderecoNumero(cliente.getEndereco().getNumero());
+        entity.setEnderecoBairro(cliente.getEndereco().getBairro());
+        entity.setEnderecoCidade(cliente.getEndereco().getCidade());
+        entity.setEnderecoUf(cliente.getEndereco().getUf());
+        entity.setEnderecoCep(cliente.getEndereco().getCep());
     }
 }

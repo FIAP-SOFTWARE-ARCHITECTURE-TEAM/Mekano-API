@@ -8,4 +8,6 @@ public interface ClienteEntityMapper {
     ClienteEntity toEntity(Cliente cliente);
 
     Cliente toDomain(ClienteEntity entity);
+
+    void updateEntity(Cliente cliente, ClienteEntity entity);
 }

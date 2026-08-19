@@ -25,12 +25,8 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
     }
 
     @Override
-    public Cliente save(Cliente cliente) {
-        ClienteEntity entity = panacheRepository.find("uuid = ?1", cliente.getId()).firstResult();
-        if (entity == null) {
-            entity = new ClienteEntity();
-        }
-
+    public Cliente create(Cliente cliente) {
+        ClienteEntity entity = new ClienteEntity();
         entity.setUuid(cliente.getId());
         entity.setNome(cliente.getNome());
         entity.setCpf(cliente.getCpf().getValue());
@@ -42,15 +38,24 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
         entity.setEnderecoCidade(cliente.getEndereco().getCidade());
         entity.setEnderecoUf(cliente.getEndereco().getUf());
         entity.setEnderecoCep(cliente.getEndereco().getCep());
-        if (entity.getCreatedAt() == null) {
-            entity.setCreatedAt(cliente.getCreatedAt());
-        }
+        entity.setCreatedAt(cliente.getCreatedAt());
         entity.setDeletedAt(null);
         entity.setIsActive(true);
 
-        if (entity.getId() == null) {
-            panacheRepository.persist(entity);
+        panacheRepository.persist(entity);
+
+        return clienteEntityMapper.toDomain(entity);
+    }
+
+    @Override
+    public Cliente update(Cliente cliente) {
+        ClienteEntity entity = panacheRepository.find("uuid = ?1 and isActive = ?2", cliente.getId(), true)
+                .firstResult();
+        if (entity == null) {
+            throw new IllegalArgumentException("Cliente não encontrado para atualização: " + cliente.getId());
         }
+
+        clienteEntityMapper.updateEntity(cliente, entity);
 
         return clienteEntityMapper.toDomain(entity);
     }

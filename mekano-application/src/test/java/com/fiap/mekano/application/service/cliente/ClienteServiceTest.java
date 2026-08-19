@@ -24,6 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.model.Cliente;
+import com.fiap.mekano.domain.port.in.CreateClienteCommand;
 import com.fiap.mekano.domain.port.in.UpdateClienteCommand;
 import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;
 import com.fiap.mekano.domain.port.out.EventPublisher;
@@ -77,7 +78,7 @@ class ClienteServiceTest {
         when(clienteRepository.findById(CLIENTE_UUID))
                 .thenReturn(Optional.of(existente));
 
-        when(clienteRepository.save(any(Cliente.class)))
+        when(clienteRepository.update(any(Cliente.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         UpdateClienteCommand command = new UpdateClienteCommand(
@@ -97,7 +98,7 @@ class ClienteServiceTest {
 
         // Assert
         assertNotNull(resultado);
-        verify(clienteRepository, times(1)).save(clienteCaptor.capture());
+        verify(clienteRepository, times(1)).update(clienteCaptor.capture());
 
         Cliente capturado = clienteCaptor.getValue();
         assertEquals(CLIENTE_UUID, capturado.getId());
@@ -139,6 +140,35 @@ class ClienteServiceTest {
         );
 
         assertEquals(404, ex.getStatus());
-        verify(clienteRepository, never()).save(any());
+        verify(clienteRepository, never()).update(any());
+    }
+
+    @Test
+    @DisplayName("execute deve lançar AppException(409) quando CPF já existe")
+    void execute_comCpfExistente_deveLancar409() {
+        CreateClienteCommand command = new CreateClienteCommand(
+                "João Silva",
+                CPF_VALIDO,
+                "joao@fiap.br",
+                "11999999999",
+                "Rua A",
+                "100",
+                "Centro",
+                "São Paulo",
+                "SP",
+                "01001000"
+        );
+
+        when(clienteRepository.existsByCpf(CPF_VALIDO))
+                .thenReturn(true);
+
+        AppException ex = assertThrows(
+                AppException.class,
+                () -> clienteService.execute(command)
+        );
+
+        assertEquals(409, ex.getStatus());
+        verify(clienteRepository, never()).create(any());
+        verify(eventPublisher, never()).publish(any());
     }
 }

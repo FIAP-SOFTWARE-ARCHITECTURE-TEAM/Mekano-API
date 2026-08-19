@@ -101,6 +101,16 @@
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct</artifactId>
         </dependency>
+        <!-- mapstruct-processor como provided: necessário para o Quarkus descobrir
+             o processador de anotação quando quarkus-maven-plugin tem extensions=true
+             (o annotationProcessorPaths do maven-compiler-plugin NÃO é honrado pelo
+             compilador interno do Quarkus). -->
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct-processor</artifactId>
+            <version>${mapstruct.version}</version>
+            <scope>provided</scope>
+        </dependency>
 
         <!-- Lombok — geração de getters/setters para CreateUserRequest -->
         <dependency>
@@ -150,7 +160,8 @@
 
     <build>
         <plugins>
-            <!-- ÚNICO módulo com quarkus-maven-plugin (MOD-06, Gotcha 1) -->
+            <!-- ÚNICO módulo com quarkus-maven-plugin (MOD-06, Gotcha 1).
+                 extensions=true já vincula automaticamente o goal build à fase compile. -->
             <plugin>
                 <groupId>${quarkus.platform.group-id}</groupId>
                 <artifactId>quarkus-maven-plugin</artifactId>
@@ -159,13 +170,6 @@
                 <configuration>
                     <skip>false</skip>
                 </configuration>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>build</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
             <!-- Jandex explícito conforme MOD-07 -->
             <plugin>

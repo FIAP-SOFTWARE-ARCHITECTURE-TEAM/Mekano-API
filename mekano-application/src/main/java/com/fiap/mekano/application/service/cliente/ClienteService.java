@@ -25,7 +25,7 @@ public class ClienteService implements ClienteServicePort {
     private final OrdemDeServicoRepositoryPort osRepository;
 
     public ClienteService(ClienteRepositoryPort clienteRepository, EventPublisher eventPublisher,
-                          OrdemDeServicoRepositoryPort osRepository) {
+            OrdemDeServicoRepositoryPort osRepository) {
         this.clienteRepository = clienteRepository;
         this.eventPublisher = eventPublisher;
         this.osRepository = osRepository;
@@ -34,27 +34,29 @@ public class ClienteService implements ClienteServicePort {
     @Override
     @Transactional
     public Cliente execute(CreateClienteCommand command) {
+        if (clienteRepository.existsByCpf(command.cpf())) {
+            throw new AppException(409, Messages.get("cliente.already.exists", command.cpf()));
+        }
+
         Cliente cliente = Cliente.create(command.nome(), command.cpf(), command.email(),
-            command.telefone(), command.logradouro(), command.numero(), command.bairro(),
-            command.cidade(), command.uf(), command.cep());
-        Cliente saved = clienteRepository.save(cliente);
-        eventPublisher.publish(ClienteCriadoEvent.of(saved));
-        return saved;
+                command.telefone(), command.logradouro(), command.numero(), command.bairro(),
+                command.cidade(), command.uf(), command.cep());
+        Cliente criado = clienteRepository.create(cliente);
+        eventPublisher.publish(ClienteCriadoEvent.of(criado));
+        return criado;
     }
 
     @Override
     @Transactional
     public Cliente updateCliente(UUID id, UpdateClienteCommand command) {
-        Cliente existente = clienteRepository.findById(id)
-            .orElseThrow(() -> new AppException(404, Messages.get("cliente.not.found", id)));
+        Cliente cliente = clienteRepository.findById(id)
+                .orElseThrow(() -> new AppException(404, Messages.get("cliente.not.found", id)));
 
         // Validar campos obrigatórios
         validarUpdate(command);
 
-        Cliente atualizado = Cliente.reconstitute(
-                id,
+        cliente.atualizar(
                 command.nome(),
-                existente.getCpf().getValue(),
                 command.email(),
                 command.telefone(),
                 command.logradouro(),
@@ -62,11 +64,9 @@ public class ClienteService implements ClienteServicePort {
                 command.bairro(),
                 command.cidade(),
                 command.uf(),
-                command.cep(),
-                existente.getCreatedAt()
-        );
+                command.cep());
 
-        return clienteRepository.save(atualizado);
+        return clienteRepository.update(cliente);
     }
 
     private void validarUpdate(UpdateClienteCommand command) {
@@ -99,7 +99,7 @@ public class ClienteService implements ClienteServicePort {
     @Override
     public Cliente findClienteById(UUID id) {
         return clienteRepository.findById(id)
-            .orElseThrow(() -> new AppException(404, Messages.get("cliente.not.found", id)));
+                .orElseThrow(() -> new AppException(404, Messages.get("cliente.not.found", id)));
     }
 
     @Override

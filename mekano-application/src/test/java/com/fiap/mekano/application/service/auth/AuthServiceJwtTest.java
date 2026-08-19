@@ -181,4 +181,28 @@ class AuthServiceJwtTest {
 
         verify(refreshTokenService).invalidateByUser(tokenHash);
     }
+
+    @Test
+    void logout_comTokenNulo_deveLancar400() {
+        AppException exception = assertThrows(
+                AppException.class,
+                () -> authService.logout(null)
+        );
+
+        assertEquals(400, exception.getStatus());
+        assertEquals("refresh_token é obrigatório", exception.getMessage());
+        verifyNoInteractions(refreshTokenService);
+    }
+
+    @Test
+    void logout_comTokenEmBranco_deveLancar400() {
+        AppException exception = assertThrows(
+                AppException.class,
+                () -> authService.logout("   ")
+        );
+
+        assertEquals(400, exception.getStatus());
+        assertEquals("refresh_token é obrigatório", exception.getMessage());
+        verifyNoInteractions(refreshTokenService);
+    }
 }
