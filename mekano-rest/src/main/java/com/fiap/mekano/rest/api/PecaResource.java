@@ -62,7 +62,7 @@ public class PecaResource {
                 var pecaResponse = new PecaResponse(
                                 response.id(), response.codigo(), response.descricao(),
                                 response.valorUnitario(),
-                                response.saldoAtual(), response.estoqueMinimo(), response.createdAt());
+                                response.saldoAtual(), response.estoqueMinimo(), response.createdAt(), true);
                 return Response.created(location).entity(pecaResponse).build();
         }
 

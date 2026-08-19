@@ -14,5 +14,6 @@ public record PecaResponse(
                 @Schema(description = "Valor unitário em reais", examples = "45.90") BigDecimal valorUnitario,
                 @Schema(description = "Saldo atual em estoque", examples = "50") Long saldoAtual,
                 @Schema(description = "Estoque mínimo para alerta", examples = "10") Long estoqueMinimo,
-                @Schema(description = "Data e hora de criação (ISO-8601)", examples = "2026-05-29T14:30:00") LocalDateTime createdAt) {
+                @Schema(description = "Data e hora de criação (ISO-8601)", examples = "2026-05-29T14:30:00") LocalDateTime createdAt,
+                @Schema(description = "Indica se o registro está ativo") Boolean isActive) {
 }

@@ -58,7 +58,8 @@ public class ClienteEntityMapperImpl implements ClienteEntityMapper {
                 entity.getEnderecoCidade(),
                 entity.getEnderecoUf(),
                 entity.getEnderecoCep(),
-                entity.getCreatedAt());
+                entity.getCreatedAt(),
+                entity.getIsActive());
     }
 
     @Override

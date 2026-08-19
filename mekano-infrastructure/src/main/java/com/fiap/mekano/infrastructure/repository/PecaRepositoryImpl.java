@@ -60,14 +60,14 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
     @Override
     @CacheResult(cacheName = CacheNames.PECAS)
     public Optional<Peca> buscarPorId(UUID id) {
-        return panacheRepository.find("uuid = ?1 and isActive = ?2", id, true)
+        return panacheRepository.find("uuid = ?1", id)
                 .firstResultOptional()
                 .map(PecaRepositoryImpl::toDomain);
     }
 
     @Override
     public List<Peca> findAll(int page, int size) {
-        return panacheRepository.find("isActive = ?1", Sort.by("id"), true)
+        return panacheRepository.findAll(Sort.by("id"))
                 .page(Page.of(page, size))
                 .list()
                 .stream()
@@ -77,7 +77,7 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
 
     @Override
     public long countAll() {
-        return panacheRepository.count("isActive", true);
+        return panacheRepository.count();
     }
 
     @Override
@@ -183,7 +183,8 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
                 entity.saldo == null ? 0L : entity.saldo.longValue(),
                 entity.estoqueMinimo == null ? 0L : entity.estoqueMinimo.longValue(),
                 entity.getCreatedAt() == null ? LocalDateTime.now() : entity.getCreatedAt(),
-                entity.saldoReservado == null ? 0L : entity.saldoReservado.longValue()
+                entity.saldoReservado == null ? 0L : entity.saldoReservado.longValue(),
+                entity.getIsActive()
         );
     }
 }

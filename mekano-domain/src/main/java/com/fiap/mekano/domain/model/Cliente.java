@@ -38,6 +38,7 @@ public class Cliente {
     private Telefone telefone;
     private Endereco endereco;
     private final LocalDateTime createdAt;
+    private final Boolean isActive;
 
     public static Cliente create(
             String nome,
@@ -65,6 +66,7 @@ public class Cliente {
                         uf,
                         cep))
                 .createdAt(LocalDateTime.now())
+                .isActive(true)
                 .build();
     }
 
@@ -82,6 +84,25 @@ public class Cliente {
             String cep,
             LocalDateTime createdAt) {
 
+        return reconstitute(id, nome, cpfValue, emailValue, telefoneValue,
+                logradouro, numero, bairro, cidade, uf, cep, createdAt, true);
+    }
+
+    public static Cliente reconstitute(
+            UUID id,
+            String nome,
+            String cpfValue,
+            String emailValue,
+            String telefoneValue,
+            String logradouro,
+            String numero,
+            String bairro,
+            String cidade,
+            String uf,
+            String cep,
+            LocalDateTime createdAt,
+            Boolean isActive) {
+
         return Cliente.builder()
                 .id(id)
                 .nome(nome)
@@ -96,6 +117,7 @@ public class Cliente {
                         uf,
                         cep))
                 .createdAt(createdAt)
+                .isActive(isActive)
                 .build();
     }
 

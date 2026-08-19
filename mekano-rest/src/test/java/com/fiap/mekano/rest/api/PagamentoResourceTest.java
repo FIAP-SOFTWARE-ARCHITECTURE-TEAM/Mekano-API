@@ -71,7 +71,7 @@ class PagamentoResourceTest {
             clienteId = cliente.getId().toString();
 
             Veiculo veiculo = Veiculo.create(cliente.getId(), "ZZZ0000", "Fiat", "Uno", 2020);
-            veiculo = veiculoRepository.save(veiculo);
+            veiculo = veiculoRepository.create(veiculo);
             veiculoId = veiculo.getId().toString();
             utx.commit();
         } catch (Exception e) {
@@ -250,7 +250,7 @@ class PagamentoResourceTest {
             c = clienteRepository.create(c);
             cId = c.getId().toString();
             Veiculo v = Veiculo.create(c.getId(), "ZZZ0001", "VW", "Gol", 2021);
-            v = veiculoRepository.save(v);
+            v = veiculoRepository.create(v);
             vId = v.getId().toString();
             utx.commit();
         } catch (Exception e) {

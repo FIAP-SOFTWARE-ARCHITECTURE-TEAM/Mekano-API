@@ -17,5 +17,6 @@ public record ServicoResponse(
         @Schema(description = "Nome do serviço", example = "Troca de óleo") String nome,
         @Schema(description = "Descrição do serviço", example = "Troca de óleo do motor com filtro incluso") String descricao,
         @Schema(description = "Valor do serviço em reais", example = "89.90") BigDecimal valor,
-        @Schema(description = "Data e hora de criação (ISO-8601)", example = "2026-05-29T14:30:00") LocalDateTime createdAt
+        @Schema(description = "Data e hora de criação (ISO-8601)", example = "2026-05-29T14:30:00") LocalDateTime createdAt,
+        @Schema(description = "Indica se o registro está ativo") Boolean isActive
 ) {}

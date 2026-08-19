@@ -32,6 +32,7 @@ public class Veiculo {
     private final String modelo;
     private final Integer ano;
     private final LocalDateTime createdAt;
+    private final Boolean isActive;
 
     /**
      * Factory method — único ponto de criação de um novo veículo.
@@ -46,7 +47,7 @@ public class Veiculo {
      */
     public static Veiculo create(UUID clienteUuid, String placaValue, String marca, String modelo, Integer ano) {
         return Veiculo.builder().id(UUID.randomUUID()).clienteUuid(clienteUuid).placa(new PlacaVeiculo(placaValue))
-                .marca(marca).modelo(modelo).ano(ano).createdAt(LocalDateTime.now()).build();
+                .marca(marca).modelo(modelo).ano(ano).createdAt(LocalDateTime.now()).isActive(true).build();
     }
 
     /**
@@ -63,8 +64,13 @@ public class Veiculo {
      */
     public static Veiculo reconstitute(UUID id, UUID clienteUuid, String placaValue, String marca, String modelo,
             Integer ano, LocalDateTime createdAt) {
+        return reconstitute(id, clienteUuid, placaValue, marca, modelo, ano, createdAt, true);
+    }
+
+    public static Veiculo reconstitute(UUID id, UUID clienteUuid, String placaValue, String marca, String modelo,
+            Integer ano, LocalDateTime createdAt, Boolean isActive) {
         return Veiculo.builder().id(id).clienteUuid(clienteUuid).placa(new PlacaVeiculo(placaValue)).marca(marca)
-                .modelo(modelo).ano(ano).createdAt(createdAt).build();
+                .modelo(modelo).ano(ano).createdAt(createdAt).isActive(isActive).build();
     }
 
 }

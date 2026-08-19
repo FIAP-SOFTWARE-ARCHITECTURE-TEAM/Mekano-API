@@ -38,6 +38,7 @@ public class Peca {
     private final Long saldoReservado;
     private final Long estoqueMinimo;
     private final LocalDateTime createdAt;
+    private final Boolean isActive;
 
     /**
      * Factory method — único ponto de criação de uma nova peça.
@@ -62,6 +63,7 @@ public class Peca {
                 .saldoReservado(0L)
                 .estoqueMinimo(estoqueMinimo)
                 .createdAt(LocalDateTime.now())
+                .isActive(true)
                 .build();
     }
 
@@ -73,6 +75,14 @@ public class Peca {
                                     BigDecimal valorUnitario,
                                     Long saldoAtual, Long estoqueMinimo, LocalDateTime createdAt,
                                     Long saldoReservado) {
+        return reconstitute(id, codigo, descricao, valorUnitario, saldoAtual, estoqueMinimo, createdAt,
+                saldoReservado, true);
+    }
+
+    public static Peca reconstitute(UUID id, String codigo, String descricao,
+                                    BigDecimal valorUnitario,
+                                    Long saldoAtual, Long estoqueMinimo, LocalDateTime createdAt,
+                                    Long saldoReservado, Boolean isActive) {
         validateCodigo(codigo);
         validateDescricao(descricao);
         validateValorUnitario(valorUnitario);
@@ -95,6 +105,7 @@ public class Peca {
                 .saldoReservado(reservado)
                 .estoqueMinimo(estoqueMinimo)
                 .createdAt(createdAt)
+                .isActive(isActive)
                 .build();
     }
 

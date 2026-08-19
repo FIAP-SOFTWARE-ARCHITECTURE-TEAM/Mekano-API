@@ -124,7 +124,8 @@ class ServicoResourceTest {
                 .then()
                 .statusCode(200)
                 .body("id", equalTo(createdUuid))
-                .body("nome", equalTo("Troca de óleo"));
+                .body("nome", equalTo("Troca de óleo"))
+                .body("isActive", equalTo(true));
     }
 
     @Test
@@ -151,6 +152,7 @@ class ServicoResourceTest {
                 .then()
                 .statusCode(200)
                 .body("content.size()", greaterThan(0))
+                .body("content[0].isActive", equalTo(true))
                 .body("page", equalTo(0))
                 .body("totalElements", greaterThan(0));
     }
@@ -222,12 +224,13 @@ class ServicoResourceTest {
     @Test
     @Order(13)
     @TestSecurity(user = "admin", roles = {"admin"})
-    void getById_afterDelete_returns404() {
+    void getById_afterDelete_returns200Inactive() {
         given()
                 .when()
                 .get(BASE_PATH + "/" + createdUuid)
                 .then()
-                .statusCode(404);
+                .statusCode(200)
+                .body("isActive", equalTo(false));
     }
 
     // ───────────────── AUTHORIZATION ─────────────────

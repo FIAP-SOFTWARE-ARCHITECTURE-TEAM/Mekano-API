@@ -13,7 +13,6 @@ import com.fiap.mekano.domain.port.in.VeiculoServicePort;
 import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;
 import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.VeiculoRepositoryPort;
-import com.fiap.mekano.domain.valueobject.PlacaVeiculo;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
@@ -61,7 +60,7 @@ public class VeiculoService
                 command.modelo(),
                 command.ano());
 
-        Veiculo saved = veiculoRepository.save(veiculo);
+        Veiculo saved = veiculoRepository.create(veiculo);
 
         eventPublisher.publish(
                 VeiculoCriadoEvent.of(saved));
@@ -75,25 +74,11 @@ public class VeiculoService
         Veiculo existingVehicle = veiculoRepository.findById(veiculoId)
                 .orElseThrow(() -> new AppException(404, "Veículo não encontrado"));
 
-        // 1. Tratar a placa do comando de forma segura e normalizada
-        Optional<String> newPlacaNormalized = Optional.ofNullable(command.placa())
-                .filter(placa -> !placa.isBlank())
-                .map(PlacaVeiculo::new) // Assumindo que PlacaVeiculo tem um construtor que aceita String
-                .map(PlacaVeiculo::getValue);
-
-        // 2. Validar se a nova placa (se presente e diferente) já existe
-        newPlacaNormalized.ifPresent(placa -> {
-            if (!placa.equalsIgnoreCase(existingVehicle.getPlaca().getValue())
-                    && veiculoRepository.existsByPlaca(placa)) {
-                throw new AppException(409, "Veículo já cadastrado");
-            }
-        });
-
-        // 3. Reconstituir o veículo com os valores atualizados ou existentes
+        // A placa é imutável após a criação — qualquer valor enviado é ignorado
         Veiculo updatedVehicle = Veiculo.reconstitute(
                 existingVehicle.getId(),
                 existingVehicle.getClienteUuid(),
-                newPlacaNormalized.orElseGet(() -> existingVehicle.getPlaca().getValue()),
+                existingVehicle.getPlaca().getValue(),
                 Optional.ofNullable(command.marca()).filter(marca -> !marca.isBlank())
                         .orElse(existingVehicle.getMarca()),
                 Optional.ofNullable(command.modelo()).filter(modelo -> !modelo.isBlank())
@@ -101,7 +86,7 @@ public class VeiculoService
                 Optional.ofNullable(command.ano()).orElse(existingVehicle.getAno()),
                 existingVehicle.getCreatedAt());
 
-        return veiculoRepository.save(updatedVehicle);
+        return veiculoRepository.update(updatedVehicle);
     }
 
     @Override
