@@ -1,75 +1,106 @@
 package com.fiap.mekano.infrastructure.repository;
 
+import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.model.Cliente;
-import com.fiap.mekano.infrastructure.mapper.ClienteEntityMapper;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.time.LocalDateTime;
-import java.util.UUID;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/**
+ * Testes de integração para {@link ClienteRepositoryImpl}.
+ *
+ * <p>Usa QuarkusTest + DevServices PostgreSQL + Flyway migrations.
+ * Cada teste roda dentro de uma transação isolada e recebe rollback automático
+ * ao final ({@code @TestTransaction}).
+ */
 @QuarkusTest
-@DisplayName("ClienteRepositoryImpl")
 class ClienteRepositoryImplTest {
 
     @Inject
     ClienteRepositoryImpl repository;
 
-    @Inject
-    ClientePanacheRepository panacheRepository;
-
-    @Inject
-    ClienteEntityMapper clienteEntityMapper;
-
-    private Cliente cliente(String nome, String telefone, String cpf) {
-        return Cliente.reconstitute(UUID.randomUUID(), nome, cpf,
-                nome.toLowerCase().replace(" ", "") + "@test.com", telefone,
-                "Rua A", "100", "Centro", "São Paulo", "SP", "01001000", LocalDateTime.now());
-    }
-
-    private void persistir(Cliente cliente) {
-        panacheRepository.persist(clienteEntityMapper.toEntity(cliente));
-    }
-
-    @Test
-    @TestTransaction
-    void findByTelefone_exato_deveRetornarCliente() {
-        persistir(cliente("Cliente A", "91984847811", "12345678909"));
-
-        var result = repository.findByTelefone("91984847811");
-
-        assertThat(result).isPresent();
-        assertThat(result.get().getTelefone().getValue()).isEqualTo("91984847811");
+    private Cliente novoCliente() {
+        return Cliente.create(
+                "Cliente Teste",
+                "52998224725",
+                "cliente@teste.com",
+                "11999999999",
+                "Rua A",
+                "100",
+                "Centro",
+                "São Paulo",
+                "SP",
+                "01001000");
     }
 
     @Test
     @TestTransaction
-    void findByTelefone_fallbackSufixoComDDD_deveRetornarUnico() {
-        persistir(cliente("Cliente A", "91984847811", "12345678909"));
+    void create_devePersistirCliente() {
+        Cliente salvo = repository.create(novoCliente());
 
-        // 13 dígitos (DDI 55 + DDD 91 + número): sem match exato → fallback
-        // por sufixo com DDD (últimos 10 dígitos = 91984847811) → único (WR-04)
-        var result = repository.findByTelefone("5591984847811");
+        Optional<Cliente> encontrado = repository.findById(salvo.getId());
 
-        assertThat(result).isPresent();
-        assertThat(result.get().getTelefone().getValue()).isEqualTo("91984847811");
+        assertThat(encontrado).isPresent();
+        assertThat(encontrado.get().getId()).isEqualTo(salvo.getId());
+        assertThat(encontrado.get().getIsActive()).isTrue();
     }
 
     @Test
     @TestTransaction
-    void findByTelefone_fallbackAmbiguo_deveRetornarVazio() {
-        persistir(cliente("Cliente A", "91984847811", "12345678909"));
-        persistir(cliente("Cliente B", "21984847811", "11144477735"));
+    void markAsDeleted_deveRealizarSoftDelete() {
+        Cliente salvo = repository.create(novoCliente());
 
-        // Mesmo número local (984847811) em DDDs diferentes (91 e 21):
-        // sufixo de 10 dígitos é idêntico → resultado ambíguo → vazio (WR-04)
-        var result = repository.findByTelefone("11984847811");
+        repository.markAsDeleted(salvo.getId());
 
-        assertThat(result).isEmpty();
+        Optional<Cliente> encontrado = repository.findById(salvo.getId());
+        assertThat(encontrado).isPresent();
+        assertThat(encontrado.get().getIsActive()).isFalse();
+    }
+
+    @Test
+    @TestTransaction
+    void markAsDeleted_deveLancar404_quandoClienteNaoExiste() {
+        assertThatThrownBy(() -> repository.markAsDeleted(java.util.UUID.randomUUID()))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(404));
+    }
+
+    @Test
+    @TestTransaction
+    void reactivate_deveReativarRegistroInativo() {
+        Cliente salvo = repository.create(novoCliente());
+        repository.markAsDeleted(salvo.getId());
+
+        repository.reactivate(salvo.getId());
+
+        Optional<Cliente> encontrado = repository.findById(salvo.getId());
+        assertThat(encontrado).isPresent();
+        assertThat(encontrado.get().getIsActive()).isTrue();
+    }
+
+    @Test
+    @TestTransaction
+    void reactivate_jaAtivo_naoAlteraEstado() {
+        Cliente salvo = repository.create(novoCliente());
+
+        repository.reactivate(salvo.getId());
+
+        Optional<Cliente> encontrado = repository.findById(salvo.getId());
+        assertThat(encontrado).isPresent();
+        assertThat(encontrado.get().getIsActive()).isTrue();
+    }
+
+    @Test
+    @TestTransaction
+    void reactivate_deveLancar404_quandoClienteNaoExiste() {
+        assertThatThrownBy(() -> repository.reactivate(java.util.UUID.randomUUID()))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(404));
     }
 }

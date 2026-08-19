@@ -25,4 +25,6 @@ public interface ClienteRepositoryPort {
     long countAll();
 
     void markAsDeleted(UUID id);
+
+    void reactivate(UUID id);
 }

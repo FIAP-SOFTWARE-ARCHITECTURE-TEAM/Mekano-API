@@ -236,6 +236,90 @@ public class VeiculoResourceTest {
                                 .body("isActive", equalTo(false));
         }
 
+        /** CENÁRIO 6b - Reativação de veículo inativo */
+        @Test
+        void reativar_vehicle_returns204AndActive() {
+
+                String location = given()
+                                .contentType(ContentType.JSON)
+                                .body("""
+                                                {
+                                                  "clienteUuid":"11111111-1111-1111-1111-111111111111",
+                                                  "placa":"KLM1234",
+                                                  "marca":"Fiat",
+                                                  "modelo":"Pulse",
+                                                  "ano":2023
+                                                }
+                                                """)
+                                .when()
+                                .post("/api/v1/veiculos")
+                                .then()
+                                .statusCode(201)
+                                .extract()
+                                .header("Location");
+
+                UUID id = UUID.fromString(
+                                location.substring(location.lastIndexOf("/") + 1));
+
+                given()
+                                .when()
+                                .delete("/api/v1/veiculos/{id}", id)
+                                .then()
+                                .statusCode(204);
+
+                given()
+                                .when()
+                                .put("/api/v1/veiculos/{id}/ativar", id)
+                                .then()
+                                .statusCode(204);
+
+                given()
+                                .when()
+                                .get("/api/v1/veiculos/{id}", id)
+                                .then()
+                                .statusCode(200)
+                                .body("isActive", equalTo(true));
+        }
+
+        /** CENÁRIO 6c - Reativação de veículo já ativo é idempotente (204) */
+        @Test
+        void reativar_activeVehicle_returns204() {
+
+                String location = given()
+                                .contentType(ContentType.JSON)
+                                .body("""
+                                                {
+                                                  "clienteUuid":"11111111-1111-1111-1111-111111111111",
+                                                  "placa":"MNO1234",
+                                                  "marca":"Chevrolet",
+                                                  "modelo":"Onix",
+                                                  "ano":2022
+                                                }
+                                                """)
+                                .when()
+                                .post("/api/v1/veiculos")
+                                .then()
+                                .statusCode(201)
+                                .extract()
+                                .header("Location");
+
+                UUID id = UUID.fromString(
+                                location.substring(location.lastIndexOf("/") + 1));
+
+                given()
+                                .when()
+                                .put("/api/v1/veiculos/{id}/ativar", id)
+                                .then()
+                                .statusCode(204);
+
+                given()
+                                .when()
+                                .get("/api/v1/veiculos/{id}", id)
+                                .then()
+                                .statusCode(200)
+                                .body("isActive", equalTo(true));
+        }
+
         /** CENÁRIO 7 - Autorização */
         @Test
         @TestSecurity(user = "mecanico-test", roles = { "mecanico" })

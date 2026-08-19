@@ -104,6 +104,16 @@ public class PecaResource {
                 return Response.noContent().build();
         }
 
+        @PUT
+        @Path("/{id}/ativar")
+        @Operation(summary = "Reativar peça", description = "Reativa uma peça inativa. Se a peça já estiver ativa, nenhuma alteração é feita.")
+        @APIResponse(responseCode = "204", description = "Peça reativada com sucesso")
+        @APIResponse(responseCode = "404", description = "Peça não encontrada", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = ProblemDetail.class)))
+        public Response reativar(@PathParam("id") UUID id) {
+                pecaService.reativar(id);
+                return Response.noContent().build();
+        }
+
         @GET
         @Produces(MediaType.APPLICATION_JSON)
         @Operation(summary = "Listar peças", description = "Retorna peças ativas de forma paginada")

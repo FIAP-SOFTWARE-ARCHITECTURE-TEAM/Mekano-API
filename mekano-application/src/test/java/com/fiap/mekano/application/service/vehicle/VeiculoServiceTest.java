@@ -291,4 +291,16 @@ class VeiculoServiceTest {
         verify(veiculoRepository)
                 .markAsDeleted(veiculoId);
     }
+
+    @Test
+    @DisplayName("deve reativar veículo")
+    void deveReativarVeiculo() {
+
+        UUID veiculoId = UUID.randomUUID();
+
+        veiculoService.reactivate(veiculoId);
+
+        verify(veiculoRepository)
+                .reactivate(veiculoId);
+    }
 }

@@ -131,6 +131,16 @@ public class ServicoRepositoryImpl implements ServicoRepositoryPort {
         entity.setIsActive(false);
     }
 
+    @Override
+    @Transactional
+    @CacheInvalidate(cacheName = CacheNames.SERVICOS)
+    public void reactivate(UUID id) {
+        ServicoEntity entity = panacheRepository.find("uuid", id).firstResultOptional()
+                .orElseThrow(() -> new AppException(404, Messages.get("servico.not.found", id)));
+        entity.setDeletedAt(null);
+        entity.setIsActive(true);
+    }
+
     private static int normalizeSize(int size) {
         if (size <= 0) {
             return 10;

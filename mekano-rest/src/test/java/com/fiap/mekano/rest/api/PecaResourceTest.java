@@ -69,6 +69,8 @@ class PecaResourceTest {
 
         Mockito.doThrow(new AppException(409, "Peça vinculada a OS ativa"))
                 .when(pecaService).excluir(OTHER_UUID);
+
+        Mockito.doNothing().when(pecaService).reativar(PECA_UUID);
     }
 
     @Test
@@ -236,5 +238,16 @@ class PecaResourceTest {
                 .delete(BASE_PATH + "/" + PECA_UUID)
                 .then()
                 .statusCode(403);
+    }
+
+    @Test
+    @Order(13)
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void reativar_existing_returns204() {
+        given()
+                .when()
+                .put(BASE_PATH + "/" + PECA_UUID + "/ativar")
+                .then()
+                .statusCode(204);
     }
 }

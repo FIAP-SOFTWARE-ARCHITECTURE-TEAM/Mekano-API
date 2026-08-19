@@ -23,4 +23,6 @@ public interface ClienteServicePort {
     long countAllClientes();
 
     void deleteCliente(UUID id);
+
+    void reactivate(UUID id);
 }

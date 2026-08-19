@@ -23,4 +23,6 @@ public interface ServicoServicePort {
     long countAll();
 
     void delete(UUID id);
+
+    void reactivate(UUID id);
 }

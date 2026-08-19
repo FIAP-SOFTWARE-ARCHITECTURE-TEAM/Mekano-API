@@ -21,4 +21,5 @@ public interface PecaRepositoryPort {
     boolean liberarReserva(UUID pecaId, Integer quantidade);
 
     void remover(UUID id);
+    void reativar(UUID id);
 }

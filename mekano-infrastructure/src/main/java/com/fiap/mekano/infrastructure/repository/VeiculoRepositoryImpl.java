@@ -159,4 +159,19 @@ public class VeiculoRepositoryImpl
         entity.setDeletedAt(LocalDateTime.now());
         entity.setIsActive(false);
     }
+
+    @Override
+    @Transactional
+    @CacheInvalidate(cacheName = CacheNames.VEHICLES)
+    public void reactivate(UUID id) {
+        VeiculoEntity entity = panacheRepository
+                .find("uuid", id)
+                .firstResultOptional()
+                .orElseThrow(
+                        () -> new AppException(
+                                404,
+                                "Veículo não encontrado"));
+        entity.setDeletedAt(null);
+        entity.setIsActive(true);
+    }
 }
