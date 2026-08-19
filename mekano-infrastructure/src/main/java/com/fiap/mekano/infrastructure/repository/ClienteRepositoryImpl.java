@@ -80,6 +80,39 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
     }
 
     @Override
+    public Optional<Cliente> findByTelefone(String telefone) {
+        if (telefone == null || telefone.isBlank()) {
+            return Optional.empty();
+        }
+
+        String digits = telefone.replaceAll("\\D", "");
+        Optional<ClienteEntity> exact = panacheRepository
+                .find("telefone = ?1 and isActive = ?2",
+                        Sort.by("createdAt").descending(), digits, true)
+                .firstResultOptional();
+        if (exact.isPresent()) {
+            return exact.map(clienteEntityMapper::toDomain);
+        }
+
+        // WR-04: fallback por sufixo incluindo o DDD (últimos 10 dígitos) com
+        // ORDER BY createdAt (determinístico) e retorno APENAS quando há uma
+        // única correspondência — múltiplos clientes com o mesmo número local
+        // em DDDs diferentes tornam o resultado ambíguo (retorna vazio).
+        if (digits.length() >= 10) {
+            String suffix = digits.substring(digits.length() - 10);
+            List<ClienteEntity> matches = panacheRepository
+                    .find("telefone like ?1 and isActive = ?2",
+                            Sort.by("createdAt").descending(), "%" + suffix, true)
+                    .list();
+            if (matches.size() == 1) {
+                return Optional.of(matches.get(0)).map(clienteEntityMapper::toDomain);
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    @Override
     public boolean existsByCpf(String cpf) {
         if (cpf == null || cpf.isBlank()) {
             return false;

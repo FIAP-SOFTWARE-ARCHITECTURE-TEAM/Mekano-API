@@ -5,6 +5,9 @@ status: validated
 nyquist_compliant: true
 wave_0_complete: true
 created: 2026-08-08
+updated: 2026-08-18
+test_count: 544
+failures: 0
 ---
 
 # Phase 5: WhatsApp Integration — Validation Strategy
@@ -29,9 +32,27 @@ created: 2026-08-08
 | Webhook endpoint | 100% | Security-critical (401/200) |
 | Docker compose services | 100% | Must validate config |
 
-## Wave 0 Gaps
+## Wave 0 Coverage — Post Code Review
 
-No gaps identified. This phase introduces new external integration (Evolution API) — all components are testable with mocked HTTP.
+| Component | Test File | Module | Tests | Status |
+|-----------|-----------|--------|-------|--------|
+| WhatsAppNotifierPort | Interface contract | domain | — | COVERED (compile-time) |
+| WhatsAppOrcamentoRespostaService | WhatsAppOrcamentoRespostaServiceTest | application | 8 | COVERED |
+| EvolutionApiRestClient | EvolutionApiNotifierTest | infrastructure | 7 | COVERED |
+| WhatsAppOrcamentoObserver | WhatsAppOrcamentoObserverTest | infrastructure | 3 | COVERED |
+| ClienteRepositoryImpl.findByTelefone | ClienteRepositoryImplTest | infrastructure | 3 | COVERED |
+| WebhookEvolutionResource | WebhookEvolutionResourceTest | rest | 6 | COVERED |
+| docker-compose evolution services | `docker compose config` | infra | — | COVERED |
+
+### CR Fix Regression Tests
+
+| Finding | Test Added | Module | Status |
+|---------|-----------|--------|--------|
+| CR-01 formatPhone DDD-55 | EvolutionApiNotifierTest 2 new cases | infrastructure | COVERED |
+| CR-02 webhook fail-closed | WebhookEvolutionResourceTest 2 401 cases | rest | COVERED |
+| WR-03 SIM/NÃO exact token | WhatsAppOrcamentoRespostaServiceTest | application | COVERED |
+| WR-04 findByTelefone determinístico | ClienteRepositoryImplTest 3 cases | infrastructure | COVERED |
+| WR-05 observer post-commit | WhatsAppOrcamentoObserverTest | infrastructure | COVERED |
 
 ## Validation Dependencies
 
@@ -45,10 +66,13 @@ No gaps identified. This phase introduces new external integration (Evolution AP
 # Domain tests
 ./mvnw test -pl mekano-domain
 
-# Infrastructure tests (REST Client + observers)
+# Application tests (WhatsAppOrcamentoRespostaService)
+./mvnw test -pl mekano-application -am
+
+# Infrastructure tests (REST Client + observers + repository)
 ./mvnw test -pl mekano-infrastructure -am
 
-# REST tests (webhook endpoint)
+# REST tests (webhook endpoint + auth)
 ./mvnw test -pl mekano-rest -am
 
 # Full suite
@@ -57,3 +81,14 @@ No gaps identified. This phase introduces new external integration (Evolution AP
 # Docker compose validation
 docker compose config
 ```
+
+## Audit Trail
+
+### 2026-08-18 — Post Code Review Audit
+| Metric | Count |
+|--------|-------|
+| Total tests (all modules) | 544 |
+| Failures | 0 |
+| WPP-01 specific tests | 27 (8 app + 10 infra + 6 rest + 3 repo) |
+| Code review findings fixed | 6/6 (CR-01, CR-02, WR-03..WR-06) |
+| Nyquist compliant | ✅ |

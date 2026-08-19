@@ -95,6 +95,11 @@
 			<groupId>io.quarkus</groupId>
 			<artifactId>quarkus-jackson</artifactId>
 		</dependency>
+		<!-- REST Client — EvolutionApiRestClient (WhatsApp, Issue #77 WPP-01) -->
+		<dependency>
+			<groupId>io.quarkus</groupId>
+			<artifactId>quarkus-rest-client-jackson</artifactId>
+		</dependency>
 		<!-- Quarkus JUnit5 — escopo test -->
 		<dependency>
 			<groupId>io.quarkus</groupId>

@@ -3,7 +3,7 @@ services:
     image: postgres:16-alpine
     container_name: mekano-postgres
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       POSTGRES_DB: mekano
       POSTGRES_USER: ${POSTGRES_USER:-mekano}
@@ -55,6 +55,10 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:-mekano}
       SMALLRYE_JWT_SIGN_KEY_LOCATION: /home/jboss/.mekano/secrets/privatekey.pem
       MP_JWT_VERIFY_PUBLICKEY_LOCATION: /home/jboss/.mekano/secrets/publicKey.pem
+      EVOLUTION_API_URL: http://evolution-api:5033
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-dev-key}
+      EVOLUTION_INSTANCE_NAME: ${EVOLUTION_INSTANCE_NAME:-mekano}
+      EVOLUTION_WEBHOOK_TOKEN: ${EVOLUTION_WEBHOOK_TOKEN:-dev-key}
     volumes:
       - mekano_secrets:/home/jboss/.mekano/secrets:ro
     depends_on:
@@ -71,6 +75,74 @@ services:
     networks:
       - mekano-net
 
+  # --- Evolution API (WhatsApp gateway) — Issue #77 WPP-01 ---
+  evolution-postgres:
+    image: postgres:16-alpine
+    container_name: mekano-evolution-postgres
+    environment:
+      POSTGRES_DB: evolution
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: ${EVOLUTION_DB_PASSWORD:-evolution}
+    volumes:
+      - evolution_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evolution -d evolution"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mekano-net
+
+  evolution-redis:
+    image: redis:7-alpine
+    container_name: mekano-evolution-redis
+    volumes:
+      - evolution_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - mekano-net
+
+  evolution-api:
+    image: evoapicloud/evolution-api:latest
+    container_name: mekano-evolution-api
+    ports:
+      - "5033:5033"
+    environment:
+      SERVER_URL: http://localhost:5033
+      SERVER_PORT: "5033"
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY}
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://evolution:${EVOLUTION_DB_PASSWORD:-evolution}@evolution-postgres:5432/evolution?schema=public
+      DATABASE_SAVE_DATA_INSTANCE: "true"
+      DATABASE_SAVE_DATA_NEW_MESSAGE: "true"
+      DATABASE_SAVE_MESSAGE_UPDATE: "true"
+      DATABASE_SAVE_DATA_CONTACTS: "true"
+      DATABASE_SAVE_DATA_CHATS: "true"
+      REDIS_ENABLED: "true"
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://evolution-redis:6379
+      CACHE_REDIS_KEY_PREFIX: mekano
+      CACHE_LOCAL_ENABLED: "true"
+      CACHE_LOCAL_TTL: 3600
+      # WR-06: webhook global habilitado — instâncias criadas via API/manager
+      # herdam esta config e entregam eventos MESSAGES_UPSERT ao Mekano.
+      # O header x-webhook-token deve ser configurado na instância
+      # (webhookHeaders) com o mesmo valor de EVOLUTION_WEBHOOK_TOKEN (CR-02).
+      WEBHOOK_GLOBAL_ENABLED: "true"
+      WEBHOOK_GLOBAL_URL: http://mekano:8080/api/v1/webhooks/evolution
+      WEBHOOK_GLOBAL_EVENTS: MESSAGES_UPSERT
+    depends_on:
+      evolution-postgres:
+        condition: service_healthy
+      evolution-redis:
+        condition: service_healthy
+    networks:
+      - mekano-net
+
 networks:
   mekano-net:
     driver: bridge
@@ -79,4 +151,8 @@ volumes:
   postgres_data:
     driver: local
   mekano_secrets:
+    driver: local
+  evolution_postgres_data:
+    driver: local
+  evolution_redis_data:
     driver: local
