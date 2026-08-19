@@ -156,4 +156,14 @@ class ServicoServiceTest {
 
         verify(servicoRepository, times(1)).markAsDeleted(id);
     }
+
+    @Test
+    @DisplayName("deve reativar serviço")
+    void deveReativarServico() {
+        UUID id = UUID.randomUUID();
+
+        servicoService.reactivate(id);
+
+        verify(servicoRepository, times(1)).reactivate(id);
+    }
 }

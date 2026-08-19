@@ -140,4 +140,15 @@ public class ClienteResource {
 
         return Response.noContent().build();
     }
+
+    @PUT
+    @Path("/{id}/ativar")
+    @Operation(summary = "Reativar cliente", description = "Reativa um cliente inativo. Se o cliente já estiver ativo, nenhuma alteração é feita.")
+    public Response reativar(
+            @PathParam("id") UUID id) {
+
+        clienteService.reactivate(id);
+
+        return Response.noContent().build();
+    }
 }

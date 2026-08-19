@@ -77,6 +77,12 @@ public class ServicoService implements ServicoServicePort {
         servicoRepository.markAsDeleted(id);
     }
 
+    @Override
+    @Transactional
+    public void reactivate(UUID id) {
+        servicoRepository.reactivate(id);
+    }
+
     private static String normalizeNome(String nome) {
         return nome == null ? null : nome.strip();
     }

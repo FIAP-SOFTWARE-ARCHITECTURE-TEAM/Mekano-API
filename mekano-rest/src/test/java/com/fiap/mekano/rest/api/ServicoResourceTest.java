@@ -286,4 +286,29 @@ class ServicoResourceTest {
                 .then()
                 .statusCode(403);
     }
+
+    // ───────────────── REACTIVATE ─────────────────
+
+    @Test
+    @Order(18)
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void reativar_existingServico_returns204() {
+        given()
+                .when()
+                .put(BASE_PATH + "/" + createdUuid + "/ativar")
+                .then()
+                .statusCode(204);
+    }
+
+    @Test
+    @Order(19)
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void getById_afterReativar_returns200Active() {
+        given()
+                .when()
+                .get(BASE_PATH + "/" + createdUuid)
+                .then()
+                .statusCode(200)
+                .body("isActive", equalTo(true));
+    }
 }

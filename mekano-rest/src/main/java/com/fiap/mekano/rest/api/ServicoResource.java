@@ -167,4 +167,18 @@ public class ServicoResource {
         servicoServicePort.delete(id);
         return Response.noContent().build();
     }
+
+    /**
+     * Reativa um serviço inativo (idempotente).
+     */
+    @PUT
+    @Path("/{id}/ativar")
+    @Operation(summary = "Reativar serviço", description = "Reativa um serviço inativo. Se o serviço já estiver ativo, nenhuma alteração é feita.")
+    @APIResponse(responseCode = "204", description = "Serviço reativado com sucesso")
+    @APIResponse(responseCode = "404", description = "Serviço não encontrado",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = ProblemDetail.class)))
+    public Response reativar(@PathParam("id") UUID id) {
+        servicoServicePort.reactivate(id);
+        return Response.noContent().build();
+    }
 }

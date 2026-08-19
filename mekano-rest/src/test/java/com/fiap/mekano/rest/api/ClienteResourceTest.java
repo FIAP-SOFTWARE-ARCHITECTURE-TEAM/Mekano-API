@@ -77,4 +77,22 @@ class ClienteResourceTest {
                 .body("content[0].isActive", equalTo(true))
                 .body("content[1].isActive", equalTo(false));
     }
+
+    @Test
+    void delete_cliente_returns204() {
+        given()
+                .when()
+                .delete(BASE_PATH + "/" + CLIENTE_ATIVO)
+                .then()
+                .statusCode(204);
+    }
+
+    @Test
+    void reativar_cliente_returns204() {
+        given()
+                .when()
+                .put(BASE_PATH + "/" + CLIENTE_INATIVO + "/ativar")
+                .then()
+                .statusCode(204);
+    }
 }

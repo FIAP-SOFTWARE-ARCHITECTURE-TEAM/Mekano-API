@@ -31,4 +31,6 @@ public interface VeiculoRepositoryPort {
 
     void markAsDeleted(UUID id);
 
+    void reactivate(UUID id);
+
 }

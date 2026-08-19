@@ -1,5 +1,7 @@
 package com.fiap.mekano.infrastructure.repository;
 
+import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.domain.model.Peca;
 import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
 import com.fiap.mekano.infrastructure.cache.CacheNames;
@@ -172,6 +174,18 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
             entity.setDeletedAt(LocalDateTime.now());
             panacheRepository.flush();
         });
+    }
+
+    @Override
+    @Transactional
+    @CacheInvalidate(cacheName = CacheNames.PECAS)
+    public void reativar(UUID id) {
+        PecaEntity entity = panacheRepository.find("uuid = ?1", id)
+                .firstResultOptional()
+                .orElseThrow(() -> new AppException(404, Messages.get("peca.not.found", id)));
+        entity.setIsActive(true);
+        entity.setDeletedAt(null);
+        panacheRepository.flush();
     }
 
     private static Peca toDomain(PecaEntity entity) {

@@ -142,4 +142,15 @@ public class VeiculoResource {
 
                 return Response.noContent().build();
         }
+
+        @PUT
+        @Path("/{id}/ativar")
+        @Operation(summary = "Reativar veículo", description = "Reativa um veículo inativo. Se o veículo já estiver ativo, nenhuma alteração é feita.")
+        public Response reativar(
+                        @PathParam("id") UUID id) {
+
+                veiculoService.reactivate(id);
+
+                return Response.noContent().build();
+        }
 }

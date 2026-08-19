@@ -111,4 +111,10 @@ public class VeiculoService
         veiculoRepository.markAsDeleted(veiculoId);
     }
 
+    @Override
+    @Transactional
+    public void reactivate(UUID veiculoId) {
+        veiculoRepository.reactivate(veiculoId);
+    }
+
 }

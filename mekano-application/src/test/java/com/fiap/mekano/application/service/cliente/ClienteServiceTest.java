@@ -171,4 +171,35 @@ class ClienteServiceTest {
         verify(clienteRepository, never()).create(any());
         verify(eventPublisher, never()).publish(any());
     }
+
+    @Test
+    @DisplayName("deleteCliente deve delegar ao repository")
+    void deleteCliente_deveDelegarAoRepository() {
+        clienteService.deleteCliente(CLIENTE_UUID);
+
+        verify(clienteRepository, times(1)).markAsDeleted(CLIENTE_UUID);
+    }
+
+    @Test
+    @DisplayName("deleteCliente deve lançar AppException(409) quando há OS ativa")
+    void deleteCliente_comOsAtiva_deveLancar409() {
+        when(osRepository.existsByClienteUuidAndStatusIn(CLIENTE_UUID, java.util.List.of("EM_EXECUCAO", "AGUARDANDO_APROVACAO")))
+                .thenReturn(true);
+
+        AppException ex = assertThrows(
+                AppException.class,
+                () -> clienteService.deleteCliente(CLIENTE_UUID)
+        );
+
+        assertEquals(409, ex.getStatus());
+        verify(clienteRepository, never()).markAsDeleted(any());
+    }
+
+    @Test
+    @DisplayName("reactivate deve delegar ao repository")
+    void reactivate_deveDelegarAoRepository() {
+        clienteService.reactivate(CLIENTE_UUID);
+
+        verify(clienteRepository, times(1)).reactivate(CLIENTE_UUID);
+    }
 }

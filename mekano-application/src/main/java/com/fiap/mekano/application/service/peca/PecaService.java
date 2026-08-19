@@ -115,4 +115,9 @@ public class PecaService {
         }
         pecaRepository.remover(pecaId);
     }
+
+    @Transactional
+    public void reativar(UUID pecaId) {
+        pecaRepository.reativar(pecaId);
+    }
 }

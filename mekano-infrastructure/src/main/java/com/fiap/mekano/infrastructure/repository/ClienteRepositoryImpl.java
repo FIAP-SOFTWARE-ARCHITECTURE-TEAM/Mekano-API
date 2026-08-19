@@ -1,5 +1,7 @@
 package com.fiap.mekano.infrastructure.repository;
 
+import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.domain.model.Cliente;
 import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;
 import com.fiap.mekano.infrastructure.entity.ClienteEntity;
@@ -7,6 +9,7 @@ import com.fiap.mekano.infrastructure.mapper.ClienteEntityMapper;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.transaction.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -138,13 +141,23 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
     }
 
     @Override
+    @Transactional
     public void markAsDeleted(UUID id) {
-        panacheRepository.find("uuid = ?1 and isActive = ?2", id, true)
+        ClienteEntity entity = panacheRepository.find("uuid = ?1", id)
                 .firstResultOptional()
-                .ifPresent(entity -> {
-                    entity.setIsActive(false);
-                    entity.setDeletedAt(LocalDateTime.now());
-                });
+                .orElseThrow(() -> new AppException(404, Messages.get("cliente.not.found", id)));
+        entity.setIsActive(false);
+        entity.setDeletedAt(LocalDateTime.now());
+    }
+
+    @Override
+    @Transactional
+    public void reactivate(UUID id) {
+        ClienteEntity entity = panacheRepository.find("uuid = ?1", id)
+                .firstResultOptional()
+                .orElseThrow(() -> new AppException(404, Messages.get("cliente.not.found", id)));
+        entity.setIsActive(true);
+        entity.setDeletedAt(null);
     }
 
     private static int normalizeSize(int size) {

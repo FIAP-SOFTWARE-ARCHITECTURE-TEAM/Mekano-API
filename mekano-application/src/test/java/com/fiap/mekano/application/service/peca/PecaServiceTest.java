@@ -96,4 +96,20 @@ class PecaServiceTest {
         assertFalse(result);
         verify(pecaRepository, times(1)).liberarReserva(pecaId, 999);
     }
+
+    @Test
+    @DisplayName("excluir deve delegar ao repository")
+    void excluirDeveDelegarAoRepository() {
+        pecaService.excluir(pecaId);
+
+        verify(pecaRepository, times(1)).remover(pecaId);
+    }
+
+    @Test
+    @DisplayName("reativar deve delegar ao repository")
+    void reativarDeveDelegarAoRepository() {
+        pecaService.reativar(pecaId);
+
+        verify(pecaRepository, times(1)).reativar(pecaId);
+    }
 }

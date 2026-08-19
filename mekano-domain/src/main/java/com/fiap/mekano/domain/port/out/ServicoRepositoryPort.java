@@ -30,4 +30,6 @@ public interface ServicoRepositoryPort {
     long countAll();
 
     void markAsDeleted(UUID id);
+
+    void reactivate(UUID id);
 }

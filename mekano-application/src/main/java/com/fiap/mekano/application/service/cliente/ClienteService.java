@@ -113,10 +113,17 @@ public class ClienteService implements ClienteServicePort {
     }
 
     @Override
+    @Transactional
     public void deleteCliente(UUID id) {
         if (osRepository.existsByClienteUuidAndStatusIn(id, List.of("EM_EXECUCAO", "AGUARDANDO_APROVACAO"))) {
             throw new AppException(409, Messages.get("os.cliente.possui.os.ativa"));
         }
         clienteRepository.markAsDeleted(id);
+    }
+
+    @Override
+    @Transactional
+    public void reactivate(UUID id) {
+        clienteRepository.reactivate(id);
     }
 }

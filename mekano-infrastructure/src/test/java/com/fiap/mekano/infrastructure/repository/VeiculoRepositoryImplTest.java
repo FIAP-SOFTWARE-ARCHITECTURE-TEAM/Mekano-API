@@ -142,6 +142,31 @@ class VeiculoRepositoryImplTest {
 
     @Test
     @TestTransaction
+    void reactivate_deveReativarRegistroInativo() {
+
+        // Arrange
+        Veiculo veiculo = repository.create(
+                Veiculo.create(
+                        UUID.randomUUID(),
+                        "GHI4321",
+                        "Volkswagen",
+                        "Golf",
+                        2019));
+        repository.markAsDeleted(veiculo.getId());
+
+        // Act
+        repository.reactivate(veiculo.getId());
+
+        // Assert
+        Optional<Veiculo> encontrado = repository.findById(
+                veiculo.getId());
+
+        assertThat(encontrado).isPresent();
+        assertThat(encontrado.get().getIsActive()).isTrue();
+    }
+
+    @Test
+    @TestTransaction
     void findById_deveRetornarVeiculoQuandoExistir() {
 
         // Arrange

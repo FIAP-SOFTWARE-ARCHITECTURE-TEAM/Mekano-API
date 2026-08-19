@@ -25,4 +25,6 @@ public interface VeiculoServicePort {
 
     void delete(UUID veiculoId);
 
+    void reactivate(UUID veiculoId);
+
 }
