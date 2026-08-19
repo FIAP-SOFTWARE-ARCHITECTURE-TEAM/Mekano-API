@@ -35,6 +35,7 @@ public class Servico {
     private String descricao;
     private BigDecimal valor;
     private final LocalDateTime createdAt;
+    private final Boolean isActive;
 
     /**
      * Factory method — cria um novo serviço com validação de negócio.
@@ -55,6 +56,7 @@ public class Servico {
                 .descricao(descricao != null ? descricao.strip() : null)
                 .valor(valor)
                 .createdAt(LocalDateTime.now())
+                .isActive(true)
                 .build();
     }
 
@@ -64,12 +66,18 @@ public class Servico {
      */
     public static Servico reconstitute(UUID id, String nome, String descricao,
                                         BigDecimal valor, LocalDateTime createdAt) {
+        return reconstitute(id, nome, descricao, valor, createdAt, true);
+    }
+
+    public static Servico reconstitute(UUID id, String nome, String descricao,
+                                        BigDecimal valor, LocalDateTime createdAt, Boolean isActive) {
         return Servico.builder()
                 .id(id)
                 .nome(nome)
                 .descricao(descricao)
                 .valor(valor)
                 .createdAt(createdAt)
+                .isActive(isActive)
                 .build();
     }
 

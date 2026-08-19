@@ -191,7 +191,7 @@ public class VeiculoResourceTest {
                                 .put("/api/v1/veiculos/{id}", id)
                                 .then()
                                 .statusCode(200)
-                                .body("placa", equalTo("ABC1D23"))
+                                .body("placa", equalTo("XYZ1234"))
                                 .body("marca", equalTo("Toyota"))
                                 .body("modelo", equalTo("Yaris"))
                                 .body("ano", equalTo(2022));
@@ -232,7 +232,8 @@ public class VeiculoResourceTest {
                                 .when()
                                 .get("/api/v1/veiculos/{id}", id)
                                 .then()
-                                .statusCode(404);
+                                .statusCode(200)
+                                .body("isActive", equalTo(false));
         }
 
         /** CENÁRIO 7 - Autorização */

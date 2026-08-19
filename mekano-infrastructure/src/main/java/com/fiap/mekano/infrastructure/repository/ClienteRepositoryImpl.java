@@ -62,7 +62,7 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
 
     @Override
     public Optional<Cliente> findById(UUID id) {
-        return panacheRepository.find("uuid = ?1 and isActive = ?2", id, true)
+        return panacheRepository.find("uuid = ?1", id)
                 .firstResultOptional()
                 .map(clienteEntityMapper::toDomain);
     }
@@ -91,7 +91,7 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
 
     @Override
     public List<Cliente> findAll(int page, int size, String sort) {
-        return panacheRepository.find("isActive = ?1", parseSort(sort), true)
+        return panacheRepository.findAll(parseSort(sort))
                 .page(Page.of(Math.max(page, 0), normalizeSize(size)))
                 .list()
                 .stream()
@@ -101,7 +101,7 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
 
     @Override
     public long countAll() {
-        return panacheRepository.count("isActive = ?1", true);
+        return panacheRepository.count();
     }
 
     @Override

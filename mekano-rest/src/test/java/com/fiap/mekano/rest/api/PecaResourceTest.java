@@ -112,7 +112,8 @@ class PecaResourceTest {
                 .statusCode(200)
                 .body("id", equalTo(PECA_UUID.toString()))
                 .body("descricao", equalTo("Óleo do Motor 5W30"))
-                .body("saldoAtual", equalTo(50));
+                .body("saldoAtual", equalTo(50))
+                .body("isActive", equalTo(true));
     }
 
     @Test

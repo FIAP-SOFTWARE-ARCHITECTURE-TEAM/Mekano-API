@@ -68,11 +68,17 @@ private final OrdemDeServicoRepositoryPort repository;
     @Override
     @Transactional
     public OrdemDeServico create(CreateOrdemDeServicoCommand command) {
-        // OS-07: validar existência de clienteId e veiculoId antes de criar
-        clienteRepository.findById(command.clienteId())
+        // OS-07: validar existência e atividade de clienteId e veiculoId antes de criar
+        var cliente = clienteRepository.findById(command.clienteId())
                 .orElseThrow(() -> new AppException(404, Messages.get("cliente.not.found", command.clienteId())));
-        veiculoRepository.findById(command.veiculoId())
+        if (!Boolean.TRUE.equals(cliente.getIsActive())) {
+            throw new AppException(422, Messages.get("cliente.inactive", command.clienteId()));
+        }
+        var veiculo = veiculoRepository.findById(command.veiculoId())
                 .orElseThrow(() -> new AppException(404, Messages.get("veiculo.not.found", command.veiculoId())));
+        if (!Boolean.TRUE.equals(veiculo.getIsActive())) {
+            throw new AppException(422, Messages.get("veiculo.inactive", command.veiculoId()));
+        }
         OrdemDeServico os = OrdemDeServico.create(command.clienteId(), command.veiculoId(), command.descricaoProblema());
         OrdemDeServico saved = repository.save(os);
         eventPublisher.publish(OrdemDeServicoCriadaEvent.of(saved));
@@ -91,6 +97,16 @@ private final OrdemDeServicoRepositoryPort repository;
     @Transactional
     public OrdemDeServico update(UUID id, CreateOrdemDeServicoCommand command) {
         OrdemDeServico os = findById(id);
+        var cliente = clienteRepository.findById(command.clienteId())
+                .orElseThrow(() -> new AppException(404, Messages.get("cliente.not.found", command.clienteId())));
+        if (!Boolean.TRUE.equals(cliente.getIsActive())) {
+            throw new AppException(422, Messages.get("cliente.inactive", command.clienteId()));
+        }
+        var veiculo = veiculoRepository.findById(command.veiculoId())
+                .orElseThrow(() -> new AppException(404, Messages.get("veiculo.not.found", command.veiculoId())));
+        if (!Boolean.TRUE.equals(veiculo.getIsActive())) {
+            throw new AppException(422, Messages.get("veiculo.inactive", command.veiculoId()));
+        }
         os.atualizar(command.clienteId(), command.veiculoId(), command.descricaoProblema());
         return repository.save(os);
     }
@@ -127,11 +143,17 @@ private final OrdemDeServicoRepositoryPort repository;
                 case "PECA" -> {
                     Peca peca = pecaRepository.buscarPorId(item.referenciaUuid())
                             .orElseThrow(() -> new AppException(404, "Peça não encontrada: " + item.referenciaUuid()));
+                    if (!Boolean.TRUE.equals(peca.getIsActive())) {
+                        throw new AppException(422, Messages.get("peca.inactive", item.referenciaUuid()));
+                    }
                     itens.add(new ItemOrcamento(peca.getDescricao(), item.quantidade(), peca.getValorUnitario(), peca.getId()));
                 }
                 case "SERVICO" -> {
                     Servico servico = servicoRepository.findById(item.referenciaUuid())
                             .orElseThrow(() -> new AppException(404, "Serviço não encontrado: " + item.referenciaUuid()));
+                    if (!Boolean.TRUE.equals(servico.getIsActive())) {
+                        throw new AppException(422, Messages.get("servico.inactive", item.referenciaUuid()));
+                    }
                     itens.add(new ItemOrcamento(servico.getNome(), item.quantidade(), servico.getValor()));
                 }
                 default -> throw new AppException(400, "Tipo de item inválido: " + item.tipo());

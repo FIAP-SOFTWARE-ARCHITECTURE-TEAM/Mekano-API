@@ -44,44 +44,35 @@ public class VeiculoRepositoryImpl
     @Override
     @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     @CacheInvalidate(cacheName = CacheNames.VEHICLES)
-    public Veiculo save(Veiculo veiculo) {
+    public Veiculo create(Veiculo veiculo) {
 
-        Optional<VeiculoEntity> existing = panacheRepository.find(
-                "uuid",
-                veiculo.getId())
-                .firstResultOptional();
+        VeiculoEntity entity = mapper.toEntity(veiculo);
 
-        VeiculoEntity entity;
-
-        /** Se for Update */
-        if (existing.isPresent()) {
-            entity = existing.get();
-
-            entity.setClienteUuid(
-                    veiculo.getClienteUuid());
-
-            entity.setPlaca(
-                    veiculo.getPlaca().getValue());
-
-            entity.setMarca(
-                    veiculo.getMarca());
-
-            entity.setModelo(
-                    veiculo.getModelo());
-
-            entity.setAno(
-                    veiculo.getAno());
-
-            /** Se for Create */
-        } else {
-            entity = mapper.toEntity(veiculo);
-            try {
-                panacheRepository.persist(entity);
-                panacheRepository.flush();
-            } catch (ConstraintViolationException e) {
-                throw new AppException(409, "Placa já cadastrada");
-            }
+        try {
+            panacheRepository.persist(entity);
+            panacheRepository.flush();
+        } catch (ConstraintViolationException e) {
+            throw new AppException(409, "Placa já cadastrada");
         }
+
+        return mapper.toDomain(entity);
+    }
+
+    @Override
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
+    @CacheInvalidate(cacheName = CacheNames.VEHICLES)
+    public Veiculo update(Veiculo veiculo) {
+
+        VeiculoEntity entity = panacheRepository.find(
+                "uuid = ?1 and isActive = ?2",
+                veiculo.getId(),
+                true)
+                .firstResultOptional()
+                .orElseThrow(() -> new AppException(
+                        404,
+                        "Veículo não encontrado"));
+
+        mapper.updateEntity(veiculo, entity);
 
         return mapper.toDomain(entity);
     }
@@ -92,9 +83,8 @@ public class VeiculoRepositoryImpl
     public Optional<Veiculo> findById(UUID id) {
         return panacheRepository
                 .find(
-                        "uuid = ?1 AND isActive = ?2",
-                        id,
-                        true)
+                        "uuid = ?1",
+                        id)
                 .firstResultOptional()
                 .map(mapper::toDomain);
     }
@@ -121,11 +111,11 @@ public class VeiculoRepositoryImpl
     }
 
     /**
-     * Retorna todos os veículos ativos de forma paginada e ordenada.
+     * Retorna todos os veículos de forma paginada e ordenada.
      *
      * <p>
      * Usa {@code Sort.by()} do Panache para ordenação no banco.
-     * Filtra {@code isActive = true} para excluir registros deletados logicamente.
+     * Retorna registros ativos e inativos (soft delete).
      *
      * @param page número da página (0-based)
      * @param size tamanho da página
@@ -142,17 +132,15 @@ public class VeiculoRepositoryImpl
         boolean ascending = sortParts.length < 2 || "asc".equalsIgnoreCase(sortParts[1]);
         var direction = ascending ? io.quarkus.panache.common.Sort.Direction.Ascending
                 : io.quarkus.panache.common.Sort.Direction.Descending;
-        var query = panacheRepository.find("isActive = ?1",
-                io.quarkus.panache.common.Sort.by(sortField).direction(direction), true);
+        var query = panacheRepository.findAll(
+                io.quarkus.panache.common.Sort.by(sortField).direction(direction));
         return query.page(io.quarkus.panache.common.Page.of(page, size)).list()
                 .stream().map(mapper::toDomain).toList();
     }
 
     @Override
     public long countAll() {
-        return panacheRepository.count(
-                "isActive = ?1",
-                true);
+        return panacheRepository.count();
     }
 
     @Override

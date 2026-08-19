@@ -15,7 +15,9 @@ import com.fiap.mekano.domain.model.Veiculo;
  */
 public interface VeiculoRepositoryPort {
 
-    Veiculo save(Veiculo veiculo);
+    Veiculo create(Veiculo veiculo);
+
+    Veiculo update(Veiculo veiculo);
 
     Optional<Veiculo> findById(UUID id);
 

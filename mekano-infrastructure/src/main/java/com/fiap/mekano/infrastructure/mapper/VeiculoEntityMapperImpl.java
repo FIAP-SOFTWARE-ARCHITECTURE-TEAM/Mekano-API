@@ -50,6 +50,17 @@ public class VeiculoEntityMapperImpl implements VeiculoEntityMapper {
                 entity.getMarca(),
                 entity.getModelo(),
                 entity.getAno(),
-                entity.getCreatedAt());
+                entity.getCreatedAt(),
+                entity.getIsActive());
+    }
+
+    @Override
+    public void updateEntity(Veiculo veiculo, VeiculoEntity entity) {
+        if (veiculo == null || entity == null) {
+            return;
+        }
+        entity.setMarca(veiculo.getMarca());
+        entity.setModelo(veiculo.getModelo());
+        entity.setAno(veiculo.getAno());
     }
 }

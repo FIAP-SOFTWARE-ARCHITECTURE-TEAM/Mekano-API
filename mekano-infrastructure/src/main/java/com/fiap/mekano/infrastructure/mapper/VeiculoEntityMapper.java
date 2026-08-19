@@ -8,4 +8,6 @@ public interface VeiculoEntityMapper {
     VeiculoEntity toEntity(Veiculo veiculo);
 
     Veiculo toDomain(VeiculoEntity entity);
+
+    void updateEntity(Veiculo veiculo, VeiculoEntity entity);
 }

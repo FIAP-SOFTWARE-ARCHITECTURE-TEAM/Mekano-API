@@ -86,7 +86,7 @@ public class ServicoRepositoryImpl implements ServicoRepositoryPort {
     @Retry(maxRetries = 3)
     @CacheResult(cacheName = CacheNames.SERVICOS)
     public Optional<Servico> findById(UUID id) {
-        return panacheRepository.find("uuid = ?1 AND isActive = ?2", id, true)
+        return panacheRepository.find("uuid = ?1", id)
                 .firstResultOptional().map(mapper::toDomain);
     }
 
@@ -110,15 +110,15 @@ public class ServicoRepositoryImpl implements ServicoRepositoryPort {
         }
         boolean ascending = sortParts.length < 2 || !"desc".equalsIgnoreCase(sortParts[1].strip());
         var direction = ascending ? Sort.Direction.Ascending : Sort.Direction.Descending;
-        var query = panacheRepository.find("isActive = ?1",
-                Sort.by(sortField).direction(direction), true);
+        var query = panacheRepository.findAll(
+                Sort.by(sortField).direction(direction));
         return query.page(Page.of(Math.max(page, 0), normalizeSize(size))).list()
                 .stream().map(mapper::toDomain).toList();
     }
 
     @Override
     public long countAll() {
-        return panacheRepository.count("isActive = ?1", true);
+        return panacheRepository.count();
     }
 
     @Override

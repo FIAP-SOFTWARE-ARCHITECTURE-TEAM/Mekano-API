@@ -37,7 +37,8 @@ public class ServicoEntityMapperImpl implements ServicoEntityMapper {
                 entity.getNome(),
                 entity.getDescricao(),
                 entity.getValor(),
-                entity.getCreatedAt()
+                entity.getCreatedAt(),
+                entity.getIsActive()
         );
     }
 }

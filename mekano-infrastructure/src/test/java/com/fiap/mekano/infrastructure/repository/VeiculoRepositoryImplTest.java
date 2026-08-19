@@ -1,5 +1,6 @@
 package com.fiap.mekano.infrastructure.repository;
 
+import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.model.Veiculo;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
@@ -10,6 +11,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Testes de integração para {@link VeiculoRepositoryImpl}.
@@ -17,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Usa QuarkusTest + DevServices PostgreSQL + Flyway migrations.
  *
  * Cada teste roda dentro de uma transação isolada através do
- * 
+ *
  * @TestTransaction e recebe rollback automático ao final.
  */
 @QuarkusTest
@@ -28,7 +30,7 @@ class VeiculoRepositoryImplTest {
 
     @Test
     @TestTransaction
-    void save_devePersistirERetornarVeiculoComPlacaCorreta() {
+    void create_devePersistirERetornarVeiculoComPlacaCorreta() {
 
         // Arrange
         UUID clienteUuid = UUID.randomUUID();
@@ -41,7 +43,7 @@ class VeiculoRepositoryImplTest {
                 2020);
 
         // Act
-        Veiculo salvo = repository.save(veiculo);
+        Veiculo salvo = repository.create(veiculo);
 
         // Assert
         Optional<Veiculo> encontrado = repository.findByPlaca("ABC1234");
@@ -73,7 +75,7 @@ class VeiculoRepositoryImplTest {
 
     @Test
     @TestTransaction
-    void save_deveRetornarVeiculoSemCamposNull_roundTrip() {
+    void create_deveRetornarVeiculoSemCamposNull_roundTrip() {
 
         // Arrange
         UUID clienteUuid = UUID.randomUUID();
@@ -86,7 +88,7 @@ class VeiculoRepositoryImplTest {
                 2021);
 
         // Act
-        Veiculo salvo = repository.save(original);
+        Veiculo salvo = repository.create(original);
 
         // Assert
         assertThat(salvo.getId()).isNotNull();
@@ -118,7 +120,7 @@ class VeiculoRepositoryImplTest {
     void markAsDeleted_deveRealizarSoftDelete() {
 
         // Arrange
-        Veiculo veiculo = repository.save(
+        Veiculo veiculo = repository.create(
                 Veiculo.create(
                         UUID.randomUUID(),
                         "GHI1234",
@@ -134,7 +136,8 @@ class VeiculoRepositoryImplTest {
         Optional<Veiculo> encontrado = repository.findById(
                 veiculo.getId());
 
-        assertThat(encontrado).isEmpty();
+        assertThat(encontrado).isPresent();
+        assertThat(encontrado.get().getIsActive()).isFalse();
     }
 
     @Test
@@ -142,7 +145,7 @@ class VeiculoRepositoryImplTest {
     void findById_deveRetornarVeiculoQuandoExistir() {
 
         // Arrange
-        Veiculo salvo = repository.save(
+        Veiculo salvo = repository.create(
                 Veiculo.create(
                         UUID.randomUUID(),
                         "JKL1234",
@@ -168,7 +171,7 @@ class VeiculoRepositoryImplTest {
     void findByPlaca_deveRetornarVeiculoQuandoExistir() {
 
         // Arrange
-        repository.save(
+        repository.create(
                 Veiculo.create(
                         UUID.randomUUID(),
                         "MNO1234",
@@ -187,5 +190,64 @@ class VeiculoRepositoryImplTest {
                 encontrado.get()
                         .getMarca())
                 .isEqualTo("Fiat");
+    }
+
+    @Test
+    @TestTransaction
+    void update_deveAlterarCamposMutaveisEPreservarPlaca() {
+
+        // Arrange
+        Veiculo salvo = repository.create(
+                Veiculo.create(
+                        UUID.randomUUID(),
+                        "PQR1234",
+                        "Toyota",
+                        "Corolla",
+                        2020));
+
+        Veiculo atualizado = Veiculo.reconstitute(
+                salvo.getId(),
+                salvo.getClienteUuid(),
+                "PQR1234",
+                "Toyota",
+                "Yaris",
+                2022,
+                salvo.getCreatedAt());
+
+        // Act
+        Veiculo resultado = repository.update(atualizado);
+
+        // Assert
+        assertThat(resultado.getId()).isEqualTo(salvo.getId());
+
+        assertThat(resultado.getPlaca().getValue())
+                .isEqualTo("PQR1234");
+
+        assertThat(resultado.getMarca())
+                .isEqualTo("Toyota");
+
+        assertThat(resultado.getModelo())
+                .isEqualTo("Yaris");
+
+        assertThat(resultado.getAno())
+                .isEqualTo(2022);
+    }
+
+    @Test
+    @TestTransaction
+    void update_deveLancarAppException_quandoVeiculoNaoExiste() {
+
+        // Arrange
+        Veiculo veiculo = Veiculo.create(
+                UUID.randomUUID(),
+                "QRS1234",
+                "Honda",
+                "Fit",
+                2021);
+
+        // Act & Assert
+        assertThatThrownBy(() -> repository.update(veiculo))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(404));
     }
 }
