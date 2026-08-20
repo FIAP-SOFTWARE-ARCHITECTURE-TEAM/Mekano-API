@@ -1,7 +1,9 @@
 package com.fiap.mekano.infrastructure.entity;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+import com.fiap.mekano.infrastructure.audit.AuditoriaListener;
 import jakarta.persistence.Column;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -23,11 +25,12 @@ import java.util.UUID;
  * <ul>
  *   <li>{@code createdAt} — preenchido no momento da criação da entidade</li>
  *   <li>{@code updatedAt} — atualizado automaticamente via {@code @PreUpdate}</li>
- *   <li>{@code createdBy} — UUID do usuário que criou o registro</li>
- *   <li>{@code updatedBy} — UUID do usuário que atualizou o registro</li>
+ *   <li>{@code createdBy} — UUID do usuário que criou o registro (preenchido por {@link AuditoriaListener})</li>
+ *   <li>{@code updatedBy} — UUID do usuário que atualizou o registro (preenchido por {@link AuditoriaListener})</li>
  * </ul>
  */
 @MappedSuperclass
+@EntityListeners(AuditoriaListener.class)
 @Getter
 @Setter
 public abstract class BaseEntity extends PanacheEntityBase {

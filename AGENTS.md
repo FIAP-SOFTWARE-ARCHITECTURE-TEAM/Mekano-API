@@ -16,7 +16,7 @@ mekano-rest (quarkus packaging — app entrypoint)
 mekano-application (jar) — 7 sub-packages (user, cliente, vehicle, servico, peca, nfentrada, requisicao)
   └── mekano-domain (compile)
 
-mekano-infrastructure (jar) — 7 entities, 14 repos, 13 mappers, 11 migrations
+mekano-infrastructure (jar) — 7 entities, 14 repos, 13 mappers, 11 migrations, audit auto-fill
   └── mekano-domain (compile)
 
 mekano-domain (jar) — 12 models/enums, 6 VOs, 22 ports, 5 events
@@ -41,7 +41,7 @@ mekano-domain (jar) — 12 models/enums, 6 VOs, 22 ports, 5 events
 For detailed per-module conventions, read these instead of old CLAUDE.md:
 - `mekano-domain/AGENTS.md` — entities, VOs, ports, exceptions, events
 - `mekano-application/AGENTS.md` — services (implemented vs stub), injection style, known bugs
-- `mekano-infrastructure/AGENTS.md` — JPA entities, repositories, mappers, migrations, FT/cache coverage
+- `mekano-infrastructure/AGENTS.md` — JPA entities, repositories, mappers, migrations, audit auto-fill, FT/cache coverage
 - `mekano-rest/AGENTS.md` — resources, DTOs, config files, test patterns, missing items
 
 ## Cross-Cutting Conventions (VERIFIED vs Old CLAUDE.md)
@@ -59,6 +59,7 @@ For detailed per-module conventions, read these instead of old CLAUDE.md:
 | Exception Handling | `ApiExceptionMapper` — RFC 7807 Problem Details (`application/problem+json`) |
 | `@Transactional` | In use case (NOT in resource, NOT in repository) |
 | Soft delete | `isActive` + `deletedAt` |  |  |
+| Audit auto-fill | `createdBy`/`updatedBy` filled by `AuditoriaListener` (`@EntityListeners` in `BaseEntity`); user → subject JWT, anônimo → `PUBLICO`, sem request → `SISTEMA` |
 
 ### What is FALSE (Old CLAUDE.md was WRONG)
 | Old Doc Claim | Reality |
@@ -101,7 +102,7 @@ For detailed per-module conventions, read these instead of old CLAUDE.md:
 - D-13: Cache Caffeine inconsistente — User/Veiculo/Servico apenas
 - D-14: `@Retry`/`@Timeout` testados via integração; `@CircuitBreaker` omitido
 - D-15: Eventos de domínio como records; `EventPublisher` interface pura
-- D-16: Audit fields exclusivos de infrastructure
+- D-16: Audit fields exclusivos de infrastructure — `AuditoriaListener` (`@EntityListeners` em `BaseEntity`) preenche `createdBy` no `@PrePersist` e `updatedBy` no `@PreUpdate`; resolve via `SecurityIdentity` (subject JWT) com fallbacks `PUBLICO`/`SISTEMA`; sem backfill
 
 ## Commands (VERIFIED)
 ```bash

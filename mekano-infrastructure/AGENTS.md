@@ -13,6 +13,7 @@ com.fiap.mekano.infrastructure
 │   ├── BaseEntity.java              — @MappedSuperclass, extends PanacheEntityBase
 │   │                                  Long id (IDENTITY), UUID uuid, createdAt, updatedAt, createdBy, updatedBy, isActive, deletedAt
 │   │                                  @PreUpdate sets updatedAt
+│   │                                  @EntityListeners(AuditoriaListener.class) — auto-fills createdBy/updatedBy
 │   ├── UserEntity.java              — table "users"
 │   ├── ClienteEntity.java           — table "clientes" (flattened address fields)
 │   ├── VeiculoEntity.java           — table "veiculos" (clienteUuid FK)
@@ -20,6 +21,15 @@ com.fiap.mekano.infrastructure
 │   ├── PecaEntity.java              — table "pecas" — ⚠ uses @Data (public fields) instead of @Getter/@Setter
 │   ├── RequisicaoCompraEntity.java  — table "requisicoes_compra" — ⚠ uses @Data
 │   └── NfEntradaEntity.java         — table "nf_entradas" — ⚠ uses @Data
+├── audit/                           # Auditoria automática de createdBy/updatedBy (D-16)
+│   ├── AuditoriaOrigem.java         — enum: PUBLICO (00000000-0000-0000-0000-000000000001),
+│   │                                  SISTEMA (00000000-0000-0000-0000-000000000002);
+│   │                                  estático resolver(String principalName)
+│   ├── AuditoriaContext.java        — @RequestScoped @Unremovable; injeta Instance<SecurityIdentity>;
+│   │                                  principalName() = subject do JWT (ou null se anônimo)
+│   └── AuditoriaListener.java       — JPA listener de BaseEntity: @PrePersist → createdBy;
+│                                      @PreUpdate → updatedBy; resolve via Arc.container() com
+│                                      fallback SISTEMA em caso de erro/sem request context
 ├── repository/                      # Two-class pattern: PanacheRepository + Impl
 │   ├── UserPanacheRepository.java              — PanacheRepositoryBase<UserEntity, Long>
 │   ├── UserRepositoryImpl.java                 — implements UserRepositoryPort
@@ -71,6 +81,16 @@ com.fiap.mekano.infrastructure
 - Audit: `createdAt`, `updatedAt`, `createdBy`, `updatedBy`
 - Explicit `@Table(name = "...")`, `@Column(name = "...")`
 - ⚠ Newer entities (Peca, RequisicaoCompra, NfEntrada) use `@Data` (public fields) — older ones use `@Getter/@Setter` (private)
+
+### Audit Auto-Fill (`audit/` package — D-16)
+- `AuditoriaListener` está registrado via `@EntityListeners` em `BaseEntity` — cobrindo TODAS as entidades de uma vez
+- `@PrePersist` preenche apenas `createdBy` (nunca `updatedBy`, que fica NULL no create)
+- `@PreUpdate` preenche `updatedBy` (via dirty checking no commit, sem calls extras)
+- Resolução do usuário: request ativo + principal → subject do JWT (UUID); request ativo + anônimo → `PUBLICO`; sem request context (jobs, unit tests) → `SISTEMA`
+- Usa `SecurityIdentity` (não `JsonWebToken`) — funciona com `@TestSecurity` e com JWT real
+- `@Unremovable` em `AuditoriaContext` é OBRIGATÓRIO (lookup programático via `Arc.container()` não é detectado pela remoção de beans)
+- Queries nativas de estoque (`PecaRepositoryImpl`) estampam `updated_by = SISTEMA` explicitamente
+- Nenhuma mudança de schema nem backfill — apenas registros novos são auditados
 
 ### Repository Two-Class Pattern
 1. `*PanacheRepository` — extends `PanacheRepositoryBase<Entity, Long>` or `PanacheRepository<Entity>`
@@ -135,9 +155,9 @@ All caches: `expire-after-write=60s` (except servicos: 120s), max-size 100-200.
 6. **No `RefreshTokenEntity`, `RefreshTokenRepository`, `TokenBucketRateLimiter`, `RefreshTokenService`** — these were documented but deleted
 
 ## Dependencies (compile)
-mekano-domain, quarkus-hibernate-orm-panache, quarkus-arc, quarkus-jdbc-postgresql, quarkus-flyway, quarkus-smallrye-fault-tolerance, quarkus-elytron-security-common, quarkus-cache, quarkus-config-yaml, mapstruct, lombok (provided)
+mekano-domain, quarkus-hibernate-orm-panache, quarkus-arc, quarkus-jdbc-postgresql, quarkus-flyway, quarkus-smallrye-fault-tolerance, quarkus-elytron-security-common, quarkus-smallrye-jwt-build, quarkus-cache, quarkus-config-yaml, mapstruct, lombok (provided)
 
 ## Testing
 - `@QuarkusTest` + `@TestTransaction` (DevServices PostgreSQL)
 - AssertJ fluent assertions
-- 2 test files: `UserRepositoryImplTest`, `VeiculoRepositoryImplTest`
+- Test files: `UserRepositoryImplTest`, `VeiculoRepositoryImplTest`, `AuditoriaOrigemTest` (unit), `AuditoriaListenerTest` (unit — SISTEMA fora do Quarkus), `AuditoriaListenerIntegrationTest` (@QuarkusTest — PUBLICO sem usuário)
