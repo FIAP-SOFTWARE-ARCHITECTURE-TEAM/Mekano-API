@@ -4,6 +4,7 @@ import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.domain.model.Peca;
 import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
+import com.fiap.mekano.infrastructure.audit.AuditoriaOrigem;
 import com.fiap.mekano.infrastructure.cache.CacheNames;
 import com.fiap.mekano.infrastructure.entity.PecaEntity;
 import io.quarkus.cache.CacheInvalidate;
@@ -24,6 +25,8 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
 
     private final PecaPanacheRepository panacheRepository;
     private final EntityManager em;
+
+    private static final String SISTEMA_UUID = AuditoriaOrigem.SISTEMA.getCodigo().toString();
 
     public PecaRepositoryImpl(PecaPanacheRepository panacheRepository, EntityManager em) {
         this.panacheRepository = panacheRepository;
@@ -107,10 +110,11 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
     @CacheInvalidate(cacheName = CacheNames.PECAS)
     public boolean debitarSaldo(UUID uuid, Integer quantidade) {
         int rowsUpdated = em.createNativeQuery(
-                "UPDATE pecas SET saldo = saldo - :qtd WHERE uuid = :uuid AND saldo >= :qtd"
+                "UPDATE pecas SET saldo = saldo - :qtd, updated_by = :sistemaUuid WHERE uuid = :uuid AND saldo >= :qtd"
         )
                 .setParameter("uuid", uuid)
                 .setParameter("qtd", quantidade)
+                .setParameter("sistemaUuid", SISTEMA_UUID)
                 .executeUpdate();
         return rowsUpdated > 0;
     }
@@ -120,10 +124,11 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
     @CacheInvalidate(cacheName = CacheNames.PECAS)
     public void creditarSaldo(UUID uuid, Integer quantidade) {
         em.createNativeQuery(
-                "UPDATE pecas SET saldo = saldo + :qtd WHERE uuid = :uuid"
+                "UPDATE pecas SET saldo = saldo + :qtd, updated_by = :sistemaUuid WHERE uuid = :uuid"
         )
                 .setParameter("uuid", uuid)
                 .setParameter("qtd", quantidade)
+                .setParameter("sistemaUuid", SISTEMA_UUID)
                 .executeUpdate();
     }
 
@@ -132,10 +137,11 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
     @CacheInvalidate(cacheName = CacheNames.PECAS)
     public boolean reservarSaldo(UUID uuid, Integer quantidade) {
         int rowsUpdated = em.createNativeQuery(
-                "UPDATE pecas SET saldo_reservado = saldo_reservado + :qtd WHERE uuid = :uuid AND (saldo - saldo_reservado) >= :qtd"
+                "UPDATE pecas SET saldo_reservado = saldo_reservado + :qtd, updated_by = :sistemaUuid WHERE uuid = :uuid AND (saldo - saldo_reservado) >= :qtd"
         )
                 .setParameter("uuid", uuid)
                 .setParameter("qtd", quantidade)
+                .setParameter("sistemaUuid", SISTEMA_UUID)
                 .executeUpdate();
         return rowsUpdated > 0;
     }
@@ -145,10 +151,11 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
     @CacheInvalidate(cacheName = CacheNames.PECAS)
     public boolean debitarSaldoReservado(UUID uuid, Integer quantidade) {
         int rowsUpdated = em.createNativeQuery(
-                "UPDATE pecas SET saldo = saldo - :qtd, saldo_reservado = saldo_reservado - :qtd WHERE uuid = :uuid AND saldo_reservado >= :qtd"
+                "UPDATE pecas SET saldo = saldo - :qtd, saldo_reservado = saldo_reservado - :qtd, updated_by = :sistemaUuid WHERE uuid = :uuid AND saldo_reservado >= :qtd"
         )
                 .setParameter("uuid", uuid)
                 .setParameter("qtd", quantidade)
+                .setParameter("sistemaUuid", SISTEMA_UUID)
                 .executeUpdate();
         return rowsUpdated > 0;
     }
@@ -158,10 +165,11 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
     @CacheInvalidate(cacheName = CacheNames.PECAS)
     public boolean liberarReserva(UUID uuid, Integer quantidade) {
         int rowsUpdated = em.createNativeQuery(
-                "UPDATE pecas SET saldo_reservado = saldo_reservado - :qtd WHERE uuid = :uuid AND saldo_reservado >= :qtd"
+                "UPDATE pecas SET saldo_reservado = saldo_reservado - :qtd, updated_by = :sistemaUuid WHERE uuid = :uuid AND saldo_reservado >= :qtd"
         )
                 .setParameter("uuid", uuid)
                 .setParameter("qtd", quantidade)
+                .setParameter("sistemaUuid", SISTEMA_UUID)
                 .executeUpdate();
         return rowsUpdated > 0;
     }

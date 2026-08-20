@@ -138,7 +138,10 @@ mekano-domain, mekano-application, mekano-infrastructure, quarkus-rest-jackson, 
 ## Testing
 - `@QuarkusTest` + REST Assured
 - `@TestSecurity(user = "X", roles = {"Y"})` for JWT bypass
+  - ⚠ `user`/`roles` values MUST be compile-time constants (e.g. literal strings, NOT `UUID.randomUUID().toString()`)
+  - ⚠ `@TestSecurity` populates `SecurityIdentity` (principal name = `user`), NOT the `JsonWebToken` bean — resolve the principal via `SecurityIdentity` (see `AuditoriaContext`)
 - `@TestMethodOrder(MethodOrderer.OrderAnnotation.class)` + `@Order(N)` for sequential tests
 - `@InjectMock` for mocking repository deps (Quarkus Mockito)
 - `@TestTransaction` for automatic rollback
-- 11 test files: UserResourceTest, UserSoftDeleteTest, VeiculoResourceTest, VeiculoFaultToleranceTest, ServicoResourceTest, FaultToleranceTest, ObservabilityEndpointsTest, PecaResourceTest, RequisicaoCompraResourceTest, NfEntradaResourceTest, AlertaResourceTest
+- 20 test files: AdminUserResourceSecurityTest, AdminUserResourceTest, AlertaResourceTest, AuditoriaAuditFieldsTest, ClasspathDiagnosticTest, ClienteResourceTest, FaultToleranceTest, NfEntradaResourceTest, OrcamentoResourceTest, OrdemDeServicoResourceTest, PagamentoResourceTest, PecaResourceTest, RequisicaoCompraResourceTest, ServicoResourceTest, VeiculoFaultToleranceTest, VeiculoGetResourceTest, VeiculoResourceTest, WebhookEvolutionResourceTest, ObservabilityEndpointsTest (observability package), OsAuditResourceTest
+- `AuditoriaAuditFieldsTest` (E2E do auto-fill) usa beans REAIS (service + repo, SEM `@InjectMock`) + `@TestTransaction`, com POST/PUT de `/pecas` e leitura do `createdBy`/`updatedBy` persistido
