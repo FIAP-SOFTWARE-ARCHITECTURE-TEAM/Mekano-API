@@ -41,8 +41,12 @@ class ClienteResourceTest {
 
         when(clienteService.findClienteById(CLIENTE_ATIVO)).thenReturn(ativo);
         when(clienteService.findClienteById(CLIENTE_INATIVO)).thenReturn(inativo);
-        when(clienteService.findAllClientes(0, 10, "nome,asc")).thenReturn(List.of(ativo, inativo));
-        when(clienteService.countAllClientes()).thenReturn(2L);
+        when(clienteService.findAllClientes(0, 10, "nome,asc", null)).thenReturn(List.of(ativo, inativo));
+        when(clienteService.countAllClientes(null)).thenReturn(2L);
+        when(clienteService.findAllClientes(0, 10, "nome,asc", true)).thenReturn(List.of(ativo));
+        when(clienteService.countAllClientes(true)).thenReturn(1L);
+        when(clienteService.findAllClientes(0, 10, "nome,asc", false)).thenReturn(List.of(inativo));
+        when(clienteService.countAllClientes(false)).thenReturn(1L);
     }
 
     @Test
@@ -76,6 +80,30 @@ class ClienteResourceTest {
                 .body("content.size()", equalTo(2))
                 .body("content[0].isActive", equalTo(true))
                 .body("content[1].isActive", equalTo(false));
+    }
+
+    @Test
+    void listAll_filtroIsActiveTrue_retornaSomenteAtivos() {
+        given()
+                .when()
+                .get(BASE_PATH + "?page=0&size=10&sort=nome,asc&isActive=true")
+                .then()
+                .statusCode(200)
+                .body("content.size()", equalTo(1))
+                .body("content[0].isActive", equalTo(true))
+                .body("totalElements", equalTo(1));
+    }
+
+    @Test
+    void listAll_filtroIsActiveFalse_retornaSomenteInativos() {
+        given()
+                .when()
+                .get(BASE_PATH + "?page=0&size=10&sort=nome,asc&isActive=false")
+                .then()
+                .statusCode(200)
+                .body("content.size()", equalTo(1))
+                .body("content[0].isActive", equalTo(false))
+                .body("totalElements", equalTo(1));
     }
 
     @Test

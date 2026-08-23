@@ -2,6 +2,8 @@ package com.fiap.mekano.rest.api;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.Mockito.when;
 
@@ -318,6 +320,115 @@ public class VeiculoResourceTest {
                                 .then()
                                 .statusCode(200)
                                 .body("isActive", equalTo(true));
+        }
+
+        /** CENÁRIO 6d - Update de veículo inativo (PUT não deve tratar inativo como inexistente) */
+        @Test
+        void update_inactiveVehicle_returns200AndPreservesInactive() {
+
+                String location = given()
+                                .contentType(ContentType.JSON)
+                                .body("""
+                                                {
+                                                  "clienteUuid":"11111111-1111-1111-1111-111111111111",
+                                                  "placa":"OPQ1234",
+                                                  "marca":"Renault",
+                                                  "modelo":"Kwid",
+                                                  "ano":2021
+                                                }
+                                                """)
+                                .when()
+                                .post("/api/v1/veiculos")
+                                .then()
+                                .statusCode(201)
+                                .extract()
+                                .header("Location");
+
+                UUID id = UUID.fromString(
+                                location.substring(location.lastIndexOf("/") + 1));
+
+                given()
+                                .when()
+                                .delete("/api/v1/veiculos/{id}", id)
+                                .then()
+                                .statusCode(204);
+
+                given()
+                                .contentType(ContentType.JSON)
+                                .body("""
+                                                {
+                                                  "marca":"Renault",
+                                                  "modelo":"Kwid Outsider",
+                                                  "ano":2022
+                                                }
+                                                """)
+                                .when()
+                                .put("/api/v1/veiculos/{id}", id)
+                                .then()
+                                .statusCode(200)
+                                .body("modelo", equalTo("Kwid Outsider"))
+                                .body("ano", equalTo(2022))
+                                .body("isActive", equalTo(false));
+
+                given()
+                                .when()
+                                .get("/api/v1/veiculos/{id}", id)
+                                .then()
+                                .statusCode(200)
+                                .body("isActive", equalTo(false));
+        }
+
+        /** CENÁRIO 6e - Listagem com filtro isActive */
+        @Test
+        void list_filtroIsActive_returnsOnlyRequested() {
+
+                String location = given()
+                                .contentType(ContentType.JSON)
+                                .body("""
+                                                {
+                                                  "clienteUuid":"11111111-1111-1111-1111-111111111111",
+                                                  "placa":"FIL1234",
+                                                  "marca":"VW",
+                                                  "modelo":"Gol",
+                                                  "ano":2019
+                                                }
+                                                """)
+                                .when()
+                                .post("/api/v1/veiculos")
+                                .then()
+                                .statusCode(201)
+                                .extract()
+                                .header("Location");
+
+                UUID id = UUID.fromString(
+                                location.substring(location.lastIndexOf("/") + 1));
+
+                given()
+                                .when()
+                                .delete("/api/v1/veiculos/{id}", id)
+                                .then()
+                                .statusCode(204);
+
+                given()
+                                .when()
+                                .get("/api/v1/veiculos?isActive=false&size=100")
+                                .then()
+                                .statusCode(200)
+                                .body("content.placa", hasItem("FIL1234"));
+
+                given()
+                                .when()
+                                .get("/api/v1/veiculos?isActive=true&size=100")
+                                .then()
+                                .statusCode(200)
+                                .body("content.placa", not(hasItem("FIL1234")));
+
+                given()
+                                .when()
+                                .get("/api/v1/veiculos?size=100")
+                                .then()
+                                .statusCode(200)
+                                .body("content.placa", hasItem("FIL1234"));
         }
 
         /** CENÁRIO 7 - Autorização */

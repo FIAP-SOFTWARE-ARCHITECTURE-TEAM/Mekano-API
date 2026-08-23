@@ -23,6 +23,8 @@ import java.util.UUID;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -71,6 +73,18 @@ class PecaResourceTest {
                 .when(pecaService).excluir(OTHER_UUID);
 
         Mockito.doNothing().when(pecaService).reativar(PECA_UUID);
+
+        Peca inativa = Peca.reconstitute(
+                OTHER_UUID, "PEA-999", "Peça Inativa",
+                new BigDecimal("10.00"),
+                1L, 1L, LocalDateTime.now(), 0L, false);
+
+        Mockito.when(pecaService.findAll(0, 10, null)).thenReturn(java.util.List.of(mockPeca, inativa));
+        Mockito.when(pecaService.countAll(null)).thenReturn(2L);
+        Mockito.when(pecaService.findAll(0, 10, true)).thenReturn(java.util.List.of(mockPeca));
+        Mockito.when(pecaService.countAll(true)).thenReturn(1L);
+        Mockito.when(pecaService.findAll(0, 10, false)).thenReturn(java.util.List.of(inativa));
+        Mockito.when(pecaService.countAll(false)).thenReturn(1L);
     }
 
     @Test
@@ -249,5 +263,36 @@ class PecaResourceTest {
                 .put(BASE_PATH + "/" + PECA_UUID + "/ativar")
                 .then()
                 .statusCode(204);
+    }
+
+    @Test
+    @Order(14)
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void listAll_filtroIsActive_returnsOnlyRequested() {
+        given()
+                .when()
+                .get(BASE_PATH + "?isActive=false")
+                .then()
+                .statusCode(200)
+                .body("content.descricao", hasItem("Peça Inativa"))
+                .body("content.descricao", not(hasItem("Óleo do Motor 5W30")))
+                .body("totalElements", equalTo(1));
+
+        given()
+                .when()
+                .get(BASE_PATH + "?isActive=true")
+                .then()
+                .statusCode(200)
+                .body("content.descricao", hasItem("Óleo do Motor 5W30"))
+                .body("content.descricao", not(hasItem("Peça Inativa")))
+                .body("totalElements", equalTo(1));
+
+        given()
+                .when()
+                .get(BASE_PATH)
+                .then()
+                .statusCode(200)
+                .body("content.size()", equalTo(2))
+                .body("totalElements", equalTo(2));
     }
 }

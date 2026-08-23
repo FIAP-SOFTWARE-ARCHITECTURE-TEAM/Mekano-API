@@ -95,7 +95,7 @@ public class UserRepositoryImpl implements UserRepositoryPort {
     }
 
     @Override
-    public List<User> findAll(int page, int size, String sort) {
+    public List<User> findAll(int page, int size, String sort, Boolean isActive) {
         String sortValue = sort == null || sort.isBlank() ? "name,asc" : sort;
         String[] sortParts = sortValue.split(",", 2);
         String sortField = sortParts[0].strip();
@@ -104,13 +104,18 @@ public class UserRepositoryImpl implements UserRepositoryPort {
         }
         boolean ascending = sortParts.length < 2 || !"desc".equalsIgnoreCase(sortParts[1].strip());
         var direction = ascending ? Sort.Direction.Ascending : Sort.Direction.Descending;
-        var query = panacheRepository.find("isActive = ?1", Sort.by(sortField).direction(direction), true);
+        var sortBy = Sort.by(sortField).direction(direction);
+        var query = isActive == null
+                ? panacheRepository.findAll(sortBy)
+                : panacheRepository.find("isActive = ?1", sortBy, isActive);
         return query.page(Page.of(Math.max(page, 0), normalizeSize(size))).list().stream().map(mapper::toDomain).toList();
     }
 
     @Override
-    public long countAll() {
-        return panacheRepository.count("isActive = ?1", true);
+    public long countAll(Boolean isActive) {
+        return isActive == null
+                ? panacheRepository.count()
+                : panacheRepository.count("isActive = ?1", isActive);
     }
 
     @Override

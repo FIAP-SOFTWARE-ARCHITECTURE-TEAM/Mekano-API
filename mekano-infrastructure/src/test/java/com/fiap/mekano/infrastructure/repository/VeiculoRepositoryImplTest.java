@@ -275,4 +275,79 @@ class VeiculoRepositoryImplTest {
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(404));
     }
+
+    @Test
+    @TestTransaction
+    void update_deveAlterarVeiculoInativoPreservandoIsActive() {
+
+        // Arrange
+        Veiculo salvo = repository.create(
+                Veiculo.create(
+                        UUID.randomUUID(),
+                        "STU1234",
+                        "Toyota",
+                        "Corolla",
+                        2020));
+        repository.markAsDeleted(salvo.getId());
+
+        Veiculo atualizado = Veiculo.reconstitute(
+                salvo.getId(),
+                salvo.getClienteUuid(),
+                "STU1234",
+                "Toyota",
+                "Yaris",
+                2022,
+                salvo.getCreatedAt());
+
+        // Act
+        Veiculo resultado = repository.update(atualizado);
+
+        // Assert
+        assertThat(resultado.getId()).isEqualTo(salvo.getId());
+        assertThat(resultado.getModelo()).isEqualTo("Yaris");
+        assertThat(resultado.getAno()).isEqualTo(2022);
+        assertThat(resultado.getIsActive()).isFalse();
+
+        Optional<Veiculo> encontrado = repository.findById(salvo.getId());
+        assertThat(encontrado).isPresent();
+        assertThat(encontrado.get().getIsActive()).isFalse();
+    }
+
+    @Test
+    @TestTransaction
+    void findAll_deveFiltrarPorIsActive() {
+
+        // Arrange
+        Veiculo ativo = repository.create(
+                Veiculo.create(
+                        UUID.randomUUID(),
+                        "AAA1000",
+                        "Toyota",
+                        "Corolla",
+                        2020));
+        Veiculo inativo = repository.create(
+                Veiculo.create(
+                        UUID.randomUUID(),
+                        "BBB1000",
+                        "Honda",
+                        "Civic",
+                        2021));
+        repository.markAsDeleted(inativo.getId());
+
+        // Assert
+        assertThat(repository.findAll(0, 100, "placa,asc", null))
+                .extracting(Veiculo::getId)
+                .contains(ativo.getId(), inativo.getId());
+        assertThat(repository.findAll(0, 100, "placa,asc", true))
+                .extracting(Veiculo::getId)
+                .contains(ativo.getId())
+                .doesNotContain(inativo.getId());
+        assertThat(repository.findAll(0, 100, "placa,asc", false))
+                .extracting(Veiculo::getId)
+                .contains(inativo.getId())
+                .doesNotContain(ativo.getId());
+        assertThat(repository.countAll(null)).isGreaterThanOrEqualTo(2L);
+        assertThat(repository.countAll(true)).isGreaterThanOrEqualTo(1L);
+        assertThat(repository.countAll(false)).isGreaterThanOrEqualTo(1L);
+    }
 }

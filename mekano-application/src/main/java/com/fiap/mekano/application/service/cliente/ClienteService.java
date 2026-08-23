@@ -103,13 +103,13 @@ public class ClienteService implements ClienteServicePort {
     }
 
     @Override
-    public List<Cliente> findAllClientes(int page, int size, String sort) {
-        return clienteRepository.findAll(page, size, sort);
+    public List<Cliente> findAllClientes(int page, int size, String sort, Boolean isActive) {
+        return clienteRepository.findAll(page, size, sort, isActive);
     }
 
     @Override
-    public long countAllClientes() {
-        return clienteRepository.countAll();
+    public long countAllClientes(Boolean isActive) {
+        return clienteRepository.countAll(isActive);
     }
 
     @Override

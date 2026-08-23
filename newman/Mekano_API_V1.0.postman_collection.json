@@ -1,0 +1,3192 @@
+{
+    "info": {
+        "_postman_id": "8d096299-7d65-424a-bd9c-3c97888abcc8",
+        "name": "Mekano API v1.0",
+        "description": "## Collection da API Mekano (Clean Architecture Quarkus)\n\n### Ordem de Execução Sugerida\n\n#### Setup (1-9)\n1. POST Login (admin) → obtém token JWT\n2. Criar usuários para cada perfil via POST /admin/usuarios\n3. Login como cada perfil (atendente, mecanico, financeiro, cliente)\n\n#### Dados Mestres (10-28)\n4. CRUD Cliente\n5. CRUD Veículo (depende de cliente)\n6. CRUD Serviço\n7. CRUD Peça\n\n",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "_exporter_id": "29252768"
+    },
+    "item": [
+        {
+            "name": "🔐 Auth",
+            "item": [
+                {
+                    "name": "POST Login - erro 401 (senha inválida)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "// Verifica o HTTP Status Code (401 Unauthorized)\r",
+                                    "pm.test(\"Status code é 401 Unauthorized\", function () {\r",
+                                    "    pm.response.to.have.status(401);\r",
+                                    "});\r",
+                                    "\r",
+                                    "// Verifica a mensagem de erro no campo 'detail'\r",
+                                    "pm.test(\"Mensagem de erro em 'detail' está correta\", function () {\r",
+                                    "    const responseData = pm.response.json();\r",
+                                    "    pm.expect(responseData.detail).to.eql(\"Credenciais inválidas\");\r",
+                                    "});"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{wrongPassword}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "login"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Login (admin)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "// 1. Verifica o HTTP Status Code (200 OK)",
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "// 2. Validia a presença e o formato básico dos tokens",
+                                    "pm.test(\"Retorna 'access_token' e 'refresh_token' válidos\", function () {",
+                                    "    const responseData = pm.response.json();",
+                                    "",
+                                    "    // Verifica se os campos existem e são do tipo String",
+                                    "    pm.expect(responseData).to.have.property(\"access_token\").that.is.a(\"string\");",
+                                    "    pm.expect(responseData).to.have.property(\"refresh_token\").that.is.a(\"string\");",
+                                    "",
+                                    "    // Valida que os tokens não estão vazios",
+                                    "    pm.expect(responseData.access_token).to.not.be.empty;",
+                                    "    pm.expect(responseData.refresh_token).to.not.be.empty;",
+                                    "",
+                                    "    // (Opcional) Salva o access_token em uma variável de ambiente para requisições futuras",
+                                    "    pm.environment.set(\"access_token\", responseData.access_token);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('adminToken', jsonData.access_token);",
+                                    "    pm.collectionVariables.set('adminRefreshToken', jsonData.refresh_token);",
+                                    "    console.log('Admin token obtido com sucesso');",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        },
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "const variablesToReset = [\r",
+                                    "    \"adminToken\",\r",
+                                    "    \"adminRefreshToken\",\r",
+                                    "\r",
+                                    "    \"atendenteToken\",\r",
+                                    "    \"atendenteEmail\",\r",
+                                    "    \"atendenteSenha\",\r",
+                                    "    \"atendenteUuid\",\r",
+                                    "\r",
+                                    "    \"mecanicoToken\",\r",
+                                    "    \"mecanicoEmail\",\r",
+                                    "    \"mecanicoSenha\",\r",
+                                    "    \"mecanicoUuid\",\r",
+                                    "\r",
+                                    "    \"financeiroToken\",\r",
+                                    "    \"financeiroEmail\",\r",
+                                    "    \"financeiroSenha\",\r",
+                                    "    \"financeiroUuid\",\r",
+                                    "\r",
+                                    "    \"clienteToken\",\r",
+                                    "    \"clienteUserEmail\",\r",
+                                    "    \"clienteUserSenha\",\r",
+                                    "    \"clienteUserUuid\",\r",
+                                    "    \"clienteUuid\",\r",
+                                    "\r",
+                                    "    \"veiculoUuid\",\r",
+                                    "    \"servicoUuid\",\r",
+                                    "\r",
+                                    "    \"pecaUuid\",\r",
+                                    "    \"pecaCodigo\",\r",
+                                    "    \"pecaSaldoAtual\",\r",
+                                    "\r",
+                                    "    \"requisicaoCompraUuid\",\r",
+                                    "    \"reqCompraOSUuid\",\r",
+                                    "\r",
+                                    "    \"nfEntradaUuid\",\r",
+                                    "    \"nfEntradaOSUuid\",\r",
+                                    "\r",
+                                    "    \"osUuid\",\r",
+                                    "    \"orcamentoUuid\",\r",
+                                    "\r",
+                                    "    \"userUuid\",\r",
+                                    "    \"idUsuarioDelete\",\r",
+                                    "\r",
+                                    "    \"primeiroUsuarioAdmin\"\r",
+                                    "];\r",
+                                    "\r",
+                                    "variablesToReset.forEach(variable => {\r",
+                                    "    pm.collectionVariables.set(variable, \"\");\r",
+                                    "});\r",
+                                    "\r",
+                                    "console.log(`Foram limpas ${variablesToReset.length} variáveis da Collection.`);"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "login"
+                            ]
+                        },
+                        "description": "Login como administrador. Retorna access_token, refresh_token e expires_in (900s)."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Refresh Token",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "// 1. Verifica o HTTP Status Code (200 OK)",
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "// 2. Validia a presença e o formato básico dos tokens",
+                                    "pm.test(\"Retorna 'access_token' e 'refresh_token' válidos\", function () {",
+                                    "    const responseData = pm.response.json();",
+                                    "",
+                                    "    // Verifica se os campos existem e são do tipo String",
+                                    "    pm.expect(responseData).to.have.property(\"access_token\").that.is.a(\"string\");",
+                                    "    pm.expect(responseData).to.have.property(\"refresh_token\").that.is.a(\"string\");",
+                                    "",
+                                    "    // Valida que os tokens não estão vazios",
+                                    "    pm.expect(responseData.access_token).to.not.be.empty;",
+                                    "    pm.expect(responseData.refresh_token).to.not.be.empty;",
+                                    "",
+                                    "    // (Opcional) Salva o access_token em uma variável de ambiente para requisições futuras",
+                                    "    pm.environment.set(\"access_token\", responseData.access_token);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('adminToken', jsonData.access_token);",
+                                    "    pm.collectionVariables.set('adminRefreshToken', jsonData.refresh_token);",
+                                    "    console.log('Token renovado com sucesso');",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"refresh_token\": \"{{adminRefreshToken}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/refresh",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "refresh"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Logout",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 204 No Content\", function () {\r",
+                                    "    pm.response.to.have.status(204);\r",
+                                    "});"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"refresh_token\": \"{{adminRefreshToken}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/logout",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "logout"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Autenticação e gerenciamento de tokens JWT"
+        },
+        {
+            "name": "👑 Admin Users (Gerenciamento de Usuários do Sistema)",
+            "item": [
+                {
+                    "name": "POST Criar Usuário role ( atendente )",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 201 CREATED\", function () {",
+                                    "    pm.response.to.have.status(201);",
+                                    "});",
+                                    "",
+                                    "const responseData = pm.response.json();",
+                                    "",
+                                    "// Expressão regular para validar UUID (v1, v3, v4, v5)",
+                                    "const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+                                    "",
+                                    "// Função auxiliar para validar presença e valor não nulo/vazio",
+                                    "function validateField(fieldName) {",
+                                    "    pm.test(`Campo '${fieldName}' - Deve existir e não ser nulo/vazio`, function () {",
+                                    "        pm.expect(responseData).to.have.property(fieldName);",
+                                    "        ",
+                                    "        const value = responseData[fieldName];",
+                                    "        pm.expect(value, `O campo '${fieldName}' não deve ser nulo`).to.not.be.null;",
+                                    "        pm.expect(value, `O campo '${fieldName}' não deve ser undefined`).to.not.be.undefined;",
+                                    "",
+                                    "        if (typeof value === \"string\") {",
+                                    "            pm.expect(value.trim(), `O campo '${fieldName}' não deve estar vazio`).to.not.be.empty;",
+                                    "        }",
+                                    "    });",
+                                    "}",
+                                    "",
+                                    "// 1. Teste do ID (Presença + Formato UUID)",
+                                    "validateField(\"id\");",
+                                    "",
+                                    "pm.test(\"Campo 'id' - Deve estar no formato UUID válido\", function () {",
+                                    "    pm.expect(responseData.id).to.match(uuidRegex);",
+                                    "});",
+                                    "",
+                                    "// 2. Testes dos demais campos isolados",
+                                    "validateField(\"name\");",
+                                    "validateField(\"email\");",
+                                    "validateField(\"role\");",
+                                    "validateField(\"senhaGerada\");",
+                                    "",
+                                    "if (pm.response.code === 201) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('atendenteUuid', jsonData.id);",
+                                    "    pm.collectionVariables.set('atendenteSenha', jsonData.senhaGerada);",
+                                    "    pm.collectionVariables.set('atendenteEmail', jsonData.email);",
+                                    "    console.log('Atendente criado: ' + jsonData.email + ' / senha: ' + jsonData.senhaGerada);",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        },
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "packages": {},
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Atendente Teste {{sequencia}}\",\n  \"email\": \"atendente{{sequencia}}@mekano.com\",\n  \"role\": \"atendente\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/usuarios",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "usuarios"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Criar Usuário role ( mecanico )",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 201 CREATED\", function () {",
+                                    "    pm.response.to.have.status(201);",
+                                    "});",
+                                    "",
+                                    "const responseData = pm.response.json();",
+                                    "",
+                                    "// Expressão regular para validar UUID (v1, v3, v4, v5)",
+                                    "const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+                                    "",
+                                    "// Função auxiliar para validar presença e valor não nulo/vazio",
+                                    "function validateField(fieldName) {",
+                                    "    pm.test(`Campo '${fieldName}' - Deve existir e não ser nulo/vazio`, function () {",
+                                    "        pm.expect(responseData).to.have.property(fieldName);",
+                                    "        ",
+                                    "        const value = responseData[fieldName];",
+                                    "        pm.expect(value, `O campo '${fieldName}' não deve ser nulo`).to.not.be.null;",
+                                    "        pm.expect(value, `O campo '${fieldName}' não deve ser undefined`).to.not.be.undefined;",
+                                    "",
+                                    "        if (typeof value === \"string\") {",
+                                    "            pm.expect(value.trim(), `O campo '${fieldName}' não deve estar vazio`).to.not.be.empty;",
+                                    "        }",
+                                    "    });",
+                                    "}",
+                                    "",
+                                    "// 1. Teste do ID (Presença + Formato UUID)",
+                                    "validateField(\"id\");",
+                                    "",
+                                    "pm.test(\"Campo 'id' - Deve estar no formato UUID válido\", function () {",
+                                    "    pm.expect(responseData.id).to.match(uuidRegex);",
+                                    "});",
+                                    "",
+                                    "// 2. Testes dos demais campos isolados",
+                                    "validateField(\"name\");",
+                                    "validateField(\"email\");",
+                                    "validateField(\"role\");",
+                                    "validateField(\"senhaGerada\");",
+                                    "",
+                                    "if (pm.response.code === 201) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('mecanicoUuid', jsonData.id);",
+                                    "    pm.collectionVariables.set('mecanicoSenha', jsonData.senhaGerada);",
+                                    "    pm.collectionVariables.set('mecanicoEmail', jsonData.email);",
+                                    "    console.log('Mecânico criado: ' + jsonData.email + ' / senha: ' + jsonData.senhaGerada);",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Mecanico Teste {{sequencia}}\",\n  \"email\": \"mecanico{{sequencia}}@mekano.com\",\n  \"role\": \"mecanico\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/usuarios",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "usuarios"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Criar Usuário role ( financeiro )",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 201 CREATED\", function () {",
+                                    "    pm.response.to.have.status(201);",
+                                    "});",
+                                    "",
+                                    "const responseData = pm.response.json();",
+                                    "",
+                                    "// Expressão regular para validar UUID (v1, v3, v4, v5)",
+                                    "const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+                                    "",
+                                    "// Função auxiliar para validar presença e valor não nulo/vazio",
+                                    "function validateField(fieldName) {",
+                                    "    pm.test(`Campo '${fieldName}' - Deve existir e não ser nulo/vazio`, function () {",
+                                    "        pm.expect(responseData).to.have.property(fieldName);",
+                                    "        ",
+                                    "        const value = responseData[fieldName];",
+                                    "        pm.expect(value, `O campo '${fieldName}' não deve ser nulo`).to.not.be.null;",
+                                    "        pm.expect(value, `O campo '${fieldName}' não deve ser undefined`).to.not.be.undefined;",
+                                    "",
+                                    "        if (typeof value === \"string\") {",
+                                    "            pm.expect(value.trim(), `O campo '${fieldName}' não deve estar vazio`).to.not.be.empty;",
+                                    "        }",
+                                    "    });",
+                                    "}",
+                                    "",
+                                    "// 1. Teste do ID (Presença + Formato UUID)",
+                                    "validateField(\"id\");",
+                                    "",
+                                    "pm.test(\"Campo 'id' - Deve estar no formato UUID válido\", function () {",
+                                    "    pm.expect(responseData.id).to.match(uuidRegex);",
+                                    "});",
+                                    "",
+                                    "// 2. Testes dos demais campos isolados",
+                                    "validateField(\"name\");",
+                                    "validateField(\"email\");",
+                                    "validateField(\"role\");",
+                                    "validateField(\"senhaGerada\");",
+                                    "",
+                                    "if (pm.response.code === 201) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('financeiroUuid', jsonData.id);",
+                                    "    pm.collectionVariables.set('financeiroSenha', jsonData.senhaGerada);",
+                                    "    pm.collectionVariables.set('financeiroEmail', jsonData.email);",
+                                    "    console.log('Financeiro criado: ' + jsonData.email + ' / senha: ' + jsonData.senhaGerada);",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Financeiro Teste {{sequencia}}\",\n  \"email\": \"financeiro{{sequencia}}@mekano.com\",\n  \"role\": \"financeiro\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/usuarios",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "usuarios"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Criar Usuário role ( cliente )",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 201 CREATED\", function () {",
+                                    "    pm.response.to.have.status(201);",
+                                    "});",
+                                    "",
+                                    "const responseData = pm.response.json();",
+                                    "",
+                                    "// Expressão regular para validar UUID (v1, v3, v4, v5)",
+                                    "const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+                                    "",
+                                    "// Função auxiliar para validar presença e valor não nulo/vazio",
+                                    "function validateField(fieldName) {",
+                                    "    pm.test(`Campo '${fieldName}' - Deve existir e não ser nulo/vazio`, function () {",
+                                    "        pm.expect(responseData).to.have.property(fieldName);",
+                                    "        ",
+                                    "        const value = responseData[fieldName];",
+                                    "        pm.expect(value, `O campo '${fieldName}' não deve ser nulo`).to.not.be.null;",
+                                    "        pm.expect(value, `O campo '${fieldName}' não deve ser undefined`).to.not.be.undefined;",
+                                    "",
+                                    "        if (typeof value === \"string\") {",
+                                    "            pm.expect(value.trim(), `O campo '${fieldName}' não deve estar vazio`).to.not.be.empty;",
+                                    "        }",
+                                    "    });",
+                                    "}",
+                                    "",
+                                    "// 1. Teste do ID (Presença + Formato UUID)",
+                                    "validateField(\"id\");",
+                                    "",
+                                    "pm.test(\"Campo 'id' - Deve estar no formato UUID válido\", function () {",
+                                    "    pm.expect(responseData.id).to.match(uuidRegex);",
+                                    "});",
+                                    "",
+                                    "// 2. Testes dos demais campos isolados",
+                                    "validateField(\"name\");",
+                                    "validateField(\"email\");",
+                                    "validateField(\"role\");",
+                                    "validateField(\"senhaGerada\");",
+                                    "",
+                                    "if (pm.response.code === 201) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('clienteUserUuid', jsonData.id);",
+                                    "    pm.collectionVariables.set('clienteUserSenha', jsonData.senhaGerada);",
+                                    "    pm.collectionVariables.set('clienteUserEmail', jsonData.email);",
+                                    "    console.log('Cliente user criado: ' + jsonData.email + ' / senha: ' + jsonData.senhaGerada);",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Cliente Aprovador {{sequencia}}\",\n  \"email\": \"clienteuser{{sequencia}}@mekano.com\",\n  \"role\": \"cliente\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/usuarios",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "usuarios"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Login ( atendente )",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "// 2. Validia a presença e o formato básico dos tokens",
+                                    "pm.test(\"Retorna 'access_token' e 'refresh_token' válidos\", function () {",
+                                    "    const responseData = pm.response.json();",
+                                    "",
+                                    "    // Verifica se os campos existem e são do tipo String",
+                                    "    pm.expect(responseData).to.have.property(\"access_token\").that.is.a(\"string\");",
+                                    "    pm.expect(responseData).to.have.property(\"refresh_token\").that.is.a(\"string\");",
+                                    "",
+                                    "    // Valida que os tokens não estão vazios",
+                                    "    pm.expect(responseData.access_token).to.not.be.empty;",
+                                    "    pm.expect(responseData.refresh_token).to.not.be.empty;",
+                                    "",
+                                    "    // (Opcional) Salva o access_token em uma variável de ambiente para requisições futuras",
+                                    "    pm.environment.set(\"access_token\", responseData.access_token);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('atendenteToken', jsonData.access_token);",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"{{atendenteEmail}}\",\n  \"password\": \"{{atendenteSenha}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "login"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Login ( mecanico )",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "// 2. Validia a presença e o formato básico dos tokens",
+                                    "pm.test(\"Retorna 'access_token' e 'refresh_token' válidos\", function () {",
+                                    "    const responseData = pm.response.json();",
+                                    "",
+                                    "    // Verifica se os campos existem e são do tipo String",
+                                    "    pm.expect(responseData).to.have.property(\"access_token\").that.is.a(\"string\");",
+                                    "    pm.expect(responseData).to.have.property(\"refresh_token\").that.is.a(\"string\");",
+                                    "",
+                                    "    // Valida que os tokens não estão vazios",
+                                    "    pm.expect(responseData.access_token).to.not.be.empty;",
+                                    "    pm.expect(responseData.refresh_token).to.not.be.empty;",
+                                    "",
+                                    "    // (Opcional) Salva o access_token em uma variável de ambiente para requisições futuras",
+                                    "    pm.environment.set(\"access_token\", responseData.access_token);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('mecanicoToken', jsonData.access_token);",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"{{mecanicoEmail}}\",\n  \"password\": \"{{mecanicoSenha}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "login"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Login ( financeiro )",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "// 2. Validia a presença e o formato básico dos tokens",
+                                    "pm.test(\"Retorna 'access_token' e 'refresh_token' válidos\", function () {",
+                                    "    const responseData = pm.response.json();",
+                                    "",
+                                    "    // Verifica se os campos existem e são do tipo String",
+                                    "    pm.expect(responseData).to.have.property(\"access_token\").that.is.a(\"string\");",
+                                    "    pm.expect(responseData).to.have.property(\"refresh_token\").that.is.a(\"string\");",
+                                    "",
+                                    "    // Valida que os tokens não estão vazios",
+                                    "    pm.expect(responseData.access_token).to.not.be.empty;",
+                                    "    pm.expect(responseData.refresh_token).to.not.be.empty;",
+                                    "",
+                                    "    // (Opcional) Salva o access_token em uma variável de ambiente para requisições futuras",
+                                    "    pm.environment.set(\"access_token\", responseData.access_token);",
+                                    "});",
+                                    "",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('financeiroToken', jsonData.access_token);",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"{{financeiroEmail}}\",\n  \"password\": \"{{financeiroSenha}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "login"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Login ( cliente )",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "// 2. Validia a presença e o formato básico dos tokens",
+                                    "pm.test(\"Retorna 'access_token' e 'refresh_token' válidos\", function () {",
+                                    "    const responseData = pm.response.json();",
+                                    "",
+                                    "    // Verifica se os campos existem e são do tipo String",
+                                    "    pm.expect(responseData).to.have.property(\"access_token\").that.is.a(\"string\");",
+                                    "    pm.expect(responseData).to.have.property(\"refresh_token\").that.is.a(\"string\");",
+                                    "",
+                                    "    // Valida que os tokens não estão vazios",
+                                    "    pm.expect(responseData.access_token).to.not.be.empty;",
+                                    "    pm.expect(responseData.refresh_token).to.not.be.empty;",
+                                    "",
+                                    "    // (Opcional) Salva o access_token em uma variável de ambiente para requisições futuras",
+                                    "    pm.environment.set(\"access_token\", responseData.access_token);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('clienteToken', jsonData.access_token);",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"{{clienteUserEmail}}\",\n  \"password\": \"{{clienteUserSenha}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "login"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET Listar Usuários (admin)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "const responseData = pm.response.json();",
+                                    "const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+                                    "",
+                                    "// 1. Valida se o retorno é um Array",
+                                    "pm.test(\"Resposta deve ser um Array\", function () {",
+                                    "    pm.expect(responseData).to.be.an(\"array\");",
+                                    "});",
+                                    "",
+                                    "// 2. Valida se contém pelo menos 1 item",
+                                    "pm.test(\"Lista deve conter pelo menos 1 item\", function () {",
+                                    "    pm.expect(responseData).to.be.an(\"array\");",
+                                    "    pm.expect(responseData.length).to.be.at.least(1);",
+                                    "});",
+                                    "",
+                                    "// 3. Valida a estrutura do PRIMEIRO objeto da lista (index 0)",
+                                    "if (Array.isArray(responseData) && responseData.length > 0) {",
+                                    "    const firstItem = responseData[0];",
+                                    "    const requiredFields = [\"id\", \"name\", \"email\", \"role\"];",
+                                    "",
+                                    "    // Validação isolada de cada campo de texto/UUID",
+                                    "    requiredFields.forEach((field) => {",
+                                    "        pm.test(`Primeiro item - Campo '${field}' deve existir e não ser nulo/vazio`, function () {",
+                                    "            pm.expect(firstItem).to.have.property(field);",
+                                    "            ",
+                                    "            const value = firstItem[field];",
+                                    "            pm.expect(value, `O campo '${field}' não deve ser nulo`).to.not.be.null;",
+                                    "            pm.expect(value, `O campo '${field}' não deve ser undefined`).to.not.be.undefined;",
+                                    "",
+                                    "            if (typeof value === \"string\") {",
+                                    "                pm.expect(value.trim(), `O campo '${field}' não deve estar vazio`).to.not.be.empty;",
+                                    "            }",
+                                    "        });",
+                                    "    });",
+                                    "",
+                                    "    // Formato UUID do 'id'",
+                                    "    pm.test(\"Primeiro item - Campo 'id' deve ser um UUID válido\", function () {",
+                                    "        pm.expect(firstItem.id).to.match(uuidRegex);",
+                                    "    });",
+                                    "",
+                                    "    // Validação do campo 'active' (Booleano)",
+                                    "    pm.test(\"Primeiro item - Campo 'active' deve existir e ser um Booleano\", function () {",
+                                    "        pm.expect(firstItem).to.have.property(\"active\");",
+                                    "        pm.expect(firstItem.active).to.be.a(\"boolean\");",
+                                    "    });",
+                                    "}",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    if (jsonData.length > 0) {",
+                                    "        pm.collectionVariables.set('primeiroUsuarioAdmin', jsonData[0].id);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/usuarios?page=0&size=20",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "usuarios"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "size",
+                                    "value": "20"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Criar Usuário para delete",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 201 CREATED\", function () {",
+                                    "    pm.response.to.have.status(201);",
+                                    "});",
+                                    "",
+                                    "",
+                                    "if (pm.response.code === 201) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('idUsuarioDelete', jsonData.id);",
+                                    "    console.log('Cliente user criado: ' + jsonData.email + ' / senha: ' + jsonData.senhaGerada);",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Cliente Delete\",\n  \"email\": \"clienteDelete{{sequencia}}@mekano.com\",\n  \"role\": \"cliente\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/usuarios",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "usuarios"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "DELETE Remover usuário",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 204 No Content\", function () {\r",
+                                    "    pm.response.to.have.status(204);\r",
+                                    "});\r",
+                                    ""
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/usuarios/{{idUsuarioDelete}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "usuarios",
+                                "{{idUsuarioDelete}}"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Criação e gerenciamento de usuários por administradores. Esses usuários representam os perfis do sistema (admin, atendente, mecanico, financeiro, cliente).",
+            "event": [
+                {
+                    "listen": "prerequest",
+                    "script": {
+                        "type": "text/javascript",
+                        "packages": {},
+                        "requests": {},
+                        "exec": [
+                            "let seq = pm.collectionVariables.get(\"sequencia\")\r",
+                            "\r",
+                            "if(!seq) {\r",
+                            "    seq = 1;\r",
+                            "} else {\r",
+                            "    seq = parseInt(seq, 10) + 1;\r",
+                            "}\r",
+                            "\r",
+                            "let seqFormatado = String(seq).padStart(7, '0');\r",
+                            "\r",
+                            "pm.collectionVariables.set(\"sequencia\", seqFormatado);"
+                        ]
+                    }
+                },
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "packages": {},
+                        "requests": {},
+                        "exec": [
+                            ""
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "👤 Gerenciamento de Clientes ( Atendente )",
+            "item": [
+                {
+                    "name": "POST Criar Cliente",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "// 1. Lê o JSON da resposta (FALTAVA ESSA LINHA)",
+                                    "const responseData = pm.response.json();",
+                                    "",
+                                    "// 2. Valida o Status Code",
+                                    "pm.test(\"Status code é 201 CREATED\", function () {",
+                                    "    pm.response.to.have.status(201);",
+                                    "});",
+                                    "",
+                                    "const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+                                    "",
+                                    "// Função auxiliar para validar presença e valor não nulo/vazio",
+                                    "function validateField(fieldName) {",
+                                    "    pm.test(`Campo '${fieldName}' - Deve existir e não ser nulo/vazio`, function () {",
+                                    "        pm.expect(responseData).to.have.property(fieldName);",
+                                    "        ",
+                                    "        const value = responseData[fieldName];",
+                                    "        pm.expect(value, `O campo '${fieldName}' não deve ser nulo`).to.not.be.null;",
+                                    "        pm.expect(value, `O campo '${fieldName}' não deve ser undefined`).to.not.be.undefined;",
+                                    "",
+                                    "        if (typeof value === \"string\") {",
+                                    "            pm.expect(value.trim(), `O campo '${fieldName}' não deve estar vazio`).to.not.be.empty;",
+                                    "        }",
+                                    "    });",
+                                    "}",
+                                    "",
+                                    "// 3. Teste do ID (Presença + Formato UUID)",
+                                    "validateField(\"id\");",
+                                    "",
+                                    "pm.test(\"Campo 'id' - Deve estar no formato UUID válido\", function () {",
+                                    "    pm.expect(responseData.id).to.match(uuidRegex);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 201) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('clienteUuid', jsonData.id);",
+                                    "    console.log('Cliente criado: ' + jsonData.id);",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{atendenteToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"nome\": \"Cliente Valido\",\n  \"cpf\": \"24637776805\",\n  \"email\": \"cliente{{sequencia}}@email.com\",\n  \"telefone\": \"11987654321\",\n  \"logradouro\": \"Rua das Flores\",\n  \"numero\": \"123\",\n  \"bairro\": \"Centro\",\n  \"cidade\": \"São Paulo\",\n  \"uf\": \"SP\",\n  \"cep\": \"01001000\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/clientes",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "clientes"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Criar Cliente - erro 400 (CPF inválido)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "// 1. Valida o HTTP Status Code (400 Bad Request)\r",
+                                    "pm.test(\"Status code é 400 Bad Request\", function () {\r",
+                                    "    pm.response.to.have.status(400);\r",
+                                    "});\r",
+                                    "\r",
+                                    "// 2. Valida se o campo 'detail' contém \"CPF inválido\"\r",
+                                    "pm.test(\"Mensagem em 'detail' informa que o CPF é inválido\", function () {\r",
+                                    "    const responseData = pm.response.json();\r",
+                                    "    \r",
+                                    "    pm.expect(responseData).to.have.property(\"detail\");\r",
+                                    "    pm.expect(responseData.detail).to.be.a(\"string\");\r",
+                                    "    \r",
+                                    "    // Verifica se a string contém o trecho \"CPF inválido\"\r",
+                                    "    pm.expect(responseData.detail).to.include(\"CPF inválido\");\r",
+                                    "});"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"nome\": \"Cliente Inválido\",\n  \"cpf\": \"12345678901\",\n  \"email\": \"invalido@email.com\",\n  \"telefone\": \"11999999999\",\n  \"logradouro\": \"Rua A\",\n  \"numero\": \"1\",\n  \"bairro\": \"Centro\",\n  \"cidade\": \"São Paulo\",\n  \"uf\": \"SP\",\n  \"cep\": \"01001000\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/clientes",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "clientes"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Criar Cliente - erro 400 (CPF duplicado)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "// 1. Valida o HTTP Status Code (409 Conflict)\r",
+                                    "pm.test(\"Status code é 409 Conflict\", function () {\r",
+                                    "    pm.response.to.have.status(409);\r",
+                                    "});\r",
+                                    "\r",
+                                    "// 2. Valida se o campo 'detail' contém \"CPF Duplicado\"\r",
+                                    "pm.test(\"Mensagem em 'detail' informa que o CPF é Duplicado\", function () {\r",
+                                    "    const responseData = pm.response.json();\r",
+                                    "    \r",
+                                    "    pm.expect(responseData).to.have.property(\"detail\");\r",
+                                    "    pm.expect(responseData.detail).to.be.a(\"string\");\r",
+                                    "    \r",
+                                    "    // Verifica se a string contém o trecho \"CPF Duplicado\"\r",
+                                    "    pm.expect(responseData.detail).to.include(\"Cliente já existe com o CPF\");\r",
+                                    "});"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"nome\": \"Cliente Cpf Duplicado\",\n  \"cpf\": \"24637776805\",\n  \"email\": \"invalido@email.com\",\n  \"telefone\": \"11999999999\",\n  \"logradouro\": \"Rua A\",\n  \"numero\": \"1\",\n  \"bairro\": \"Centro\",\n  \"cidade\": \"São Paulo\",\n  \"uf\": \"SP\",\n  \"cep\": \"01001000\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/clientes",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "clientes"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET Listar Clientes",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const responseData = pm.response.json();",
+                                    "const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+                                    "",
+                                    "// 1. Verifica se 'content' é um Array (Lista)",
+                                    "pm.test(\"Propriedade 'content' deve ser um Array (Lista)\", function () {",
+                                    "    pm.expect(responseData).to.have.property(\"content\");",
+                                    "    pm.expect(responseData.content).to.be.an(\"array\");",
+                                    "});",
+                                    "",
+                                    "// 2. Verifica se a lista 'content' contém pelo menos 1 objeto",
+                                    "pm.test(\"Lista 'content' deve conter pelo menos 1 item\", function () {",
+                                    "    pm.expect(responseData.content).to.be.an(\"array\");",
+                                    "    pm.expect(responseData.content.length).to.be.at.least(1);",
+                                    "});",
+                                    "",
+                                    "// 5. Verifica se os metadados de paginação existem (page, size, totalElements, totalPages)",
+                                    "const paginationFields = [\"page\", \"size\", \"totalElements\", \"totalPages\"];",
+                                    "paginationFields.forEach((field) => {",
+                                    "    pm.test(`Paginação - Deve possuir a propriedade '${field}' (número)`, function () {",
+                                    "        pm.expect(responseData).to.have.property(field);",
+                                    "        pm.expect(responseData[field]).to.be.a(\"number\");",
+                                    "    });",
+                                    "});",
+                                    "",
+                                    "// 3 e 4. Valida as propriedades e o UUID no PRIMEIRO objeto da lista 'content'",
+                                    "if (Array.isArray(responseData.content) && responseData.content.length > 0) {",
+                                    "    const firstItem = responseData.content[0];",
+                                    "    ",
+                                    "    const requiredFields = [",
+                                    "        \"id\", \"nome\", \"cpf\", \"email\", \"telefone\",",
+                                    "        \"enderecoLogradouro\", \"enderecoNumero\", \"enderecoBairro\",",
+                                    "        \"enderecoCidade\", \"enderecoUf\", \"enderecoCep\", \"createdAt\"",
+                                    "    ];",
+                                    "",
+                                    "    // 3. Valida se todas as propriedades existem e não são nulas/vazias no primeiro item",
+                                    "    requiredFields.forEach((field) => {",
+                                    "        pm.test(`Primeiro item - Campo '${field}' deve existir e não ser nulo/vazio`, function () {",
+                                    "            pm.expect(firstItem).to.have.property(field);",
+                                    "            ",
+                                    "            const value = firstItem[field];",
+                                    "            pm.expect(value, `O campo '${field}' não deve ser nulo`).to.not.be.null;",
+                                    "            pm.expect(value, `O campo '${field}' não deve ser undefined`).to.not.be.undefined;",
+                                    "",
+                                    "            if (typeof value === \"string\") {",
+                                    "                pm.expect(value.trim(), `O campo '${field}' não deve estar vazio`).to.not.be.empty;",
+                                    "            }",
+                                    "        });",
+                                    "    });",
+                                    "",
+                                    "    // 4. Valida se o campo ID do primeiro item está no formato UUID",
+                                    "    pm.test(\"Primeiro item - Campo 'id' deve ser um UUID válido\", function () {",
+                                    "        pm.expect(firstItem.id).to.match(uuidRegex);",
+                                    "    });",
+                                    "}",
+                                    "",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    console.log('Total clientes: ' + jsonData.totalElements);",
+                                    "    if (jsonData.content && jsonData.content.length > 0 && !pm.collectionVariables.get('clienteUuid')) {",
+                                    "        pm.collectionVariables.set('clienteUuid', jsonData.content[0].id);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{atendenteToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/clientes?page=0&size=10&sort=nome,asc",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "clientes"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "size",
+                                    "value": "10"
+                                },
+                                {
+                                    "key": "sort",
+                                    "value": "nome,asc"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET Buscar Cliente por ID",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {\r",
+                                    "    pm.response.to.have.status(200);\r",
+                                    "});"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{atendenteToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/clientes/{{clienteUuid}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "clientes",
+                                "{{clienteUuid}}"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "PUT Atualizar Cliente",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "// 1. Valida HTTP Status 200 OK\r",
+                                    "pm.test(\"Status code é 200 OK\", function () {\r",
+                                    "    pm.response.to.have.status(200);\r",
+                                    "});\r",
+                                    "\r",
+                                    "// Extrai e converte os corpos da requisição e da resposta\r",
+                                    "const requestBody = JSON.parse(pm.request.body.raw);\r",
+                                    "const responseData = pm.response.json();\r",
+                                    "\r",
+                                    "// Mapeamento de equivalente entre Request (PUT) vs Response (API)\r",
+                                    "const fieldMappings = [\r",
+                                    "    { req: \"nome\", res: \"nome\" },\r",
+                                    "    { req: \"email\", res: \"email\" },\r",
+                                    "    { req: \"telefone\", res: \"telefone\" },\r",
+                                    "    { req: \"logradouro\", res: \"enderecoLogradouro\" },\r",
+                                    "    { req: \"numero\", res: \"enderecoNumero\" },\r",
+                                    "    { req: \"bairro\", res: \"enderecoBairro\" },\r",
+                                    "    { req: \"cidade\", res: \"enderecoCidade\" },\r",
+                                    "    { req: \"uf\", res: \"enderecoUf\" },\r",
+                                    "    { req: \"cep\", res: \"enderecoCep\" }\r",
+                                    "];\r",
+                                    "\r",
+                                    "// Iteramos apenas pelos mapeamentos cujas chaves foram enviadas no body do PUT\r",
+                                    "fieldMappings.forEach((mapping) => {\r",
+                                    "    // Verifica se o campo foi enviado no body da requisição\r",
+                                    "    if (requestBody.hasOwnProperty(mapping.req)) {\r",
+                                    "        \r",
+                                    "        pm.test(`Persistência - Campo '${mapping.res}' deve refletir o valor enviado`, function () {\r",
+                                    "            const sentValue = requestBody[mapping.req];\r",
+                                    "            const receivedValue = responseData[mapping.res];\r",
+                                    "\r",
+                                    "            pm.expect(receivedValue, `O valor retornado em '${mapping.res}' não coincide com o enviado em '${mapping.req}'`)\r",
+                                    "                .to.eql(sentValue);\r",
+                                    "        });\r",
+                                    "\r",
+                                    "    }\r",
+                                    "});\r",
+                                    "\r",
+                                    ""
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{atendenteToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"nome\": \"João Silva Atualizado\",\n  \"email\": \"joao.atualizado@email.com\",\n  \"telefone\": \"11988887777\",\n  \"logradouro\": \"Rua das Orquídeas\",\n  \"numero\": \"456\",\n  \"bairro\": \"Jardim Botânico\",\n  \"cidade\": \"Porto Alegre\",\n  \"uf\": \"RS\",\n  \"cep\": \"90030095\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/clientes/{{clienteUuid}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "clientes",
+                                "{{clienteUuid}}"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET Cliente não encontrado (404)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "// 1. Valida o HTTP Status Code (404 Not Found)\r",
+                                    "pm.test(\"Status code é 404 Not Found\", function () {\r",
+                                    "    pm.response.to.have.status(404);\r",
+                                    "});\r",
+                                    "\r",
+                                    "// 2. Valida se o campo 'detail' contém \"Cliente não encontrado\"\r",
+                                    "pm.test(\"Mensagem em 'detail' informa que o Cliente não foi encontrado para o ID fornecido\", function () {\r",
+                                    "    const responseData = pm.response.json();\r",
+                                    "    \r",
+                                    "    pm.expect(responseData).to.have.property(\"detail\");\r",
+                                    "    pm.expect(responseData.detail).to.be.a(\"string\");\r",
+                                    "    \r",
+                                    "    // Verifica se a string contém o trecho \"Cliente não encontrado\"\r",
+                                    "    pm.expect(responseData.detail).to.include(\"Cliente não encontrado\");\r",
+                                    "});"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{atendenteToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/clientes/00000000-0000-0000-0000-000000000000",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "clientes",
+                                "00000000-0000-0000-0000-000000000000"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "DELETE Remover Cliente",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 204 No Content\", function () {\r",
+                                    "    pm.response.to.have.status(204);\r",
+                                    "});"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{atendenteToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/clientes/{{clienteUuid}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "clientes",
+                                "{{clienteUuid}}"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "PUT ATIVAR Cliente",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 204 No Content\", function () {\r",
+                                    "    pm.response.to.have.status(204);\r",
+                                    "});"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/clientes/{{clienteUuid}}/ativar",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "clientes",
+                                "{{clienteUuid}}",
+                                "ativar"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ],
+            "description": "CRUD de clientes (pessoas físicas donas dos veículos)."
+        },
+        {
+            "name": "🚗 Gerenciamento de Veículos ( atendente )",
+            "item": [
+                {
+                    "name": "POST Criar Veículo",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const responseData = pm.response.json();",
+                                    "const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+                                    "",
+                                    "// 1. Valida HTTP Status 201 Created",
+                                    "pm.test(\"Status code é 201 Created\", function () {",
+                                    "    pm.response.to.have.status(201);",
+                                    "});",
+                                    "",
+                                    "// 2. Valida se o campo 'id' existe e está no formato UUID",
+                                    "pm.test(\"Campo 'id' deve existir e ser um UUID válido\", function () {",
+                                    "    pm.expect(responseData).to.have.property(\"id\");",
+                                    "    pm.expect(responseData.id, \"O campo 'id' não deve ser nulo/vazio\").to.be.a(\"string\").that.is.not.empty;",
+                                    "    pm.expect(responseData.id).to.match(uuidRegex);",
+                                    "});",
+                                    "",
+                                    "// 3. Valida se o campo 'clienteUuid' existe e está no formato UUID",
+                                    "pm.test(\"Campo 'clienteUuid' deve existir e ser um UUID válido\", function () {",
+                                    "    pm.expect(responseData).to.have.property(\"clienteUuid\");",
+                                    "    pm.expect(responseData.clienteUuid, \"O campo 'clienteUuid' não deve ser nulo/vazio\").to.be.a(\"string\").that.is.not.empty;",
+                                    "    pm.expect(responseData.clienteUuid).to.match(uuidRegex);",
+                                    "});",
+                                    "",
+                                    "// 4. Valida os demais campos do cadastro do veículo",
+                                    "const vehicleFields = [\"placa\", \"marca\", \"modelo\", \"ano\", \"createdAt\"];",
+                                    "vehicleFields.forEach((field) => {",
+                                    "    pm.test(`Campo '${field}' deve existir e ter valor válido`, function () {",
+                                    "        pm.expect(responseData).to.have.property(field);",
+                                    "        ",
+                                    "        const value = responseData[field];",
+                                    "        pm.expect(value, `O campo '${field}' não deve ser nulo`).to.not.be.null;",
+                                    "        pm.expect(value, `O campo '${field}' não deve ser undefined`).to.not.be.undefined;",
+                                    "",
+                                    "        if (typeof value === \"string\") {",
+                                    "            pm.expect(value.trim(), `O campo '${field}' não deve estar vazio`).to.not.be.empty;",
+                                    "        }",
+                                    "    });",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 201) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('veiculoUuid', jsonData.id);",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{atendenteToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"clienteUuid\": \"{{clienteUuid}}\",\n  \"placa\": \"ABC1D23\",\n  \"marca\": \"Toyota\",\n  \"modelo\": \"Corolla\",\n  \"ano\": 2025\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/veiculos",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "veiculos"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Criar Veículo - erro 409 (placa duplicada)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "// 1. Valida o HTTP Status Code (409 Conflict)\r",
+                                    "pm.test(\"Status code é 409 Conflict\", function () {\r",
+                                    "    pm.response.to.have.status(409);\r",
+                                    "});\r",
+                                    "\r",
+                                    "// 2. Valida se o campo 'detail' contém \"Veiculo já cadastrado\"\r",
+                                    "pm.test(\"Mensagem em 'detail' informa que o veiculo já foi cadastrado\", function () {\r",
+                                    "    const responseData = pm.response.json();\r",
+                                    "    \r",
+                                    "    pm.expect(responseData).to.have.property(\"detail\");\r",
+                                    "    pm.expect(responseData.detail).to.be.a(\"string\");\r",
+                                    "    \r",
+                                    "    // Verifica se a string contém o trecho \"Placada já cadastrada\"\r",
+                                    "    pm.expect(responseData.detail).to.include(\"Veículo já cadastrado\");\r",
+                                    "});"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{atendenteToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"clienteUuid\": \"{{clienteUuid}}\",\n  \"placa\": \"ABC1D23\",\n  \"marca\": \"Toyota\",\n  \"modelo\": \"Corolla\",\n  \"ano\": 2022\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/veiculos",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "veiculos"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Criar Veículo - erro 400 (placa inválida)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const responseData = pm.response.json();\r",
+                                    "\r",
+                                    "// 1. Valida HTTP Status 400 Bad Request\r",
+                                    "pm.test(\"Status code é 400 Bad Request\", function () {\r",
+                                    "    pm.response.to.have.status(400);\r",
+                                    "});\r",
+                                    "\r",
+                                    "// 2. Valida se a mensagem de erro da placa está presente em 'violations'\r",
+                                    "pm.test(\"Retorna violação com a mensagem 'Placa inválida'\", function () {\r",
+                                    "    pm.expect(responseData).to.have.property(\"violations\");\r",
+                                    "    pm.expect(responseData.violations).to.be.an(\"array\").that.is.not.empty;\r",
+                                    "\r",
+                                    "    // Procura se existe algum item na lista com a mensagem esperada\r",
+                                    "    const hasPlacaError = responseData.violations.some(\r",
+                                    "        (violation) => violation.message === \"Placa inválida\"\r",
+                                    "    );\r",
+                                    "\r",
+                                    "    pm.expect(hasPlacaError, \"A lista de violações deve conter a mensagem 'Placa inválida'\").to.be.true;\r",
+                                    "});\r",
+                                    "\r",
+                                    "// 3. Valida especificamente o campo 'field' associado à violação\r",
+                                    "pm.test(\"A violação do campo de placa está vinculada corretamente\", function () {\r",
+                                    "    const placaViolation = responseData.violations.find(\r",
+                                    "        (violation) => violation.message === \"Placa inválida\"\r",
+                                    "    );\r",
+                                    "\r",
+                                    "    pm.expect(placaViolation).to.not.be.undefined;\r",
+                                    "    pm.expect(placaViolation.field).to.include(\"placa\");\r",
+                                    "});"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{atendenteToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"clienteUuid\": \"{{clienteUuid}}\",\n  \"placa\": \"INVALIDA\",\n  \"marca\": \"Teste\",\n  \"modelo\": \"Teste\",\n  \"ano\": 2020\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/veiculos",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "veiculos"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET Listar Veículos",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "const responseData = pm.response.json();",
+                                    "const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+                                    "",
+                                    "// 1. Verifica se 'content' é um Array (Lista)",
+                                    "pm.test(\"Propriedade 'content' deve ser um Array (Lista)\", function () {",
+                                    "    pm.expect(responseData).to.have.property(\"content\");",
+                                    "    pm.expect(responseData.content).to.be.an(\"array\");",
+                                    "});",
+                                    "",
+                                    "// 2. Verifica se a lista 'content' contém pelo menos 1 item",
+                                    "pm.test(\"Lista 'content' deve conter pelo menos 1 item\", function () {",
+                                    "    pm.expect(responseData.content).to.be.an(\"array\");",
+                                    "    pm.expect(responseData.content.length).to.be.at.least(1);",
+                                    "});",
+                                    "",
+                                    "// 3. Verifica os metadados de paginação (page, size, totalElements, totalPages)",
+                                    "const paginationFields = [\"page\", \"size\", \"totalElements\", \"totalPages\"];",
+                                    "paginationFields.forEach((field) => {",
+                                    "    pm.test(`Paginação - Deve possuir a propriedade '${field}' (número)`, function () {",
+                                    "        pm.expect(responseData).to.have.property(field);",
+                                    "        pm.expect(responseData[field]).to.be.a(\"number\");",
+                                    "    });",
+                                    "});",
+                                    "",
+                                    "// 4. Validações da estrutura e UUIDs apenas no PRIMEIRO objeto da lista 'content'",
+                                    "if (Array.isArray(responseData.content) && responseData.content.length > 0) {",
+                                    "    const firstItem = responseData.content[0];",
+                                    "",
+                                    "    // Validação dos UUIDs",
+                                    "    pm.test(\"Primeiro item - Campo 'id' deve ser um UUID válido\", function () {",
+                                    "        pm.expect(firstItem).to.have.property(\"id\");",
+                                    "        pm.expect(firstItem.id).to.match(uuidRegex);",
+                                    "    });",
+                                    "",
+                                    "    pm.test(\"Primeiro item - Campo 'clienteUuid' deve ser um UUID válido\", function () {",
+                                    "        pm.expect(firstItem).to.have.property(\"clienteUuid\");",
+                                    "        pm.expect(firstItem.clienteUuid).to.match(uuidRegex);",
+                                    "    });",
+                                    "",
+                                    "    // Validação dos campos de texto (existência e não vazios)",
+                                    "    const stringFields = [\"placa\", \"marca\", \"modelo\", \"createdAt\"];",
+                                    "    stringFields.forEach((field) => {",
+                                    "        pm.test(`Primeiro item - Campo '${field}' deve existir e não ser nulo/vazio`, function () {",
+                                    "            pm.expect(firstItem).to.have.property(field);",
+                                    "            ",
+                                    "            const value = firstItem[field];",
+                                    "            pm.expect(value, `O campo '${field}' não deve ser nulo`).to.not.be.null;",
+                                    "            pm.expect(value, `O campo '${field}' não deve ser undefined`).to.not.be.undefined;",
+                                    "",
+                                    "            if (typeof value === \"string\") {",
+                                    "                pm.expect(value.trim(), `O campo '${field}' não deve estar vazio`).to.not.be.empty;",
+                                    "            }",
+                                    "        });",
+                                    "    });",
+                                    "",
+                                    "    // Validação do campo 'ano' (Número)",
+                                    "    pm.test(\"Primeiro item - Campo 'ano' deve existir e ser um Número\", function () {",
+                                    "        pm.expect(firstItem).to.have.property(\"ano\");",
+                                    "        pm.expect(firstItem.ano).to.be.a(\"number\");",
+                                    "    });",
+                                    "}",
+                                    "",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    console.log('Total veículos: ' + jsonData.totalElements);",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{atendenteToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/veiculos?page=0&size=10&sort=placa,asc",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "veiculos"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "size",
+                                    "value": "10"
+                                },
+                                {
+                                    "key": "sort",
+                                    "value": "placa,asc"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET Buscar Veículo por ID",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {\r",
+                                    "    pm.response.to.have.status(200);\r",
+                                    "});\r",
+                                    "\r",
+                                    "if (pm.response.code === 200) {\r",
+                                    "    var jsonData = pm.response.json();\r",
+                                    "    pm.collectionVariables.set('veiculoPlaca', jsonData.placa);\r",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{atendenteToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/veiculos/{{veiculoUuid}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "veiculos",
+                                "{{veiculoUuid}}"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "PUT Atualizar Veículo",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {\r",
+                                    "    pm.response.to.have.status(200);\r",
+                                    "});\r",
+                                    "\r",
+                                    "// 1. Converte o corpo da resposta em JSON\r",
+                                    "const responseData = pm.response.json();\r",
+                                    "\r",
+                                    "// 2. Recupera a variável salva na Collection\r",
+                                    "const placaSalva = pm.collectionVariables.get(\"veiculoPlaca\");\r",
+                                    "\r",
+                                    "// 3. Valida se a placa do Response Body é igual à placa salva na Collection\r",
+                                    "pm.test(\"A placa retornada deve ser a mesma da cadastrada (Criar Veiculos)\", function () {\r",
+                                    "    // Garante primeiro que a variável foi encontrada antes de comparar\r",
+                                    "    pm.expect(placaSalva, \"A variável 'veiculoPlaca' não foi encontrada na Collection\").to.not.be.undefined;\r",
+                                    "    \r",
+                                    "    // Compara a propriedade 'placa' do JSON com o valor da variável\r",
+                                    "    pm.expect(responseData.placa, \"A placa do response não corresponde ao valor salvo\").to.eql(placaSalva);\r",
+                                    "});"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{atendenteToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"placa\": \"XYZ9K87\",\n  \"marca\": \"Toyota\",\n  \"modelo\": \"Corolla Cross\",\n  \"ano\": 2023\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/veiculos/{{veiculoUuid}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "veiculos",
+                                "{{veiculoUuid}}"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "DELETE Inativa Veículo",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "// 1. Valida HTTP Status 204 No Content\r",
+                                    "pm.test(\"Status code é 204 No Content\", function () {\r",
+                                    "    pm.response.to.have.status(204);\r",
+                                    "});"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{atendenteToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/veiculos/{{veiculoUuid}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "veiculos",
+                                "{{veiculoUuid}}"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "PUT ATIVAR Veiculo",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 204 No Content\", function () {\r",
+                                    "    pm.response.to.have.status(204);\r",
+                                    "});"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/veiculos/{{veiculoUuid}}/ativar",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "veiculos",
+                                "{{veiculoUuid}}",
+                                "ativar"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ],
+            "description": "CRUD de veículos vinculados a clientes."
+        },
+        {
+            "name": "🔧 Serviços",
+            "item": [
+                {
+                    "name": "POST Criar Serviço",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const responseData = pm.response.json();",
+                                    "const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+                                    "",
+                                    "// 1. Valida HTTP Status 201 Created",
+                                    "pm.test(\"Status code é 201 Created\", function () {",
+                                    "    pm.response.to.have.status(201);",
+                                    "});",
+                                    "",
+                                    "// 2. Valida se o campo 'id' existe e está no formato UUID",
+                                    "pm.test(\"Campo 'id' deve existir e ser um UUID válido\", function () {",
+                                    "    pm.expect(responseData).to.have.property(\"id\");",
+                                    "    pm.expect(responseData.id, \"O campo 'id' não deve ser nulo/vazio\").to.be.a(\"string\").that.is.not.empty;",
+                                    "    pm.expect(responseData.id).to.match(uuidRegex);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 201) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('servicoUuid', jsonData.id);",
+                                    "    console.log('Serviço criado: ' + jsonData.id + ' - ' + jsonData.nome);",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"nome\": \"Troca de óleo\",\n  \"descricao\": \"Troca de óleo do motor 5W30 sintético\",\n  \"valor\": 89.90\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/servicos",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "servicos"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Criar Serviço - erro 409 (nome duplicado)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "// 1. Valida o HTTP Status Code (409 Conflict)\r",
+                                    "pm.test(\"Status code é 409 Conflict\", function () {\r",
+                                    "    pm.response.to.have.status(409);\r",
+                                    "});\r",
+                                    "\r",
+                                    "// 2. Valida se o campo 'detail' contém \"Serviço já existe com o nome:\"\r",
+                                    "pm.test(\"Mensagem em 'detail' informa que o serviço já existe\", function () {\r",
+                                    "    const responseData = pm.response.json();\r",
+                                    "    \r",
+                                    "    pm.expect(responseData).to.have.property(\"detail\");\r",
+                                    "    pm.expect(responseData.detail).to.be.a(\"string\");\r",
+                                    "    \r",
+                                    "    // Verifica se a string contém o trecho \"Placada já cadastrada\"\r",
+                                    "    pm.expect(responseData.detail).to.include(\"Serviço já existe com o nome:\");\r",
+                                    "});"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"nome\": \"Troca de óleo\",\n  \"descricao\": \"Duplicado\",\n  \"valor\": 89.90\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/servicos",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "servicos"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET Listar Serviços",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "const responseData = pm.response.json();",
+                                    "const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+                                    "",
+                                    "// 1. Verifica se 'content' é um Array (Lista)",
+                                    "pm.test(\"Propriedade 'content' deve ser um Array (Lista)\", function () {",
+                                    "    pm.expect(responseData).to.have.property(\"content\");",
+                                    "    pm.expect(responseData.content).to.be.an(\"array\");",
+                                    "});",
+                                    "",
+                                    "// 2. Verifica se a lista 'content' contém pelo menos 1 item",
+                                    "pm.test(\"Lista 'content' deve conter pelo menos 1 item\", function () {",
+                                    "    pm.expect(responseData.content).to.be.an(\"array\");",
+                                    "    pm.expect(responseData.content.length).to.be.at.least(1);",
+                                    "});",
+                                    "",
+                                    "// 3. Verifica os metadados de paginação (page, size, totalElements, totalPages)",
+                                    "const paginationFields = [\"page\", \"size\", \"totalElements\", \"totalPages\"];",
+                                    "paginationFields.forEach((field) => {",
+                                    "    pm.test(`Paginação - Deve possuir a propriedade '${field}' (número)`, function () {",
+                                    "        pm.expect(responseData).to.have.property(field);",
+                                    "        pm.expect(responseData[field]).to.be.a(\"number\");",
+                                    "    });",
+                                    "});",
+                                    "",
+                                    "// 4. Validações de estrutura apenas no PRIMEIRO objeto da lista 'content'",
+                                    "if (Array.isArray(responseData.content) && responseData.content.length > 0) {",
+                                    "    const firstItem = responseData.content[0];",
+                                    "",
+                                    "    // Validação do UUID no 'id'",
+                                    "    pm.test(\"Primeiro item - Campo 'id' deve ser um UUID válido\", function () {",
+                                    "        pm.expect(firstItem).to.have.property(\"id\");",
+                                    "        pm.expect(firstItem.id).to.match(uuidRegex);",
+                                    "    });",
+                                    "",
+                                    "    // Validação dos campos de texto (existência e não vazios)",
+                                    "    const stringFields = [\"nome\", \"descricao\", \"createdAt\"];",
+                                    "    stringFields.forEach((field) => {",
+                                    "        pm.test(`Primeiro item - Campo '${field}' deve existir e não ser nulo/vazio`, function () {",
+                                    "            pm.expect(firstItem).to.have.property(field);",
+                                    "            ",
+                                    "            const value = firstItem[field];",
+                                    "            pm.expect(value, `O campo '${field}' não deve ser nulo`).to.not.be.null;",
+                                    "            pm.expect(value, `O campo '${field}' não deve ser undefined`).to.not.be.undefined;",
+                                    "",
+                                    "            if (typeof value === \"string\") {",
+                                    "                pm.expect(value.trim(), `O campo '${field}' não deve estar vazio`).to.not.be.empty;",
+                                    "            }",
+                                    "        });",
+                                    "    });",
+                                    "",
+                                    "    // Validação do campo 'valor' (Número maior que zero)",
+                                    "    pm.test(\"Primeiro item - Campo 'valor' deve existir e ser um número positivo\", function () {",
+                                    "        pm.expect(firstItem).to.have.property(\"valor\");",
+                                    "        pm.expect(firstItem.valor).to.be.a(\"number\");",
+                                    "        pm.expect(firstItem.valor).to.be.above(0);",
+                                    "    });",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/servicos?page=0&size=10&sort=nome,asc",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "servicos"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "size",
+                                    "value": "10"
+                                },
+                                {
+                                    "key": "sort",
+                                    "value": "nome,asc"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET Buscar Serviço por ID",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {\r",
+                                    "    pm.response.to.have.status(200);\r",
+                                    "});"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/servicos/{{servicoUuid}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "servicos",
+                                "{{servicoUuid}}"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "PUT Atualizar Serviço",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "// 1. Valida HTTP Status 200 OK\r",
+                                    "pm.test(\"Status code é 200 OK\", function () {\r",
+                                    "    pm.response.to.have.status(200);\r",
+                                    "});\r",
+                                    "\r",
+                                    "// Extrai e converte os corpos da requisição e da resposta\r",
+                                    "const requestBody = JSON.parse(pm.request.body.raw);\r",
+                                    "const responseData = pm.response.json();\r",
+                                    "\r",
+                                    "// Mapeamento de equivalente entre Request (PUT) vs Response (API)\r",
+                                    "const fieldMappings = [\r",
+                                    "    { req: \"nome\", res: \"nome\" },\r",
+                                    "    { req: \"descricao\", res: \"descricao\" },\r",
+                                    "    { req: \"valor\", res: \"valor\" }\r",
+                                    "];\r",
+                                    "\r",
+                                    "// Iteramos apenas pelos campos que foram de fato enviados no body da requisição\r",
+                                    "fieldMappings.forEach((mapping) => {\r",
+                                    "    if (requestBody.hasOwnProperty(mapping.req)) {\r",
+                                    "        \r",
+                                    "        pm.test(`Persistência - Campo '${mapping.res}' deve refletir o valor enviado`, function () {\r",
+                                    "            const sentValue = requestBody[mapping.req];\r",
+                                    "            const receivedValue = responseData[mapping.res];\r",
+                                    "\r",
+                                    "            pm.expect(receivedValue, `O valor retornado em '${mapping.res}' não coincide com o enviado em '${mapping.req}'`)\r",
+                                    "                .to.eql(sentValue);\r",
+                                    "        });\r",
+                                    "\r",
+                                    "    }\r",
+                                    "});"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"nome\": \"Troca de óleo orgânico\",\n  \"descricao\": \"Troca de óleo 5W35 premium\",\n  \"valor\": 129.90\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/servicos/{{servicoUuid}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "servicos",
+                                "{{servicoUuid}}"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "DELETE Remover Serviço",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 204 No Content\", function () {\r",
+                                    "    pm.response.to.have.status(204);\r",
+                                    "});"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/servicos/{{servicoUuid}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "servicos",
+                                "{{servicoUuid}}"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "PUT ATIVAR Serviço",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 204 No Content\", function () {\r",
+                                    "    pm.response.to.have.status(204);\r",
+                                    "});"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/servicos/{{servicoUuid}}/ativar",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "servicos",
+                                "{{servicoUuid}}",
+                                "ativar"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ],
+            "description": "CRUD de serviços prestados pela oficina (mão de obra)."
+        },
+        {
+            "name": "⚙️ Peças e Insumos",
+            "item": [
+                {
+                    "name": "POST Criar Peça",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const responseData = pm.response.json();",
+                                    "const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+                                    "",
+                                    "// 1. Valida HTTP Status 201 Created",
+                                    "pm.test(\"Status code é 201 Created\", function () {",
+                                    "    pm.response.to.have.status(201);",
+                                    "});",
+                                    "",
+                                    "// 2. Valida se o campo 'id' existe e está no formato UUID",
+                                    "pm.test(\"Campo 'id' deve existir e ser um UUID válido\", function () {",
+                                    "    pm.expect(responseData).to.have.property(\"id\");",
+                                    "    pm.expect(responseData.id, \"O campo 'id' não deve ser nulo/vazio\").to.be.a(\"string\").that.is.not.empty;",
+                                    "    pm.expect(responseData.id).to.match(uuidRegex);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 201) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('pecaUuid', jsonData.id);",
+                                    "    console.log('Peça criada: ' + jsonData.id + ' - ' + jsonData.codigo);",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"codigo\": \"OLEO-5W30\",\n  \"descricao\": \"Óleo do Motor 5W30 Sintético - 1L\",\n  \"valorUnitario\": 45.90,\n  \"estoqueMinimo\": 5\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/pecas",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "pecas"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Criar Peça - erro 400 (dados inválidos)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const responseData = pm.response.json();\r",
+                                    "\r",
+                                    "// 1. Valida HTTP Status 400 Bad Request\r",
+                                    "pm.test(\"Status code é 400 Bad Request\", function () {\r",
+                                    "    pm.response.to.have.status(400);\r",
+                                    "});\r",
+                                    "\r",
+                                    "// 2. Valida se a lista 'violations' existe e não está vazia\r",
+                                    "pm.test(\"Resposta deve conter a lista 'violations'\", function () {\r",
+                                    "    pm.expect(responseData).to.have.property(\"violations\");\r",
+                                    "    pm.expect(responseData.violations).to.be.an(\"array\").that.is.not.empty;\r",
+                                    "});\r",
+                                    "\r",
+                                    "// Lista de mensagens esperadas nas violações\r",
+                                    "const expectedMessages = [\r",
+                                    "    \"Valor unitário não pode ser negativo\",\r",
+                                    "    \"Código é obrigatório\"\r",
+                                    "];\r",
+                                    "\r",
+                                    "// 3. Validações isoladas para cada mensagem de erro\r",
+                                    "if (Array.isArray(responseData.violations)) {\r",
+                                    "    expectedMessages.forEach((expectedMsg) => {\r",
+                                    "        pm.test(`Retorna violação com a mensagem '${expectedMsg}'`, function () {\r",
+                                    "            const hasError = responseData.violations.some(\r",
+                                    "                (violation) => violation.message === expectedMsg\r",
+                                    "            );\r",
+                                    "\r",
+                                    "            pm.expect(hasError, `A mensagem '${expectedMsg}' não foi encontrada em 'violations'`).to.be.true;\r",
+                                    "        });\r",
+                                    "    });\r",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"codigo\": \"\",\n  \"descricao\": \"Peça sem código\",\n  \"valorUnitario\": -1\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/pecas",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "pecas"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET Listar Peças",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "const responseData = pm.response.json();",
+                                    "const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+                                    "",
+                                    "// 1. Verifica se 'content' é um Array (Lista)",
+                                    "pm.test(\"Propriedade 'content' deve ser um Array (Lista)\", function () {",
+                                    "    pm.expect(responseData).to.have.property(\"content\");",
+                                    "    pm.expect(responseData.content).to.be.an(\"array\");",
+                                    "});",
+                                    "",
+                                    "// 2. Verifica se a lista 'content' contém pelo menos 1 item",
+                                    "pm.test(\"Lista 'content' deve conter pelo menos 1 item\", function () {",
+                                    "    pm.expect(responseData.content).to.be.an(\"array\");",
+                                    "    pm.expect(responseData.content.length).to.be.at.least(1);",
+                                    "});",
+                                    "",
+                                    "// 3. Verifica os metadados de paginação (page, size, totalElements, totalPages)",
+                                    "const paginationFields = [\"page\", \"size\", \"totalElements\", \"totalPages\"];",
+                                    "paginationFields.forEach((field) => {",
+                                    "    pm.test(`Paginação - Deve possuir a propriedade '${field}' (número)`, function () {",
+                                    "        pm.expect(responseData).to.have.property(field);",
+                                    "        pm.expect(responseData[field]).to.be.a(\"number\");",
+                                    "    });",
+                                    "});",
+                                    "",
+                                    "// 4. Validações da estrutura apenas no PRIMEIRO objeto da lista 'content'",
+                                    "if (Array.isArray(responseData.content) && responseData.content.length > 0) {",
+                                    "    const firstItem = responseData.content[0];",
+                                    "",
+                                    "    // Validação do UUID no 'id'",
+                                    "    pm.test(\"Primeiro item - Campo 'id' deve ser um UUID válido\", function () {",
+                                    "        pm.expect(firstItem).to.have.property(\"id\");",
+                                    "        pm.expect(firstItem.id).to.match(uuidRegex);",
+                                    "    });",
+                                    "",
+                                    "    // Validação dos campos de texto (existência e não vazios)",
+                                    "    const stringFields = [\"codigo\", \"descricao\", \"createdAt\"];",
+                                    "    stringFields.forEach((field) => {",
+                                    "        pm.test(`Primeiro item - Campo '${field}' deve existir e não ser nulo/vazio`, function () {",
+                                    "            pm.expect(firstItem).to.have.property(field);",
+                                    "            ",
+                                    "            const value = firstItem[field];",
+                                    "            pm.expect(value, `O campo '${field}' não deve ser nulo`).to.not.be.null;",
+                                    "            pm.expect(value, `O campo '${field}' não deve ser undefined`).to.not.be.undefined;",
+                                    "",
+                                    "            if (typeof value === \"string\") {",
+                                    "                pm.expect(value.trim(), `O campo '${field}' não deve estar vazio`).to.not.be.empty;",
+                                    "            }",
+                                    "        });",
+                                    "    });",
+                                    "",
+                                    "    // Validação dos campos numéricos (existência e tipo)",
+                                    "    const numberFields = [\"valorUnitario\", \"saldoAtual\", \"estoqueMinimo\"];",
+                                    "    numberFields.forEach((field) => {",
+                                    "        pm.test(`Primeiro item - Campo '${field}' deve existir e ser um Número`, function () {",
+                                    "            pm.expect(firstItem).to.have.property(field);",
+                                    "            pm.expect(firstItem[field]).to.be.a(\"number\");",
+                                    "        });",
+                                    "    });",
+                                    "}",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    console.log('Total peças: ' + jsonData.totalElements);",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/pecas?page=0&size=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "pecas"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "size",
+                                    "value": "10"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET Buscar Peça por ID",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('pecaCodigo', jsonData.codigo);",
+                                    "    pm.collectionVariables.set('pecaSaldoAtual', jsonData.saldoAtual);",
+                                    "    console.log('Peça: ' + jsonData.codigo + ' saldo: ' + jsonData.saldoAtual);",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/pecas/{{pecaUuid}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "pecas",
+                                "{{pecaUuid}}"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "DELETE Remover Peça",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 204 No Content\", function () {\r",
+                                    "    pm.response.to.have.status(204);\r",
+                                    "});"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/pecas/{{pecaUuid}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "pecas",
+                                "{{pecaUuid}}"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "PUT ATIVAR Peça",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 204 No Content\", function () {\r",
+                                    "    pm.response.to.have.status(204);\r",
+                                    "});"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/pecas/{{pecaUuid}}/ativar",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "pecas",
+                                "{{pecaUuid}}",
+                                "ativar"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Gerenciamento de peças e insumos do estoque."
+        }
+    ],
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:8080/api/v1"
+        },
+        {
+            "key": "adminEmail",
+            "value": "admin@mekano.com.br"
+        },
+        {
+            "key": "adminPassword",
+            "value": "Mekano@2024"
+        },
+        {
+            "key": "wrongPassword",
+            "value": ""
+        },
+        {
+            "key": "sequencia",
+            "value": ""
+        },
+        {
+            "key": "adminToken",
+            "value": ""
+        },
+        {
+            "key": "adminRefreshToken",
+            "value": ""
+        },
+        {
+            "key": "atendenteToken",
+            "value": ""
+        },
+        {
+            "key": "atendenteEmail",
+            "value": ""
+        },
+        {
+            "key": "atendenteSenha",
+            "value": ""
+        },
+        {
+            "key": "atendenteUuid",
+            "value": ""
+        },
+        {
+            "key": "mecanicoToken",
+            "value": ""
+        },
+        {
+            "key": "mecanicoEmail",
+            "value": ""
+        },
+        {
+            "key": "mecanicoSenha",
+            "value": ""
+        },
+        {
+            "key": "mecanicoUuid",
+            "value": ""
+        },
+        {
+            "key": "financeiroToken",
+            "value": ""
+        },
+        {
+            "key": "financeiroEmail",
+            "value": ""
+        },
+        {
+            "key": "financeiroSenha",
+            "value": ""
+        },
+        {
+            "key": "financeiroUuid",
+            "value": ""
+        },
+        {
+            "key": "clienteToken",
+            "value": ""
+        },
+        {
+            "key": "clienteUserEmail",
+            "value": ""
+        },
+        {
+            "key": "clienteUserSenha",
+            "value": ""
+        },
+        {
+            "key": "clienteUserUuid",
+            "value": ""
+        },
+        {
+            "key": "clienteUuid",
+            "value": ""
+        },
+        {
+            "key": "veiculoUuid",
+            "value": ""
+        },
+        {
+            "key": "servicoUuid",
+            "value": ""
+        },
+        {
+            "key": "pecaUuid",
+            "value": ""
+        },
+        {
+            "key": "pecaCodigo",
+            "value": ""
+        },
+        {
+            "key": "pecaSaldoAtual",
+            "value": ""
+        },
+        {
+            "key": "requisicaoCompraUuid",
+            "value": ""
+        },
+        {
+            "key": "reqCompraOSUuid",
+            "value": ""
+        },
+        {
+            "key": "nfEntradaUuid",
+            "value": ""
+        },
+        {
+            "key": "nfEntradaOSUuid",
+            "value": ""
+        },
+        {
+            "key": "osUuid",
+            "value": ""
+        },
+        {
+            "key": "orcamentoUuid",
+            "value": ""
+        },
+        {
+            "key": "userUuid",
+            "value": ""
+        },
+        {
+            "key": "idUsuarioDelete",
+            "value": ""
+        },
+        {
+            "key": "primeiroUsuarioAdmin",
+            "value": ""
+        },
+        {
+            "key": "veiculoPlaca",
+            "value": ""
+        }
+    ]
+}

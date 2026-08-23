@@ -10,6 +10,7 @@ import com.fiap.mekano.infrastructure.entity.PecaEntity;
 import io.quarkus.cache.CacheInvalidate;
 import io.quarkus.cache.CacheResult;
 import io.quarkus.panache.common.Page;
+import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
@@ -40,6 +41,8 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
         PecaEntity entity = panacheRepository.find("uuid = ?1", peca.getId()).firstResult();
         if (entity == null) {
             entity = new PecaEntity();
+            entity.setDeletedAt(null);
+            entity.setIsActive(true);
         }
 
         entity.uuid = peca.getId();
@@ -52,8 +55,6 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
         if (entity.getCreatedAt() == null) {
             entity.setCreatedAt(peca.getCreatedAt());
         }
-        entity.setDeletedAt(null);
-        entity.setIsActive(true);
 
         if (entity.getId() == null) {
             panacheRepository.persist(entity);
@@ -71,9 +72,11 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
     }
 
     @Override
-    public List<Peca> findAll(int page, int size) {
-        return panacheRepository.findAll(Sort.by("id"))
-                .page(Page.of(page, size))
+    public List<Peca> findAll(int page, int size, Boolean isActive) {
+        PanacheQuery<PecaEntity> query = isActive == null
+                ? panacheRepository.findAll(Sort.by("id"))
+                : panacheRepository.find("isActive = ?1", Sort.by("id"), isActive);
+        return query.page(Page.of(page, size))
                 .list()
                 .stream()
                 .map(PecaRepositoryImpl::toDomain)
@@ -81,8 +84,10 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
     }
 
     @Override
-    public long countAll() {
-        return panacheRepository.count();
+    public long countAll(Boolean isActive) {
+        return isActive == null
+                ? panacheRepository.count()
+                : panacheRepository.count("isActive = ?1", isActive);
     }
 
     @Override
