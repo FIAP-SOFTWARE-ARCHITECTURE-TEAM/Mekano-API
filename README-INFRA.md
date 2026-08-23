@@ -40,7 +40,7 @@ k3d cluster create mekano --servers 1 --agents 2
 kubectl cluster-info
 ```
 
-O `configmap.yaml` usa `host.k3d.internal:5432`. Para Kind/Docker Desktop altere para `host.docker.internal:5432`.
+O `configmap.yaml` está configurado por padrão com `host.docker.internal:5432`, adequado para Docker Desktop/Kind no Windows. Para testar especificamente com k3d, altere temporariamente o `DB_URL` para `jdbc:postgresql://host.k3d.internal:5432/mekano`. Em EKS, o pipeline de CD substitui esse valor pelo endpoint real do RDS gerado pelo Terraform.
 
 Crie o Secret real local usando os PEMs já usados pelo projeto:
 

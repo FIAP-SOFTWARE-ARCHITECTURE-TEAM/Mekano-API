@@ -26,10 +26,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -47,7 +47,7 @@ jobs:
       image: ${{ steps.image.outputs.image }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Compute GHCR image name
         id: image
@@ -58,17 +58,17 @@ jobs:
           echo "repository=${REPOSITORY}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Login to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: mekano-rest/src/main/docker/Dockerfile.jvm
@@ -85,15 +85,28 @@ jobs:
   bootstrap-backend:
     name: Bootstrap Terraform backend (S3 + DynamoDB)
     runs-on: ubuntu-latest
+    outputs:
+      state_bucket: ${{ steps.outputs.outputs.state_bucket }}
+      lock_table: ${{ steps.outputs.outputs.lock_table }}
+    env:
+      TF_VAR_state_bucket_name: ${{ vars.TF_STATE_BUCKET }}
     defaults:
       run:
         working-directory: terraform/bootstrap
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+
+      - name: Configure AWS credentials
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: 1.15.9
           terraform_wrapper: false
@@ -141,17 +154,17 @@ jobs:
         working-directory: terraform
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: 1.15.9
           terraform_wrapper: false
@@ -176,48 +189,72 @@ jobs:
         run: terraform validate
 
       - name: Terraform plan
-        run: terraform plan -out=tfplan
-
-      - name: Upload terraform plan artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: terraform-plan
-          path: tfplan
+        # Validation-only plan for CI/PR. Do not persist tfplan as an artifact,
+        # because saved Terraform plans may contain sensitive values.
+        run: terraform plan -input=false -no-color
 
   infra-apply:
     name: Terraform apply (protected)
-    # This job will require environment protection in GitHub (environments > production)
+    # Configure the "production" environment in GitHub with required reviewers
+    # if you want manual approval before changing AWS infrastructure.
     needs: infrastructure
     runs-on: ubuntu-latest
     environment: production
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    outputs:
+      cluster_name: ${{ steps.tfout.outputs.cluster_name }}
+      db_endpoint: ${{ steps.tfout.outputs.db_endpoint }}
+    env:
+      TF_IN_AUTOMATION: 'true'
+      TF_VAR_region: ${{ vars.AWS_REGION || 'us-east-1' }}
+      TF_VAR_cluster_name: ${{ vars.EKS_CLUSTER_NAME || 'mekano-eks' }}
+      TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+      TF_VAR_db_username: ${{ vars.DB_USER || 'mekano' }}
+      TF_VAR_github_actions_principal_arn: ${{ vars.GITHUB_ACTIONS_PRINCIPAL_ARN }}
     defaults:
       run:
         working-directory: terraform
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Download terraform plan artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: terraform-plan
-
       - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: 1.15.9
           terraform_wrapper: false
 
-      - name: Terraform apply (use plan)
+      - name: Terraform init
+        run: |
+          test -n "$TF_STATE_BUCKET" || (echo "Repository variable TF_STATE_BUCKET is required" && exit 1)
+          terraform init \
+            -backend-config="bucket=$TF_STATE_BUCKET" \
+            -backend-config="region=$AWS_REGION"
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Terraform plan for apply
+        # Create the saved plan only inside this protected runner.
+        # It is not uploaded as an artifact.
+        run: terraform plan -input=false -out=tfplan
+
+      - name: Terraform apply
         run: terraform apply -auto-approve tfplan
+
+      - name: Export Terraform outputs
+        id: tfout
+        shell: bash
+        run: |
+          echo "cluster_name=$(terraform output -raw cluster_name)" >> "$GITHUB_OUTPUT"
+          echo "db_endpoint=$(terraform output -raw db_endpoint)" >> "$GITHUB_OUTPUT"
 
   deploy:
     name: Deploy to EKS
@@ -226,27 +263,50 @@ jobs:
     runs-on: ubuntu-latest
     env:
       IMAGE: ${{ needs.docker.outputs.image }}
-      CLUSTER_NAME: ${{ needs.infrastructure.outputs.cluster_name || '' }}
-      DB_ENDPOINT: ${{ needs.infrastructure.outputs.db_endpoint || '' }}
+      CLUSTER_NAME: ${{ needs.infra-apply.outputs.cluster_name }}
+      DB_ENDPOINT: ${{ needs.infra-apply.outputs.db_endpoint }}
       DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
       JWT_PRIVATE_KEY: ${{ secrets.JWT_PRIVATE_KEY }}
       JWT_PUBLIC_KEY: ${{ secrets.JWT_PUBLIC_KEY }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Set up kubectl
-        uses: azure/setup-kubectl@v4
+        uses: azure/setup-kubectl@v5
 
       - name: Configure kubeconfig
         run: aws eks update-kubeconfig --region "$AWS_REGION" --name "$CLUSTER_NAME"
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v5
+        with:
+          version: 'v3.21.0'
+
+      - name: Install or upgrade NGINX Ingress Controller
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+          helm repo update
+
+          helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+            --namespace ingress-nginx \
+            --create-namespace \
+            --set controller.service.type=LoadBalancer \
+            --wait \
+            --timeout 5m
+
+          kubectl get ingressclass nginx
+          kubectl get deployment,svc -n ingress-nginx
 
       - name: Apply namespace
         run: kubectl apply -f k8s/namespace.yaml
@@ -303,4 +363,5 @@ jobs:
 
       - name: Verify deployment
         run: |
-          kubectl get deployment,pods,svc,hpa -n mekano-system
+          kubectl get deployment,pods,svc,hpa,ingress -n mekano-system
+          kubectl get service ingress-nginx-controller -n ingress-nginx
