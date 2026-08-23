@@ -7,4 +7,5 @@ data:
   QUARKUS_PROFILE: "prod"
   # Local k3d. For Kind/Docker Desktop use host.docker.internal.
   # In EKS the CD pipeline replaces this value with the RDS endpoint from Terraform.
-  DB_URL: "jdbc:postgresql://host.k3d.internal:5432/mekano"
+  #DB_URL: "jdbc:postgresql://host.k3d.internal:5432/mekano"
+  DB_URL: "jdbc:postgresql://host.docker.internal:5432/mekano"

@@ -79,14 +79,56 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  infrastructure:
-    name: Terraform EKS and RDS
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: build-test
+  # Bootstrap backend: creates S3 bucket + DynamoDB lock (only applies on main).
+  # On PRs this job will be a fast no-op but will still export outputs (empty strings),
+  # avoiding blocking the rest of the CI which needs to reference ${{ needs.bootstrap-backend.outputs.* }}
+  bootstrap-backend:
+    name: Bootstrap Terraform backend (S3 + DynamoDB)
     runs-on: ubuntu-latest
-    outputs:
-      cluster_name: ${{ steps.tfout.outputs.cluster_name }}
-      db_endpoint: ${{ steps.tfout.outputs.db_endpoint }}
+    defaults:
+      run:
+        working-directory: terraform/bootstrap
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.9
+          terraform_wrapper: false
+
+      - name: Decide whether to run bootstrap (only apply on main)
+        id: decide
+        run: |
+          if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
+            echo "Not on main; skipping bootstrap apply."
+            echo "state_bucket=" >> "$GITHUB_OUTPUT"
+            echo "lock_table=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "On main; proceeding with bootstrap."
+
+      - name: Terraform init
+        if: steps.decide.outcome == 'success' && startsWith(github.ref, 'refs/heads/main')
+        run: terraform init
+
+      - name: Terraform apply (bootstrap)
+        if: steps.decide.outcome == 'success' && startsWith(github.ref, 'refs/heads/main')
+        run: terraform apply -auto-approve
+
+      - name: Export bootstrap outputs
+        if: steps.decide.outcome == 'success' && startsWith(github.ref, 'refs/heads/main')
+        id: outputs
+        run: |
+          echo "state_bucket=$(terraform output -raw state_bucket)" >> $GITHUB_OUTPUT
+          echo "lock_table=$(terraform output -raw lock_table)" >> $GITHUB_OUTPUT
+
+  infrastructure:
+    name: Terraform EKS and RDS (plan)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
+    needs: [build-test, bootstrap-backend]
+    runs-on: ubuntu-latest
     env:
       TF_IN_AUTOMATION: 'true'
       TF_VAR_region: ${{ vars.AWS_REGION || 'us-east-1' }}
@@ -117,12 +159,18 @@ jobs:
       - name: Terraform fmt
         run: terraform fmt -check -recursive
 
-      - name: Terraform init
+      - name: Terraform init (choose backend bucket from bootstrap or repo variable)
         run: |
-          test -n "$TF_STATE_BUCKET" || (echo "Repository variable TF_STATE_BUCKET is required" && exit 1)
-          terraform init \
-            -backend-config="bucket=$TF_STATE_BUCKET" \
-            -backend-config="region=$AWS_REGION"
+          # Prefer bootstrap output (set by bootstrap-backend when running on main). Fallback to repo variable TF_STATE_BUCKET.
+          BOOTSTRAP_BUCKET="${{ needs.bootstrap-backend.outputs.state_bucket }}"
+          if [ -n "$BOOTSTRAP_BUCKET" ]; then
+            echo "Using bootstrap bucket: $BOOTSTRAP_BUCKET"
+            terraform init -backend-config="bucket=$BOOTSTRAP_BUCKET" -backend-config="region=$AWS_REGION"
+          else
+            test -n "$TF_STATE_BUCKET" || (echo "Repository variable TF_STATE_BUCKET is required or run bootstrap on main" && exit 1)
+            echo "Using repository TF_STATE_BUCKET: $TF_STATE_BUCKET"
+            terraform init -backend-config="bucket=$TF_STATE_BUCKET" -backend-config="region=$AWS_REGION"
+          fi
 
       - name: Terraform validate
         run: terraform validate
@@ -130,24 +178,56 @@ jobs:
       - name: Terraform plan
         run: terraform plan -out=tfplan
 
-      - name: Terraform apply
-        run: terraform apply -auto-approve tfplan
+      - name: Upload terraform plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan
+          path: tfplan
 
-      - name: Export Terraform outputs
-        id: tfout
-        run: |
-          echo "cluster_name=$(terraform output -raw cluster_name)" >> "$GITHUB_OUTPUT"
-          echo "db_endpoint=$(terraform output -raw db_endpoint)" >> "$GITHUB_OUTPUT"
+  infra-apply:
+    name: Terraform apply (protected)
+    # This job will require environment protection in GitHub (environments > production)
+    needs: infrastructure
+    runs-on: ubuntu-latest
+    environment: production
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download terraform plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-plan
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.9
+          terraform_wrapper: false
+
+      - name: Terraform apply (use plan)
+        run: terraform apply -auto-approve tfplan
 
   deploy:
     name: Deploy to EKS
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [docker, infrastructure]
+    needs: [docker, infra-apply]
     runs-on: ubuntu-latest
     env:
       IMAGE: ${{ needs.docker.outputs.image }}
-      CLUSTER_NAME: ${{ needs.infrastructure.outputs.cluster_name }}
-      DB_ENDPOINT: ${{ needs.infrastructure.outputs.db_endpoint }}
+      CLUSTER_NAME: ${{ needs.infrastructure.outputs.cluster_name || '' }}
+      DB_ENDPOINT: ${{ needs.infrastructure.outputs.db_endpoint || '' }}
       DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
       JWT_PRIVATE_KEY: ${{ secrets.JWT_PRIVATE_KEY }}
       JWT_PUBLIC_KEY: ${{ secrets.JWT_PUBLIC_KEY }}

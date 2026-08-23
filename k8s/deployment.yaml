@@ -30,8 +30,10 @@ spec:
         fsGroup: 185
       containers:
         - name: mekano
-          image: ghcr.io/fiap-software-architecture-team/mekano-api:latest
-          imagePullPolicy: IfNotPresent
+          # Use a templated/immutable tag rather than :latest in the repo.
+          # The pipeline should substitute IMAGE_TAG with the actual sha/tag.
+          image: ghcr.io/fiap-software-architecture-team/mekano-api:{{IMAGE_TAG}}
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8080

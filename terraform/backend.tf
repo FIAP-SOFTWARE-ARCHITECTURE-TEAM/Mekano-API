@@ -4,9 +4,7 @@ terraform {
     encrypt        = true
 
     # Requisito acadêmico: locking com DynamoDB.
-    # Em Terraform moderno o lockfile S3 é preferível; mantemos os dois
-    # durante a migração/compatibilidade.
+    # A tabela DynamoDB é usada para locking; parametrizar o nome via variável quando necessário.
     dynamodb_table = "mekano-terraform-locks"
-    use_lockfile   = true
   }
 }
