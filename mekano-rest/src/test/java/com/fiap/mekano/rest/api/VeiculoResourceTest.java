@@ -387,7 +387,7 @@ public class VeiculoResourceTest {
                                 .body("""
                                                 {
                                                   "clienteUuid":"11111111-1111-1111-1111-111111111111",
-                                                  "placa":"FILT1234",
+                                                  "placa":"FIL1234",
                                                   "marca":"VW",
                                                   "modelo":"Gol",
                                                   "ano":2019
@@ -414,21 +414,21 @@ public class VeiculoResourceTest {
                                 .get("/api/v1/veiculos?isActive=false&size=100")
                                 .then()
                                 .statusCode(200)
-                                .body("content.placa", hasItem("FILT1234"));
+                                .body("content.placa", hasItem("FIL1234"));
 
                 given()
                                 .when()
                                 .get("/api/v1/veiculos?isActive=true&size=100")
                                 .then()
                                 .statusCode(200)
-                                .body("content.placa", not(hasItem("FILT1234")));
+                                .body("content.placa", not(hasItem("FIL1234")));
 
                 given()
                                 .when()
                                 .get("/api/v1/veiculos?size=100")
                                 .then()
                                 .statusCode(200)
-                                .body("content.placa", hasItem("FILT1234"));
+                                .body("content.placa", hasItem("FIL1234"));
         }
 
         /** CENÁRIO 7 - Autorização */
