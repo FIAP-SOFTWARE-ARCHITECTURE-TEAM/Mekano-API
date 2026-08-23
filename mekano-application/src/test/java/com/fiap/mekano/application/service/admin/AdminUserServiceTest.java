@@ -14,6 +14,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -187,5 +188,21 @@ class AdminUserServiceTest {
         assertThrows(AppException.class, () -> service.criarUsuario(command));
 
         verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void listar_deveRepassarFiltroIsActive() {
+        User user = User.create("Ana", "ana@mekano.com", false, "$2a$hash");
+        when(userRepository.findAll(0, 20, "createdAt desc", false))
+                .thenReturn(List.of(user));
+        when(userRoleRepository.findRoleByUserUuid(user.getId()))
+                .thenReturn(Optional.of(Role.admin));
+
+        var resultado = service.listar(0, 20, false);
+
+        assertNotNull(resultado);
+        assertEquals(1, resultado.size());
+        assertFalse(resultado.get(0).active());
+        verify(userRepository).findAll(0, 20, "createdAt desc", false);
     }
 }

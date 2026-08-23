@@ -20,6 +20,7 @@ import com.fiap.mekano.infrastructure.mapper.VeiculoEntityMapper;
 
 import io.quarkus.cache.CacheInvalidate;
 import io.quarkus.cache.CacheResult;
+import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -64,9 +65,8 @@ public class VeiculoRepositoryImpl
     public Veiculo update(Veiculo veiculo) {
 
         VeiculoEntity entity = panacheRepository.find(
-                "uuid = ?1 and isActive = ?2",
-                veiculo.getId(),
-                true)
+                "uuid = ?1",
+                veiculo.getId())
                 .firstResultOptional()
                 .orElseThrow(() -> new AppException(
                         404,
@@ -123,7 +123,7 @@ public class VeiculoRepositoryImpl
      * @return lista de veículos da página
      */
     @Override
-    public List<Veiculo> findAll(int page, int size, String sort) {
+    public List<Veiculo> findAll(int page, int size, String sort, Boolean isActive) {
         String[] sortParts = sort.split(",");
         String sortField = sortParts[0];
         if (!ALLOWED_SORT_FIELDS.contains(sortField)) {
@@ -132,15 +132,19 @@ public class VeiculoRepositoryImpl
         boolean ascending = sortParts.length < 2 || "asc".equalsIgnoreCase(sortParts[1]);
         var direction = ascending ? io.quarkus.panache.common.Sort.Direction.Ascending
                 : io.quarkus.panache.common.Sort.Direction.Descending;
-        var query = panacheRepository.findAll(
-                io.quarkus.panache.common.Sort.by(sortField).direction(direction));
+        var sortBy = io.quarkus.panache.common.Sort.by(sortField).direction(direction);
+        PanacheQuery<VeiculoEntity> query = isActive == null
+                ? panacheRepository.findAll(sortBy)
+                : panacheRepository.find("isActive = ?1", sortBy, isActive);
         return query.page(io.quarkus.panache.common.Page.of(page, size)).list()
                 .stream().map(mapper::toDomain).toList();
     }
 
     @Override
-    public long countAll() {
-        return panacheRepository.count();
+    public long countAll(Boolean isActive) {
+        return isActive == null
+                ? panacheRepository.count()
+                : panacheRepository.count("isActive = ?1", isActive);
     }
 
     @Override

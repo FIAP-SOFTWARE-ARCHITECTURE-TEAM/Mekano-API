@@ -1,6 +1,7 @@
 package com.fiap.mekano.application.service.peca;
 
 import com.fiap.mekano.domain.model.Peca;
+import com.fiap.mekano.domain.port.in.UpdatePecaCommand;
 import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
 import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
@@ -111,5 +112,41 @@ class PecaServiceTest {
         pecaService.reativar(pecaId);
 
         verify(pecaRepository, times(1)).reativar(pecaId);
+    }
+
+    @Test
+    @DisplayName("updatePeca em peça inativa deve preservar isActive=false")
+    void updatePecaEmPecaInativaPreservaIsActive() {
+        Peca inativa = Peca.reconstitute(
+                pecaId, "PEA-001", "Óleo do Motor 5W30",
+                new BigDecimal("45.90"),
+                50L, 10L, LocalDateTime.now().minusDays(30), 0L, false);
+
+        when(pecaRepository.buscarPorId(pecaId)).thenReturn(java.util.Optional.of(inativa));
+        when(pecaRepository.salvar(any(Peca.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Peca resultado = pecaService.updatePeca(pecaId, new UpdatePecaCommand(
+                pecaId, "PEA-001", "Óleo do Motor 5W40", new BigDecimal("55.90"), 10L));
+
+        assertNotNull(resultado);
+        assertEquals(false, resultado.getIsActive());
+        assertEquals("Óleo do Motor 5W40", resultado.getDescricao());
+
+        verify(pecaRepository, times(1)).salvar(any(Peca.class));
+    }
+
+    @Test
+    @DisplayName("findAll/countAll devem repassar filtro isActive")
+    void findAllRepassaFiltroIsActive() {
+        when(pecaRepository.findAll(0, 10, false)).thenReturn(java.util.List.of());
+        when(pecaRepository.countAll(false)).thenReturn(4L);
+
+        var resultado = pecaService.findAll(0, 10, false);
+        long total = pecaService.countAll(false);
+
+        assertNotNull(resultado);
+        assertEquals(4L, total);
+        verify(pecaRepository, times(1)).findAll(0, 10, false);
+        verify(pecaRepository, times(1)).countAll(false);
     }
 }

@@ -1,6 +1,7 @@
 package com.fiap.mekano.infrastructure.repository;
 
 import com.fiap.mekano.domain.model.Peca;
+import com.fiap.mekano.infrastructure.entity.PecaEntity;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
@@ -28,6 +29,9 @@ class PecaRepositoryImplTest {
     @Inject
     PecaRepositoryImpl repository;
 
+    @Inject
+    PecaPanacheRepository panacheRepository;
+
     private UUID pecaId;
 
     @BeforeEach
@@ -46,6 +50,33 @@ class PecaRepositoryImplTest {
         assertThat(found).isPresent();
         assertThat(found.get().getSaldoReservado()).isZero();
         assertThat(found.get().getSaldoAtual()).isZero();
+    }
+
+    @Test
+    @TestTransaction
+    @DisplayName("salvar em peça inativa deve atualizar campos preservando isActive=false")
+    void salvarDevePreservarIsActiveEmPecaInativa() {
+        repository.remover(pecaId);
+
+        Optional<Peca> inativa = repository.buscarPorId(pecaId);
+        assertThat(inativa).isPresent();
+        assertThat(inativa.get().getIsActive()).isFalse();
+
+        Peca atualizada = Peca.reconstitute(
+                pecaId, "PEA-INTEG-001", "Óleo Motor 5W40", new BigDecimal("55.90"),
+                0L, 5L, inativa.get().getCreatedAt(), 0L);
+
+        Peca resultado = repository.salvar(atualizada);
+
+        assertThat(resultado.getDescricao()).isEqualTo("Óleo Motor 5W40");
+        assertThat(resultado.getValorUnitario()).isEqualTo(new BigDecimal("55.90"));
+        assertThat(resultado.getIsActive()).isFalse();
+
+        PecaEntity persistido = panacheRepository.find("uuid", pecaId).firstResult();
+        assertThat(persistido).isNotNull();
+        assertThat(persistido.descricao).isEqualTo("Óleo Motor 5W40");
+        assertThat(persistido.getIsActive()).isFalse();
+        assertThat(persistido.getDeletedAt()).isNotNull();
     }
 
     @Test
@@ -157,5 +188,29 @@ class PecaRepositoryImplTest {
         List<Peca> abaixo = repository.listarAbaixoEstoqueMinimo();
 
         assertThat(abaixo).extracting(Peca::getId).doesNotContain(pecaId);
+    }
+
+    @Test
+    @TestTransaction
+    @DisplayName("findAll deve filtrar por isActive")
+    void findAllDeveFiltrarPorIsActive() {
+        Peca ativa = Peca.create("PEA-INTEG-002", "Filtro de Óleo", new BigDecimal("25.00"), 3L);
+        Peca salvaInativa = repository.salvar(ativa);
+        repository.remover(salvaInativa.getId());
+
+        assertThat(repository.findAll(0, 100, null))
+                .extracting(Peca::getId)
+                .contains(pecaId, salvaInativa.getId());
+        assertThat(repository.findAll(0, 100, true))
+                .extracting(Peca::getId)
+                .contains(pecaId)
+                .doesNotContain(salvaInativa.getId());
+        assertThat(repository.findAll(0, 100, false))
+                .extracting(Peca::getId)
+                .contains(salvaInativa.getId())
+                .doesNotContain(pecaId);
+        assertThat(repository.countAll(null)).isGreaterThanOrEqualTo(2L);
+        assertThat(repository.countAll(true)).isGreaterThanOrEqualTo(1L);
+        assertThat(repository.countAll(false)).isGreaterThanOrEqualTo(1L);
     }
 }

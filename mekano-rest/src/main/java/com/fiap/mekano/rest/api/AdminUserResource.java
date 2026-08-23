@@ -48,9 +48,10 @@ public class AdminUserResource {
     @GET
     public Response listar(
             @QueryParam("page") @DefaultValue("0") int page,
-            @QueryParam("size") @DefaultValue("20") int size
+            @QueryParam("size") @DefaultValue("20") int size,
+            @QueryParam("isActive") Boolean isActive
     ) {
-        var users = adminUserService.listar(page, size)
+        var users = adminUserService.listar(page, size, isActive)
                 .stream()
                 .map(AdminUserSummaryResponse::from)
                 .toList();

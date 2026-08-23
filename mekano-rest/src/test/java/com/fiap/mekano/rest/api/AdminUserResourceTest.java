@@ -97,7 +97,7 @@ class AdminUserResourceTest {
     void get_comAdmin_deveRetornarListaPaginada() {
         UUID userUuid = UUID.randomUUID();
 
-        when(adminUserService.listar(0, 20))
+        when(adminUserService.listar(0, 20, null))
                 .thenReturn(List.of(new AdminUserSummary(
                         userUuid,
                         "Admin Novo",
@@ -116,6 +116,30 @@ class AdminUserResourceTest {
                 .body("[0].email", equalTo("admin.novo@mekano.com"))
                 .body("[0].role", equalTo("admin"))
                 .body("[0].active", equalTo(true));
+    }
+
+    @Test
+    void get_filtroIsActiveFalse_deveRepassarFiltro() {
+        UUID userUuid = UUID.randomUUID();
+
+        when(adminUserService.listar(0, 20, false))
+                .thenReturn(List.of(new AdminUserSummary(
+                        userUuid,
+                        "Admin Inativo",
+                        "admin.inativo@mekano.com",
+                        Role.admin,
+                        false
+                )));
+
+        given()
+        .when()
+                .get("/api/v1/admin/usuarios?isActive=false")
+        .then()
+                .statusCode(200)
+                .body("[0].id", equalTo(userUuid.toString()))
+                .body("[0].active", equalTo(false));
+
+        verify(adminUserService).listar(0, 20, false);
     }
 
     @Test
