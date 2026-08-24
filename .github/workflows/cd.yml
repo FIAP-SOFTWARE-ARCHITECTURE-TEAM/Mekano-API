@@ -347,16 +347,76 @@ jobs:
         shell: bash
         run: |
           set +e
-          kubectl rollout status deployment/mekano -n mekano-system --timeout=240s
+
+          kubectl rollout status deployment/mekano \
+            -n mekano-system \
+            --timeout=240s
+
           STATUS=$?
-          set -e
 
           if [ "$STATUS" -ne 0 ]; then
+            echo "======================================"
+            echo "DEPLOYMENT"
+            echo "======================================"
+            kubectl describe deployment mekano -n mekano-system || true
+
+            echo "======================================"
+            echo "PODS"
+            echo "======================================"
+            kubectl get pods -n mekano-system -o wide || true
+
+            echo "======================================"
+            echo "POD DESCRIBE"
+            echo "======================================"
+            for POD in $(kubectl get pods \
+              -n mekano-system \
+              -l app=mekano \
+              -o name); do
+              echo "### $POD"
+              kubectl describe "$POD" -n mekano-system || true
+            done
+
+            echo "======================================"
+            echo "CONTAINER LOGS"
+            echo "======================================"
+            for POD in $(kubectl get pods \
+              -n mekano-system \
+              -l app=mekano \
+              -o name); do
+              echo "### $POD"
+              kubectl logs "$POD" \
+                -n mekano-system \
+                --all-containers=true \
+                --tail=200 || true
+
+              echo "### Previous container"
+              kubectl logs "$POD" \
+                -n mekano-system \
+                --all-containers=true \
+                --previous \
+                --tail=200 || true
+            done
+
+            echo "======================================"
+            echo "EVENTS"
+            echo "======================================"
+            kubectl get events \
+              -n mekano-system \
+              --sort-by='.lastTimestamp' || true
+
             echo "Deployment failed. Rolling back..."
-            kubectl rollout undo deployment/mekano -n mekano-system || true
-            kubectl rollout status deployment/mekano -n mekano-system --timeout=180s || true
+
+            kubectl rollout undo deployment/mekano \
+              -n mekano-system || true
+
+            kubectl rollout status deployment/mekano \
+              -n mekano-system \
+              --timeout=180s || true
+
             exit "$STATUS"
           fi
+
+          set -e
 
       - name: Verify deployment
         run: |
