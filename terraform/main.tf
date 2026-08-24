@@ -43,10 +43,10 @@ module "vpc" {
     cidrsubnet(var.vpc_cidr, 4, 13)
   ]
 
-  enable_nat_gateway     = true
-  single_nat_gateway     = true
-  enable_dns_support     = true
-  enable_dns_hostnames   = true
+  enable_nat_gateway           = true
+  single_nat_gateway           = true
+  enable_dns_support           = true
+  enable_dns_hostnames         = true
   create_database_subnet_group = false
 
   public_subnet_tags = {
@@ -75,7 +75,7 @@ module "eks" {
   subnet_ids = module.vpc.private_subnets
 
   cluster_addons = {
-    coredns = {}
+    coredns    = {}
     kube-proxy = {}
     vpc-cni = {
       before_compute = true
@@ -172,9 +172,9 @@ module "db" {
   subnet_ids             = module.vpc.database_subnets
   vpc_security_group_ids = [aws_security_group.rds.id]
 
-  backup_retention_period = 7
+  backup_retention_period    = 7
   auto_minor_version_upgrade = true
-  apply_immediately           = false
+  apply_immediately          = false
 
   enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
 
