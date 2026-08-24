@@ -14,16 +14,16 @@ API REST para gestao de oficina mecanica — gestao completa do ciclo de vida da
 
 ## Sobre o Projeto
 
-O MEKANO-API e um Sistema Integrado de Atendimento e Execucao de Servicos para oficinas mecanicas. A solucao gerencia o ciclo completo das Ordens de Servico — do recebimento do veiculo a entrega — com rastreabilidade, controle de estoque e cobranca integrados.
+O MEKANO-API e um Sistema Integrado de Atendimento e Execução de Servicos para oficinas mecanicas. A solução gerencia o ciclo completo das Ordens de Servico — do recebimento do veiculo a entrega — com rastreabilidade, controle de estoque e cobranca integrados.
 
-A aplicacao foi construida seguindo os principios de **Domain-Driven Design (DDD)** e **Clean Architecture**, separando responsabilidades em camadas isoladas e independentes de framework.
+A aplicação foi construida seguindo os principios de **Domain-Driven Design (DDD)** e **Clean Architecture**, separando responsabilidades em camadas isoladas e independentes de framework.
 
 ## Objetivos da Fase 2
 
-A versao 2.0 do projeto evolui a solucao MVP da Fase 1 incorporando:
+A versão 2.0 do projeto evolui a solução MVP da Fase 1 incorporando:
 
-- **Infraestrutura escalavel**: containerizacao com Docker, orchestracao com Kubernetes e provisionamento via Terraform
-- **Automacao de deploy**: pipeline CI/CD integrada com build, testes e publicacao de imagem
+- **Infraestrutura escalavel**: containerização com Docker, orchestração com Kubernetes e provisionamento via Terraform
+- **Automação de deploy**: pipeline CI/CD integrada com build, testes e publicação de imagem
 - **Qualidade assegurada**: cobertura de testes automatizados com gate de qualidade via JaCoCo
 - **Resiliencia**: health checks, politicas de restart e escalabilidade dinamica via HPA
 - **Observabilidade**: endpoints de saude, metricas Prometheus e logging estruturado
@@ -31,13 +31,13 @@ A versao 2.0 do projeto evolui a solucao MVP da Fase 1 incorporando:
 ## Principais Funcionalidades
 
 - Gestao de clientes, veiculos, servicos e pecas
-- Ciclo de vida completo da Ordem de Servico: Recebida, Em Diagnostico, Aguardando Aprovacao, Em Execucao, Finalizada, Entregue
-- Geracao automatica de orcamento com aprovacao via API
+- Ciclo de vida completo da Ordem de Servico: Recebida, Em Diagnostico, Aguardando Aprovação, Em Execução, Finalizada, Entregue
+- Geração automatica de orcamento com aprovação via API
 - Controle de estoque com reservas, requisicoes de compra e notas fiscais
-- Cobranca automatica e confirmacao de pagamento
+- Cobranca automatica e confirmação de pagamento
 - Consulta publica de status da OS pelo cliente
-- Autenticacao JWT com roles diferenciadas (admin, atendente, mecanico, financeiro, cliente)
-- Integracao com WhatsApp via Evolution API para notificacoes
+- Autenticação JWT com roles diferenciadas (admin, atendente, mecanico, financeiro, cliente)
+- Integração com WhatsApp via Evolution API para notificacoes
 
 ## Stack Tecnologica
 
@@ -49,8 +49,8 @@ A versao 2.0 do projeto evolui a solucao MVP da Fase 1 incorporando:
 | Mapeamento | MapStruct 1.6.3, Lombok 1.18.46 |
 | Testes | JUnit 5, Mockito, REST Assured, AssertJ |
 | Cobertura | JaCoCo 0.8.15 (gate: 80% LINE) |
-| Documentacao API | OpenAPI / Swagger UI |
-| Autenticacao | JWT (Ed25519/EdDSA) via SmallRye |
+| Documentação API | OpenAPI / Swagger UI |
+| Autenticação | JWT (Ed25519/EdDSA) via SmallRye |
 | Containers | Docker (multi-stage build) |
 | CI/CD | GitHub Actions |
 | Cache | Caffeine |
@@ -59,9 +59,9 @@ A versao 2.0 do projeto evolui a solucao MVP da Fase 1 incorporando:
 
 ## Arquitetura
 
-### Visao Geral
+### Visão Geral
 
-O projeto segue **Clean Architecture** com separacao estrita de camadas. O dominio nao possui dependencias de framework; a aplicacao orquestra os casos de uso; a infraestrutura implementa as interfaces de persistencia e integracao; e a camada REST expoe os endpoints.
+O projeto segue **Clean Architecture** com separação estrita de camadas. O dominio nao possui dependencias de framework; a aplicação orquestra os casos de uso; a infraestrutura implementa as interfaces de persistencia e integração; e a camada REST expoe os endpoints.
 
 ```mermaid
 graph TB
@@ -78,15 +78,14 @@ graph TB
         DOM[Models / Value Objects / Ports / Events]
     end
 
-    REST --> APP
-    APP --> DOM
-    INFRA --> DOM
-    REST --> INFRA
+    REST -->|chama services| APP
+    APP -->|usa ports/models| DOM
+    INFRA -->|implementa ports| DOM
 ```
 
 ### Diagrama de Arquitetura
 
-> **A inserir:** diagrama completo da arquitetura contendo: aplicacao, modulos, banco de dados, containers, Kubernetes, HPA e infraestrutura provisionada.
+> **A inserir:** diagrama completo da arquitetura contendo: aplicação, modulos, banco de dados, containers, Kubernetes, HPA e infraestrutura provisionada.
 
 ### Modulos Maven
 
@@ -97,7 +96,7 @@ Responsabilidade: nucleo do dominio, livre de dependencias de framework.
 Principais componentes:
 
 - Entities e enums (OrdemDeServico, Cliente, Veiculo, Peca, Servico, Orcamento, etc.)
-- Value Objects com validacao no construtor (Email, CPF, Telefone, Placa, Endereco)
+- Value Objects com validação no construtor (Email, CPF, Telefone, Placa, Endereco)
 - Ports de entrada e saida (interfaces para servicos e repositorios)
 - Events de dominio (OrdemDeServicoCriadaEvent, CobrancaEmitidaEvent, etc.)
 
@@ -105,20 +104,20 @@ Dependencias: apenas Lombok (provided).
 
 #### / **mekano-application**
 
-Responsabilidade: orquestracao dos casos de uso e logica de negocios.
+Responsabilidade: orquestração dos casos de uso e logica de negocios.
 
 Principais componentes:
 
 - Servicos de dominio (OrdemDeServicoService, ClienteService, VeiculoService, etc.)
-- Servicos de autenticacao (AuthService, RefreshTokenService)
+- Servicos de autenticação (AuthService, RefreshTokenService)
 - Listeners de eventos (CobrancaEmitidaListener)
-- Integracao WhatsApp (WhatsAppOrcamentoRespostaService)
+- Integração WhatsApp (WhatsAppOrcamentoRespostaService)
 
 Dependencias: mekano-domain, quarkus-arc.
 
 #### / **mekano-infrastructure**
 
-Responsabilidade: adaptadores para persistencia, seguranca e integracao externa.
+Responsabilidade: adaptadores para persistencia, seguranca e integração externa.
 
 Principais componentes:
 
@@ -128,14 +127,14 @@ Principais componentes:
 - Flyway migrations (34 arquivos SQL)
 - Seguranca (BcryptPasswordHasher, SmallRyeAccessTokenIssuer)
 - Observers e listeners CDI
-- Integracao WhatsApp (EvolutionApiRestClient, EvolutionApiNotifier)
+- Integração WhatsApp (EvolutionApiRestClient, EvolutionApiNotifier)
 - Cache (Caffeine)
 
 Dependencias: mekano-domain, mekano-application, Quarkus Hibernate ORM Panache, Flyway, SmallRye JWT, SmallRye Fault Tolerance.
 
 #### / **mekano-rest**
 
-Responsabilidade: camada de entrada REST, DTOs, configuracao e health checks.
+Responsabilidade: camada de entrada REST, DTOs, configuração e health checks.
 
 Principais componentes:
 
@@ -154,9 +153,9 @@ A Ordem de Servico percorre os seguintes estados:
 ```
 Criar (Recebida)
   -> Diagnosticar (Em Diagnostico)
-    -> Orcar (Aguardando Aprovacao)
-      -> Aprovar (Em Execucao) / Reprovar (Cancelada)
-        -> Executar (Em Execucao)
+    -> Orcar (Aguardando Aprovação)
+      -> Aprovar (Em Execução) / Reprovar (Cancelada)
+        -> Executar (Em Execução)
           -> Finalizar (Finalizada)
             -> Pagar (Pagamento Confirmado)
               -> Entregar (Entregue)
@@ -174,23 +173,23 @@ Diagramas detalhados do fluxo estao disponiveis em:
 ### Pre-requisitos
 
 - **Java 17** (configurado via `JAVA_HOME`)
-- **Docker Desktop** ou **Rancher Desktop** instalado e em execucao
+- **Docker Desktop** ou **Rancher Desktop** instalado e em execução
 
-### Execucao com Docker Compose
+### Execução com Docker Compose
 
 ```bash
 # 1. Build e subir todos os servicos (postgres, keygen, app)
 docker compose up -d --build
 
-# 2. A aplicacao estara disponivel em:
+# 2. A aplicação estara disponivel em:
 #    API:        http://localhost:8080
 #    Swagger UI: http://localhost:8080/q/swagger-ui
 #    Health:     http://localhost:8080/q/health/live
 ```
 
-> O `Dockerfile.jvm` e multi-stage: compila o JAR internamente (sem precisar de Maven instalado na maquina host) e depois gera a imagem runtime. O servico `keygen` gera o par de chaves Ed25519 na primeira execucao.
+> O `Dockerfile.jvm` e multi-stage: compila o JAR internamente (sem precisar de Maven instalado na maquina host) e depois gera a imagem runtime. O servico `keygen` gera o par de chaves Ed25519 na primeira execução.
 
-### Verificacao da Aplicacao
+### Verificação da Aplicação
 
 ```bash
 # Verificar status dos containers
@@ -212,7 +211,7 @@ docker compose down
 docker compose down -v
 ```
 
-### Execucao Local (sem Docker)
+### Execução Local (sem Docker)
 
 ```bash
 # 1. Subir apenas o banco
@@ -255,8 +254,8 @@ Todos os endpoints estao sob o prefixo `/api/v1`.
 | Finalizar Diagnostico | PUT | `/api/v1/os/{uuid}/finalizar-diagnostico` | mecanico, admin |
 | Aprovar Orcamento | PUT | `/api/v1/orcamentos/{uuid}/aprovar` | Publico |
 | Reprovar Orcamento | PUT | `/api/v1/orcamentos/{uuid}/reprovar` | Publico |
-| Iniciar Execucao | PUT | `/api/v1/os/{uuid}/iniciar-execucao` | mecanico, admin |
-| Finalizar Execucao | PUT | `/api/v1/os/{uuid}/finalizar-execucao` | mecanico, admin |
+| Iniciar Execução | PUT | `/api/v1/os/{uuid}/iniciar-execucao` | mecanico, admin |
+| Finalizar Execução | PUT | `/api/v1/os/{uuid}/finalizar-execucao` | mecanico, admin |
 | Confirmar Pagamento | PUT | `/api/v1/os/{uuid}/confirmar-pagamento` | financeiro |
 | Entregar | PUT | `/api/v1/os/{uuid}/entregar` | admin, atendente |
 | Cancelar OS | PUT | `/api/v1/os/{uuid}/cancelar` | admin |
@@ -277,7 +276,7 @@ O Swagger UI esta disponivel em:
 http://localhost:8080/q/swagger-ui
 ```
 
-A documentacao OpenAPI completa esta em:
+A documentação OpenAPI completa esta em:
 
 ```
 http://localhost:8080/q/openapi
@@ -303,7 +302,7 @@ Para utilizar:
 
 ### Terraform
 
-> **A inserir:** documentacao dos recursos provisionados via Terraform (cluster EKS, banco RDS, backend S3).
+> **A inserir:** documentação dos recursos provisionados via Terraform (cluster EKS, banco RDS, backend S3).
 
 ### Fluxo de Deploy
 
@@ -321,11 +320,11 @@ Para utilizar:
 # Apenas dominio
 ./mvnw test -pl mekano-domain
 
-# Apenas aplicacao
+# Apenas aplicação
 ./mvnw test -pl mekano-application -am
 ```
 
-### Testes de Integracao
+### Testes de Integração
 
 ```bash
 # Infraestrutura (requer H2 em memoria)
@@ -344,7 +343,7 @@ Para utilizar:
 ### Testes Funcionais (Newman)
 
 ```bash
-# Requer a aplicacao rodando via Docker Compose
+# Requer a aplicação rodando via Docker Compose
 newman run newman/Mekano_API_V2.0.postman_collection.json --reporters cli
 ```
 
@@ -364,30 +363,30 @@ O projeto utiliza **JaCoCo** com gate de 80% de cobertura LINE. O relatorio agre
 
 ### HPA
 
-> **A inserir:** configuracao do Horizontal Pod Autoscaler com metricas de CPU/memoria e politicas de escalabilidade.
+> **A inserir:** configuração do Horizontal Pod Autoscaler com metricas de CPU/memoria e politicas de escalabilidade.
 
-### Simulacao de Carga
+### Simulação de Carga
 
-> **A inserir:** ferramenta e comandos para simulacao de carga (JMeter, k6 ou equivalente).
+> **A inserir:** ferramenta e comandos para simulação de carga (JMeter, k6 ou equivalente).
 
 ## Troubleshooting
 
-| Problema | Solucao |
+| Problema | solução |
 | ---------- | --------- |
 | Container nao inicia | Verificar se Docker esta rodando: `docker compose ps` |
 | Porta 8080 ocupada | Encerrar processo na porta ou alterar a porta no `docker-compose.yml` |
 | Banco indisponivel | Aguardar health check: `docker compose logs postgres` |
 | Chaves JWT nao encontradas | Executar `./mekano-rest/keygen.sh` ou reiniciar com `docker compose down -v && docker compose up -d --build` |
 | Migration falhou | Verificar logs: `docker compose logs mekano` ou executar `make migrate-status` |
-| Swagger nao carrega | Verificar se a aplicacao esta saudavel: `curl http://localhost:8080/q/health/live` |
+| Swagger nao carrega | Verificar se a aplicação esta saudavel: `curl http://localhost:8080/q/health/live` |
 
 ## Video Demonstrativo
 
-> **A inserir:** link do video demonstrativo (duracao maxima de 15 minutos).
+> **A inserir:** link do video demonstrativo (duração maxima de 15 minutos).
 
 Segmentos previstos:
 
-1. **Fluxo da Ordem de Servico** — demonstracao completa do ciclo: criar, diagnosticar, orcamento, aprovacao, execucao, finalizacao, pagamento e entrega
-2. **API** — Swagger, endpoints principais, execucao de requests via Postman
+1. **Fluxo da Ordem de Servico** — demonstração completa do ciclo: criar, diagnosticar, orcamento, aprovação, execução, finalização, pagamento e entrega
+2. **API** — Swagger, endpoints principais, execução de requests via Postman
 3. **Infraestrutura** — Docker Compose, containers, health checks, escalabilidade
 4. **Testes** — testes automatizados, pipeline CI, cobertura
