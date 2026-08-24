@@ -1,7 +1,7 @@
 {
     "info": {
         "_postman_id": "8d096299-7d65-424a-bd9c-3c97888abcc8",
-        "name": "Mekano API v1.0",
+        "name": "Mekano API v2.0",
         "description": "## Collection da API Mekano (Clean Architecture Quarkus)\n\n### Ordem de Execução Sugerida\n\n#### Setup (1-9)\n1. POST Login (admin) → obtém token JWT\n2. Criar usuários para cada perfil via POST /admin/usuarios\n3. Login como cada perfil (atendente, mecanico, financeiro, cliente)\n\n#### Dados Mestres (10-28)\n4. CRUD Cliente\n5. CRUD Veículo (depende de cliente)\n6. CRUD Serviço\n7. CRUD Peça\n\n",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
         "_exporter_id": "29252768"

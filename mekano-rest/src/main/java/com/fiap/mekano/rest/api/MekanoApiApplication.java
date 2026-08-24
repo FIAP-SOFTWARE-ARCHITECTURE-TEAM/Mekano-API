@@ -10,7 +10,7 @@ import org.eclipse.microprofile.openapi.annotations.info.Info;
 @OpenAPIDefinition(
         info = @Info(
                 title = "Mekano API",
-                version = "1.0.0",
+                version = "2.0.0",
                 description = "Clean Architecture REST API — FIAP Software Architecture"
         )
 )

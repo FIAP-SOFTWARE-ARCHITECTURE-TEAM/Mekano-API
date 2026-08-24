@@ -67,7 +67,7 @@ jobs:
       #    passar --environment separadamente.
       - name: Run functional tests with Newman
         run: |
-          newman run newman/Mekano_API_V1.0.postman_collection.json \
+          newman run newman/Mekano_API_V2.0.postman_collection.json \
             --reporters cli,junit \
             --reporter-junit-export newman/report.xml
 
