@@ -263,6 +263,8 @@ jobs:
       DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
       JWT_PRIVATE_KEY: ${{ secrets.JWT_PRIVATE_KEY }}
       JWT_PUBLIC_KEY: ${{ secrets.JWT_PUBLIC_KEY }}
+      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -308,6 +310,22 @@ jobs:
       - name: Apply namespace
         run: kubectl apply -f k8s/namespace.yaml
 
+      - name: Configure GHCR image pull secret
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -n "$GHCR_USERNAME" || (echo "GHCR_USERNAME secret is required" && exit 1)
+          test -n "$GHCR_TOKEN" || (echo "GHCR_TOKEN secret is required" && exit 1)
+
+          kubectl create secret docker-registry ghcr-secret \
+            --namespace mekano-system \
+            --docker-server=ghcr.io \
+            --docker-username="$GHCR_USERNAME" \
+            --docker-password="$GHCR_TOKEN" \
+            --dry-run=client \
+            -o yaml | kubectl apply -f -
+
       - name: Apply runtime ConfigMap with RDS endpoint
         shell: bash
         run: |
@@ -336,12 +354,17 @@ jobs:
           rm -rf .deploy-secrets
 
       - name: Apply Kubernetes manifests
+        shell: bash
         run: |
+          set -euo pipefail
+
           kubectl apply -f k8s/service.yaml
           kubectl apply -f k8s/hpa.yaml
           kubectl apply -f k8s/ingress.yaml
-          kubectl apply -f k8s/deployment.yaml
-          kubectl set image deployment/mekano mekano="$IMAGE" -n mekano-system
+
+          echo "Applying Deployment with image: $IMAGE"
+          sed "s|__MEKANO_IMAGE__|${IMAGE}|g" \
+            k8s/deployment.yaml | kubectl apply -f -
 
       - name: Wait for rollout and rollback on failure
         shell: bash
