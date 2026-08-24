@@ -80,19 +80,14 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Bootstrap backend: creates S3 bucket + DynamoDB lock on main or the controlled test branch.
+  # Terraform backend already exists. Validate S3 + DynamoDB before running the main Terraform stack.
   bootstrap-backend:
-    name: Bootstrap Terraform backend (S3 + DynamoDB)
+    name: Verify Terraform backend (S3 + DynamoDB)
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/ci-cd-terraform')
     runs-on: ubuntu-latest
     outputs:
       state_bucket: ${{ steps.outputs.outputs.state_bucket }}
       lock_table: ${{ steps.outputs.outputs.lock_table }}
-    env:
-      TF_VAR_state_bucket_name: ${{ vars.TF_STATE_BUCKET }}
-    defaults:
-      run:
-        working-directory: terraform/bootstrap
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -106,24 +101,32 @@ jobs:
       - name: Verify AWS identity
         run: aws sts get-caller-identity
 
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v4
-        with:
-          terraform_version: 1.15.9
-          terraform_wrapper: false
+      - name: Verify Terraform backend
+        shell: bash
+        run: |
+          set -euo pipefail
 
+          test -n "$TF_STATE_BUCKET" || (echo "Repository variable TF_STATE_BUCKET is required" && exit 1)
 
-      - name: Terraform init
-        run: terraform init
+          echo "Checking S3 bucket: $TF_STATE_BUCKET"
+          aws s3api head-bucket \
+            --bucket "$TF_STATE_BUCKET"
 
-      - name: Terraform apply (bootstrap)
-        run: terraform apply -auto-approve
+          echo "Checking DynamoDB table: mekano-terraform-locks"
+          aws dynamodb describe-table \
+            --table-name mekano-terraform-locks \
+            --region "$AWS_REGION" \
+            --query 'Table.TableStatus' \
+            --output text
+
+          echo "Terraform backend is ready."
 
       - name: Export bootstrap outputs
         id: outputs
+        shell: bash
         run: |
-          echo "state_bucket=$(terraform output -raw state_bucket)" >> $GITHUB_OUTPUT
-          echo "lock_table=$(terraform output -raw lock_table)" >> $GITHUB_OUTPUT
+          echo "state_bucket=$TF_STATE_BUCKET" >> "$GITHUB_OUTPUT"
+          echo "lock_table=mekano-terraform-locks" >> "$GITHUB_OUTPUT"
 
   infrastructure:
     name: Terraform EKS and RDS (plan)
