@@ -46,6 +46,14 @@ public class NfEntradaService {
                     + StatusRequisicao.PRODUTO_RECEBIDO);
         }
 
+        Optional<NfEntrada> existente = nfRepository.buscarPorChaveAcesso(command.chaveAcesso());
+        if (existente.isPresent()) {
+            if (command.requisicaoCompraId().equals(existente.get().getRequisicaoCompraId())) {
+                throw new AppException(409, Messages.get("nf_entrada.chave_acesso.duplicada.mesma_requisicao"));
+            }
+            throw new AppException(409, Messages.get("nf_entrada.chave_acesso.duplicada.outra_requisicao"));
+        }
+
         var nfEntrada = NfEntrada.create(
                 command.chaveAcesso(), command.valorTotal(),
                 requisicao.getPecaId(), command.requisicaoCompraId());

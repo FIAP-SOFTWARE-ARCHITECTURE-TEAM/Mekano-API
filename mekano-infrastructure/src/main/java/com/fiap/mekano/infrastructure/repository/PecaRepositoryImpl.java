@@ -27,7 +27,7 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
     private final PecaPanacheRepository panacheRepository;
     private final EntityManager em;
 
-    private static final String SISTEMA_UUID = AuditoriaOrigem.SISTEMA.getCodigo().toString();
+    private static final UUID SISTEMA_UUID = AuditoriaOrigem.SISTEMA.getCodigo();
 
     public PecaRepositoryImpl(PecaPanacheRepository panacheRepository, EntityManager em) {
         this.panacheRepository = panacheRepository;

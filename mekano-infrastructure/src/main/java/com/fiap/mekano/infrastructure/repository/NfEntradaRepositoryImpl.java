@@ -7,7 +7,6 @@ import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
-import jakarta.transaction.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -26,7 +25,6 @@ public class NfEntradaRepositoryImpl implements NfEntradaRepositoryPort {
     }
 
     @Override
-    @Transactional(Transactional.TxType.MANDATORY)
     public NfEntrada salvar(NfEntrada nfEntrada) {
         NfEntradaEntity entity = panacheRepository.find("uuid = ?1", nfEntrada.getId()).firstResult();
         if (entity == null) {
@@ -56,6 +54,13 @@ public class NfEntradaRepositoryImpl implements NfEntradaRepositoryPort {
     @Override
     public Optional<NfEntrada> buscarPorId(UUID id) {
         return panacheRepository.find("uuid = ?1 and isActive = ?2", id, true)
+                .firstResultOptional()
+                .map(NfEntradaRepositoryImpl::toDomain);
+    }
+
+    @Override
+    public Optional<NfEntrada> buscarPorChaveAcesso(String chaveAcesso) {
+        return panacheRepository.find("chaveAcesso = ?1 and isActive = ?2", chaveAcesso, true)
                 .firstResultOptional()
                 .map(NfEntradaRepositoryImpl::toDomain);
     }
