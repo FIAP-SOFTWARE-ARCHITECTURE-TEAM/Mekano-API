@@ -37,7 +37,7 @@ class PecaRepositoryImplTest {
     @BeforeEach
     void setUp() {
         Peca peca = Peca.create("PEA-INTEG-001", "Óleo Motor 5W30", new BigDecimal("45.50"), 5L);
-        Peca saved = repository.salvar(peca);
+        Peca saved = repository.save(peca);
         pecaId = saved.getId();
     }
 
@@ -45,7 +45,7 @@ class PecaRepositoryImplTest {
     @TestTransaction
     @DisplayName("salvar deve persistir saldoReservado como 0")
     void salvarDevePersistirSaldoReservadoZero() {
-        Optional<Peca> found = repository.buscarPorId(pecaId);
+        Optional<Peca> found = repository.findById(pecaId);
 
         assertThat(found).isPresent();
         assertThat(found.get().getSaldoReservado()).isZero();
@@ -58,7 +58,7 @@ class PecaRepositoryImplTest {
     void salvarDevePreservarIsActiveEmPecaInativa() {
         repository.remover(pecaId);
 
-        Optional<Peca> inativa = repository.buscarPorId(pecaId);
+        Optional<Peca> inativa = repository.findById(pecaId);
         assertThat(inativa).isPresent();
         assertThat(inativa.get().getIsActive()).isFalse();
 
@@ -66,7 +66,7 @@ class PecaRepositoryImplTest {
                 pecaId, "PEA-INTEG-001", "Óleo Motor 5W40", new BigDecimal("55.90"),
                 0L, 5L, inativa.get().getCreatedAt(), 0L);
 
-        Peca resultado = repository.salvar(atualizada);
+        Peca resultado = repository.save(atualizada);
 
         assertThat(resultado.getDescricao()).isEqualTo("Óleo Motor 5W40");
         assertThat(resultado.getValorUnitario()).isEqualTo(new BigDecimal("55.90"));
@@ -89,7 +89,7 @@ class PecaRepositoryImplTest {
         boolean reservado = repository.reservarSaldo(pecaId, 10);
 
         assertThat(reservado).isTrue();
-        Optional<Peca> found = repository.buscarPorId(pecaId);
+        Optional<Peca> found = repository.findById(pecaId);
         assertThat(found).isPresent();
         assertThat(found.get().getSaldoReservado()).isEqualTo(10L);
         assertThat(found.get().getSaldoAtual()).isEqualTo(50L);
@@ -104,7 +104,7 @@ class PecaRepositoryImplTest {
         boolean reservado = repository.reservarSaldo(pecaId, 999);
 
         assertThat(reservado).isFalse();
-        Optional<Peca> found = repository.buscarPorId(pecaId);
+        Optional<Peca> found = repository.findById(pecaId);
         assertThat(found).isPresent();
         assertThat(found.get().getSaldoReservado()).isZero();
         assertThat(found.get().getSaldoAtual()).isEqualTo(20L);
@@ -120,7 +120,7 @@ class PecaRepositoryImplTest {
         boolean debitado = repository.debitarSaldoReservado(pecaId, 10);
 
         assertThat(debitado).isTrue();
-        Optional<Peca> found = repository.buscarPorId(pecaId);
+        Optional<Peca> found = repository.findById(pecaId);
         assertThat(found).isPresent();
         assertThat(found.get().getSaldoAtual()).isEqualTo(40L);
         assertThat(found.get().getSaldoReservado()).isZero();
@@ -147,7 +147,7 @@ class PecaRepositoryImplTest {
         boolean liberado = repository.liberarReserva(pecaId, 10);
 
         assertThat(liberado).isTrue();
-        Optional<Peca> found = repository.buscarPorId(pecaId);
+        Optional<Peca> found = repository.findById(pecaId);
         assertThat(found).isPresent();
         assertThat(found.get().getSaldoAtual()).isEqualTo(50L);
         assertThat(found.get().getSaldoReservado()).isZero();
@@ -195,7 +195,7 @@ class PecaRepositoryImplTest {
     @DisplayName("findAll deve filtrar por isActive")
     void findAllDeveFiltrarPorIsActive() {
         Peca ativa = Peca.create("PEA-INTEG-002", "Filtro de Óleo", new BigDecimal("25.00"), 3L);
-        Peca salvaInativa = repository.salvar(ativa);
+        Peca salvaInativa = repository.save(ativa);
         repository.remover(salvaInativa.getId());
 
         assertThat(repository.findAll(0, 100, null))

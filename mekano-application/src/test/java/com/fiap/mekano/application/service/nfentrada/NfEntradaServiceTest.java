@@ -62,9 +62,9 @@ class NfEntradaServiceTest {
 
         NfEntrada nfEntrada = NfEntrada.create("35200612345678901234567890123456789012345678", new BigDecimal("229.50"), pecaId, requisicaoId);
 
-        when(requisicaoRepository.buscarPorId(requisicaoId)).thenReturn(Optional.of(requisicao));
-        when(nfRepository.salvar(any())).thenReturn(nfEntrada);
-        when(pecaRepository.buscarPorId(pecaId)).thenReturn(Optional.of(peca));
+        when(requisicaoRepository.findById(requisicaoId)).thenReturn(Optional.of(requisicao));
+        when(nfRepository.save(any())).thenReturn(nfEntrada);
+        when(pecaRepository.findById(pecaId)).thenReturn(Optional.of(peca));
 
         var command = new CreateNfEntradaCommand("35200612345678901234567890123456789012345678", new BigDecimal("229.50"), requisicaoId);
         nfEntradaService.registrar(command);
@@ -95,9 +95,9 @@ class NfEntradaServiceTest {
 
         NfEntrada nfEntrada = NfEntrada.create("35200612345678901234567890123456789012345678", new BigDecimal("229.50"), pecaId, requisicaoId);
 
-        when(requisicaoRepository.buscarPorId(requisicaoId)).thenReturn(Optional.of(requisicao));
-        when(nfRepository.salvar(any())).thenReturn(nfEntrada);
-        when(pecaRepository.buscarPorId(pecaId)).thenReturn(Optional.of(peca));
+        when(requisicaoRepository.findById(requisicaoId)).thenReturn(Optional.of(requisicao));
+        when(nfRepository.save(any())).thenReturn(nfEntrada);
+        when(pecaRepository.findById(pecaId)).thenReturn(Optional.of(peca));
 
         var command = new CreateNfEntradaCommand("35200612345678901234567890123456789012345678", new BigDecimal("229.50"), requisicaoId);
         nfEntradaService.registrar(command);
@@ -117,9 +117,9 @@ class NfEntradaServiceTest {
 
         NfEntrada nfEntrada = NfEntrada.create("35200612345678901234567890123456789012345678", new BigDecimal("229.50"), pecaId, requisicaoId);
 
-        when(requisicaoRepository.buscarPorId(requisicaoId)).thenReturn(Optional.of(requisicao));
-        when(nfRepository.salvar(any())).thenReturn(nfEntrada);
-        when(pecaRepository.buscarPorId(pecaId)).thenReturn(Optional.empty());
+        when(requisicaoRepository.findById(requisicaoId)).thenReturn(Optional.of(requisicao));
+        when(nfRepository.save(any())).thenReturn(nfEntrada);
+        when(pecaRepository.findById(pecaId)).thenReturn(Optional.empty());
 
         var command = new CreateNfEntradaCommand("35200612345678901234567890123456789012345678", new BigDecimal("229.50"), requisicaoId);
         assertDoesNotThrow(() -> nfEntradaService.registrar(command));

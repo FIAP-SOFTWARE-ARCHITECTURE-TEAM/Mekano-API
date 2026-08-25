@@ -2,7 +2,7 @@
     "info": {
         "_postman_id": "8d096299-7d65-424a-bd9c-3c97888abcc8",
         "name": "Mekano API v2.0",
-        "description": "## Collection da API Mekano (Clean Architecture Quarkus)\n\n### Ordem de Execução Sugerida\n\n#### Setup (1-9)\n1. POST Login (admin) → obtém token JWT\n2. Criar usuários para cada perfil via POST /admin/usuarios\n3. Login como cada perfil (atendente, mecanico, financeiro, cliente)\n\n#### Dados Mestres (10-28)\n4. CRUD Cliente\n5. CRUD Veículo (depende de cliente)\n6. CRUD Serviço\n7. CRUD Peça\n\n",
+        "description": "## Collection da API Mekano (Clean Architecture Quarkus)\n\n### Ordem de Execução Sugerida\n\n#### Setup (1-9)\n1. POST Login (admin) → obtém token JWT\n2. Criar usuários para cada perfil via POST /admin/usuarios\n3. Login como cada perfil (atendente, mecanico, financeiro, cliente)\n\n#### Dados Mestres (10-28)\n4. CRUD Cliente\n5. CRUD Veículo (depende de cliente)\n6. CRUD Serviço\n7. CRUD Peça\n\n#### E2E Ordem de Serviço (29-45)\n8. Criar OS → Iniciar Diagnóstico → Finalizar Diagnóstico → Aprovar Orçamento\n9. Criar Requisição de Compra → Enviar → Receber\n10. Registrar NF de Entrada (credita saldo da peça)\n11. Iniciar Execução → Finalizar Execução\n12. Confirmar Pagamento → Entregar Veículo\n\n#### Consultas (46-55)\n13. Detalhamento, Status, Audit, Tempo Médio, Alertas\n\n### Variáveis de Ambiente\n- `baseUrl`: URL base da API (padrão: http://localhost:8080/api/v1)\n- `adminToken`, `atendenteToken`, `mecanicoToken`, `financeiroToken`, `clienteToken`: JWTs\n- Demais UUIDs populados automaticamente pelos scripts de teste\n\n### Roles e Permissões\n- `admin`: acesso total\n- `atendente`: clientes, veículos, OS (criar/consultar/entregar)\n- `mecanico`: OS (diagnóstico/execução)\n- `financeiro`: OS (confirmar pagamento)\n- `cliente`: Orçamentos (aprovar/reprovar)",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
         "_exporter_id": "29252768"
     },
@@ -60,7 +60,7 @@
                     "response": []
                 },
                 {
-                    "name": "POST Login (admin)",
+                    "name": "POST Login (admin) para logout",
                     "event": [
                         {
                             "listen": "test",
@@ -293,6 +293,135 @@
                                 "logout"
                             ]
                         }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Login (admin)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "// 1. Verifica o HTTP Status Code (200 OK)",
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "// 2. Validia a presença e o formato básico dos tokens",
+                                    "pm.test(\"Retorna 'access_token' e 'refresh_token' válidos\", function () {",
+                                    "    const responseData = pm.response.json();",
+                                    "",
+                                    "    // Verifica se os campos existem e são do tipo String",
+                                    "    pm.expect(responseData).to.have.property(\"access_token\").that.is.a(\"string\");",
+                                    "    pm.expect(responseData).to.have.property(\"refresh_token\").that.is.a(\"string\");",
+                                    "",
+                                    "    // Valida que os tokens não estão vazios",
+                                    "    pm.expect(responseData.access_token).to.not.be.empty;",
+                                    "    pm.expect(responseData.refresh_token).to.not.be.empty;",
+                                    "",
+                                    "    // (Opcional) Salva o access_token em uma variável de ambiente para requisições futuras",
+                                    "    pm.environment.set(\"access_token\", responseData.access_token);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('adminToken', jsonData.access_token);",
+                                    "    pm.collectionVariables.set('adminRefreshToken', jsonData.refresh_token);",
+                                    "    console.log('Admin token obtido com sucesso');",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        },
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "const variablesToReset = [\r",
+                                    "    \"adminToken\",\r",
+                                    "    \"adminRefreshToken\",\r",
+                                    "\r",
+                                    "    \"atendenteToken\",\r",
+                                    "    \"atendenteEmail\",\r",
+                                    "    \"atendenteSenha\",\r",
+                                    "    \"atendenteUuid\",\r",
+                                    "\r",
+                                    "    \"mecanicoToken\",\r",
+                                    "    \"mecanicoEmail\",\r",
+                                    "    \"mecanicoSenha\",\r",
+                                    "    \"mecanicoUuid\",\r",
+                                    "\r",
+                                    "    \"financeiroToken\",\r",
+                                    "    \"financeiroEmail\",\r",
+                                    "    \"financeiroSenha\",\r",
+                                    "    \"financeiroUuid\",\r",
+                                    "\r",
+                                    "    \"clienteToken\",\r",
+                                    "    \"clienteUserEmail\",\r",
+                                    "    \"clienteUserSenha\",\r",
+                                    "    \"clienteUserUuid\",\r",
+                                    "    \"clienteUuid\",\r",
+                                    "\r",
+                                    "    \"veiculoUuid\",\r",
+                                    "    \"servicoUuid\",\r",
+                                    "\r",
+                                    "    \"pecaUuid\",\r",
+                                    "    \"pecaCodigo\",\r",
+                                    "    \"pecaSaldoAtual\",\r",
+                                    "\r",
+                                    "    \"requisicaoCompraUuid\",\r",
+                                    "    \"reqCompraOSUuid\",\r",
+                                    "\r",
+                                    "    \"nfEntradaUuid\",\r",
+                                    "    \"nfEntradaOSUuid\",\r",
+                                    "\r",
+                                    "    \"osUuid\",\r",
+                                    "    \"orcamentoUuid\",\r",
+                                    "\r",
+                                    "    \"userUuid\",\r",
+                                    "    \"idUsuarioDelete\",\r",
+                                    "\r",
+                                    "    \"primeiroUsuarioAdmin\"\r",
+                                    "];\r",
+                                    "\r",
+                                    "variablesToReset.forEach(variable => {\r",
+                                    "    pm.collectionVariables.set(variable, \"\");\r",
+                                    "});\r",
+                                    "\r",
+                                    "console.log(`Foram limpas ${variablesToReset.length} variáveis da Collection.`);"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "login"
+                            ]
+                        },
+                        "description": "Login como administrador. Retorna access_token, refresh_token e expires_in (900s)."
                     },
                     "response": []
                 }
@@ -1142,6 +1271,299 @@
             ]
         },
         {
+            "name": "👑 Users Login (Gera tokens válidos para usuários do sistema)",
+            "item": [
+                {
+                    "name": "POST Login ( atendente )",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "// 2. Validia a presença e o formato básico dos tokens",
+                                    "pm.test(\"Retorna 'access_token' e 'refresh_token' válidos\", function () {",
+                                    "    const responseData = pm.response.json();",
+                                    "",
+                                    "    // Verifica se os campos existem e são do tipo String",
+                                    "    pm.expect(responseData).to.have.property(\"access_token\").that.is.a(\"string\");",
+                                    "    pm.expect(responseData).to.have.property(\"refresh_token\").that.is.a(\"string\");",
+                                    "",
+                                    "    // Valida que os tokens não estão vazios",
+                                    "    pm.expect(responseData.access_token).to.not.be.empty;",
+                                    "    pm.expect(responseData.refresh_token).to.not.be.empty;",
+                                    "",
+                                    "    // (Opcional) Salva o access_token em uma variável de ambiente para requisições futuras",
+                                    "    pm.environment.set(\"access_token\", responseData.access_token);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('atendenteToken', jsonData.access_token);",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"{{atendenteEmail}}\",\n  \"password\": \"{{atendenteSenha}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "login"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Login ( mecanico )",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "// 2. Validia a presença e o formato básico dos tokens",
+                                    "pm.test(\"Retorna 'access_token' e 'refresh_token' válidos\", function () {",
+                                    "    const responseData = pm.response.json();",
+                                    "",
+                                    "    // Verifica se os campos existem e são do tipo String",
+                                    "    pm.expect(responseData).to.have.property(\"access_token\").that.is.a(\"string\");",
+                                    "    pm.expect(responseData).to.have.property(\"refresh_token\").that.is.a(\"string\");",
+                                    "",
+                                    "    // Valida que os tokens não estão vazios",
+                                    "    pm.expect(responseData.access_token).to.not.be.empty;",
+                                    "    pm.expect(responseData.refresh_token).to.not.be.empty;",
+                                    "",
+                                    "    // (Opcional) Salva o access_token em uma variável de ambiente para requisições futuras",
+                                    "    pm.environment.set(\"access_token\", responseData.access_token);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('mecanicoToken', jsonData.access_token);",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"{{mecanicoEmail}}\",\n  \"password\": \"{{mecanicoSenha}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "login"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Login ( financeiro )",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "// 2. Validia a presença e o formato básico dos tokens",
+                                    "pm.test(\"Retorna 'access_token' e 'refresh_token' válidos\", function () {",
+                                    "    const responseData = pm.response.json();",
+                                    "",
+                                    "    // Verifica se os campos existem e são do tipo String",
+                                    "    pm.expect(responseData).to.have.property(\"access_token\").that.is.a(\"string\");",
+                                    "    pm.expect(responseData).to.have.property(\"refresh_token\").that.is.a(\"string\");",
+                                    "",
+                                    "    // Valida que os tokens não estão vazios",
+                                    "    pm.expect(responseData.access_token).to.not.be.empty;",
+                                    "    pm.expect(responseData.refresh_token).to.not.be.empty;",
+                                    "",
+                                    "    // (Opcional) Salva o access_token em uma variável de ambiente para requisições futuras",
+                                    "    pm.environment.set(\"access_token\", responseData.access_token);",
+                                    "});",
+                                    "",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('financeiroToken', jsonData.access_token);",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"{{financeiroEmail}}\",\n  \"password\": \"{{financeiroSenha}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "login"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Login ( cliente )",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "// 2. Validia a presença e o formato básico dos tokens",
+                                    "pm.test(\"Retorna 'access_token' e 'refresh_token' válidos\", function () {",
+                                    "    const responseData = pm.response.json();",
+                                    "",
+                                    "    // Verifica se os campos existem e são do tipo String",
+                                    "    pm.expect(responseData).to.have.property(\"access_token\").that.is.a(\"string\");",
+                                    "    pm.expect(responseData).to.have.property(\"refresh_token\").that.is.a(\"string\");",
+                                    "",
+                                    "    // Valida que os tokens não estão vazios",
+                                    "    pm.expect(responseData.access_token).to.not.be.empty;",
+                                    "    pm.expect(responseData.refresh_token).to.not.be.empty;",
+                                    "",
+                                    "    // (Opcional) Salva o access_token em uma variável de ambiente para requisições futuras",
+                                    "    pm.environment.set(\"access_token\", responseData.access_token);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('clienteToken', jsonData.access_token);",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"{{clienteUserEmail}}\",\n  \"password\": \"{{clienteUserSenha}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "login"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Criação e gerenciamento de usuários por administradores. Esses usuários representam os perfis do sistema (admin, atendente, mecanico, financeiro, cliente).",
+            "event": [
+                {
+                    "listen": "prerequest",
+                    "script": {
+                        "type": "text/javascript",
+                        "packages": {},
+                        "requests": {},
+                        "exec": [
+                            "let seq = pm.collectionVariables.get(\"sequencia\")\r",
+                            "\r",
+                            "if(!seq) {\r",
+                            "    seq = 1;\r",
+                            "} else {\r",
+                            "    seq = parseInt(seq, 10) + 1;\r",
+                            "}\r",
+                            "\r",
+                            "let seqFormatado = String(seq).padStart(7, '0');\r",
+                            "\r",
+                            "pm.collectionVariables.set(\"sequencia\", seqFormatado);"
+                        ]
+                    }
+                },
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "packages": {},
+                        "requests": {},
+                        "exec": [
+                            ""
+                        ]
+                    }
+                }
+            ]
+        },
+        {
             "name": "👤 Gerenciamento de Clientes ( Atendente )",
             "item": [
                 {
@@ -1703,7 +2125,7 @@
             "description": "CRUD de clientes (pessoas físicas donas dos veículos)."
         },
         {
-            "name": "🚗 Gerenciamento de Veículos ( atendente )",
+            "name": "🚗 Gerenciamento de Veículos ( Atendente )",
             "item": [
                 {
                     "name": "POST Criar Veículo",
@@ -2226,7 +2648,7 @@
             "description": "CRUD de veículos vinculados a clientes."
         },
         {
-            "name": "🔧 Serviços",
+            "name": "🔧 Gerenciamento de Serviços (Admin)",
             "item": [
                 {
                     "name": "POST Criar Serviço",
@@ -2652,7 +3074,7 @@
             "description": "CRUD de serviços prestados pela oficina (mão de obra)."
         },
         {
-            "name": "⚙️ Peças e Insumos",
+            "name": "⚙️ Gerenciamento de Peças e Insumos (Admin)",
             "item": [
                 {
                     "name": "POST Criar Peça",
@@ -2985,6 +3407,65 @@
                     "response": []
                 },
                 {
+                    "name": "POST Criar Peça Copy",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const responseData = pm.response.json();",
+                                    "const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+                                    "",
+                                    "// 1. Valida HTTP Status 200 OK",
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "// 2. Valida se o campo 'id' existe e está no formato UUID",
+                                    "pm.test(\"Campo 'id' deve existir e ser um UUID válido\", function () {",
+                                    "    pm.expect(responseData).to.have.property(\"id\");",
+                                    "    pm.expect(responseData.id, \"O campo 'id' não deve ser nulo/vazio\").to.be.a(\"string\").that.is.not.empty;",
+                                    "    pm.expect(responseData.id).to.match(uuidRegex);",
+                                    "});",
+                                    "",
+                                    ""
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"codigo\": \"OLEO-5W30\",\n  \"descricao\": \"Óleo do Motor 5W30 Sintético - 1L\",\n  \"valorUnitario\": 30.90,\n  \"estoqueMinimo\": 10\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/pecas/{{pecaUuid}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "pecas",
+                                "{{pecaUuid}}"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
                     "name": "PUT ATIVAR Peça",
                     "event": [
                         {
@@ -3029,6 +3510,854 @@
                 }
             ],
             "description": "Gerenciamento de peças e insumos do estoque."
+        },
+        {
+            "name": "📋 Requisições de Compra",
+            "item": [
+                {
+                    "name": "POST Criar Requisição de Compra",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 201 Created\", function () {",
+                                    "    pm.response.to.have.status(201);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 201) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('requisicaoCompraUuid', jsonData.id);",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{financeiroToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"pecaId\": \"{{pecaUuid}}\",\n  \"quantidade\": 10,\n  \"motivo\": \"ESTOQUE_MINIMO\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/requisicoes-compra",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "requisicoes-compra"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "PUT Enviar Requisição (ABERTA → ENVIADA)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    console.log('Requisição enviada. Status: ' + jsonData.status);",
+                                    "    pm.test('Status deve ser ENVIADA', function() {",
+                                    "        pm.expect(jsonData.status).to.eql('ENVIADA');",
+                                    "    });",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{financeiroToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/requisicoes-compra/{{requisicaoCompraUuid}}/enviar",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "requisicoes-compra",
+                                "{{requisicaoCompraUuid}}",
+                                "enviar"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "PUT Receber Requisição (ENVIADA → PRODUTO_RECEBIDO)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    console.log('Requisição recebida. Status: ' + jsonData.status);",
+                                    "    pm.test('Status deve ser PRODUTO_RECEBIDO', function() {",
+                                    "        pm.expect(jsonData.status).to.eql('PRODUTO_RECEBIDO');",
+                                    "    });",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{financeiroToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/requisicoes-compra/{{requisicaoCompraUuid}}/receber",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "requisicoes-compra",
+                                "{{requisicaoCompraUuid}}",
+                                "receber"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Criar Requisição de Compra p/ Cancelar",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 201 Created\", function () {",
+                                    "    pm.response.to.have.status(201);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 201) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('requisicaoCompraCanceladaUuid', jsonData.id);",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{financeiroToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"pecaId\": \"{{pecaUuid}}\",\n  \"quantidade\": 10,\n  \"motivo\": \"ESTOQUE_MINIMO\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/requisicoes-compra",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "requisicoes-compra"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "PUT Cancelar Requisição de Compra",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    ""
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{financeiroToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/requisicoes-compra/{{requisicaoCompraCanceladaUuid}}/cancelar",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "requisicoes-compra",
+                                "{{requisicaoCompraCanceladaUuid}}",
+                                "cancelar"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET Listar Requisições",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    console.log('Total requisições: ' + jsonData.totalElements);",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{financeiroToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/requisicoes-compra?page=0&size=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "requisicoes-compra"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "size",
+                                    "value": "10"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET Buscar Requisição por ID",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {\r",
+                                    "    pm.response.to.have.status(200);\r",
+                                    "});\r",
+                                    ""
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{financeiroToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/requisicoes-compra/{{requisicaoCompraUuid}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "requisicoes-compra",
+                                "{{requisicaoCompraUuid}}"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "PUT Cancelar Requisição (PRODUTO_RECEBIDO → CANCELADA)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const responseData = pm.response.json();\r",
+                                    "\r",
+                                    "// 1. Valida HTTP Status 409 Conflict\r",
+                                    "pm.test(\"Status code é 409 Conflict\", function () {\r",
+                                    "    pm.response.to.have.status(409);\r",
+                                    "});\r",
+                                    "\r",
+                                    "// 2. Valida o título do erro RFC 7807\r",
+                                    "pm.test(\"Campo 'title' deve ser 'Conflict'\", function () {\r",
+                                    "    pm.expect(responseData).to.have.property(\"title\");\r",
+                                    "    pm.expect(responseData.title).to.eql(\"Conflict\");\r",
+                                    "});\r",
+                                    "\r",
+                                    "// 3. Valida a mensagem explicativa no campo 'detail'\r",
+                                    "pm.test(\"Campo 'detail' deve conter a mensagem de impedimento de cancelamento\", function () {\r",
+                                    "    const mensagemEsperada = \"Requisição não pode ser cancelada no status PRODUTO_RECEBIDO\";\r",
+                                    "\r",
+                                    "    pm.expect(responseData).to.have.property(\"detail\");\r",
+                                    "    pm.expect(responseData.detail).to.eql(mensagemEsperada);\r",
+                                    "});"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{financeiroToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/requisicoes-compra/{{requisicaoCompraUuid}}/cancelar",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "requisicoes-compra",
+                                "{{requisicaoCompraUuid}}",
+                                "cancelar"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Requisições de compra para abastecimento de estoque. Fluxo: ABERTA → ENVIADA → PRODUTO_RECEBIDO (ou CANCELADA)."
+        },
+        {
+            "name": "🚨 Alertas de Estoque - Deve aparecer a peça que não tem saldo",
+            "item": [
+                {
+                    "name": "GET Listar Alertas (estoque baixo)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    console.log('Alertas encontrados: ' + jsonData.length);",
+                                    "",
+                                    "    // Valida se o retorno é um Array e se possui ao menos 1 item",
+                                    "    pm.test(\"A lista de alertas deve possuir ao menos 1 objeto\", function () {",
+                                    "        pm.expect(jsonData).to.be.an(\"array\");",
+                                    "        pm.expect(jsonData.length, \"A lista de alertas não pode estar vazia\").to.be.at.least(1);",
+                                    "    });",
+                                    "",
+                                    "    // Mantém o log original percorrendo a lista",
+                                    "    if (Array.isArray(jsonData) && jsonData.length > 0) {",
+                                    "        jsonData.forEach(function(a) {",
+                                    "            console.log('  - ' + a.codigo + ' saldo: ' + a.saldoAtual + ' / mínimo: ' + a.estoqueMinimo);",
+                                    "        });",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{atendenteToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/alertas",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "alertas"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Alertas de peças com saldo abaixo do estoque mínimo."
+        },
+        {
+            "name": "📄 Notas Fiscais de Entrada",
+            "item": [
+                {
+                    "name": "POST Criar NF de Entrada",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 201 Created\", function () {",
+                                    "    pm.response.to.have.status(201);",
+                                    "});",
+                                    "",
+                                    "",
+                                    "if (pm.response.code === 201) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('nfEntradaUuid', jsonData.id);",
+                                    "    console.log('NF Entrada registrada: ' + jsonData.id);",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"chaveAcesso\": \"35200612345678000190550000001234567890123456\",\n  \"valorTotal\": 459.00,\n  \"requisicaoCompraId\": \"{{requisicaoCompraUuid}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/nf-entrada",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "nf-entrada"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Criar NF de Entrada - erro 409 (Nfe já cadastrada)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const responseData = pm.response.json();",
+                                    "",
+                                    "// 1. Valida HTTP Status 409 Conflict",
+                                    "pm.test(\"Status code é 409 Conflict\", function () {",
+                                    "    pm.response.to.have.status(409);",
+                                    "});",
+                                    "",
+                                    "// 2. Valida o campo 'title'",
+                                    "pm.test(\"Campo 'title' deve ser 'Conflict'\", function () {",
+                                    "    pm.expect(responseData).to.have.property(\"title\");",
+                                    "    pm.expect(responseData.title).to.eql(\"Conflict\");",
+                                    "});",
+                                    "",
+                                    "// 3. Valida o campo 'status' no JSON",
+                                    "pm.test(\"Campo 'status' no corpo do JSON deve ser 409\", function () {",
+                                    "    pm.expect(responseData).to.have.property(\"status\");",
+                                    "    pm.expect(responseData.status).to.eql(409);",
+                                    "});",
+                                    "",
+                                    "// 4. Valida o campo 'detail'",
+                                    "pm.test(\"Campo 'detail' deve conter a mensagem 'Essa nota fiscal já foi registrada'\", function () {",
+                                    "    pm.expect(responseData).to.have.property(\"detail\");",
+                                    "    pm.expect(responseData.detail).to.eql(\"Essa nota fiscal já foi registrada\");",
+                                    "});"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"chaveAcesso\": \"35200612345678000190550000001234567890123456\",\n  \"valorTotal\": 459.00,\n  \"requisicaoCompraId\": \"{{requisicaoCompraUuid}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/nf-entrada",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "nf-entrada"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Criar NF Entrada - erro 404 (req não encontrada)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const responseData = pm.response.json();\r",
+                                    "\r",
+                                    "// 1. Valida HTTP Status 404 Not Found\r",
+                                    "pm.test(\"Status code é 404 Not Found\", function () {\r",
+                                    "    pm.response.to.have.status(404);\r",
+                                    "});\r",
+                                    "\r",
+                                    "// 2. Valida o título do erro\r",
+                                    "pm.test(\"Campo 'title' deve ser 'Not Found'\", function () {\r",
+                                    "    pm.expect(responseData).to.have.property(\"title\");\r",
+                                    "    pm.expect(responseData.title).to.eql(\"Not Found\");\r",
+                                    "});\r",
+                                    "\r",
+                                    "// 3. Valida se 'detail' contém a mensagem de recurso não encontrado\r",
+                                    "pm.test(\"Campo 'detail' deve conter a mensagem de requisição de compra não encontrada\", function () {\r",
+                                    "    pm.expect(responseData).to.have.property(\"detail\");\r",
+                                    "    pm.expect(responseData.detail).to.be.a(\"string\");\r",
+                                    "    \r",
+                                    "    // Verifica se a mensagem contém o texto base (independente do UUID consultado)\r",
+                                    "    pm.expect(responseData.detail).to.include(\"Requisição de compra não encontrada\");\r",
+                                    "});"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"chaveAcesso\": \"35200612345678000190550000009999999999999999\",\n  \"valorTotal\": 100.00,\n  \"requisicaoCompraId\": \"00000000-0000-0000-0000-000000000000\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/nf-entrada",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "nf-entrada"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Criar NF Entrada - erro 409 (req s/ status PRODUTO_RECEBIDO)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const responseData = pm.response.json();\r",
+                                    "\r",
+                                    "// 1. Valida HTTP Status 409 Conflict\r",
+                                    "pm.test(\"Status code é 409 Conflict\", function () {\r",
+                                    "    pm.response.to.have.status(409);\r",
+                                    "});\r",
+                                    "\r",
+                                    "// 2. Valida o título do erro\r",
+                                    "pm.test(\"Campo 'title' deve ser 'Conflict'\", function () {\r",
+                                    "    pm.expect(responseData).to.have.property(\"title\");\r",
+                                    "    pm.expect(responseData.title).to.eql(\"Conflict\");\r",
+                                    "});\r",
+                                    "\r",
+                                    "// 3. Valida se 'detail' contém a mensagem de recurso não encontrado\r",
+                                    "pm.test(\"Campo 'detail' deve conter a mensagem de: requisições no status PRODUTO_RECEBIDO\", function () {\r",
+                                    "    pm.expect(responseData).to.have.property(\"detail\");\r",
+                                    "    pm.expect(responseData.detail).to.be.a(\"string\");\r",
+                                    "    \r",
+                                    "    // Verifica se a mensagem contém o texto base (independente do UUID consultado)\r",
+                                    "    pm.expect(responseData.detail).to.include(\"requisições no status PRODUTO_RECEBIDO\");\r",
+                                    "});"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"chaveAcesso\": \"35200612345678000190550000009999999999999999\",\n  \"valorTotal\": 100.00,\n  \"requisicaoCompraId\": \"{{requisicaoCompraCanceladaUuid}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/nf-entrada",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "nf-entrada"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET Listar NF Entrada",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    console.log('Total NF: ' + jsonData.totalElements);",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/nf-entrada?page=0&size=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "nf-entrada"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "size",
+                                    "value": "10"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET Buscar NF Entrada por ID",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {\r",
+                                    "    pm.response.to.have.status(200);\r",
+                                    "});\r",
+                                    ""
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/nf-entrada/{{nfEntradaUuid}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "nf-entrada",
+                                "{{nfEntradaUuid}}"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Registro de notas fiscais de entrada. Uma NF só pode ser registrada para requisições com status PRODUTO_RECEBIDO. Ao registrar, o saldo da peça é creditado automaticamente."
+        },
+        {
+            "name": "🚨 Alertas de Estoque - deve retornar vazio a lista",
+            "item": [
+                {
+                    "name": "GET Listar Alertas (estoque baixo)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    console.log('Alertas encontrados: ' + jsonData.length);",
+                                    "",
+                                    "    // Valida se o retorno é um Array e se está vazio (tamanho 0)",
+                                    "    pm.test(\"A lista de alertas deve estar vazia\", function () {",
+                                    "        pm.expect(jsonData).to.be.an(\"array\");",
+                                    "        pm.expect(jsonData.length, \"A lista deveria ser vazia\").to.eql(0);",
+                                    "    });",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{atendenteToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/alertas",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "alertas"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Alertas de peças com saldo abaixo do estoque mínimo."
         }
     ],
     "variable": [
@@ -3186,6 +4515,10 @@
         },
         {
             "key": "veiculoPlaca",
+            "value": ""
+        },
+        {
+            "key": "requisicaoCompraCanceladaUuid",
             "value": ""
         }
     ]

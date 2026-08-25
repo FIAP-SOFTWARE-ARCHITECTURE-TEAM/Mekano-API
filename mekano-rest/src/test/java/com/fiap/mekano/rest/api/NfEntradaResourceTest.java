@@ -72,19 +72,19 @@ class NfEntradaResourceTest {
                 REQUISICAO_UUID, PECA_UUID, 5L,
                 StatusRequisicao.PRODUTO_RECEBIDO, MotivoRequisicao.ESTOQUE_MINIMO, now);
 
-        Mockito.when(requisicaoRepository.buscarPorId(REQUISICAO_UUID))
+        Mockito.when(requisicaoRepository.findById(REQUISICAO_UUID))
                 .thenReturn(Optional.of(mockRequisicao));
 
-        Mockito.when(nfEntradaRepository.salvar(any()))
+        Mockito.when(nfEntradaRepository.save(any()))
                 .thenReturn(mockNf);
 
-        Mockito.when(nfEntradaRepository.buscarPorId(NF_UUID))
+        Mockito.when(nfEntradaRepository.findById(NF_UUID))
                 .thenReturn(Optional.of(mockNf));
 
-        Mockito.when(nfEntradaRepository.buscarPorId(Mockito.argThat(id -> !id.equals(NF_UUID))))
+        Mockito.when(nfEntradaRepository.findById(Mockito.argThat(id -> !id.equals(NF_UUID))))
                 .thenReturn(Optional.empty());
 
-        Mockito.when(pecaRepository.buscarPorId(PECA_UUID))
+        Mockito.when(pecaRepository.findById(PECA_UUID))
                 .thenReturn(Optional.empty());
     }
 

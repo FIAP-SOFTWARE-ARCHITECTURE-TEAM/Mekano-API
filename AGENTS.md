@@ -76,7 +76,7 @@ For detailed per-module conventions, read these instead of old CLAUDE.md:
 | `publicKey.pem` in rest resources | NOT FOUND |
 
 ## Key Inconsistencies (Tech Debt — Avoid Repeating)
-1. **Naming**: `PecaRepositoryPort`/`NfEntradaRepositoryPort`/`RequisicaoCompraRepositoryPort` use PT-BR (`salvar`, `buscarPorId`) — others use EN (`save`, `findById`)
+1. **Naming**: ~~`PecaRepositoryPort`/`NfEntradaRepositoryPort`/`RequisicaoCompraRepositoryPort` use PT-BR~~ **RESOLVED**: all 3 ports now use EN (`save`, `findById`) — remaining PT-BR names (`buscarPorDescricao`, `buscarPorChaveAcesso`, `remover`, `reativar`, `atualizar`, `listarAbaixoEstoqueMinimo`, `debitarSaldo`, `creditarSaldo`, `reservarSaldo`, `debitarSaldoReservado`, `liberarReserva`) are intentional (business operations or deferred)
 2. **Injection**: 3 stub services use field injection (`@Inject`) — real services use constructor injection
 3. **Entity style**: Newer entities use `@Data` (public fields) — older ones use `@Getter/@Setter` (private)
 4. **FT/Cache**: Only User/Veiculo/Servico repos have `@Retry`+`@Timeout`+`@CacheResult` — Cliente/Peca/RequisicaoCompra/NfEntrada do NOT
