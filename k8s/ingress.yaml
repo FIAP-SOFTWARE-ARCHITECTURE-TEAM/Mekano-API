@@ -1,27 +1,25 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
+
 metadata:
   name: mekano
   namespace: mekano-system
+
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "10m"
-    # If using cert-manager, you can add:
-    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+
 spec:
   ingressClassName: nginx
+
   rules:
-    - host: mekano.local
-      http:
+    - http:
         paths:
           - path: /
             pathType: Prefix
+
             backend:
               service:
                 name: mekano
                 port:
                   number: 8080
-  # TLS block: replace secretName with the TLS secret provisioned via cert-manager or your TLS process.
-  tls:
-    - hosts:
-        - mekano.local
-      secretName: mekano-tls

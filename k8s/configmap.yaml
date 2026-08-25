@@ -1,11 +1,33 @@
 apiVersion: v1
 kind: ConfigMap
+
 metadata:
   name: mekano-config
   namespace: mekano-system
+
 data:
   QUARKUS_PROFILE: "prod"
-  # Local k3d. For Kind/Docker Desktop use host.docker.internal.
-  # In EKS the CD pipeline replaces this value with the RDS endpoint from Terraform.
-  #DB_URL: "jdbc:postgresql://host.k3d.internal:5432/mekano"
+
+  # ============================================================
+  # Banco de dados Mekano
+  # ============================================================
+
+  # Local k3d:
+  # DB_URL: "jdbc:postgresql://host.k3d.internal:5432/mekano"
+
+  # Docker Desktop / Kind:
   DB_URL: "jdbc:postgresql://host.docker.internal:5432/mekano"
+
+  # Em EKS o pipeline CI/CD substitui DB_URL pelo endpoint
+  # do RDS provisionado pelo Terraform.
+
+  # ============================================================
+  # Evolution API / WhatsApp
+  # ============================================================
+
+  # Dentro do Kubernetes o nome "evolution-api"
+  # será resolvido pelo DNS interno do Kubernetes.
+  EVOLUTION_API_URL: "http://evolution-api:5033"
+
+  # Nome da instância WhatsApp cadastrada na Evolution API.
+  EVOLUTION_INSTANCE_NAME: "mekano"

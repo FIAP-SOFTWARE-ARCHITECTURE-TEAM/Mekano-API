@@ -1,10 +1,13 @@
 terraform {
   backend "s3" {
-    key     = "mekano/infra/terraform.tfstate"
-    encrypt = true
+    key            = "mekano/infra/terraform.tfstate"
+    encrypt        = true
 
-    # Requisito acadêmico: locking com DynamoDB.
-    # A tabela DynamoDB é usada para locking; parametrizar o nome via variável quando necessário.
+    # Lock nativo no S3
+    use_lockfile = true
+
+    # Mantido temporariamente por requisito acadêmico.
+    # Deprecated no Terraform atual.
     dynamodb_table = "mekano-terraform-locks"
   }
 }
