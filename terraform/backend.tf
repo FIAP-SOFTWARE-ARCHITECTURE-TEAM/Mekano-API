@@ -1,7 +1,7 @@
 terraform {
   backend "s3" {
-    key            = "mekano/infra/terraform.tfstate"
-    encrypt        = true
+    key     = "mekano/infra/terraform.tfstate"
+    encrypt = true
 
     # Lock nativo no S3
     use_lockfile = true
