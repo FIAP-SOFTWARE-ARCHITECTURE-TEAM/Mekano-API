@@ -475,3 +475,19 @@ resource "aws_elasticache_replication_group" "evolution" {
 
   apply_immediately = true
 }
+
+# ============================================================
+# Existing EKS access resources adopted by Terraform
+# ============================================================
+
+import {
+  to = module.eks.aws_eks_access_entry.this["github_actions"]
+
+  id = "mekano-eks:arn:aws:iam::070165420894:role/MekanoGitHubActionsRole"
+}
+
+import {
+  to = module.eks.aws_eks_access_policy_association.this["github_actions_cluster_admin"]
+
+  id = "mekano-eks#arn:aws:iam::070165420894:role/MekanoGitHubActionsRole#arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+}
