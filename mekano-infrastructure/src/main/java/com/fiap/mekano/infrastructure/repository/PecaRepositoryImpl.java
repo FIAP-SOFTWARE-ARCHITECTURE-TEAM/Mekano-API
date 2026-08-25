@@ -37,7 +37,7 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
     @Override
     @Transactional
     @CacheInvalidate(cacheName = CacheNames.PECAS)
-    public Peca salvar(Peca peca) {
+    public Peca save(Peca peca) {
         PecaEntity entity = panacheRepository.find("uuid = ?1", peca.getId()).firstResult();
         if (entity == null) {
             entity = new PecaEntity();
@@ -65,7 +65,7 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
 
     @Override
     @CacheResult(cacheName = CacheNames.PECAS)
-    public Optional<Peca> buscarPorId(UUID id) {
+    public Optional<Peca> findById(UUID id) {
         return panacheRepository.find("uuid = ?1", id)
                 .firstResultOptional()
                 .map(PecaRepositoryImpl::toDomain);

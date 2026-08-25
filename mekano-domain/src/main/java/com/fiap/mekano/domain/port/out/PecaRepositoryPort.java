@@ -6,8 +6,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface PecaRepositoryPort {
-    Peca salvar(Peca peca);
-    Optional<Peca> buscarPorId(UUID id);
+    Peca save(Peca peca);
+    Optional<Peca> findById(UUID id);
+
+    @Deprecated
+    default Optional<Peca> buscarPorId(UUID id) { return findById(id); }
     Optional<Peca> buscarPorDescricao(String descricao);
     /**
      * Lista peças paginadas, opcionalmente filtradas por status.

@@ -122,8 +122,8 @@ class PecaServiceTest {
                 new BigDecimal("45.90"),
                 50L, 10L, LocalDateTime.now().minusDays(30), 0L, false);
 
-        when(pecaRepository.buscarPorId(pecaId)).thenReturn(java.util.Optional.of(inativa));
-        when(pecaRepository.salvar(any(Peca.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(pecaRepository.findById(pecaId)).thenReturn(java.util.Optional.of(inativa));
+        when(pecaRepository.save(any(Peca.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Peca resultado = pecaService.updatePeca(pecaId, new UpdatePecaCommand(
                 pecaId, "PEA-001", "Óleo do Motor 5W40", new BigDecimal("55.90"), 10L));
@@ -132,7 +132,7 @@ class PecaServiceTest {
         assertEquals(false, resultado.getIsActive());
         assertEquals("Óleo do Motor 5W40", resultado.getDescricao());
 
-        verify(pecaRepository, times(1)).salvar(any(Peca.class));
+        verify(pecaRepository, times(1)).save(any(Peca.class));
     }
 
     @Test

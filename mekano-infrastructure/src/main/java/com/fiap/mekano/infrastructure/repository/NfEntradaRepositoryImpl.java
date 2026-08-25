@@ -25,7 +25,7 @@ public class NfEntradaRepositoryImpl implements NfEntradaRepositoryPort {
     }
 
     @Override
-    public NfEntrada salvar(NfEntrada nfEntrada) {
+    public NfEntrada save(NfEntrada nfEntrada) {
         NfEntradaEntity entity = panacheRepository.find("uuid = ?1", nfEntrada.getId()).firstResult();
         if (entity == null) {
             entity = new NfEntradaEntity();
@@ -52,7 +52,7 @@ public class NfEntradaRepositoryImpl implements NfEntradaRepositoryPort {
     }
 
     @Override
-    public Optional<NfEntrada> buscarPorId(UUID id) {
+    public Optional<NfEntrada> findById(UUID id) {
         return panacheRepository.find("uuid = ?1 and isActive = ?2", id, true)
                 .firstResultOptional()
                 .map(NfEntradaRepositoryImpl::toDomain);
