@@ -139,7 +139,8 @@ jobs:
       TF_VAR_cluster_name: ${{ vars.EKS_CLUSTER_NAME || 'mekano-eks' }}
       TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
       TF_VAR_db_username: ${{ vars.DB_USER || 'mekano' }}
-      TF_VAR_github_actions_principal_arn: ${{ vars.EKS_ACCESS_PRINCIPAL_ARN}}
+      TF_VAR_evolution_db_password: ${{ secrets.EVOLUTION_DB_PASSWORD }}
+      TF_VAR_github_actions_principal_arn: ${{ vars.EKS_ACCESS_PRINCIPAL_ARN }}
     defaults:
       run:
         working-directory: terraform
@@ -197,13 +198,16 @@ jobs:
     outputs:
       cluster_name: ${{ steps.tfout.outputs.cluster_name }}
       db_endpoint: ${{ steps.tfout.outputs.db_endpoint }}
+      evolution_db_endpoint: ${{ steps.tfout.outputs.evolution_db_endpoint }}
+      evolution_redis_endpoint: ${{ steps.tfout.outputs.evolution_redis_endpoint }}
     env:
       TF_IN_AUTOMATION: 'true'
       TF_VAR_region: ${{ vars.AWS_REGION || 'us-east-1' }}
       TF_VAR_cluster_name: ${{ vars.EKS_CLUSTER_NAME || 'mekano-eks' }}
       TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
       TF_VAR_db_username: ${{ vars.DB_USER || 'mekano' }}
-      TF_VAR_github_actions_principal_arn: ${{ vars.GITHUB_ACTIONS_PRINCIPAL_ARN }}
+      TF_VAR_evolution_db_password: ${{ secrets.EVOLUTION_DB_PASSWORD }}
+      TF_VAR_github_actions_principal_arn: ${{ vars.EKS_ACCESS_PRINCIPAL_ARN }}
     defaults:
       run:
         working-directory: terraform
@@ -250,6 +254,8 @@ jobs:
         run: |
           echo "cluster_name=$(terraform output -raw cluster_name)" >> "$GITHUB_OUTPUT"
           echo "db_endpoint=$(terraform output -raw db_endpoint)" >> "$GITHUB_OUTPUT"
+          echo "evolution_db_endpoint=$(terraform output -raw evolution_db_endpoint)" >> "$GITHUB_OUTPUT"
+          echo "evolution_redis_endpoint=$(terraform output -raw evolution_redis_endpoint)" >> "$GITHUB_OUTPUT"
 
   deploy:
     name: Deploy to EKS
@@ -261,6 +267,12 @@ jobs:
       CLUSTER_NAME: ${{ needs.infra-apply.outputs.cluster_name }}
       DB_ENDPOINT: ${{ needs.infra-apply.outputs.db_endpoint }}
       DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      EVOLUTION_DB_ENDPOINT: ${{ needs.infra-apply.outputs.evolution_db_endpoint }}
+      EVOLUTION_REDIS_ENDPOINT: ${{ needs.infra-apply.outputs.evolution_redis_endpoint }}
+      EVOLUTION_DB_PASSWORD: ${{ secrets.EVOLUTION_DB_PASSWORD }}
+      EVOLUTION_API_KEY: ${{ secrets.EVOLUTION_API_KEY }}
+      EVOLUTION_WEBHOOK_TOKEN: ${{ secrets.EVOLUTION_WEBHOOK_TOKEN }}
+      EVOLUTION_INSTANCE_NAME: ${{ vars.EVOLUTION_INSTANCE_NAME || 'mekano' }}
       JWT_PRIVATE_KEY: ${{ secrets.JWT_PRIVATE_KEY }}
       JWT_PUBLIC_KEY: ${{ secrets.JWT_PUBLIC_KEY }}
       GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
@@ -333,6 +345,8 @@ jobs:
             --namespace mekano-system \
             --from-literal=QUARKUS_PROFILE=prod \
             --from-literal=DB_URL="jdbc:postgresql://${DB_ENDPOINT}:5432/mekano" \
+            --from-literal=EVOLUTION_API_URL="http://evolution-api:5033" \
+            --from-literal=EVOLUTION_INSTANCE_NAME="$EVOLUTION_INSTANCE_NAME" \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Apply runtime Secret
@@ -347,22 +361,75 @@ jobs:
             --namespace mekano-system \
             --from-literal=DB_USER="$DB_USER" \
             --from-literal=DB_PASSWORD="$DB_PASSWORD" \
+            --from-literal=EVOLUTION_API_KEY="$EVOLUTION_API_KEY" \
+            --from-literal=EVOLUTION_WEBHOOK_TOKEN="$EVOLUTION_WEBHOOK_TOKEN" \
             --from-file=privatekey.pem=.deploy-secrets/privatekey.pem \
             --from-file=publicKey.pem=.deploy-secrets/publicKey.pem \
             --dry-run=client -o yaml | kubectl apply -f -
 
           rm -rf .deploy-secrets
 
+      - name: Apply Evolution API runtime configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -n "$EVOLUTION_DB_ENDPOINT" || (echo "EVOLUTION_DB_ENDPOINT is required" && exit 1)
+          test -n "$EVOLUTION_REDIS_ENDPOINT" || (echo "EVOLUTION_REDIS_ENDPOINT is required" && exit 1)
+          test -n "$EVOLUTION_DB_PASSWORD" || (echo "EVOLUTION_DB_PASSWORD secret is required" && exit 1)
+          test -n "$EVOLUTION_API_KEY" || (echo "EVOLUTION_API_KEY secret is required" && exit 1)
+          test -n "$EVOLUTION_WEBHOOK_TOKEN" || (echo "EVOLUTION_WEBHOOK_TOKEN secret is required" && exit 1)
+
+          ENCODED_EVOLUTION_DB_PASSWORD="$(python3 -c 'import os, urllib.parse; print(urllib.parse.quote(os.environ["EVOLUTION_DB_PASSWORD"], safe=""))')"
+
+          EVOLUTION_DATABASE_URI="postgresql://evolution:${ENCODED_EVOLUTION_DB_PASSWORD}@${EVOLUTION_DB_ENDPOINT}:5432/evolution?schema=public"
+
+          kubectl create configmap evolution-config \
+            --namespace mekano-system \
+            --from-literal=SERVER_URL="http://evolution-api:5033" \
+            --from-literal=SERVER_PORT="5033" \
+            --from-literal=DATABASE_PROVIDER="postgresql" \
+            --from-literal=DATABASE_SAVE_DATA_INSTANCE="true" \
+            --from-literal=DATABASE_SAVE_DATA_NEW_MESSAGE="true" \
+            --from-literal=DATABASE_SAVE_MESSAGE_UPDATE="true" \
+            --from-literal=DATABASE_SAVE_DATA_CONTACTS="true" \
+            --from-literal=DATABASE_SAVE_DATA_CHATS="true" \
+            --from-literal=CACHE_REDIS_ENABLED="true" \
+            --from-literal=CACHE_REDIS_URI="redis://${EVOLUTION_REDIS_ENDPOINT}:6379" \
+            --from-literal=CACHE_REDIS_PREFIX_KEY="mekano" \
+            --from-literal=CACHE_REDIS_SAVE_INSTANCES="false" \
+            --from-literal=CACHE_LOCAL_ENABLED="false" \
+            --from-literal=WEBHOOK_GLOBAL_ENABLED="true" \
+            --from-literal=WEBHOOK_GLOBAL_URL="http://mekano:8080/api/v1/webhooks/evolution" \
+            --from-literal=WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS="false" \
+            --from-literal=WEBHOOK_EVENTS_MESSAGES_UPSERT="true" \
+            --from-literal=AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES="false" \
+            --from-literal=LANGUAGE="pt-BR" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl create secret generic evolution-secret \
+            --namespace mekano-system \
+            --from-literal=AUTHENTICATION_API_KEY="$EVOLUTION_API_KEY" \
+            --from-literal=DATABASE_CONNECTION_URI="$EVOLUTION_DATABASE_URI" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Apply Kubernetes manifests
         shell: bash
         run: |
           set -euo pipefail
 
+          kubectl apply -f k8s/evolution.yaml
+
+          echo "Waiting for Evolution API..."
+          kubectl rollout status deployment/evolution-api \
+            -n mekano-system \
+            --timeout=600s
+
           kubectl apply -f k8s/service.yaml
           kubectl apply -f k8s/hpa.yaml
           kubectl apply -f k8s/ingress.yaml
 
-          echo "Applying Deployment with image: $IMAGE"
+          echo "Applying Mekano Deployment with image: $IMAGE"
           sed "s|__MEKANO_IMAGE__|${IMAGE}|g" \
             k8s/deployment.yaml | kubectl apply -f -
 
@@ -443,5 +510,5 @@ jobs:
 
       - name: Verify deployment
         run: |
-          kubectl get deployment,pods,svc,hpa,ingress -n mekano-system
+          kubectl get deployment,pods,svc,hpa,ingress,pvc -n mekano-system
           kubectl get service ingress-nginx-controller -n ingress-nginx
