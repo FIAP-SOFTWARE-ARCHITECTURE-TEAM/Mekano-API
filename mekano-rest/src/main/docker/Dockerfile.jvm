@@ -4,7 +4,7 @@ WORKDIR /app
 COPY . .
 RUN find . \( -name "mvnw" -o -name "*.sh" \) -exec sed -i 's/\r$//' {} +
 RUN chmod +x mvnw
-RUN ./mvnw install -pl mekano-rest -am -DskipTests -B -q
+RUN ./mvnw clean install -pl mekano-rest -am -DskipTests -B -q
 
 FROM eclipse-temurin:17-jre
 
