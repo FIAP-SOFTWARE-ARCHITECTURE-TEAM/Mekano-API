@@ -37,11 +37,8 @@ public class PecaEntity extends BaseEntity {
     private Integer saldo;
 
     @Column(name = "estoque_minimo", nullable = false)
-<<<<<<< Updated upstream
-    public Integer estoqueMinimo;
-@Column(name = "saldo_reservado", nullable = false)
-    public Integer saldoReservado = 0;
-=======
     private Integer estoqueMinimo;
->>>>>>> Stashed changes
+
+    @Column(name = "saldo_reservado", nullable = false)
+    private Integer saldoReservado = 0;
 }

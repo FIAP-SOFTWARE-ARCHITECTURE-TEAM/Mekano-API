@@ -1,14 +1,11 @@
-# --- Stage 1: Build ---
 FROM eclipse-temurin:17-jdk AS build
 RUN apt-get update && apt-get install -y --no-install-recommends unzip && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY . .
-# Converte CRLF → LF (Windows) no mvnw e scripts .sh
 RUN find . \( -name "mvnw" -o -name "*.sh" \) -exec sed -i 's/\r$//' {} +
 RUN chmod +x mvnw
 RUN ./mvnw install -pl mekano-rest -am -DskipTests -B -q
 
-# --- Stage 2: Runtime ---
 FROM eclipse-temurin:17-jre
 
 ENV LANGUAGE='en_US:en'

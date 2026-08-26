@@ -38,7 +38,7 @@ public class PecaService {
                 command.valorUnitario(),
                 command.estoqueMinimo()
         );
-        var saved = pecaRepository.salvar(peca);
+        var saved = pecaRepository.save(peca);
         return new CreatePecaResponse(
                 saved.getId(), saved.getCodigo(), saved.getDescricao(),
                 saved.getValorUnitario(),
@@ -53,11 +53,11 @@ public class PecaService {
                 id, command.codigo(), command.descricao(), command.valorUnitario(),
                 atual.getSaldoAtual(), command.estoqueMinimo(), atual.getCreatedAt(), atual.getSaldoReservado(),
                 atual.getIsActive());
-        return pecaRepository.salvar(atualizada);
+        return pecaRepository.save(atualizada);
     }
 
     public Peca buscarPorId(UUID id) {
-        return pecaRepository.buscarPorId(id)
+        return pecaRepository.findById(id)
                 .orElseThrow(() -> new AppException(404, Messages.get("peca.not.found", id)));
     }
 

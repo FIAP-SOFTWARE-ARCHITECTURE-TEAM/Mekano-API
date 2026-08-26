@@ -37,7 +37,7 @@ public class NfEntradaService {
 
     @Transactional
     public CreateNfEntradaResponse registrar(CreateNfEntradaCommand command) {
-        RequisicaoCompra requisicao = requisicaoRepository.buscarPorId(command.requisicaoCompraId())
+        RequisicaoCompra requisicao = requisicaoRepository.findById(command.requisicaoCompraId())
                 .orElseThrow(() -> new AppException(404,
                         Messages.get("requisicao_compra.not.found", command.requisicaoCompraId())));
 
@@ -46,14 +46,22 @@ public class NfEntradaService {
                     + StatusRequisicao.PRODUTO_RECEBIDO);
         }
 
+        Optional<NfEntrada> existente = nfRepository.buscarPorChaveAcesso(command.chaveAcesso());
+        if (existente.isPresent()) {
+            if (command.requisicaoCompraId().equals(existente.get().getRequisicaoCompraId())) {
+                throw new AppException(409, Messages.get("nf_entrada.chave_acesso.duplicada.mesma_requisicao"));
+            }
+            throw new AppException(409, Messages.get("nf_entrada.chave_acesso.duplicada.outra_requisicao"));
+        }
+
         var nfEntrada = NfEntrada.create(
                 command.chaveAcesso(), command.valorTotal(),
                 requisicao.getPecaId(), command.requisicaoCompraId());
-        var saved = nfRepository.salvar(nfEntrada);
+        var saved = nfRepository.save(nfEntrada);
 
         pecaRepository.creditarSaldo(requisicao.getPecaId(), requisicao.getQuantidade().intValue());
 
-        Optional<Peca> pecaOpt = pecaRepository.buscarPorId(requisicao.getPecaId());
+        Optional<Peca> pecaOpt = pecaRepository.findById(requisicao.getPecaId());
         pecaOpt.ifPresent(peca -> {
             if (peca.isEstoqueMinimoAtingido()) {
                 eventPublisher.publish(new EstoqueMinimoAtingidoEvent(
@@ -72,7 +80,7 @@ public class NfEntradaService {
     }
 
     public NfEntrada buscarPorId(UUID id) {
-        return nfRepository.buscarPorId(id)
+        return nfRepository.findById(id)
                 .orElseThrow(() -> new AppException(404, Messages.get("nf_entrada.not.found", id)));
     }
 

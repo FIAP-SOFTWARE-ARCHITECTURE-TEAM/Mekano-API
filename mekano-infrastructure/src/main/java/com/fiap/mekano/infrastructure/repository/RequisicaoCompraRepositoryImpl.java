@@ -25,7 +25,7 @@ public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositor
     }
 
     @Override
-    public RequisicaoCompra salvar(RequisicaoCompra requisicao) {
+    public RequisicaoCompra save(RequisicaoCompra requisicao) {
         RequisicaoCompraEntity entity = panacheRepository.find("uuid = ?1", requisicao.getId()).firstResult();
         if (entity == null) {
             entity = new RequisicaoCompraEntity();
@@ -50,7 +50,7 @@ public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositor
     }
 
     @Override
-    public Optional<RequisicaoCompra> buscarPorId(UUID id) {
+    public Optional<RequisicaoCompra> findById(UUID id) {
         return panacheRepository.find("uuid = ?1 and isActive = ?2", id, true)
                 .firstResultOptional()
                 .map(RequisicaoCompraRepositoryImpl::toDomain);
@@ -73,7 +73,7 @@ public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositor
 
     @Override
     public RequisicaoCompra atualizar(RequisicaoCompra requisicao) {
-        return salvar(requisicao);
+        return save(requisicao);
     }
 
     private static RequisicaoCompra toDomain(RequisicaoCompraEntity entity) {

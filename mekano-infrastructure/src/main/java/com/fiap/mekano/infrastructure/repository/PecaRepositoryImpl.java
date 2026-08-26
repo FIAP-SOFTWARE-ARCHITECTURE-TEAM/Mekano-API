@@ -1,15 +1,12 @@
 package com.fiap.mekano.infrastructure.repository;
 
-<<<<<<< Updated upstream
-import com.fiap.mekano.domain.exception.AppException;
-import com.fiap.mekano.domain.exception.Messages;
-=======
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
->>>>>>> Stashed changes
+import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.domain.model.Peca;
 import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
 import com.fiap.mekano.infrastructure.audit.AuditoriaOrigem;
@@ -41,7 +38,7 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
     @Override
     @Transactional
     @CacheInvalidate(cacheName = CacheNames.PECAS)
-    public Peca salvar(Peca peca) {
+    public Peca save(Peca peca) {
         PecaEntity entity = panacheRepository.find("uuid = ?1", peca.getId()).firstResult();
         if (entity == null) {
             entity = new PecaEntity();
@@ -49,22 +46,13 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
             entity.setIsActive(true);
         }
 
-<<<<<<< Updated upstream
-        entity.uuid = peca.getId();
-        entity.codigo = peca.getCodigo();
-        entity.descricao = peca.getDescricao();
-        entity.valorUnitario = peca.getValorUnitario();
-        entity.saldo = peca.getSaldoAtual() == null ? 0 : peca.getSaldoAtual().intValue();
-        entity.saldoReservado = peca.getSaldoReservado() == null ? 0 : peca.getSaldoReservado().intValue();
-        entity.estoqueMinimo = peca.getEstoqueMinimo() == null ? 0 : peca.getEstoqueMinimo().intValue();
-=======
         entity.setUuid(peca.getId());
         entity.setCodigo(peca.getCodigo());
         entity.setDescricao(peca.getDescricao());
         entity.setValorUnitario(peca.getValorUnitario());
         entity.setSaldo(peca.getSaldoAtual() == null ? 0 : peca.getSaldoAtual().intValue());
+        entity.setSaldoReservado(peca.getSaldoReservado() == null ? 0 : peca.getSaldoReservado().intValue());
         entity.setEstoqueMinimo(peca.getEstoqueMinimo() == null ? 0 : peca.getEstoqueMinimo().intValue());
->>>>>>> Stashed changes
         if (entity.getCreatedAt() == null) {
             entity.setCreatedAt(peca.getCreatedAt());
         }
@@ -78,7 +66,7 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
 
     @Override
     @CacheResult(cacheName = CacheNames.PECAS)
-    public Optional<Peca> buscarPorId(UUID id) {
+    public Optional<Peca> findById(UUID id) {
         return panacheRepository.find("uuid = ?1", id)
                 .firstResultOptional()
                 .map(PecaRepositoryImpl::toDomain);
@@ -107,11 +95,7 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
     public List<Peca> listarAbaixoEstoqueMinimo() {
         return panacheRepository.find("isActive = ?1", true).list()
                 .stream()
-<<<<<<< Updated upstream
-                .filter(e -> e.estoqueMinimo > 0 && (e.saldo - e.saldoReservado) < e.estoqueMinimo)
-=======
-                .filter(e -> e.getEstoqueMinimo() > 0 && e.getSaldo() < e.getEstoqueMinimo())
->>>>>>> Stashed changes
+                .filter(e -> e.getEstoqueMinimo() > 0 && (e.getSaldo() - e.getSaldoReservado()) < e.getEstoqueMinimo())
                 .map(PecaRepositoryImpl::toDomain)
                 .toList();
     }
@@ -220,25 +204,15 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
 
     private static Peca toDomain(PecaEntity entity) {
         return Peca.reconstitute(
-<<<<<<< Updated upstream
-                entity.uuid,
-                entity.codigo,
-                entity.descricao,
-                entity.valorUnitario,
-                entity.saldo == null ? 0L : entity.saldo.longValue(),
-                entity.estoqueMinimo == null ? 0L : entity.estoqueMinimo.longValue(),
-                entity.getCreatedAt() == null ? LocalDateTime.now() : entity.getCreatedAt(),
-                entity.saldoReservado == null ? 0L : entity.saldoReservado.longValue(),
-                entity.getIsActive()
-=======
                 entity.getUuid(),
                 entity.getCodigo(),
                 entity.getDescricao(),
                 entity.getValorUnitario(),
                 entity.getSaldo() == null ? 0L : entity.getSaldo().longValue(),
                 entity.getEstoqueMinimo() == null ? 0L : entity.getEstoqueMinimo().longValue(),
-                entity.getCreatedAt() == null ? LocalDateTime.now() : entity.getCreatedAt()
->>>>>>> Stashed changes
+                entity.getCreatedAt() == null ? LocalDateTime.now() : entity.getCreatedAt(),
+                entity.getSaldoReservado() == null ? 0L : entity.getSaldoReservado().longValue(),
+                entity.getIsActive()
         );
     }
 }
