@@ -3,6 +3,7 @@ quarkus:
   rest:
     path: /api/v1
   http:
+    port: 8085
     cors:
       enabled: true
       origins: "*"
