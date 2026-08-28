@@ -1,6 +1,7 @@
 package com.fiap.mekano.domain.model;
 
 import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.valueobject.ItemOrcamento;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

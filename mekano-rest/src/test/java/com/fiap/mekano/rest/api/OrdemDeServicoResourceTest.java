@@ -1,7 +1,7 @@
 package com.fiap.mekano.rest.api;
 
 import com.fiap.mekano.domain.model.Cliente;
-import com.fiap.mekano.domain.model.ItemOrcamento;
+import com.fiap.mekano.domain.valueobject.ItemOrcamento;
 import com.fiap.mekano.domain.model.Orcamento;
 import com.fiap.mekano.domain.model.Veiculo;
 import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;

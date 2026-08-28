@@ -1,6 +1,6 @@
 package com.fiap.mekano.rest.api.dto;
 
-import com.fiap.mekano.domain.model.ItemOrcamento;
+import com.fiap.mekano.domain.valueobject.ItemOrcamento;
 import com.fiap.mekano.domain.model.Orcamento;
 import com.fiap.mekano.domain.model.StatusOrcamento;
 import io.quarkus.runtime.annotations.RegisterForReflection;
