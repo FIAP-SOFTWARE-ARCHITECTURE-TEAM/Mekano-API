@@ -1,11 +1,16 @@
 package com.fiap.mekano.infrastructure.repository;
 
 import com.fiap.mekano.domain.model.OrdemDeServico;
+import com.fiap.mekano.domain.model.StatusOS;
+import com.fiap.mekano.domain.os.StatusEntrega;
+import com.fiap.mekano.domain.os.StatusPagamento;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -90,7 +95,7 @@ class OrdemDeServicoRepositoryImplTest {
     @Test
     @TestTransaction
     void findAllWithFilters_semResultados_retornaListaVazia() {
-        var resultado = repository.findAllWithFilters("FINALIZADA", null, null, null, null, 0, 100);
+        var resultado = repository.findAllWithFilters("RECEBIDA", null, null, null, null, 0, 100);
 
         assertThat(resultado).isEmpty();
     }
@@ -125,6 +130,62 @@ class OrdemDeServicoRepositoryImplTest {
         assertThat(breakdown).isEmpty();
     }
 
+    @Test
+    @TestTransaction
+    void findAllWithFilters_excluiStatusTerminais() {
+        // OS ativa não-terminal deve aparecer
+        var ativa = repository.save(criarOS("OS Ativa"));
+
+        // OS em status terminais NÃO devem aparecer
+        repository.save(criarOSComStatus("OS Finalizada", StatusOS.FINALIZADA));
+        repository.save(criarOSComStatus("OS Entregue", StatusOS.ENTREGUE));
+        repository.save(criarOSComStatus("OS Cancelada", StatusOS.CANCELADA));
+
+        var resultado = repository.findAllWithFilters(null, null, null, null, null, 0, 100);
+
+        assertThat(resultado).hasSize(1);
+        assertThat(resultado.get(0).getId()).isEqualTo(ativa.getId());
+    }
+
+    @Test
+    @TestTransaction
+    void findAllWithFilters_ordenaPorPrioridadeDeStatus() {
+        // Cria OS em ordem "aleatória" de status; a listagem deve ordenar por prioridade
+        var recebida = repository.save(criarOSComStatus("Recebida", StatusOS.RECEBIDA));
+        var emExecucao = repository.save(criarOSComStatus("Em Execução", StatusOS.EM_EXECUCAO));
+        var aguardandoExecucao = repository.save(criarOSComStatus("Aguardando Execução", StatusOS.AGUARDANDO_EXECUCAO));
+        var aguardandoAprovacao = repository.save(criarOSComStatus("Aguardando Aprovação", StatusOS.AGUARDANDO_APROVACAO));
+        var emDiagnostico = repository.save(criarOSComStatus("Em Diagnóstico", StatusOS.EM_DIAGNOSTICO));
+
+        var resultado = repository.findAllWithFilters(null, null, null, null, null, 0, 100);
+
+        // Ordem esperada: EM_EXECUCAO(0), AGUARDANDO_APROVACAO(1), EM_DIAGNOSTICO(2), RECEBIDA(3), AGUARDANDO_EXECUCAO(4)
+        assertThat(resultado).extracting(OrdemDeServico::getId)
+                .containsExactly(
+                        emExecucao.getId(),
+                        aguardandoAprovacao.getId(),
+                        emDiagnostico.getId(),
+                        recebida.getId(),
+                        aguardandoExecucao.getId());
+    }
+
+    @Test
+    @TestTransaction
+    void findAllWithFilters_mesmoStatus_ordenaPorCreatedAtAsc() {
+        var antiga = repository.save(
+                criarOSComStatusECreatedAt("Antiga", StatusOS.RECEBIDA, LocalDateTime.now().minusDays(3)));
+        var media = repository.save(
+                criarOSComStatusECreatedAt("Média", StatusOS.RECEBIDA, LocalDateTime.now().minusDays(2)));
+        var nova = repository.save(
+                criarOSComStatusECreatedAt("Nova", StatusOS.RECEBIDA, LocalDateTime.now().minusDays(1)));
+
+        var resultado = repository.findAllWithFilters("RECEBIDA", null, null, null, null, 0, 100);
+
+        // Mais antigas primeiro (createdAt ASC)
+        assertThat(resultado).extracting(OrdemDeServico::getId)
+                .containsExactly(antiga.getId(), media.getId(), nova.getId());
+    }
+
     // ─────────────── Helpers ───────────────
 
     private static OrdemDeServico criarOS(String descricao) {
@@ -142,5 +203,20 @@ class OrdemDeServicoRepositoryImplTest {
         os.iniciarExecucao(mecanico, null);
         os.finalizarExecucao(null);
         repository.save(os);
+    }
+
+    private static OrdemDeServico criarOSComStatus(String descricao, StatusOS status) {
+        return criarOSComStatusECreatedAt(descricao, status, LocalDateTime.now());
+    }
+
+    private static OrdemDeServico criarOSComStatusECreatedAt(String descricao, StatusOS status,
+                                                             LocalDateTime createdAt) {
+        return OrdemDeServico.reconstitute(
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+                descricao, status, null,
+                null, null, null, null, null, null,
+                StatusPagamento.NAO_COBRADO, null, null, null, null,
+                StatusEntrega.NAO_LIBERADA, null, null, null, null, null,
+                createdAt, 0L);
     }
 }
