@@ -22,22 +22,21 @@ A aplicação foi construida seguindo os principios de **Domain-Driven Design (D
 
 A versão 2.0 do projeto evolui a solução MVP da Fase 1 incorporando:
 
-- **Infraestrutura escalavel**: containerização com Docker, orchestração com Kubernetes e provisionamento via Terraform
+- **Infraestrutura escalavel**: containerização com Docker, orchestração com Kubernetes (EKS) e provisionamento via Terraform
 - **Automação de deploy**: pipeline CI/CD integrada com build, testes e publicação de imagem
 - **Qualidade assegurada**: cobertura de testes automatizados com gate de qualidade via JaCoCo
 - **Resiliencia**: health checks, politicas de restart e escalabilidade dinamica via HPA
-- **Observabilidade**: endpoints de saude, metricas Prometheus e logging estruturado
 
 ## Principais Funcionalidades
 
 - Gestao de clientes, veiculos, servicos e pecas
 - Ciclo de vida completo da Ordem de Servico: Recebida, Em Diagnostico, Aguardando Aprovação, Em Execução, Finalizada, Entregue
-- Geração automatica de orcamento com aprovação via API
+- Geração automática de orçamento com aprovação via API
 - Controle de estoque com reservas, requisicoes de compra e notas fiscais
-- Cobranca automatica e confirmação de pagamento
+- Cobrança automática e confirmação de pagamento
 - Consulta publica de status da OS pelo cliente
 - Autenticação JWT com roles diferenciadas (admin, atendente, mecanico, financeiro, cliente)
-- Integração com WhatsApp via Evolution API para notificacoes
+- Integração com WhatsApp via Evolution API para notificações
 
 ## Stack Tecnologica
 
@@ -83,10 +82,6 @@ graph TB
     INFRA -->|implementa ports| DOM
 ```
 
-### Diagrama de Arquitetura
-
-> **A inserir:** diagrama completo da arquitetura contendo: aplicação, modulos, banco de dados, containers, Kubernetes, HPA e infraestrutura provisionada.
-
 ### Modulos Maven
 
 #### / **mekano-domain**
@@ -95,7 +90,7 @@ Responsabilidade: nucleo do dominio, livre de dependencias de framework.
 
 Principais componentes:
 
-- Entities e enums (OrdemDeServico, Cliente, Veiculo, Peca, Servico, Orcamento, etc.)
+- Entities e enums (OrdemDeServico, Cliente, Veiculo, Peca, Servico, Orçamento, etc.)
 - Value Objects com validação no construtor (Email, CPF, Telefone, Placa, Endereco)
 - Ports de entrada e saida (interfaces para servicos e repositorios)
 - Events de dominio (OrdemDeServicoCriadaEvent, CobrancaEmitidaEvent, etc.)
@@ -111,7 +106,7 @@ Principais componentes:
 - Servicos de dominio (OrdemDeServicoService, ClienteService, VeiculoService, etc.)
 - Servicos de autenticação (AuthService, RefreshTokenService)
 - Listeners de eventos (CobrancaEmitidaListener)
-- Integração WhatsApp (WhatsAppOrcamentoRespostaService)
+- Integração WhatsApp (WhatsAppOrçamentoRespostaService)
 
 Dependencias: mekano-domain, quarkus-arc.
 
@@ -167,6 +162,17 @@ Diagramas detalhados do fluxo estao disponiveis em:
 - [Criar OS](docs/sequence-diagrams/criar-os.md)
 - [Iniciar diagnostico](docs/sequence-diagrams/iniciar-diagnostico.md)
 - [Consulta publica de status](docs/sequence-diagrams/consulta-publica-status.md)
+- [Fluxo Requisição de Compra - Estoque Mínimo](/docs/sequence-diagrams/requisicao-compra-estoque-minimo.md)
+
+### Diagrama de Arquitetura AWS
+
+#### Diagrama geral
+
+- [Fluxo completo do o cliente até os serviços externos.](docs/aws-infrastructure/global-scope-architecture.md)
+
+#### Diagrama de arquitetura da VPC
+
+- [Layout de subnets, componentes de rede e fluxo de tráfego.](docs/aws-infrastructure/vpc-scope-architecture.md)
 
 ## Quick Start
 
