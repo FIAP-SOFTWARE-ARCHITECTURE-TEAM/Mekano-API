@@ -122,7 +122,9 @@ module "eks" {
 
   authentication_mode = "API_AND_CONFIG_MAP"
 
-  enable_cluster_creator_admin_permissions = true
+  # GitHub Actions access is managed explicitly in access_entries below.
+  # Keep this false to avoid duplicate EKS Access Entry for the same IAM role.
+  enable_cluster_creator_admin_permissions = false
 
   enable_irsa = true
 
