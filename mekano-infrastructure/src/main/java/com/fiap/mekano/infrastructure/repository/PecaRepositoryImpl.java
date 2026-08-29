@@ -1,5 +1,10 @@
 package com.fiap.mekano.infrastructure.repository;
 
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.domain.model.Peca;
@@ -7,6 +12,7 @@ import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
 import com.fiap.mekano.infrastructure.audit.AuditoriaOrigem;
 import com.fiap.mekano.infrastructure.cache.CacheNames;
 import com.fiap.mekano.infrastructure.entity.PecaEntity;
+
 import io.quarkus.cache.CacheInvalidate;
 import io.quarkus.cache.CacheResult;
 import io.quarkus.panache.common.Page;
@@ -15,11 +21,6 @@ import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 
 @ApplicationScoped
 public class PecaRepositoryImpl implements PecaRepositoryPort {
@@ -45,13 +46,13 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
             entity.setIsActive(true);
         }
 
-        entity.uuid = peca.getId();
-        entity.codigo = peca.getCodigo();
-        entity.descricao = peca.getDescricao();
-        entity.valorUnitario = peca.getValorUnitario();
-        entity.saldo = peca.getSaldoAtual() == null ? 0 : peca.getSaldoAtual().intValue();
-        entity.saldoReservado = peca.getSaldoReservado() == null ? 0 : peca.getSaldoReservado().intValue();
-        entity.estoqueMinimo = peca.getEstoqueMinimo() == null ? 0 : peca.getEstoqueMinimo().intValue();
+        entity.setUuid(peca.getId());
+        entity.setCodigo(peca.getCodigo());
+        entity.setDescricao(peca.getDescricao());
+        entity.setValorUnitario(peca.getValorUnitario());
+        entity.setSaldo(peca.getSaldoAtual() == null ? 0 : peca.getSaldoAtual().intValue());
+        entity.setSaldoReservado(peca.getSaldoReservado() == null ? 0 : peca.getSaldoReservado().intValue());
+        entity.setEstoqueMinimo(peca.getEstoqueMinimo() == null ? 0 : peca.getEstoqueMinimo().intValue());
         if (entity.getCreatedAt() == null) {
             entity.setCreatedAt(peca.getCreatedAt());
         }
@@ -94,7 +95,7 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
     public List<Peca> listarAbaixoEstoqueMinimo() {
         return panacheRepository.find("isActive = ?1", true).list()
                 .stream()
-                .filter(e -> e.estoqueMinimo > 0 && (e.saldo - e.saldoReservado) < e.estoqueMinimo)
+                .filter(e -> e.getEstoqueMinimo() > 0 && (e.getSaldo() - e.getSaldoReservado()) < e.getEstoqueMinimo())
                 .map(PecaRepositoryImpl::toDomain)
                 .toList();
     }
@@ -203,14 +204,14 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
 
     private static Peca toDomain(PecaEntity entity) {
         return Peca.reconstitute(
-                entity.uuid,
-                entity.codigo,
-                entity.descricao,
-                entity.valorUnitario,
-                entity.saldo == null ? 0L : entity.saldo.longValue(),
-                entity.estoqueMinimo == null ? 0L : entity.estoqueMinimo.longValue(),
+                entity.getUuid(),
+                entity.getCodigo(),
+                entity.getDescricao(),
+                entity.getValorUnitario(),
+                entity.getSaldo() == null ? 0L : entity.getSaldo().longValue(),
+                entity.getEstoqueMinimo() == null ? 0L : entity.getEstoqueMinimo().longValue(),
                 entity.getCreatedAt() == null ? LocalDateTime.now() : entity.getCreatedAt(),
-                entity.saldoReservado == null ? 0L : entity.saldoReservado.longValue(),
+                entity.getSaldoReservado() == null ? 0L : entity.getSaldoReservado().longValue(),
                 entity.getIsActive()
         );
     }

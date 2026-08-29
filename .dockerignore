@@ -11,6 +11,3 @@
 !mekano-infrastructure/src/**
 !mekano-rest/pom.xml
 !mekano-rest/src/**
-!mekano-rest/target
-!mekano-rest/target/quarkus-app
-!mekano-rest/target/quarkus-app/**

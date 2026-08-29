@@ -1,6 +1,6 @@
 package com.fiap.mekano.domain.event;
 
-import com.fiap.mekano.domain.model.ItemOrcamento;
+import com.fiap.mekano.domain.valueobject.ItemOrcamento;
 
 import java.time.LocalDateTime;
 import java.util.List;

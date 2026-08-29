@@ -74,7 +74,7 @@ class PecaRepositoryImplTest {
 
         PecaEntity persistido = panacheRepository.find("uuid", pecaId).firstResult();
         assertThat(persistido).isNotNull();
-        assertThat(persistido.descricao).isEqualTo("Óleo Motor 5W40");
+        assertThat(persistido.getDescricao()).isEqualTo("Óleo Motor 5W40");
         assertThat(persistido.getIsActive()).isFalse();
         assertThat(persistido.getDeletedAt()).isNotNull();
     }

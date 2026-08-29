@@ -1,7 +1,7 @@
 package com.fiap.mekano.infrastructure.job;
 
 import com.fiap.mekano.application.service.os.OsAuditEventPublisher;
-import com.fiap.mekano.domain.model.ItemOrcamento;
+import com.fiap.mekano.domain.valueobject.ItemOrcamento;
 import com.fiap.mekano.domain.model.Orcamento;
 import com.fiap.mekano.domain.model.OrdemDeServico;
 import com.fiap.mekano.domain.model.StatusOS;
