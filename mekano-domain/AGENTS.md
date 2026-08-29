@@ -48,9 +48,9 @@ com.fiap.mekano.domain
 │       ├── ClienteRepositoryPort.java
 │       ├── VeiculoRepositoryPort.java
 │       ├── ServicoRepositoryPort.java
-│       ├── PecaRepositoryPort.java         — uses PT-BR method names (salvar, buscarPorId)
-│       ├── NfEntradaRepositoryPort.java    — uses PT-BR method names
-│       ├── RequisicaoCompraRepositoryPort.java — uses PT-BR method names
+│       ├── PecaRepositoryPort.java         — uses EN method names (save, findById)
+│       ├── NfEntradaRepositoryPort.java    — uses EN method names (save, findById)
+│       ├── RequisicaoCompraRepositoryPort.java — uses EN method names (save, findById)
 │       └── EventPublisher.java            — <T> void publish(T event)
 ├── exception/
 │   ├── AppException.java      — SINGLE exception for ALL domain errors (unchecked RuntimeException)
@@ -85,7 +85,7 @@ com.fiap.mekano.domain
 
 ## Key Deviations (Tech Debt / Known Inconsistencies)
 1. `ItemOrcamento` is a Value Object but lives in `model/` instead of `valueobject/`
-2. `PecaRepositoryPort`/`NfEntradaRepositoryPort`/`RequisicaoCompraRepositoryPort` use PT-BR method names (`salvar()`, `buscarPorId()`) — others use EN (`save()`, `findById()`)
+2. ~~`PecaRepositoryPort`/`NfEntradaRepositoryPort`/`RequisicaoCompraRepositoryPort` use PT-BR method names~~ **RESOLVED** — all use EN (`save()`, `findById()`)
 3. `Placa.java` and `PlacaVeiculo.java` overlap — same purpose, different regex
 4. `AppException` carries HTTP `int status` — infrastructure concern leaking into domain
 5. Two assertion styles coexist in tests: JUnit5 (`assertEquals`) and AssertJ (`assertThat`)

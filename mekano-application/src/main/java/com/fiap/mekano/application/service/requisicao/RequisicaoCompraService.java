@@ -27,14 +27,14 @@ public class RequisicaoCompraService {
                 command.pecaId(),
                 command.quantidade().longValue(),
                 command.motivo());
-        var saved = requisicaoRepository.salvar(requisicao);
+        var saved = requisicaoRepository.save(requisicao);
         return new CreateRequisicaoCompraResponse(
                 saved.getId(), saved.getPecaId(), saved.getQuantidade(),
                 saved.getStatus().name(), saved.getMotivo().name(), saved.getCreatedAt());
     }
 
     public RequisicaoCompra buscarPorId(UUID id) {
-        return requisicaoRepository.buscarPorId(id)
+        return requisicaoRepository.findById(id)
                 .orElseThrow(() -> new AppException(404, Messages.get("requisicao_compra.not.found", id)));
     }
 

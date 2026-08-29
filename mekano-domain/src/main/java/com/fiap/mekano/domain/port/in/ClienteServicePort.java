@@ -18,9 +18,14 @@ public interface ClienteServicePort {
 
     Cliente findClienteById(UUID id);
 
-    List<Cliente> findAllClientes(int page, int size, String sort);
+    /**
+     * Lista clientes paginados, opcionalmente filtrados por status.
+     *
+     * @param isActive quando {@code null} retorna todos; {@code true} só ativos; {@code false} só inativos
+     */
+    List<Cliente> findAllClientes(int page, int size, String sort, Boolean isActive);
 
-    long countAllClientes();
+    long countAllClientes(Boolean isActive);
 
     void deleteCliente(UUID id);
 

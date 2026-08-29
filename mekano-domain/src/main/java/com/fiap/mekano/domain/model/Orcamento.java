@@ -2,6 +2,7 @@ package com.fiap.mekano.domain.model;
 
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.exception.Messages;
+import com.fiap.mekano.domain.valueobject.ItemOrcamento;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;

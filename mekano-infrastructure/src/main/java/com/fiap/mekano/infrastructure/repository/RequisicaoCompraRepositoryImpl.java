@@ -1,18 +1,19 @@
 package com.fiap.mekano.infrastructure.repository;
 
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
 import com.fiap.mekano.domain.model.MotivoRequisicao;
 import com.fiap.mekano.domain.model.RequisicaoCompra;
 import com.fiap.mekano.domain.model.StatusRequisicao;
 import com.fiap.mekano.domain.port.out.RequisicaoCompraRepositoryPort;
 import com.fiap.mekano.infrastructure.entity.RequisicaoCompraEntity;
+
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 
 @ApplicationScoped
 public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositoryPort {
@@ -24,17 +25,17 @@ public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositor
     }
 
     @Override
-    public RequisicaoCompra salvar(RequisicaoCompra requisicao) {
+    public RequisicaoCompra save(RequisicaoCompra requisicao) {
         RequisicaoCompraEntity entity = panacheRepository.find("uuid = ?1", requisicao.getId()).firstResult();
         if (entity == null) {
             entity = new RequisicaoCompraEntity();
         }
 
-        entity.uuid = requisicao.getId();
-        entity.pecaId = requisicao.getPecaId();
-        entity.quantidade = requisicao.getQuantidade().intValue();
-        entity.status = requisicao.getStatus().name();
-        entity.motivo = requisicao.getMotivo().name();
+        entity.setUuid(requisicao.getId());
+        entity.setPecaId(requisicao.getPecaId());
+        entity.setQuantidade(requisicao.getQuantidade().intValue());
+        entity.setStatus(requisicao.getStatus().name());
+        entity.setMotivo(requisicao.getMotivo().name());
         if (entity.getCreatedAt() == null) {
             entity.setCreatedAt(requisicao.getCreatedAt());
         }
@@ -49,7 +50,7 @@ public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositor
     }
 
     @Override
-    public Optional<RequisicaoCompra> buscarPorId(UUID id) {
+    public Optional<RequisicaoCompra> findById(UUID id) {
         return panacheRepository.find("uuid = ?1 and isActive = ?2", id, true)
                 .firstResultOptional()
                 .map(RequisicaoCompraRepositoryImpl::toDomain);
@@ -72,16 +73,16 @@ public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositor
 
     @Override
     public RequisicaoCompra atualizar(RequisicaoCompra requisicao) {
-        return salvar(requisicao);
+        return save(requisicao);
     }
 
     private static RequisicaoCompra toDomain(RequisicaoCompraEntity entity) {
         return RequisicaoCompra.reconstitute(
-                entity.uuid,
-                entity.pecaId,
-                entity.quantidade == null ? 0L : entity.quantidade.longValue(),
-                parseStatus(entity.status),
-                parseMotivo(entity.motivo),
+                entity.getUuid(),
+                entity.getPecaId(),
+                entity.getQuantidade() == null ? 0L : entity.getQuantidade().longValue(),
+                parseStatus(entity.getStatus()),
+                parseMotivo(entity.getMotivo()),
                 entity.getCreatedAt() == null ? LocalDateTime.now() : entity.getCreatedAt()
         );
     }

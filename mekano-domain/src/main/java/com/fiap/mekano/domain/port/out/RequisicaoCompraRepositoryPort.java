@@ -6,8 +6,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface RequisicaoCompraRepositoryPort {
-    RequisicaoCompra salvar(RequisicaoCompra requisicao);
-    Optional<RequisicaoCompra> buscarPorId(UUID id);
+    RequisicaoCompra save(RequisicaoCompra requisicao);
+    Optional<RequisicaoCompra> findById(UUID id);
     RequisicaoCompra atualizar(RequisicaoCompra requisicao);
     List<RequisicaoCompra> findAll(int page, int size);
     long countAll();

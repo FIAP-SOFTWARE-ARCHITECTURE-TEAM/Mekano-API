@@ -96,13 +96,13 @@ public class VeiculoService
     }
 
     @Override
-    public List<Veiculo> findAll(int page, int size, String sort) {
-        return veiculoRepository.findAll(page, size, sort);
+    public List<Veiculo> findAll(int page, int size, String sort, Boolean isActive) {
+        return veiculoRepository.findAll(page, size, sort, isActive);
     }
 
     @Override
-    public long countAll() {
-        return veiculoRepository.countAll();
+    public long countAll(Boolean isActive) {
+        return veiculoRepository.countAll(isActive);
     }
 
     @Override

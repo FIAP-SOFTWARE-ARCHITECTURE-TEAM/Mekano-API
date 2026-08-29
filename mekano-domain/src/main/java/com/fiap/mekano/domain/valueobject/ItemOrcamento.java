@@ -1,4 +1,4 @@
-package com.fiap.mekano.domain.model;
+package com.fiap.mekano.domain.valueobject;
 
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.exception.Messages;

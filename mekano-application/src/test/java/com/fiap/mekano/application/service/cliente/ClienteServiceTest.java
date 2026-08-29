@@ -144,6 +144,52 @@ class ClienteServiceTest {
     }
 
     @Test
+    @DisplayName("updateCliente deve atualizar cliente inativo sem tratá-lo como inexistente")
+    void updateCliente_clienteInativo_deveAtualizar() {
+        // Arrange
+        Cliente existenteInativo = Cliente.reconstitute(
+                CLIENTE_UUID,
+                "João Silva",
+                CPF_VALIDO,
+                "joao@fiap.br",
+                "11999999999",
+                "Rua A",
+                "100",
+                "Centro",
+                "São Paulo",
+                "SP",
+                "01001000",
+                CREATED_AT,
+                false
+        );
+        when(clienteRepository.findById(CLIENTE_UUID))
+                .thenReturn(Optional.of(existenteInativo));
+
+        when(clienteRepository.update(any(Cliente.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        UpdateClienteCommand command = new UpdateClienteCommand(
+                "João Silva Atualizado",
+                "joao.novo@fiap.br",
+                "11988888888",
+                "Rua B",
+                "200",
+                "Vila Nova",
+                "Campinas",
+                "SP",
+                "02002000"
+        );
+
+        // Act
+        Cliente resultado = clienteService.updateCliente(CLIENTE_UUID, command);
+
+        // Assert
+        assertNotNull(resultado);
+        assertEquals("João Silva Atualizado", resultado.getNome());
+        verify(clienteRepository, times(1)).update(any(Cliente.class));
+    }
+
+    @Test
     @DisplayName("execute deve lançar AppException(409) quando CPF já existe")
     void execute_comCpfExistente_deveLancar409() {
         CreateClienteCommand command = new CreateClienteCommand(
@@ -201,5 +247,20 @@ class ClienteServiceTest {
         clienteService.reactivate(CLIENTE_UUID);
 
         verify(clienteRepository, times(1)).reactivate(CLIENTE_UUID);
+    }
+
+    @Test
+    @DisplayName("findAllClientes/countAllClientes devem repassar filtro isActive")
+    void findAllClientes_repassaFiltroIsActive() {
+        when(clienteRepository.findAll(0, 10, "nome,asc", false)).thenReturn(java.util.List.of());
+        when(clienteRepository.countAll(false)).thenReturn(5L);
+
+        var resultado = clienteService.findAllClientes(0, 10, "nome,asc", false);
+        long total = clienteService.countAllClientes(false);
+
+        assertNotNull(resultado);
+        assertEquals(5L, total);
+        verify(clienteRepository, times(1)).findAll(0, 10, "nome,asc", false);
+        verify(clienteRepository, times(1)).countAll(false);
     }
 }

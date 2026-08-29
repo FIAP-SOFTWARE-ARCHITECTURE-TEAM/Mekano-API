@@ -7,6 +7,7 @@ import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;
 import com.fiap.mekano.infrastructure.entity.ClienteEntity;
 import com.fiap.mekano.infrastructure.mapper.ClienteEntityMapper;
 import io.quarkus.panache.common.Page;
+import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
@@ -52,11 +53,9 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
 
     @Override
     public Cliente update(Cliente cliente) {
-        ClienteEntity entity = panacheRepository.find("uuid = ?1 and isActive = ?2", cliente.getId(), true)
-                .firstResult();
-        if (entity == null) {
-            throw new IllegalArgumentException("Cliente não encontrado para atualização: " + cliente.getId());
-        }
+        ClienteEntity entity = panacheRepository.find("uuid = ?1", cliente.getId())
+                .firstResultOptional()
+                .orElseThrow(() -> new AppException(404, Messages.get("cliente.not.found", cliente.getId())));
 
         clienteEntityMapper.updateEntity(cliente, entity);
 
@@ -126,9 +125,12 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
     }
 
     @Override
-    public List<Cliente> findAll(int page, int size, String sort) {
-        return panacheRepository.findAll(parseSort(sort))
-                .page(Page.of(Math.max(page, 0), normalizeSize(size)))
+    public List<Cliente> findAll(int page, int size, String sort, Boolean isActive) {
+        Sort panacheSort = parseSort(sort);
+        PanacheQuery<ClienteEntity> query = isActive == null
+                ? panacheRepository.findAll(panacheSort)
+                : panacheRepository.find("isActive = ?1", panacheSort, isActive);
+        return query.page(Page.of(Math.max(page, 0), normalizeSize(size)))
                 .list()
                 .stream()
                 .map(clienteEntityMapper::toDomain)
@@ -136,8 +138,10 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
     }
 
     @Override
-    public long countAll() {
-        return panacheRepository.count();
+    public long countAll(Boolean isActive) {
+        return isActive == null
+                ? panacheRepository.count()
+                : panacheRepository.count("isActive = ?1", isActive);
     }
 
     @Override

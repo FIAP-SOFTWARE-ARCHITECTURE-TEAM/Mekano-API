@@ -7,7 +7,12 @@ public interface AdminUserServicePort {
 
     AdminCreatedUser criarUsuario(CreateAdminUserCommand command);
 
-    List<AdminUserSummary> listar(int page, int size);
+    /**
+     * Lista usuários paginados, opcionalmente filtrados por status.
+     *
+     * @param isActive quando {@code null} retorna todos; {@code true} só ativos; {@code false} só inativos
+     */
+    List<AdminUserSummary> listar(int page, int size, Boolean isActive);
 
     void deletar(UUID uuid);
 }

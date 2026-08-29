@@ -236,6 +236,50 @@ class VeiculoServiceTest {
     }
 
     @Test
+    @DisplayName("deve atualizar veículo inativo sem tratá-lo como inexistente")
+    void deveAtualizarVeiculoInativo() {
+
+        UUID veiculoId = UUID.randomUUID();
+        UUID clienteUuid = UUID.randomUUID();
+
+        Veiculo existenteInativo = Veiculo.reconstitute(
+                veiculoId,
+                clienteUuid,
+                "ABC1234",
+                "Toyota",
+                "Corolla",
+                2020,
+                LocalDateTime.now(),
+                false);
+
+        UpdateVeiculoCommand command = new UpdateVeiculoCommand(
+                "Toyota",
+                "Yaris",
+                2022);
+
+        when(veiculoRepository.findById(veiculoId))
+                .thenReturn(Optional.of(existenteInativo));
+
+        when(veiculoRepository.update(any(Veiculo.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        Veiculo atualizado = veiculoService.update(
+                veiculoId,
+                command);
+
+        assertEquals(
+                "Yaris",
+                atualizado.getModelo());
+
+        assertEquals(
+                2022,
+                atualizado.getAno());
+
+        verify(veiculoRepository)
+                .update(any(Veiculo.class));
+    }
+
+    @Test
     @DisplayName("deve buscar veículo por id")
     void deveBuscarVeiculoPorId() {
 
@@ -263,13 +307,14 @@ class VeiculoServiceTest {
     @DisplayName("deve listar veículos")
     void deveListarVeiculos() {
 
-        when(veiculoRepository.findAll(0, 10, "placa,asc"))
+        when(veiculoRepository.findAll(0, 10, "placa,asc", null))
                 .thenReturn(List.of());
 
         List<Veiculo> resultado = veiculoService.findAll(
                 0,
                 10,
-                "placa,asc");
+                "placa,asc",
+                null);
 
         assertNotNull(resultado);
 
@@ -277,7 +322,32 @@ class VeiculoServiceTest {
                 .findAll(
                         0,
                         10,
-                        "placa,asc");
+                        "placa,asc",
+                        null);
+    }
+
+    @Test
+    @DisplayName("deve repassar filtro isActive na listagem")
+    void deveRepassarFiltroIsActiveNaListagem() {
+
+        when(veiculoRepository.findAll(0, 10, "placa,asc", false))
+                .thenReturn(List.of());
+        when(veiculoRepository.countAll(false)).thenReturn(0L);
+
+        List<Veiculo> resultado = veiculoService.findAll(
+                0,
+                10,
+                "placa,asc",
+                false);
+        long total = veiculoService.countAll(false);
+
+        assertNotNull(resultado);
+        assertEquals(0L, total);
+
+        verify(veiculoRepository)
+                .findAll(0, 10, "placa,asc", false);
+        verify(veiculoRepository)
+                .countAll(false);
     }
 
     @Test

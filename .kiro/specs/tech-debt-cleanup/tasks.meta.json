@@ -1,0 +1,193 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Modify PecaEntity.java: replace @Data with @Getter/@Setter, change public fields to private": [
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611064784
+      },
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611074485
+      },
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611313578
+      }
+    ],
+    "1.2 Modify RequisicaoCompraEntity.java: replace @Data with @Getter/@Setter, change public fields to private": [
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611064812
+      },
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611074506
+      },
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611313594
+      }
+    ],
+    "1.3 Modify NfEntradaEntity.java: replace @Data with @Getter/@Setter, change public fields to private": [
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611064836
+      },
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611074524
+      },
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611313513
+      }
+    ],
+    "1.4 Verify compilation after annotation changes": [
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611064877
+      },
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611321087
+      },
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611576914
+      }
+    ],
+    "2.1 Delete PecaEntityMapper.java, RequisicaoCompraEntityMapper.java, and NfEntradaEntityMapper.java": [
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611064901
+      },
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611583480
+      },
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611816413
+      }
+    ],
+    "3.1 Delete mekano-domain/src/main/java/com/fiap/mekano/domain/model/StatusPagamento.java": [
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611064929
+      },
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611583496
+      },
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611816433
+      }
+    ],
+    "4.1 Delete Placa.java and PlacaTest.java": [
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611064950
+      },
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611583462
+      },
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611816448
+      }
+    ],
+    "5. Checkpoint - Compile and run tests after all deletions": [
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611064971
+      },
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611832515
+      },
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611890707
+      }
+    ],
+    "6.1 Run infrastructure and REST module tests": [
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611064994
+      },
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611894898
+      },
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787612313476
+      }
+    ],
+    "1. Convert JPA entity annotations from @Data to @Getter/@Setter": [
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611576938
+      }
+    ],
+    "2. Remove empty mapper classes": [
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611816467
+      }
+    ],
+    "3. Remove duplicate StatusPagamento enum": [
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611816492
+      }
+    ],
+    "4. Remove duplicate Placa value object": [
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787611816508
+      }
+    ],
+    "6. Full integration verification": [
+      {
+        "executionId": "6eafa5ab-61c7-4d47-b0c4-caf5832a6c50",
+        "chatSessionId": "sess_19f2eaa8-4ad4-4ade-9909-9d680243a155",
+        "timestamp": 1787612313503
+      }
+    ]
+  }
+}

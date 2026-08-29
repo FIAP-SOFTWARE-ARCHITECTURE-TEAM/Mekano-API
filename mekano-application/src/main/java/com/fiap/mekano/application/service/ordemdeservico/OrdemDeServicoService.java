@@ -14,7 +14,7 @@ import com.fiap.mekano.domain.event.OSFinalizadaEvent;
 import com.fiap.mekano.domain.event.OrdemDeServicoCriadaEvent;
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.exception.Messages;
-import com.fiap.mekano.domain.model.ItemOrcamento;
+import com.fiap.mekano.domain.valueobject.ItemOrcamento;
 import com.fiap.mekano.domain.model.OrdemDeServico;
 import com.fiap.mekano.domain.model.Peca;
 import com.fiap.mekano.domain.model.Servico;

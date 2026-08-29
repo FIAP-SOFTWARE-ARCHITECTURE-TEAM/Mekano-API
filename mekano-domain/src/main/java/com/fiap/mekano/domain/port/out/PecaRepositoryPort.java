@@ -6,11 +6,19 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface PecaRepositoryPort {
-    Peca salvar(Peca peca);
-    Optional<Peca> buscarPorId(UUID id);
+    Peca save(Peca peca);
+    Optional<Peca> findById(UUID id);
+
+    @Deprecated
+    default Optional<Peca> buscarPorId(UUID id) { return findById(id); }
     Optional<Peca> buscarPorDescricao(String descricao);
-    List<Peca> findAll(int page, int size);
-    long countAll();
+    /**
+     * Lista peças paginadas, opcionalmente filtradas por status.
+     *
+     * @param isActive quando {@code null} retorna todas; {@code true} só ativas; {@code false} só inativas
+     */
+    List<Peca> findAll(int page, int size, Boolean isActive);
+    long countAll(Boolean isActive);
     List<Peca> listarAbaixoEstoqueMinimo();
 
     boolean debitarSaldo(UUID pecaId, Integer quantidade);

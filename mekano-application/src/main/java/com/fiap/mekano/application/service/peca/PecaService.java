@@ -38,7 +38,7 @@ public class PecaService {
                 command.valorUnitario(),
                 command.estoqueMinimo()
         );
-        var saved = pecaRepository.salvar(peca);
+        var saved = pecaRepository.save(peca);
         return new CreatePecaResponse(
                 saved.getId(), saved.getCodigo(), saved.getDescricao(),
                 saved.getValorUnitario(),
@@ -51,12 +51,13 @@ public class PecaService {
         Peca atual = buscarPorId(id);
         Peca atualizada = Peca.reconstitute(
                 id, command.codigo(), command.descricao(), command.valorUnitario(),
-                atual.getSaldoAtual(), command.estoqueMinimo(), atual.getCreatedAt(), atual.getSaldoReservado());
-        return pecaRepository.salvar(atualizada);
+                atual.getSaldoAtual(), command.estoqueMinimo(), atual.getCreatedAt(), atual.getSaldoReservado(),
+                atual.getIsActive());
+        return pecaRepository.save(atualizada);
     }
 
     public Peca buscarPorId(UUID id) {
-        return pecaRepository.buscarPorId(id)
+        return pecaRepository.findById(id)
                 .orElseThrow(() -> new AppException(404, Messages.get("peca.not.found", id)));
     }
 
@@ -95,12 +96,12 @@ public class PecaService {
         return pecaRepository.liberarReserva(pecaId, quantidade);
     }
 
-    public List<Peca> findAll(int page, int size) {
-        return pecaRepository.findAll(page, size);
+    public List<Peca> findAll(int page, int size, Boolean isActive) {
+        return pecaRepository.findAll(page, size, isActive);
     }
 
-    public long countAll() {
-        return pecaRepository.countAll();
+    public long countAll(Boolean isActive) {
+        return pecaRepository.countAll(isActive);
     }
 
     public List<Peca> listarAbaixoEstoqueMinimo() {

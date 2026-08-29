@@ -20,9 +20,14 @@ public interface ClienteRepositoryPort {
 
     boolean existsByCpf(String cpf);
 
-    List<Cliente> findAll(int page, int size, String sort);
+    /**
+     * Lista clientes paginados, opcionalmente filtrados por status.
+     *
+     * @param isActive quando {@code null} retorna todos; {@code true} só ativos; {@code false} só inativos
+     */
+    List<Cliente> findAll(int page, int size, String sort, Boolean isActive);
 
-    long countAll();
+    long countAll(Boolean isActive);
 
     void markAsDeleted(UUID id);
 
