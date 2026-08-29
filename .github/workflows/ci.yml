@@ -21,6 +21,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 2. Instala o JDK 17 (necessário para compilar a aplicação Quarkus)
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -31,5 +32,10 @@ jobs:
       - name: Configure Maven Wrapper permission
         run: chmod +x mvnw
 
+      # 4. Compila o projeto e executa os testes unitários/integração do Maven.
+      #    Graças ao -am, os módulos domain/application/infrastructure também
+      #    são construídos, pois mekano-rest depende deles (Clean Architecture).
+      #    Esse passo também gera o target/quarkus-app usado pelo Dockerfile.jvm
+      #    no próximo passo.
       - name: Build and test
         run: ./mvnw -B -ntp verify -pl mekano-rest -am

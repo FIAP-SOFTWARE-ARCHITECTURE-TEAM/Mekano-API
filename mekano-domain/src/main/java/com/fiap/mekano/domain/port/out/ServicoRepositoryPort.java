@@ -25,9 +25,14 @@ public interface ServicoRepositoryPort {
      */
     boolean existsByNomeAndIdNot(String nome, UUID id);
 
-    List<Servico> findAll(int page, int size, String sort);
+    /**
+     * Lista serviços paginados, opcionalmente filtrados por status.
+     *
+     * @param isActive quando {@code null} retorna todos; {@code true} só ativos; {@code false} só inativos
+     */
+    List<Servico> findAll(int page, int size, String sort, Boolean isActive);
 
-    long countAll();
+    long countAll(Boolean isActive);
 
     void markAsDeleted(UUID id);
 

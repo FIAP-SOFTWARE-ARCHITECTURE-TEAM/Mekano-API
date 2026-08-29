@@ -120,15 +120,16 @@ public class PecaResource {
         @APIResponse(responseCode = "200", description = "Lista paginada de peças", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = PecaPageResponse.class)))
         public Response listAll(
                         @QueryParam("page") @DefaultValue("0") int page,
-                        @QueryParam("size") @DefaultValue("10") int size) {
+                        @QueryParam("size") @DefaultValue("10") int size,
+                        @QueryParam("isActive") Boolean isActive) {
                 int normalizedPage = Math.max(page, 0);
                 int normalizedSize = normalizeSize(size);
 
-                var content = pecaService.findAll(normalizedPage, normalizedSize)
+                var content = pecaService.findAll(normalizedPage, normalizedSize, isActive)
                                 .stream()
                                 .map(pecaDtoMapper::toResponse)
                                 .toList();
-                long total = pecaService.countAll();
+                long total = pecaService.countAll(isActive);
                 int totalPages = (int) Math.ceil((double) total / normalizedSize);
                 var response = new PecaPageResponse(content, normalizedPage, normalizedSize, total, totalPages);
                 return Response.ok(response).build();

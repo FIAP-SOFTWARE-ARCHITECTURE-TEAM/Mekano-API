@@ -3,7 +3,7 @@ services:
     image: postgres:16-alpine
     container_name: mekano-postgres
     ports:
-      - "5433:5432"
+      - "5432:5432"
     environment:
       POSTGRES_DB: mekano
       POSTGRES_USER: ${POSTGRES_USER:-mekano}
@@ -11,7 +11,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mekano} -d mekano"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mekano} -d mekano" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -55,10 +55,10 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:-mekano}
       SMALLRYE_JWT_SIGN_KEY_LOCATION: /home/jboss/.mekano/secrets/privatekey.pem
       MP_JWT_VERIFY_PUBLICKEY_LOCATION: /home/jboss/.mekano/secrets/publicKey.pem
-      EVOLUTION_API_URL: http://evolution-api:5033
-      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-dev-key}
-      EVOLUTION_INSTANCE_NAME: ${EVOLUTION_INSTANCE_NAME:-mekano}
-      EVOLUTION_WEBHOOK_TOKEN: ${EVOLUTION_WEBHOOK_TOKEN:-dev-key}
+      #EVOLUTION_API_URL: http://evolution-api:5033
+      #EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-dev-key}
+      #EVOLUTION_INSTANCE_NAME: ${EVOLUTION_INSTANCE_NAME:-mekano}
+      #EVOLUTION_WEBHOOK_TOKEN: ${EVOLUTION_WEBHOOK_TOKEN:-dev-key}
     volumes:
       - mekano_secrets:/home/jboss/.mekano/secrets:ro
     depends_on:
@@ -67,7 +67,7 @@ services:
       keygen:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8080/q/health/live || exit 1"]
+      test: [ "CMD-SHELL", "curl -sf http://localhost:8080/q/health/live || exit 1" ]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -86,7 +86,7 @@ services:
     volumes:
       - evolution_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U evolution -d evolution"]
+      test: [ "CMD-SHELL", "pg_isready -U evolution -d evolution" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -99,7 +99,7 @@ services:
     volumes:
       - evolution_redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -114,7 +114,7 @@ services:
     environment:
       SERVER_URL: http://localhost:5033
       SERVER_PORT: "5033"
-      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY}
+      #AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY}
       DATABASE_PROVIDER: postgresql
       DATABASE_CONNECTION_URI: postgresql://evolution:${EVOLUTION_DB_PASSWORD:-evolution}@evolution-postgres:5432/evolution?schema=public
       DATABASE_SAVE_DATA_INSTANCE: "true"

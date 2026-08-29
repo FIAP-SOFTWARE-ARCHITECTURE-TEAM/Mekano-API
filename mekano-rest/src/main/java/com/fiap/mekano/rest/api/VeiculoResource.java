@@ -98,14 +98,16 @@ public class VeiculoResource {
 
                         @QueryParam("size") @DefaultValue("10") int size,
 
-                        @QueryParam("sort") @DefaultValue("placa,asc") String sort) {
+                        @QueryParam("sort") @DefaultValue("placa,asc") String sort,
 
-                List<VeiculoResponse> content = veiculoService.findAll(page, size, sort)
+                        @QueryParam("isActive") Boolean isActive) {
+
+                List<VeiculoResponse> content = veiculoService.findAll(page, size, sort, isActive)
                                 .stream()
                                 .map(veiculoDtoMapper::toResponse)
                                 .toList();
 
-                long total = veiculoService.countAll();
+                long total = veiculoService.countAll(isActive);
 
                 int totalPages = (int) Math.ceil((double) total / size);
 

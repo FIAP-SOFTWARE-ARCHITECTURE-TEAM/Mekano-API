@@ -3,7 +3,7 @@ package com.fiap.mekano.application.service.orcamento;
 import com.fiap.mekano.application.service.os.OsAuditEventPublisher;
 import com.fiap.mekano.domain.event.OrcamentoAprovadoEvent;
 import com.fiap.mekano.domain.exception.AppException;
-import com.fiap.mekano.domain.model.ItemOrcamento;
+import com.fiap.mekano.domain.valueobject.ItemOrcamento;
 import com.fiap.mekano.domain.model.Orcamento;
 import com.fiap.mekano.domain.model.OrdemDeServico;
 import com.fiap.mekano.domain.model.StatusOS;

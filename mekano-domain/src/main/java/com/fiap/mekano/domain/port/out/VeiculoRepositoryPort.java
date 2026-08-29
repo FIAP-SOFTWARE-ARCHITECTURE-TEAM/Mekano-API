@@ -25,9 +25,14 @@ public interface VeiculoRepositoryPort {
 
     boolean existsByPlaca(String placa);
 
-    List<Veiculo> findAll(int page, int size, String sort);
+    /**
+     * Lista veículos paginados, opcionalmente filtrados por status.
+     *
+     * @param isActive quando {@code null} retorna todos; {@code true} só ativos; {@code false} só inativos
+     */
+    List<Veiculo> findAll(int page, int size, String sort, Boolean isActive);
 
-    long countAll();
+    long countAll(Boolean isActive);
 
     void markAsDeleted(UUID id);
 

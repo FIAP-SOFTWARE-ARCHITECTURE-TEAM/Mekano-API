@@ -1,18 +1,18 @@
 package com.fiap.mekano.infrastructure.repository;
 
-import com.fiap.mekano.domain.model.NfEntrada;
-import com.fiap.mekano.domain.port.out.NfEntradaRepositoryPort;
-import com.fiap.mekano.infrastructure.entity.NfEntradaEntity;
-import io.quarkus.panache.common.Page;
-import io.quarkus.panache.common.Sort;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.persistence.EntityManager;
-import jakarta.transaction.Transactional;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+
+import com.fiap.mekano.domain.model.NfEntrada;
+import com.fiap.mekano.domain.port.out.NfEntradaRepositoryPort;
+import com.fiap.mekano.infrastructure.entity.NfEntradaEntity;
+
+import io.quarkus.panache.common.Page;
+import io.quarkus.panache.common.Sort;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.persistence.EntityManager;
 
 @ApplicationScoped
 public class NfEntradaRepositoryImpl implements NfEntradaRepositoryPort {
@@ -26,19 +26,18 @@ public class NfEntradaRepositoryImpl implements NfEntradaRepositoryPort {
     }
 
     @Override
-    @Transactional(Transactional.TxType.MANDATORY)
-    public NfEntrada salvar(NfEntrada nfEntrada) {
+    public NfEntrada save(NfEntrada nfEntrada) {
         NfEntradaEntity entity = panacheRepository.find("uuid = ?1", nfEntrada.getId()).firstResult();
         if (entity == null) {
             entity = new NfEntradaEntity();
         }
 
-        entity.uuid = nfEntrada.getId();
-        entity.chaveAcesso = nfEntrada.getChaveAcesso();
-        entity.valorTotal = nfEntrada.getValorTotal();
-        entity.pecaId = nfEntrada.getPecaId();
-        entity.requisicaoCompraId = nfEntrada.getRequisicaoCompraId();
-        entity.dataRecebimento = nfEntrada.getCreatedAt();
+        entity.setUuid(nfEntrada.getId());
+        entity.setChaveAcesso(nfEntrada.getChaveAcesso());
+        entity.setValorTotal(nfEntrada.getValorTotal());
+        entity.setPecaId(nfEntrada.getPecaId());
+        entity.setRequisicaoCompraId(nfEntrada.getRequisicaoCompraId());
+        entity.setDataRecebimento(nfEntrada.getCreatedAt());
         if (entity.getCreatedAt() == null) {
             entity.setCreatedAt(nfEntrada.getCreatedAt());
         }
@@ -54,8 +53,15 @@ public class NfEntradaRepositoryImpl implements NfEntradaRepositoryPort {
     }
 
     @Override
-    public Optional<NfEntrada> buscarPorId(UUID id) {
+    public Optional<NfEntrada> findById(UUID id) {
         return panacheRepository.find("uuid = ?1 and isActive = ?2", id, true)
+                .firstResultOptional()
+                .map(NfEntradaRepositoryImpl::toDomain);
+    }
+
+    @Override
+    public Optional<NfEntrada> buscarPorChaveAcesso(String chaveAcesso) {
+        return panacheRepository.find("chaveAcesso = ?1 and isActive = ?2", chaveAcesso, true)
                 .firstResultOptional()
                 .map(NfEntradaRepositoryImpl::toDomain);
     }
@@ -77,11 +83,11 @@ public class NfEntradaRepositoryImpl implements NfEntradaRepositoryPort {
 
     private static NfEntrada toDomain(NfEntradaEntity entity) {
         return NfEntrada.reconstitute(
-                entity.uuid,
-                entity.chaveAcesso,
-                entity.valorTotal,
-                entity.pecaId,
-                entity.requisicaoCompraId,
+                entity.getUuid(),
+                entity.getChaveAcesso(),
+                entity.getValorTotal(),
+                entity.getPecaId(),
+                entity.getRequisicaoCompraId(),
                 entity.getCreatedAt() == null ? LocalDateTime.now() : entity.getCreatedAt()
         );
     }

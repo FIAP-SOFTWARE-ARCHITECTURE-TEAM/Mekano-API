@@ -62,9 +62,35 @@ class UserRepositoryImplTest {
         User user = User.create("Ana", "ana@fiap.br", true, "$2a$10$hashbcrypt");
         repository.save(user);
 
-        var result = repository.findAll(-1, 0, " ");
+        var result = repository.findAll(-1, 0, " ", null);
 
         assertThat(result).isNotEmpty();
+    }
+
+    @Test
+    @TestTransaction
+    void findAll_deveFiltrarPorIsActive() {
+        User ativo = User.create("Ana", "ana2@fiap.br", true, "$2a$10$hashbcrypt");
+        repository.save(ativo);
+        repository.markAsDeleted(ativo.getId());
+
+        User outroAtivo = User.create("Bia", "bia@fiap.br", true, "$2a$10$hashbcrypt");
+        repository.save(outroAtivo);
+
+        assertThat(repository.findAll(0, 20, "createdAt,asc", null))
+                .extracting(u -> u.getEmail().getValue())
+                .contains("ana2@fiap.br", "bia@fiap.br");
+        assertThat(repository.findAll(0, 20, "createdAt,asc", true))
+                .extracting(u -> u.getEmail().getValue())
+                .contains("bia@fiap.br")
+                .doesNotContain("ana2@fiap.br");
+        assertThat(repository.findAll(0, 20, "createdAt,asc", false))
+                .extracting(u -> u.getEmail().getValue())
+                .contains("ana2@fiap.br")
+                .doesNotContain("bia@fiap.br");
+        assertThat(repository.countAll(null)).isGreaterThanOrEqualTo(2L);
+        assertThat(repository.countAll(true)).isGreaterThanOrEqualTo(1L);
+        assertThat(repository.countAll(false)).isGreaterThanOrEqualTo(1L);
     }
 
     @Test

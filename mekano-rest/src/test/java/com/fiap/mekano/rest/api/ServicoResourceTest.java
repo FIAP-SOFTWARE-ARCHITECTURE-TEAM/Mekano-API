@@ -12,6 +12,8 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 
 /**
@@ -233,10 +235,28 @@ class ServicoResourceTest {
                 .body("isActive", equalTo(false));
     }
 
+    @Test
+    @Order(14)
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void update_afterDelete_returns200AndPreservesInactive() {
+        given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {"nome": "Serviço Pós-Delete", "descricao": "Atualizado mesmo inativo", "valor": 149.90}
+                        """)
+                .when()
+                .put(BASE_PATH + "/" + createdUuid)
+                .then()
+                .statusCode(200)
+                .body("nome", equalTo("Serviço Pós-Delete"))
+                .body("valor", equalTo(149.90f))
+                .body("isActive", equalTo(false));
+    }
+
     // ───────────────── AUTHORIZATION ─────────────────
 
     @Test
-    @Order(14)
+    @Order(15)
     @TestSecurity(user = "atendente", roles = {"user"})
     void create_asAtendente_returns403() {
         given()
@@ -251,7 +271,7 @@ class ServicoResourceTest {
     }
 
     @Test
-    @Order(15)
+    @Order(16)
     @TestSecurity(user = "atendente", roles = {"user"})
     void listAll_asAtendente_returns403() {
         given()
@@ -262,7 +282,7 @@ class ServicoResourceTest {
     }
 
     @Test
-    @Order(16)
+    @Order(17)
     @TestSecurity(user = "atendente", roles = {"user"})
     void delete_asAtendente_returns403() {
         given()
@@ -273,7 +293,7 @@ class ServicoResourceTest {
     }
 
     @Test
-    @Order(17)
+    @Order(18)
     @TestSecurity(user = "atendente", roles = {"user"})
     void update_asAtendente_returns403() {
         given()
@@ -290,7 +310,7 @@ class ServicoResourceTest {
     // ───────────────── REACTIVATE ─────────────────
 
     @Test
-    @Order(18)
+    @Order(19)
     @TestSecurity(user = "admin", roles = {"admin"})
     void reativar_existingServico_returns204() {
         given()
@@ -301,7 +321,7 @@ class ServicoResourceTest {
     }
 
     @Test
-    @Order(19)
+    @Order(20)
     @TestSecurity(user = "admin", roles = {"admin"})
     void getById_afterReativar_returns200Active() {
         given()
@@ -310,5 +330,48 @@ class ServicoResourceTest {
                 .then()
                 .statusCode(200)
                 .body("isActive", equalTo(true));
+    }
+
+    @Test
+    @Order(21)
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void list_filtroIsActive_returnsOnlyRequested() {
+        String filtroUuid = given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {"nome": "Filtro IsActive Teste", "descricao": "desc", "valor": 10.00}
+                        """)
+                .when()
+                .post(BASE_PATH)
+                .then()
+                .statusCode(201)
+                .extract().path("id");
+
+        given()
+                .when()
+                .delete(BASE_PATH + "/" + filtroUuid)
+                .then()
+                .statusCode(204);
+
+        given()
+                .when()
+                .get(BASE_PATH + "?isActive=false&size=100")
+                .then()
+                .statusCode(200)
+                .body("content.nome", hasItem("Filtro IsActive Teste"));
+
+        given()
+                .when()
+                .get(BASE_PATH + "?isActive=true&size=100")
+                .then()
+                .statusCode(200)
+                .body("content.nome", not(hasItem("Filtro IsActive Teste")));
+
+        given()
+                .when()
+                .get(BASE_PATH + "?size=100")
+                .then()
+                .statusCode(200)
+                .body("content.nome", hasItem("Filtro IsActive Teste"));
     }
 }
