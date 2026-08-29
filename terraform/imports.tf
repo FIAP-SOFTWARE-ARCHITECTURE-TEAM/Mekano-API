@@ -8,11 +8,11 @@
 # and the resource appears in the Terraform state.
 # ============================================================
 
-import {
-  to = module.eks.aws_eks_access_entry.this["github_actions"]
-
-  id = "mekano-eks:arn:aws:iam::070165420894:role/MekanoGitHubActionsRole"
-}
+#import {
+#  to = module.eks.aws_eks_access_entry.this["github_actions"]
+#
+#  id = "mekano-eks:arn:aws:iam::070165420894:role/MekanoGitHubActionsRole"
+#}
 
 # ============================================================
 # Existing EKS Access Policy Association
