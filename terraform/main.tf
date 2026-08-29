@@ -22,11 +22,11 @@ locals {
 
   tags = {
 
-    Project     = "mekano"
+    Project = "mekano"
 
     Environment = var.environment
 
-    ManagedBy   = "terraform"
+    ManagedBy = "terraform"
 
   }
 
@@ -40,7 +40,7 @@ locals {
 
 module "vpc" {
 
-  source  = "terraform-aws-modules/vpc/aws"
+  source = "terraform-aws-modules/vpc/aws"
 
   version = "5.21.0"
 
@@ -74,11 +74,11 @@ module "vpc" {
 
   ]
 
-  enable_nat_gateway   = true
+  enable_nat_gateway = true
 
-  single_nat_gateway   = true
+  single_nat_gateway = true
 
-  enable_dns_support   = true
+  enable_dns_support = true
 
   enable_dns_hostnames = true
 
@@ -108,25 +108,25 @@ module "vpc" {
 
 module "eks" {
 
-  source  = "terraform-aws-modules/eks/aws"
+  source = "terraform-aws-modules/eks/aws"
 
   version = "20.37.2"
 
-  cluster_name    = var.cluster_name
+  cluster_name = var.cluster_name
 
   cluster_version = var.kubernetes_version
 
   cluster_endpoint_private_access = true
 
-  cluster_endpoint_public_access  = true
+  cluster_endpoint_public_access = true
 
   authentication_mode = "API_AND_CONFIG_MAP"
 
   enable_cluster_creator_admin_permissions = true
 
-  enable_irsa                              = true
+  enable_irsa = true
 
-  vpc_id     = module.vpc.vpc_id
+  vpc_id = module.vpc.vpc_id
 
   subnet_ids = module.vpc.private_subnets
 
@@ -160,9 +160,9 @@ module "eks" {
 
       instance_types = var.node_instance_types
 
-      min_size     = 2
+      min_size = 2
 
-      max_size     = 6
+      max_size = 6
 
       desired_size = 2
 
@@ -284,7 +284,7 @@ resource "aws_eks_addon" "ebs_csi" {
 
   cluster_name = module.eks.cluster_name
 
-  addon_name   = "aws-ebs-csi-driver"
+  addon_name = "aws-ebs-csi-driver"
 
   service_account_role_arn = aws_iam_role.ebs_csi.arn
 
@@ -322,9 +322,9 @@ resource "aws_security_group" "rds" {
 
     from_port = 5432
 
-    to_port   = 5432
+    to_port = 5432
 
-    protocol  = "tcp"
+    protocol = "tcp"
 
     security_groups = [
 
@@ -338,9 +338,9 @@ resource "aws_security_group" "rds" {
 
     from_port = 0
 
-    to_port   = 0
+    to_port = 0
 
-    protocol  = "-1"
+    protocol = "-1"
 
     cidr_blocks = [
 
@@ -366,31 +366,31 @@ resource "aws_security_group" "rds" {
 
 module "db" {
 
-  source  = "terraform-aws-modules/rds/aws"
+  source = "terraform-aws-modules/rds/aws"
 
   version = "6.12.0"
 
   identifier = "mekano-${var.environment}"
 
-  engine               = "postgres"
+  engine = "postgres"
 
-  engine_version       = "16"
+  engine_version = "16"
 
-  family               = "postgres16"
+  family = "postgres16"
 
   major_engine_version = "16"
 
   instance_class = var.db_instance_class
 
-  allocated_storage     = var.db_allocated_storage
+  allocated_storage = var.db_allocated_storage
 
   max_allocated_storage = 100
 
-  storage_type      = "gp3"
+  storage_type = "gp3"
 
   storage_encrypted = true
 
-  db_name  = var.db_name
+  db_name = var.db_name
 
   username = var.db_username
 
@@ -400,7 +400,7 @@ module "db" {
 
   manage_master_user_password = false
 
-  multi_az            = var.db_multi_az
+  multi_az = var.db_multi_az
 
   publicly_accessible = false
 
@@ -418,7 +418,7 @@ module "db" {
 
   auto_minor_version_upgrade = true
 
-  apply_immediately          = false
+  apply_immediately = false
 
   enabled_cloudwatch_logs_exports = [
 
@@ -456,9 +456,9 @@ resource "aws_security_group" "evolution_rds" {
 
     from_port = 5432
 
-    to_port   = 5432
+    to_port = 5432
 
-    protocol  = "tcp"
+    protocol = "tcp"
 
     security_groups = [
 
@@ -472,9 +472,9 @@ resource "aws_security_group" "evolution_rds" {
 
     from_port = 0
 
-    to_port   = 0
+    to_port = 0
 
-    protocol  = "-1"
+    protocol = "-1"
 
     cidr_blocks = [
 
@@ -500,31 +500,31 @@ resource "aws_security_group" "evolution_rds" {
 
 module "evolution_db" {
 
-  source  = "terraform-aws-modules/rds/aws"
+  source = "terraform-aws-modules/rds/aws"
 
   version = "6.12.0"
 
   identifier = "mekano-evolution-${var.environment}"
 
-  engine               = "postgres"
+  engine = "postgres"
 
-  engine_version       = "16"
+  engine_version = "16"
 
-  family               = "postgres16"
+  family = "postgres16"
 
   major_engine_version = "16"
 
   instance_class = var.evolution_db_instance_class
 
-  allocated_storage     = 20
+  allocated_storage = 20
 
   max_allocated_storage = 100
 
-  storage_type      = "gp3"
+  storage_type = "gp3"
 
   storage_encrypted = true
 
-  db_name  = var.evolution_db_name
+  db_name = var.evolution_db_name
 
   username = var.evolution_db_username
 
@@ -534,7 +534,7 @@ module "evolution_db" {
 
   manage_master_user_password = false
 
-  multi_az            = var.environment == "prod"
+  multi_az = var.environment == "prod"
 
   publicly_accessible = false
 
@@ -552,7 +552,7 @@ module "evolution_db" {
 
   auto_minor_version_upgrade = true
 
-  apply_immediately          = false
+  apply_immediately = false
 
   enabled_cloudwatch_logs_exports = [
 
@@ -590,9 +590,9 @@ resource "aws_security_group" "evolution_redis" {
 
     from_port = 6379
 
-    to_port   = 6379
+    to_port = 6379
 
-    protocol  = "tcp"
+    protocol = "tcp"
 
     security_groups = [
 
@@ -606,9 +606,9 @@ resource "aws_security_group" "evolution_redis" {
 
     from_port = 0
 
-    to_port   = 0
+    to_port = 0
 
-    protocol  = "-1"
+    protocol = "-1"
 
     cidr_blocks = [
 
@@ -646,7 +646,7 @@ resource "aws_elasticache_replication_group" "evolution" {
 
   description = "Redis cache for Evolution API"
 
-  engine         = "redis"
+  engine = "redis"
 
   engine_version = "7.1"
 
@@ -658,7 +658,7 @@ resource "aws_elasticache_replication_group" "evolution" {
 
   automatic_failover_enabled = false
 
-  multi_az_enabled           = false
+  multi_az_enabled = false
 
   subnet_group_name = aws_elasticache_subnet_group.evolution.name
 
