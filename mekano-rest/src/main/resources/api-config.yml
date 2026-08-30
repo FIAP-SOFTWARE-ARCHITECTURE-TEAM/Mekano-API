@@ -3,6 +3,7 @@ quarkus:
   rest:
     path: /api/v1
   http:
+    port: 8080
     cors:
       enabled: true
       origins: "*"
@@ -24,6 +25,10 @@ evolution:
   instance-name: ${EVOLUTION_INSTANCE_NAME:mekano}
   # CR-02: fail closed — sem EVOLUTION_WEBHOOK_TOKEN o webhook rejeita tudo com 401
   webhook-token: ${EVOLUTION_WEBHOOK_TOKEN:}
+
+# App public URL — usado em links de acompanhamento em mensagens WhatsApp
+mekano:
+  public-url: ${MEKANO_PUBLIC_URL:https://mekano.app}
 
 "%test":
   evolution:

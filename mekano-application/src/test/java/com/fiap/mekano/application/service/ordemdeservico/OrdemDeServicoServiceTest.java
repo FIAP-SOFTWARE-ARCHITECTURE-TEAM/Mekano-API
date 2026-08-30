@@ -195,8 +195,14 @@ class OrdemDeServicoServiceTest {
                 List.of(new ItemOrcamento("Peça A", 5L, BigDecimal.TEN, pecaId)));
         orcamento.aprovar();
 
+        Peca peca = Peca.reconstitute(
+                pecaId, "PEA-001", "Peça A", BigDecimal.TEN,
+                0L, 5L, LocalDateTime.now(), 0L
+        );
+
         when(repository.findById(osId)).thenReturn(Optional.of(osExec));
         when(pecaRepository.debitarSaldoReservado(pecaId, 5)).thenReturn(false);
+        when(pecaRepository.findById(pecaId)).thenReturn(Optional.of(peca));
         when(orcamentoRepository.findByUuid(orcamentoUuid)).thenReturn(Optional.of(orcamento));
 
         var ex = assertThrows(AppException.class,
@@ -227,6 +233,7 @@ class OrdemDeServicoServiceTest {
 
         verify(pecaRepository).liberarReserva(pecaId, 3);
         verify(pecaRepository, never()).creditarSaldo(any(), any());
+        verify(eventPublisher).publish(any(com.fiap.mekano.domain.event.OSCanceladaEvent.class));
     }
 
     @Test
@@ -493,6 +500,7 @@ class OrdemDeServicoServiceTest {
 
         verify(osAuditEventPublisher).publish(any(), eq(OsAuditAction.CANCELAR), isNull(),
                 eq("Cliente desistiu"), eq(Map.of()));
+        verify(eventPublisher).publish(any(com.fiap.mekano.domain.event.OSCanceladaEvent.class));
     }
 
     @Test

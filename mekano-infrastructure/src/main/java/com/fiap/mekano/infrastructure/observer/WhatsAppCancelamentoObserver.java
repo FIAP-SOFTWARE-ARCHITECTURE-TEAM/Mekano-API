@@ -1,10 +1,9 @@
 package com.fiap.mekano.infrastructure.observer;
 
-import com.fiap.mekano.domain.event.DiagnosticoFinalizadoEvent;
+import com.fiap.mekano.domain.event.OSCanceladaEvent;
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;
-import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
 import com.fiap.mekano.domain.port.out.VeiculoRepositoryPort;
 import com.fiap.mekano.domain.port.out.WhatsAppNotifierPort;
@@ -16,46 +15,38 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Observa a finalização do diagnóstico e notifica o cliente via WhatsApp
- * quando o orçamento é gerado.
+ * Observa o cancelamento da OS e notifica o cliente via WhatsApp
+ * com a mesma mensagem de retirada (reaproveita {@link WhatsAppNotifierPort#notificarRetirada}).
  *
  * <p><b>Sem {@code @Transactional}</b> (D-11): a chamada HTTP externa não pode
  * segurar conexão de banco. {@link TransactionPhase#AFTER_SUCCESS} garante a
- * execução apenas após o commit da transação que publicou o evento — o
- * orçamento criado por {@code DiagnosticoFinalizadoObserver} já está persistido.
+ * execução apenas após o commit da transação que publicou o evento.
  *
- * <p>Fluxo de resolução: OS → cliente (telefone) → orçamento (valor total).
+ * <p>Fluxo de resolução: OS → cliente (telefone) → veículo (placa).
  * Cliente sem telefone é ignorado (log warn — PII mascarada).
  */
 @ApplicationScoped
-public class WhatsAppOrcamentoObserver {
+public class WhatsAppCancelamentoObserver {
 
-    private static final Logger log = LoggerFactory.getLogger(WhatsAppOrcamentoObserver.class);
+    private static final Logger log = LoggerFactory.getLogger(WhatsAppCancelamentoObserver.class);
 
     private final WhatsAppNotifierPort notifier;
     private final OrdemDeServicoRepositoryPort osRepository;
     private final ClienteRepositoryPort clienteRepository;
-    private final OrcamentoRepositoryPort orcamentoRepository;
     private final VeiculoRepositoryPort veiculoRepository;
 
     @Inject
-    public WhatsAppOrcamentoObserver(WhatsAppNotifierPort notifier,
-                                     OrdemDeServicoRepositoryPort osRepository,
-                                     ClienteRepositoryPort clienteRepository,
-                                     OrcamentoRepositoryPort orcamentoRepository,
-                                     VeiculoRepositoryPort veiculoRepository) {
+    public WhatsAppCancelamentoObserver(WhatsAppNotifierPort notifier,
+                                         OrdemDeServicoRepositoryPort osRepository,
+                                         ClienteRepositoryPort clienteRepository,
+                                         VeiculoRepositoryPort veiculoRepository) {
         this.notifier = notifier;
         this.osRepository = osRepository;
         this.clienteRepository = clienteRepository;
-        this.orcamentoRepository = orcamentoRepository;
         this.veiculoRepository = veiculoRepository;
     }
 
-    void aoFinalizarDiagnostico(@Observes(during = TransactionPhase.AFTER_SUCCESS) DiagnosticoFinalizadoEvent event) {
-        // WR-05: observer roda APÓS o commit — nenhuma exceção pode propagar
-        // ao caller (OrdemDeServicoService.finalizarDiagnostico) e transformar
-        // uma operação já commitada em erro 4xx/5xx. Falha de notificação é
-        // logada como warn (side effect não afeta o fluxo primário).
+    void aoCancelarOS(@Observes(during = TransactionPhase.AFTER_SUCCESS) OSCanceladaEvent event) {
         try {
             var os = osRepository.findById(event.osUuid())
                     .orElseThrow(() -> new AppException(404, Messages.get("os.not.found", event.osUuid())));
@@ -68,22 +59,16 @@ public class WhatsAppOrcamentoObserver {
                 return;
             }
 
-            var orcamento = orcamentoRepository.findByOrdemServicoUuid(event.osUuid())
-                    .orElseThrow(() -> new AppException(404, Messages.get("orcamento.not.found", event.osUuid())));
-
             var veiculo = veiculoRepository.findById(os.getVeiculoId())
                     .orElseThrow(() -> new AppException(404, Messages.get("veiculo.not.found", os.getVeiculoId())));
 
-            notifier.notificarOrcamento(
+            notifier.notificarRetirada(
                     cliente.getTelefone().getValue(),
                     cliente.getNome(),
-                    veiculo.getMarca(),
-                     veiculo.getModelo(),
-                     veiculo.getPlaca().getValue(),
-                     orcamento.getValorTotal(),
-                     orcamento.getItens());
+                    veiculo.getPlaca().getValue(),
+                    os.getId());
         } catch (Exception ex) {
-            log.warn("Falha ao notificar orçamento via WhatsApp (evento {}): {}", event.osUuid(), ex.getMessage());
+            log.warn("Falha ao notificar cancelamento via WhatsApp (evento {}): {}", event.osUuid(), ex.getMessage());
         }
     }
 }

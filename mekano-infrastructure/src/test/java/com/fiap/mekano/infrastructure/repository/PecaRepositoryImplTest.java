@@ -97,16 +97,16 @@ class PecaRepositoryImplTest {
 
     @Test
     @TestTransaction
-    @DisplayName("reservarSaldo acima do disponível deve retornar false sem alterar")
+    @DisplayName("reservarSaldo acima do disponível ainda deve reservar e incrementar saldo_reservado")
     void reservarSaldoAcimaDoDisponivel() {
         repository.creditarSaldo(pecaId, 20);
 
         boolean reservado = repository.reservarSaldo(pecaId, 999);
 
-        assertThat(reservado).isFalse();
+        assertThat(reservado).isTrue();
         Optional<Peca> found = repository.findById(pecaId);
         assertThat(found).isPresent();
-        assertThat(found.get().getSaldoReservado()).isZero();
+        assertThat(found.get().getSaldoReservado()).isEqualTo(999L);
         assertThat(found.get().getSaldoAtual()).isEqualTo(20L);
     }
 
@@ -135,6 +135,22 @@ class PecaRepositoryImplTest {
         boolean debitado = repository.debitarSaldoReservado(pecaId, 10);
 
         assertThat(debitado).isFalse();
+    }
+
+    @Test
+    @TestTransaction
+    @DisplayName("debitarSaldoReservado com saldo fisico insuficiente deve retornar false mesmo com reserva")
+    void debitarSaldoReservadoSaldoInsuficiente() {
+        repository.creditarSaldo(pecaId, 5);
+        repository.reservarSaldo(pecaId, 10);
+
+        boolean debitado = repository.debitarSaldoReservado(pecaId, 10);
+
+        assertThat(debitado).isFalse();
+        Optional<Peca> found = repository.findById(pecaId);
+        assertThat(found).isPresent();
+        assertThat(found.get().getSaldoAtual()).isEqualTo(5L);
+        assertThat(found.get().getSaldoReservado()).isEqualTo(10L);
     }
 
     @Test

@@ -1,39 +1,34 @@
 package com.fiap.mekano.infrastructure.observer;
 
-import com.fiap.mekano.domain.event.DiagnosticoFinalizadoEvent;
+import com.fiap.mekano.domain.event.OSCanceladaEvent;
+import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.model.Cliente;
-import com.fiap.mekano.domain.valueobject.ItemOrcamento;
-import com.fiap.mekano.domain.model.Orcamento;
 import com.fiap.mekano.domain.model.OrdemDeServico;
 import com.fiap.mekano.domain.model.Veiculo;
 import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;
-import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
 import com.fiap.mekano.domain.port.out.VeiculoRepositoryPort;
 import com.fiap.mekano.domain.port.out.WhatsAppNotifierPort;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-@DisplayName("WhatsAppOrcamentoObserver")
-class WhatsAppOrcamentoObserverTest {
+@DisplayName("WhatsAppCancelamentoObserver")
+class WhatsAppCancelamentoObserverTest {
 
     private final WhatsAppNotifierPort notifier = mock(WhatsAppNotifierPort.class);
     private final OrdemDeServicoRepositoryPort osRepository = mock(OrdemDeServicoRepositoryPort.class);
     private final ClienteRepositoryPort clienteRepository = mock(ClienteRepositoryPort.class);
-    private final OrcamentoRepositoryPort orcamentoRepository = mock(OrcamentoRepositoryPort.class);
     private final VeiculoRepositoryPort veiculoRepository = mock(VeiculoRepositoryPort.class);
 
-    private final WhatsAppOrcamentoObserver observer =
-            new WhatsAppOrcamentoObserver(notifier, osRepository, clienteRepository, orcamentoRepository, veiculoRepository);
+    private final WhatsAppCancelamentoObserver observer =
+            new WhatsAppCancelamentoObserver(notifier, osRepository, clienteRepository, veiculoRepository);
 
     private OrdemDeServico stubOs(UUID osUuid, UUID clienteUuid, UUID veiculoUuid) {
         return OrdemDeServico.reconstitute(osUuid, clienteUuid, veiculoUuid,
@@ -43,36 +38,28 @@ class WhatsAppOrcamentoObserverTest {
     }
 
     @Test
-    @DisplayName("deve notificar WhatsApp com veículo quando cliente tem telefone")
-    void deveNotificarQuandoClienteTemTelefone() {
+    @DisplayName("deve notificar retirada via WhatsApp quando OS cancelada e cliente tem telefone")
+    void deveNotificarQuandoOSCanceladaEClienteTemTelefone() {
         UUID osUuid = UUID.randomUUID();
         UUID clienteUuid = UUID.randomUUID();
         UUID veiculoUuid = UUID.randomUUID();
-        UUID orcamentoUuid = UUID.randomUUID();
 
         OrdemDeServico os = stubOs(osUuid, clienteUuid, veiculoUuid);
         var cliente = Cliente.reconstitute(clienteUuid, "João", "12345678909",
                 "joao@test.com", "11999999999",
                 "Rua A", "100", "Centro", "São Paulo", "SP", "01001000", null);
-        var orcamento = Orcamento.reconstitute(orcamentoUuid, "Diagnóstico completo",
-                List.of(new ItemOrcamento("Troca óleo", 1L, BigDecimal.valueOf(150))),
-                BigDecimal.valueOf(150), LocalDateTime.now());
         var veiculo = Veiculo.reconstitute(veiculoUuid, clienteUuid, "ABC1D23", "Fiat", "Uno", 2020,
                 LocalDateTime.now());
 
         when(osRepository.findById(osUuid)).thenReturn(Optional.of(os));
         when(clienteRepository.findById(clienteUuid)).thenReturn(Optional.of(cliente));
-        when(orcamentoRepository.findByOrdemServicoUuid(osUuid)).thenReturn(Optional.of(orcamento));
         when(veiculoRepository.findById(veiculoUuid)).thenReturn(Optional.of(veiculo));
 
-        var event = DiagnosticoFinalizadoEvent.of(osUuid, "Diagnóstico completo",
-                List.of(new ItemOrcamento("Troca óleo", 1L, BigDecimal.valueOf(150))));
+        var event = OSCanceladaEvent.of(osUuid, "Cliente desistiu");
 
-        observer.aoFinalizarDiagnostico(event);
+        observer.aoCancelarOS(event);
 
-        verify(notifier).notificarOrcamento("11999999999", "João", "Fiat", "Uno", "ABC1D23",
-                BigDecimal.valueOf(150),
-                List.of(new ItemOrcamento("Troca óleo", 1L, BigDecimal.valueOf(150))));
+        verify(notifier).notificarRetirada("11999999999", "João", "ABC1D23", osUuid);
     }
 
     @Test
@@ -89,12 +76,11 @@ class WhatsAppOrcamentoObserverTest {
         when(osRepository.findById(osUuid)).thenReturn(Optional.of(os));
         when(clienteRepository.findById(clienteUuid)).thenReturn(Optional.of(cliente));
 
-        var event = new DiagnosticoFinalizadoEvent(osUuid, "Diagnóstico", List.of(), LocalDateTime.now());
+        var event = OSCanceladaEvent.of(osUuid, "Cliente desistiu");
 
-        observer.aoFinalizarDiagnostico(event);
+        observer.aoCancelarOS(event);
 
-        verify(notifier, never()).notificarOrcamento(anyString(), anyString(), anyString(), anyString(),
-                anyString(), any(BigDecimal.class), anyList());
+        verify(notifier, never()).notificarRetirada(anyString(), anyString(), anyString(), any(UUID.class));
     }
 
     @Test
@@ -107,13 +93,12 @@ class WhatsAppOrcamentoObserverTest {
 
         when(osRepository.findById(osUuid)).thenReturn(Optional.of(os));
         when(clienteRepository.findById(clienteUuid))
-                .thenThrow(new com.fiap.mekano.domain.exception.AppException(404, "cliente não encontrado"));
+                .thenThrow(new AppException(404, "cliente não encontrado"));
 
-        var event = new DiagnosticoFinalizadoEvent(osUuid, "Diagnóstico", List.of(), LocalDateTime.now());
+        var event = OSCanceladaEvent.of(osUuid, "Cliente desistiu");
 
-        assertDoesNotThrow(() -> observer.aoFinalizarDiagnostico(event));
+        assertDoesNotThrow(() -> observer.aoCancelarOS(event));
 
-        verify(notifier, never()).notificarOrcamento(anyString(), anyString(), anyString(), anyString(),
-                anyString(), any(BigDecimal.class), anyList());
+        verify(notifier, never()).notificarRetirada(anyString(), anyString(), anyString(), any(UUID.class));
     }
 }

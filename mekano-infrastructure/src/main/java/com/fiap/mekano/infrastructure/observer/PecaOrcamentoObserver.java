@@ -24,14 +24,13 @@ public class PecaOrcamentoObserver {
     @Transactional
     void aoOrcamentoAprovado(@Observes OrcamentoAprovadoEvent event) {
         for (OrcamentoAprovadoEvent.ItemOrcamento item : event.itens()) {
-            if (!pecaService.reservarSaldo(item.pecaId(), item.quantidade())) {
-                Peca peca = pecaService.buscarPorId(item.pecaId());
-                long disponivel = peca.disponivel();
-                int faltante = (int) (item.quantidade() - disponivel);
-                if (faltante > 0) {
-                    requisicaoService.criar(new CreateRequisicaoCompraCommand(
-                            item.pecaId(), faltante, MotivoRequisicao.ORDEM_SERVICO));
-                }
+            Peca peca = pecaService.buscarPorId(item.pecaId());
+            pecaService.reservarSaldo(item.pecaId(), item.quantidade());
+            long novoDisponivel = peca.disponivel() - item.quantidade();
+            if (novoDisponivel < 0) {
+                int faltante = (int) Math.abs(novoDisponivel);
+                requisicaoService.criar(new CreateRequisicaoCompraCommand(
+                        item.pecaId(), faltante, MotivoRequisicao.ORDEM_SERVICO));
             }
         }
     }

@@ -10,7 +10,7 @@ smallrye:
   jwt:
     sign:
       key:
-        location: ${user.home}/.mekano/secrets/privatekey.pem
+        location: file:${user.home}/.mekano/secrets/privatekey.pem
     new-token:
       signature-algorithm: eddsa
       issuer: mekano-api

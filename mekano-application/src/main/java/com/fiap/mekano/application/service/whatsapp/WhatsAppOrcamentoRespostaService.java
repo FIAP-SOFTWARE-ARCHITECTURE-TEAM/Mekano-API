@@ -19,7 +19,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Processa a resposta do cliente (SIM/NÃO) recebida via webhook da Evolution API.
+ * Processa a resposta do cliente (CONFIRMAR/RECUSAR) recebida via webhook da Evolution API.
  *
  * <p>Fluxo: telefone → cliente → OS mais recente em AGUARDANDO_APROVACAO →
  * orçamento pendente → aprovação/reprovação via {@link OrcamentoServicePort} →
@@ -69,7 +69,9 @@ public class WhatsAppOrcamentoRespostaService {
         // WR-03: casa apenas a primeira palavra EXATA — "não entendi..." ou
         // "simples assim" NÃO acionam aprovação/reprovação de orçamento.
         if (!palavra.equals("sim") && !palavra.equals("s")
-                && !palavra.equals("nao") && !palavra.equals("não") && !palavra.equals("n")) {
+                && !palavra.equals("confirmar") && !palavra.equals("1")
+                && !palavra.equals("nao") && !palavra.equals("não") && !palavra.equals("n")
+                && !palavra.equals("recusar") && !palavra.equals("2")) {
             log.info("Resposta WhatsApp não reconhecida — ignorando");
             return false;
         }
@@ -97,17 +99,18 @@ public class WhatsAppOrcamentoRespostaService {
         }
 
         UUID orcamentoUuid = orcamento.get().getId();
-        boolean aprovado = palavra.equals("sim") || palavra.equals("s");
+        boolean aprovado = palavra.equals("sim") || palavra.equals("s") || palavra.equals("confirmar") || palavra.equals("1");
 
         if (aprovado) {
+            notifier.notificarRespostaOrcamento(cliente.getTelefone().getValue(), true);
             orcamentoService.aprovar(new AprovarOrcamentoCommand(orcamentoUuid));
             log.info("Orçamento {} aprovado via WhatsApp pelo cliente {}", orcamentoUuid, cliente.getId());
         } else {
+            notifier.notificarRespostaOrcamento(cliente.getTelefone().getValue(), false);
             orcamentoService.reprovar(new ReprovarOrcamentoCommand(orcamentoUuid, "Reprovado via WhatsApp"));
             log.info("Orçamento {} reprovado via WhatsApp pelo cliente {}", orcamentoUuid, cliente.getId());
         }
 
-        notifier.notificarRespostaOrcamento(cliente.getTelefone().getValue(), aprovado);
         return true;
     }
 

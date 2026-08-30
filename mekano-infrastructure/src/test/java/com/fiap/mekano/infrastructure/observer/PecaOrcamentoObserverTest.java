@@ -22,13 +22,18 @@ import static org.mockito.Mockito.*;
 class PecaOrcamentoObserverTest {
 
     @Test
-    @DisplayName("reserva ok não deve criar requisição de compra")
+    @DisplayName("reserva com disponivel suficiente não deve criar requisição de compra")
     void reservaOkNaoCriaRequisicao() {
         PecaService pecaService = mock(PecaService.class);
         RequisicaoCompraService requisicaoService = mock(RequisicaoCompraService.class);
         PecaOrcamentoObserver observer = new PecaOrcamentoObserver(pecaService, requisicaoService);
 
         UUID pecaId = UUID.randomUUID();
+        Peca peca = Peca.reconstitute(
+                pecaId, "PECA-001", "Parafuso", BigDecimal.TEN,
+                20L, 5L, LocalDateTime.now(), 0L
+        );
+        when(pecaService.buscarPorId(pecaId)).thenReturn(peca);
         when(pecaService.reservarSaldo(pecaId, 10)).thenReturn(true);
 
         var event = new OrcamentoAprovadoEvent(
@@ -43,20 +48,19 @@ class PecaOrcamentoObserverTest {
     }
 
     @Test
-    @DisplayName("reserva falha com disponivel 3 e qtd 10 deve criar requisição com qtd 7 e ORDEM_SERVICO")
+    @DisplayName("reserva com disponivel insuficiente deve reservar e criar requisição com faltante")
     void reservaFalhaCriaRequisicaoComFaltante() {
         PecaService pecaService = mock(PecaService.class);
         RequisicaoCompraService requisicaoService = mock(RequisicaoCompraService.class);
         PecaOrcamentoObserver observer = new PecaOrcamentoObserver(pecaService, requisicaoService);
 
         UUID pecaId = UUID.randomUUID();
-        when(pecaService.reservarSaldo(pecaId, 10)).thenReturn(false);
-
         Peca peca = Peca.reconstitute(
                 pecaId, "PECA-001", "Parafuso", BigDecimal.TEN,
                 10L, 5L, LocalDateTime.now(), 7L
         );
         when(pecaService.buscarPorId(pecaId)).thenReturn(peca);
+        when(pecaService.reservarSaldo(pecaId, 10)).thenReturn(true);
 
         var event = new OrcamentoAprovadoEvent(
                 UUID.randomUUID(),
@@ -65,6 +69,7 @@ class PecaOrcamentoObserverTest {
 
         observer.aoOrcamentoAprovado(event);
 
+        // disponivel = 10 - 7 = 3; 3 - 10 = -7 → faltante 7
         ArgumentCaptor<CreateRequisicaoCompraCommand> captor = ArgumentCaptor.forClass(CreateRequisicaoCompraCommand.class);
         verify(requisicaoService, times(1)).criar(captor.capture());
 
@@ -75,20 +80,19 @@ class PecaOrcamentoObserverTest {
     }
 
     @Test
-    @DisplayName("reserva falha com disponivel >= qtd não deve criar requisição")
-    void reservaFalhaDisponivelSuficienteNaoCriaRequisicao() {
+    @DisplayName("reserva com disponivel exatamente igual à quantidade não deve criar requisição")
+    void reservaDisponivelExatoNaoCriaRequisicao() {
         PecaService pecaService = mock(PecaService.class);
         RequisicaoCompraService requisicaoService = mock(RequisicaoCompraService.class);
         PecaOrcamentoObserver observer = new PecaOrcamentoObserver(pecaService, requisicaoService);
 
         UUID pecaId = UUID.randomUUID();
-        when(pecaService.reservarSaldo(pecaId, 5)).thenReturn(false);
-
         Peca peca = Peca.reconstitute(
                 pecaId, "PECA-001", "Parafuso", BigDecimal.TEN,
-                15L, 5L, LocalDateTime.now(), 5L
+                15L, 5L, LocalDateTime.now(), 10L
         );
         when(pecaService.buscarPorId(pecaId)).thenReturn(peca);
+        when(pecaService.reservarSaldo(pecaId, 5)).thenReturn(true);
 
         var event = new OrcamentoAprovadoEvent(
                 UUID.randomUUID(),
@@ -97,6 +101,7 @@ class PecaOrcamentoObserverTest {
 
         observer.aoOrcamentoAprovado(event);
 
+        // disponivel = 15 - 10 = 5; 5 - 5 = 0 → não cria req
         verify(pecaService).reservarSaldo(pecaId, 5);
         verify(requisicaoService, never()).criar(any());
     }

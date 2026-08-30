@@ -10,6 +10,7 @@ import java.util.UUID;
 
 import com.fiap.mekano.application.service.os.OsAuditEventPublisher;
 import com.fiap.mekano.domain.event.DiagnosticoFinalizadoEvent;
+import com.fiap.mekano.domain.event.OSCanceladaEvent;
 import com.fiap.mekano.domain.event.OSFinalizadaEvent;
 import com.fiap.mekano.domain.event.OrdemDeServicoCriadaEvent;
 import com.fiap.mekano.domain.exception.AppException;
@@ -185,6 +186,7 @@ private final OrdemDeServicoRepositoryPort repository;
         os.cancelar(motivo);
         OrdemDeServico saved = repository.save(os);
         osAuditEventPublisher.publish(saved.getId(), OsAuditAction.CANCELAR, null, motivo, Map.of());
+        eventPublisher.publish(OSCanceladaEvent.of(saved.getId(), motivo));
         return saved;
     }
 
@@ -215,8 +217,11 @@ private final OrdemDeServicoRepositoryPort repository;
                         boolean ok = pecaRepository.debitarSaldoReservado(
                                 item.getPecaId(), item.getQuantidade().intValue());
                         if (!ok) {
+                            Peca peca = pecaRepository.findById(item.getPecaId())
+                                    .orElseThrow(() -> new AppException(404,
+                                            Messages.get("peca.not.found", item.getPecaId())));
                             throw new AppException(409, Messages.get("peca.saldo.insuficiente",
-                                    item.getDescricao(), 0, item.getQuantidade()));
+                                    item.getDescricao(), peca.getSaldoAtual(), item.getQuantidade()));
                         }
                     }
                 }
