@@ -28,6 +28,21 @@ com.fiap.mekano.application
     │   │                                constructor injection, @Transactional on create/update/delete
     │   │                                nome normalization, uniqueness check with existsByNomeAndIdNot
     │   └── (no response record — returns domain entity directly)
+    ├── ordemdeservico/          ## FULLY IMPLEMENTED
+    │   ├── OrdemDeServicoService.java — @ApplicationScoped, implements OrdemDeServicoServicePort
+    │   │                                constructor injection, @Transactional on all write methods
+    │   │                                manages OS lifecycle (create → diagnose → execute → deliver)
+    │   │                                validates items via ItemOsRepositoryPort + PecaRepository/ServicoRepository
+    │   │                                create(): persists items to os_itens junction table
+    │   │                                update(): deletes old items, persists new ones
+    │   │                                finalizarDiagnostico(): adds mechanic items, creates Orcamento from ALL items
+    │   └── (no response record — returns domain entity directly)
+    ├── orcamento/               ## FULLY IMPLEMENTED
+    │   └── OrcamentoService.java      — @ApplicationScoped, implements OrcamentoServicePort
+    │                                    aprovacao/reprovacao with status validation
+    ├── pagamento/               ## FULLY IMPLEMENTED
+    │   └── PagamentoService.java      — @ApplicationScoped
+    │                                    confirmacao with status validation
     ├── peca/                    ## STUB (incomplete)
     │   ├── PecaService.java           — @ApplicationScoped, does NOT implement any port
     │   │                                ⚠ field injection (@Inject) — violates constructor injection convention
@@ -68,5 +83,5 @@ These are placeholders awaiting real implementation.
 ## Testing
 - JUnit 5 + Mockito `@ExtendWith(MockitoExtension.class)` — no Quarkus container
 - `@Mock` for ports, `@InjectMocks` for service
-- 3 test files: `UserServiceTest`, `VeiculoServiceTest`, `ServicoServiceTest`
+- 16 test files: `UserServiceTest`, `VeiculoServiceTest`, `ServicoServiceTest`, `ClienteServiceTest`, `OrdemDeServicoServiceTest`, `OrcamentoServiceTest`, `PecaServiceTest`, `NfEntradaServiceTest`, `AdminUserServiceTest`, `AuthServiceJwtTest`, `PasswordGeneratorTest`, `RefreshTokenServiceTest`, `MockPaymentServiceTest`, `CobrancaEmitidaListenerTest`, `OsAuditEventPublisherTest`, `OsAuditQueryServiceTest`, `WhatsAppOrcamentoRespostaServiceTest`
 - No tests for stub services (Peca, NfEntrada, RequisicaoCompra)

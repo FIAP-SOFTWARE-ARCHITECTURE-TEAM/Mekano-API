@@ -20,7 +20,15 @@ com.fiap.mekano.infrastructure
 │   ├── ServicoEntity.java           — table "servicos"
 │   ├── PecaEntity.java              — table "pecas" — ⚠ uses @Data (public fields) instead of @Getter/@Setter
 │   ├── RequisicaoCompraEntity.java  — table "requisicoes_compra" — ⚠ uses @Data
-│   └── NfEntradaEntity.java         — table "nf_entradas" — ⚠ uses @Data
+│   ├── NfEntradaEntity.java         — table "nf_entradas" — ⚠ uses @Data
+│   ├── OrdemDeServicoEntity.java    — table "ordens_de_servico" — hybrid ID, audit, soft delete
+│   ├── ItemOsEntity.java            — table "os_itens" — junction table for OS items (peças/serviços)
+│   ├── OrcamentoEntity.java         — table "orcamentos"
+│   ├── OsAuditLogEntity.java        — table "os_audit_logs"
+│   ├── ProcessedEventsEntity.java   — table "processed_events" — idempotency control
+│   ├── RefreshTokenEntity.java      — table "refresh_tokens"
+│   ├── UserRoleEntity.java          — table "user_roles"
+│   └── CobrancaEntity.java          — table "cobrancas"
 ├── audit/                           # Auditoria automática de createdBy/updatedBy (D-16)
 │   ├── AuditoriaOrigem.java         — enum: PUBLICO (00000000-0000-0000-0000-000000000001),
 │   │                                  SISTEMA (00000000-0000-0000-0000-000000000002);
@@ -50,14 +58,34 @@ com.fiap.mekano.infrastructure
 │   ├── RequisicaoCompraRepositoryImpl.java     — implements RequisicaoCompraRepositoryPort
 │   │                                            ✗ NO fault tolerance, NO cache
 │   ├── NfEntradaPanacheRepository.java         — PanacheRepository<NfEntradaEntity>
-│   └── NfEntradaRepositoryImpl.java            — implements NfEntradaRepositoryPort
-│                                                 ✗ NO fault tolerance, NO cache
-│                                                 ⚠ BUG: pecaId and requisicaoCompraId both set to nfEntrada.getId()
+│   ├── NfEntradaRepositoryImpl.java            — implements NfEntradaRepositoryPort
+│   │                                            ✗ NO fault tolerance, NO cache
+│   │                                            ⚠ BUG: pecaId and requisicaoCompraId both set to nfEntrada.getId()
+│   ├── OrdemDeServicoPanacheRepository.java    — PanacheRepositoryBase<OrdemDeServicoEntity, Long>
+│   ├── OrdemDeServicoRepositoryImpl.java       — implements OrdemDeServicoRepositoryPort
+│   ├── ItemOsPanacheRepository.java            — PanacheRepository<ItemOsEntity>
+│   ├── ItemOsRepositoryImpl.java               — implements ItemOsRepositoryPort
+│   │                                            ✗ NO fault tolerance, NO cache
+│   │                                            save(), findByOsUuid(), deleteByOsUuid()
+│   ├── OrcamentoPanacheRepository.java         — PanacheRepository<OrcamentoEntity>
+│   ├── OrcamentoRepositoryImpl.java            — implements OrcamentoRepositoryPort
+│   ├── OsAuditLogPanacheRepository.java        — PanacheRepository<OsAuditLogEntity>
+│   ├── OsAuditLogRepositoryImpl.java           — implements OsAuditLogRepositoryPort
+│   ├── ProcessedEventsPanacheRepository.java   — PanacheRepository<ProcessedEventsEntity>
+│   ├── ProcessedEventsRepositoryImpl.java      — implements ProcessedEventsRepositoryPort
+│   ├── RefreshTokenPanacheRepository.java      — PanacheRepository<RefreshTokenEntity>
+│   ├── RefreshTokenRepositoryImpl.java         — implements RefreshTokenRepositoryPort
+│   ├── UserRolePanacheRepository.java          — PanacheRepository<UserRoleEntity>
+│   ├── UserRoleRepositoryImpl.java             — implements UserRoleRepositoryPort
+│   ├── CobrancaPanacheRepository.java          — PanacheRepository<CobrancaEntity>
+│   └── CobrancaRepositoryImpl.java             — implements CobrancaRepositoryPort
 ├── mapper/                          # Entity ↔ Domain mapping
 │   ├── UserEntityMapper.java / Impl.java         — manual CDI impl (not MapStruct-generated)
 │   ├── ClienteEntityMapper.java / Impl.java      — manual CDI impl
 │   ├── VeiculoEntityMapper.java / Impl.java      — manual CDI impl
 │   ├── ServicoEntityMapper.java / Impl.java      — manual CDI impl
+│   ├── OrdemDeServicoEntityMapper.java / Impl.java — manual CDI impl
+│   ├── ItemOsEntityMapper.java                   — manual toDomain() and toEntity() methods
 │   ├── PecaEntityMapper.java                     — ⚠ EMPTY class (no methods, unused)
 │   ├── RequisicaoCompraEntityMapper.java         — ⚠ EMPTY class (no methods, unused)
 │   ├── NfEntradaEntityMapper.java                — ⚠ EMPTY class (no methods, unused)
@@ -68,8 +96,14 @@ com.fiap.mekano.infrastructure
 │   └── PlacaVeiculoMapper.java                   — @ApplicationScoped @Named
 ├── security/
 │   └── BcryptPasswordHasher.java     — implements PasswordHasher, uses Quarkus BcryptUtil
-└── event/
-    └── CdiEventPublisher.java        — implements EventPublisher, uses CDI Event<Object>
+├── event/
+│   └── CdiEventPublisher.java        — implements EventPublisher, uses CDI Event<Object>
+└── listener/                        # CDI event listeners
+    ├── PagamentoConfirmadoListener.java
+    ├── OSEntregueListener.java
+    ├── WhatsAppPagamentoObserver.java
+    ├── WhatsAppOrcamentoObserver.java
+    └── WhatsAppCancelamentoObserver.java
 ```
 
 ## Key Conventions (VERIFIED)
@@ -115,7 +149,7 @@ All caches: `expire-after-write=60s` (except servicos: 120s), max-size 100-200.
 - 3 mapper classes are EMPTY (Peca, RequisicaoCompra, NfEntrada) — unused dead code
 - VO mappers (Email, Cpf, Endereco, Telefone, PlacaVeiculo) are `@ApplicationScoped @Named` with explicit methods
 
-## Flyway Migrations (V1-V23)
+## Flyway Migrations (V1-V35)
 
 | Migration | Table(s) | Notes |
 |-----------|----------|-------|
@@ -130,21 +164,31 @@ All caches: `expire-after-write=60s` (except servicos: 120s), max-size 100-200.
 | V9 | pecas | Simple inventory |
 | V10 | requisicoes_compra | References peca_id |
 | V11 | nf_entradas | References peca_id + requisicao_compra_id |
+| V12 | ordens_de_servico tables | Superseded by V18/V25 |
+| V13 | user_roles | Role-based access |
+| V14 | refresh_tokens | Add role column |
+| V15 | users_roles | Multi-role support |
+| V16 | users_roles | Insert cliente_role for existing users |
+| V17 | user_roles | Fix audit columns |
+| V18 | ordens_de_servico | Main OS table (hybrid ID, audit, soft delete) |
+| V19 | orcamentos | Budget/approval table |
+| V20 | nf_entradas | Add chave_acesso |
+| V23 | nf_entradas | Fix columns |
+| V24 | pecas, requisicoes | Fix columns |
+| V25 | ordens_de_servico | Final OS table (recreated) |
+| V26 | os_audit_logs | OS audit trail |
+| V27 | ordens_de_servico | Add payment fields |
+| V29 | ordens_de_servico | Add pagamento/entrega fields |
+| V30 | processed_events | Idempotency control |
+| V31 | ordens_de_servico | Fix pagamento/entrega column types |
+| V32 | users | Seed admin user |
+| V33 | ordens_de_servico | Fix status_pagamento/entrega column size |
+| V34 | pecas | Add saldo_reservado |
+| V35 | os_itens | Junction table for OS items (peças/serviços) |
 
-- V6-V11 use `BIGINT GENERATED BY DEFAULT AS IDENTITY` (H2-compatible)
+- V6-V11, V35 use `BIGINT GENERATED BY DEFAULT AS IDENTITY` (H2-compatible)
 - All follow H2 compatibility rules (no BIGSERIAL, no multi-column ADD)
-- V12: ordens_de_servico tables (superseded by V18)
-- V13: user_roles
-- V14: add role to refresh_tokens
-- V15: add columns users_roles
-- V16: insert cliente_role for existing users
-- V17: fix user_roles audit columns
-- V18: ordens_de_servico table
-- V19: orcamentos table
-- V20: add chave_acesso to nf_entradas
-- V21: create os_audit_logs
-- V22: fix nf_entradas columns
-- V23: fix pecas/requisicoes columns
+- V35 `os_itens`: junction table with UNIQUE constraint `(os_uuid, referencia_uuid, tipo)`
 
 ## Known Issues
 1. **Empty mapper stubs**: `PecaEntityMapper`, `RequisicaoCompraEntityMapper`, `NfEntradaEntityMapper` are dead code
@@ -160,4 +204,4 @@ mekano-domain, quarkus-hibernate-orm-panache, quarkus-arc, quarkus-jdbc-postgres
 ## Testing
 - `@QuarkusTest` + `@TestTransaction` (DevServices PostgreSQL)
 - AssertJ fluent assertions
-- Test files: `UserRepositoryImplTest`, `VeiculoRepositoryImplTest`, `AuditoriaOrigemTest` (unit), `AuditoriaListenerTest` (unit — SISTEMA fora do Quarkus), `AuditoriaListenerIntegrationTest` (@QuarkusTest — PUBLICO sem usuário)
+- Test files: `UserRepositoryImplTest`, `VeiculoRepositoryImplTest`, `AuditoriaOrigemTest` (unit), `AuditoriaListenerTest` (unit — SISTEMA fora do Quarkus), `AuditoriaListenerIntegrationTest` (@QuarkusTest — PUBLICO sem usuário), `OrdemDeServicoRepositoryImplTest`, `OrdemDeServicoEntityMapperImplTest`, `WhatsAppPagamentoObserverTest`, `WhatsAppOrcamentoObserverTest`, `WhatsAppCancelamentoObserverTest`, `SlaExpiryJobTest`
