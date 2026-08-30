@@ -29,7 +29,7 @@ class OrdemDeServicoTest {
             StatusOS.EM_EXECUCAO, Set.of(StatusOS.FINALIZADA, StatusOS.CANCELADA),
             StatusOS.FINALIZADA, Set.of(StatusOS.ENTREGUE),
             StatusOS.ENTREGUE, Set.of(),
-            StatusOS.CANCELADA, Set.of()
+            StatusOS.CANCELADA, Set.of(StatusOS.ENTREGUE)
     );
 
     /**
@@ -206,14 +206,16 @@ class OrdemDeServicoTest {
     }
 
     @Test
-    @DisplayName("CANCELADA é terminal — nenhuma transição de saída")
-    void canceladaDeveSerTerminal() {
+    @DisplayName("CANCELADA permite transição para ENTREGUE (devolução de veículo)")
+    void canceladaDevePermitirEntrega() {
         OrdemDeServico os = criarOS();
         os.cancelar("motivo");
 
         assertThrows(AppException.class, os::iniciarDiagnostico);
         assertThrows(AppException.class, () -> os.finalizarExecucao(null));
-        assertThrows(AppException.class, () -> os.entregar("Cliente"));
+
+        os.entregar("Cliente");
+        assertEquals(StatusOS.ENTREGUE, os.getStatus());
     }
 
     @Test

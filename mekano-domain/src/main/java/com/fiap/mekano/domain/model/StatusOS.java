@@ -30,7 +30,7 @@ public enum StatusOS {
             EM_EXECUCAO, Set.of(FINALIZADA, CANCELADA),
             FINALIZADA, Set.of(ENTREGUE),
             ENTREGUE, Set.of(),
-            CANCELADA, Set.of()
+            CANCELADA, Set.of(ENTREGUE)
     );
 
     public boolean podeTransicionarPara(StatusOS destino) {

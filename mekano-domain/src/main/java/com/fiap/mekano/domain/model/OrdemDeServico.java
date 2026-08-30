@@ -364,23 +364,28 @@ public class OrdemDeServico {
     }
 
     /**
-     * FINALIZADA + pagamento CONFIRMADO + entrega LIBERADA → ENTREGUE.
+     * FINALIZADA (com pagamento) ou CANCELADA (sem pagamento) → ENTREGUE.
+     * Quando CANCELADA, entrega é liberada automaticamente para devolução do veículo ao cliente.
      */
     public EntregaConfirmadaEvent entregar(String recebidoPor) {
         if (recebidoPor == null || recebidoPor.isBlank()) {
             throw new AppException(400, Messages.get("os.entrega.recebedor.required"));
         }
 
-        if (status != StatusOS.FINALIZADA) {
+        if (status != StatusOS.FINALIZADA && status != StatusOS.CANCELADA) {
             throw new AppException(422, Messages.get("os.transicao.invalida", status, StatusOS.ENTREGUE));
         }
 
-        if (statusPagamento != StatusPagamento.CONFIRMADO) {
-            throw new AppException(422, Messages.get("os.entrega.pagamento.pendente", statusPagamento));
-        }
+        if (status == StatusOS.FINALIZADA) {
+            if (statusPagamento != StatusPagamento.CONFIRMADO) {
+                throw new AppException(422, Messages.get("os.entrega.pagamento.pendente", statusPagamento));
+            }
 
-        if (!statusEntrega.podeTransicionarPara(StatusEntrega.ENTREGUE)) {
-            throw new AppException(422, Messages.get("os.entrega.status.invalido", statusEntrega));
+            if (!statusEntrega.podeTransicionarPara(StatusEntrega.ENTREGUE)) {
+                throw new AppException(422, Messages.get("os.entrega.status.invalido", statusEntrega));
+            }
+        } else {
+            this.statusEntrega = StatusEntrega.LIBERADA_PARA_ENTREGA;
         }
 
         transicionar(StatusOS.ENTREGUE);
