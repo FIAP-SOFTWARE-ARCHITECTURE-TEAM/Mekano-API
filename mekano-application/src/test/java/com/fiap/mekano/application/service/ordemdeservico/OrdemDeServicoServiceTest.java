@@ -139,8 +139,8 @@ class OrdemDeServicoServiceTest {
     }
 
     @Test
-    @DisplayName("finalizarDiagnostico item SERVICO deve gerar ItemOrcamento com pecaId null")
-    void finalizarDiagnosticoItemServicoPecaIdNull() {
+    @DisplayName("finalizarDiagnostico item SERVICO sem quantidade deve usar default 1")
+    void finalizarDiagnosticoItemServicoSemQuantidadeUsaDefault1() {
         UUID servicoId = UUID.randomUUID();
         Servico servico = Servico.create("Troca de Óleo", "Troca com óleo sintético", new BigDecimal("89.90"));
 
@@ -150,7 +150,7 @@ class OrdemDeServicoServiceTest {
 
         var command = new FinalizarDiagnosticoCommand(
                 osId, "Troca de óleo",
-                List.of(new FinalizarDiagnosticoCommand.ItemDiagnostico(servicoId, "SERVICO", 1L)));
+                List.of(new FinalizarDiagnosticoCommand.ItemDiagnostico(servicoId, "SERVICO", null)));
 
         service.finalizarDiagnostico(command);
 
@@ -161,6 +161,7 @@ class OrdemDeServicoServiceTest {
         ItemOrcamento item = event.itens().get(0);
         assertNull(item.getPecaId());
         assertEquals("Troca de Óleo", item.getDescricao());
+        assertEquals(1L, item.getQuantidade());
     }
 
     @Test
