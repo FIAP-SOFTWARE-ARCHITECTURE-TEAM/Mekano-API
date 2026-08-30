@@ -78,9 +78,10 @@ public class WhatsAppOrcamentoObserver {
                     cliente.getTelefone().getValue(),
                     cliente.getNome(),
                     veiculo.getMarca(),
-                    veiculo.getModelo(),
-                    veiculo.getPlaca().getValue(),
-                    orcamento.getValorTotal());
+                     veiculo.getModelo(),
+                     veiculo.getPlaca().getValue(),
+                     orcamento.getValorTotal(),
+                     orcamento.getItens());
         } catch (Exception ex) {
             log.warn("Falha ao notificar orçamento via WhatsApp (evento {}): {}", event.osUuid(), ex.getMessage());
         }

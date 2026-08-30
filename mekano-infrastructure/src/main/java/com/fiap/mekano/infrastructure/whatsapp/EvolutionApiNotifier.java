@@ -1,6 +1,7 @@
 package com.fiap.mekano.infrastructure.whatsapp;
 
 import com.fiap.mekano.domain.port.out.WhatsAppNotifierPort;
+import com.fiap.mekano.domain.valueobject.ItemOrcamento;
 import com.fiap.mekano.infrastructure.whatsapp.dto.SendTextRequest;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -12,7 +13,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Implementação do {@link WhatsAppNotifierPort} via Evolution API.
@@ -48,14 +51,21 @@ public class EvolutionApiNotifier implements WhatsAppNotifierPort {
     @Retry(maxRetries = 2, delay = 1000)
     @Fallback(fallbackMethod = "logFailureOrcamento")
     public void notificarOrcamento(String telefone, String nomeCliente, String marca, String modelo,
-                                   String placa, BigDecimal valorTotal) {
+                                   String placa, BigDecimal valorTotal, List<ItemOrcamento> itens) {
         String number = formatPhone(telefone);
         String veiculo = (marca == null || marca.isBlank() ? "" : marca + " ")
                 + (modelo == null || modelo.isBlank() ? "" : modelo + " ")
                 + "(" + placa + ")";
+        String listaItens = itens.stream()
+                .map(item -> "- " + item.getDescricao())
+                .collect(Collectors.joining("\n"));
         var request = new SendTextRequest(number,
                 "Olá " + nomeCliente + ", seu orçamento para o veículo " + veiculo.strip()
-                        + " ficou em R$ " + valorTotal + ". Deseja aprovar? Responda SIM ou NÃO.");
+                        + " ficou em R$ " + valorTotal + ".\n\n"
+                        + "Peças e serviços do orçamento:\n" + listaItens + "\n\n"
+                        + "Responda a esta mensagem com:\n"
+                        + "1️⃣ Confirmar\n"
+                        + "2️⃣ Recusar");
         log.info("Enviando notificação de orçamento para {} (instance={})",
                 maskPhone(number), instanceName);
         restClient.sendText(instanceName, apiKey, request);
@@ -115,7 +125,7 @@ public class EvolutionApiNotifier implements WhatsAppNotifierPort {
     }
 
     private void logFailureOrcamento(String telefone, String nomeCliente, String marca, String modelo,
-                                     String placa, BigDecimal valorTotal, Throwable ex) {
+                                     String placa, BigDecimal valorTotal, List<ItemOrcamento> itens, Throwable ex) {
         log.warn("Falha ao notificar orçamento para {} — Evolution API indisponível: {}",
                 maskPhone(telefone), ex.getMessage());
     }

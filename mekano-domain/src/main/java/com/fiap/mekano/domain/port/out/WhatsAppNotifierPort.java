@@ -1,6 +1,9 @@
 package com.fiap.mekano.domain.port.out;
 
+import com.fiap.mekano.domain.valueobject.ItemOrcamento;
+
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -23,9 +26,10 @@ public interface WhatsAppNotifierPort {
      * @param modelo       modelo do veículo
      * @param placa        placa do veículo (ex.: ABC1D23)
      * @param valorTotal   valor total do orçamento para exibição na mensagem
+     * @param itens        peças e serviços incluídos no orçamento
      */
     void notificarOrcamento(String telefone, String nomeCliente, String marca, String modelo,
-                            String placa, BigDecimal valorTotal);
+                            String placa, BigDecimal valorTotal, List<ItemOrcamento> itens);
 
     /**
      * Notifica o cliente sobre a resposta SIM/NÃO ao orçamento enviado via WhatsApp.

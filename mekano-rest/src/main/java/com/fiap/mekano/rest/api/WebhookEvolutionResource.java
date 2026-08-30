@@ -26,7 +26,7 @@ import java.util.Optional;
 /**
  * Webhook de entrada da Evolution API (WPP-01).
  *
- * <p>Recebe eventos {@code MESSAGES_UPSERT} e processa respostas SIM/NÃO
+ * <p>Recebe eventos {@code MESSAGES_UPSERT} e processa respostas CONFIRMAR/RECUSAR
  * do cliente ao orçamento via {@link WhatsAppOrcamentoRespostaService}.
  *
  * <p>{@code @PermitAll} (G8): a Evolution API não envia JWT — a autenticação

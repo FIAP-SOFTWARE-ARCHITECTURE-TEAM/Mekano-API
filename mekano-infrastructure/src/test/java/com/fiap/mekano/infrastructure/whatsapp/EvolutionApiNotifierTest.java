@@ -1,11 +1,13 @@
 package com.fiap.mekano.infrastructure.whatsapp;
 
+import com.fiap.mekano.domain.valueobject.ItemOrcamento;
 import com.fiap.mekano.infrastructure.whatsapp.dto.SendTextRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -23,7 +25,9 @@ class EvolutionApiNotifierTest {
     @Test
     @DisplayName("notificarOrcamento deve chamar sendText com veículo, valor e telefone 55+")
     void notificarOrcamento_chamaSendTextComTextoEPrefixo55() {
-        notifier.notificarOrcamento("11999999999", "João", "Fiat", "Uno", "ABC1D23", BigDecimal.valueOf(150));
+        notifier.notificarOrcamento("11999999999", "João", "Fiat", "Uno", "ABC1D23", BigDecimal.valueOf(150),
+                List.of(new ItemOrcamento("Troca de óleo", 1L, BigDecimal.valueOf(100)),
+                        new ItemOrcamento("Alinhamento", 1L, BigDecimal.valueOf(50))));
 
         ArgumentCaptor<SendTextRequest> captor = ArgumentCaptor.forClass(SendTextRequest.class);
         verify(restClient).sendText(eq(INSTANCE), eq(API_KEY), captor.capture());
@@ -36,7 +40,8 @@ class EvolutionApiNotifierTest {
         assertTrue(request.text().contains("ABC1D23"));
         assertTrue(request.text().contains("150"));
         assertFalse(request.text().contains("Orçamento #"));
-        assertTrue(request.text().contains("Responda SIM ou NÃO."));
+        assertTrue(request.text().contains("Peças e serviços do orçamento:\n- Troca de óleo\n- Alinhamento"));
+        assertTrue(request.text().contains("Responda a esta mensagem com:\n1️⃣ Confirmar\n2️⃣ Recusar"));
     }
 
     @Test

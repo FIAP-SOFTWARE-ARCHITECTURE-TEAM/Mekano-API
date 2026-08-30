@@ -12,6 +12,8 @@ import com.fiap.mekano.domain.port.out.WhatsAppNotifierPort;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -75,8 +77,9 @@ class WhatsAppOrcamentoRespostaServiceTest {
         return orcamento;
     }
 
-    @Test
-    @DisplayName("'sim' deve aprovar o orçamento pendente e confirmar ao cliente")
+    @ParameterizedTest
+    @ValueSource(strings = {"sim", "confirmar"})
+    @DisplayName("'sim' ou 'confirmar' deve aprovar o orçamento pendente e confirmar ao cliente")
     void deveAprovarOrcamentoQuandoClienteRespondeSim() {
         Cliente cliente = clienteComTelefone();
         OrdemDeServico os = osAguardandoAprovacao();
@@ -97,8 +100,9 @@ class WhatsAppOrcamentoRespostaServiceTest {
         verify(orcamentoService, never()).reprovar(any());
     }
 
-    @Test
-    @DisplayName("'não' deve reprovar o orçamento pendente e confirmar ao cliente")
+    @ParameterizedTest
+    @ValueSource(strings = {"NÃO", "recusar"})
+    @DisplayName("'não' ou 'recusar' deve reprovar o orçamento pendente e confirmar ao cliente")
     void deveReprovarOrcamentoQuandoClienteRespondeNao() {
         Cliente cliente = clienteComTelefone();
         OrdemDeServico os = osAguardandoAprovacao();
