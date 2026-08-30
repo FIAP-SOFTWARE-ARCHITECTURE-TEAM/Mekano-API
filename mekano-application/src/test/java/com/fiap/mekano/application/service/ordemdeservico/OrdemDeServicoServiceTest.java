@@ -233,6 +233,7 @@ class OrdemDeServicoServiceTest {
 
         verify(pecaRepository).liberarReserva(pecaId, 3);
         verify(pecaRepository, never()).creditarSaldo(any(), any());
+        verify(eventPublisher).publish(any(com.fiap.mekano.domain.event.OSCanceladaEvent.class));
     }
 
     @Test
@@ -499,6 +500,7 @@ class OrdemDeServicoServiceTest {
 
         verify(osAuditEventPublisher).publish(any(), eq(OsAuditAction.CANCELAR), isNull(),
                 eq("Cliente desistiu"), eq(Map.of()));
+        verify(eventPublisher).publish(any(com.fiap.mekano.domain.event.OSCanceladaEvent.class));
     }
 
     @Test
