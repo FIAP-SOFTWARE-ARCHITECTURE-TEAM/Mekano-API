@@ -4358,6 +4358,242 @@
                 }
             ],
             "description": "Alertas de peças com saldo abaixo do estoque mínimo."
+        },
+        {
+            "name": "🔧 Ordem de Serviço (Atendente)",
+            "item": [
+                {
+                    "name": "POST Criar OS - sem itens (sem peça e sem serviço)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const responseData = pm.response.json();",
+                                    "const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+                                    "",
+                                    "pm.test(\"Status code é 201 Created\", function () {",
+                                    "    pm.response.to.have.status(201);",
+                                    "});",
+                                    "",
+                                    "pm.test(\"Campo 'id' deve existir e ser um UUID válido\", function () {",
+                                    "    pm.expect(responseData).to.have.property(\"id\");",
+                                    "    pm.expect(responseData.id).to.match(uuidRegex);",
+                                    "});",
+                                    "",
+                                    "pm.test(\"Campo 'status' deve ser RECEBIDA\", function () {",
+                                    "    pm.expect(responseData).to.have.property(\"status\");",
+                                    "    pm.expect(responseData.status).to.eql(\"RECEBIDA\");",
+                                    "});",
+                                    "",
+                                    "pm.test(\"Campo 'descricaoProblema' deve estar preenchido\", function () {",
+                                    "    pm.expect(responseData).to.have.property(\"descricaoProblema\");",
+                                    "    pm.expect(responseData.descricaoProblema).to.eql(\"Barulho no motor ao acelerar\");",
+                                    "});",
+                                    "",
+                                    "pm.test(\"Campo 'itens' deve ser uma lista vazia\", function () {",
+                                    "    pm.expect(responseData).to.have.property(\"itens\");",
+                                    "    pm.expect(responseData.itens).to.be.an(\"array\");",
+                                    "    pm.expect(responseData.itens.length).to.eql(0);",
+                                    "});",
+                                    "",
+                                    "pm.test(\"Campo 'clienteId' deve ser UUID válido\", function () {",
+                                    "    pm.expect(responseData).to.have.property(\"clienteId\");",
+                                    "    pm.expect(responseData.clienteId).to.match(uuidRegex);",
+                                    "});",
+                                    "",
+                                    "pm.test(\"Campo 'veiculoId' deve ser UUID válido\", function () {",
+                                    "    pm.expect(responseData).to.have.property(\"veiculoId\");",
+                                    "    pm.expect(responseData.veiculoId).to.match(uuidRegex);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 201) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('osUuid', jsonData.id);",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{atendenteToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"clienteId\": \"{{clienteUuid}}\",\n  \"veiculoId\": \"{{veiculoUuid}}\",\n  \"descricaoProblema\": \"Barulho no motor ao acelerar\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/os",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "os"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Criar OS - com peça e serviço",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const responseData = pm.response.json();",
+                                    "const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+                                    "",
+                                    "pm.test(\"Status code é 201 Created\", function () {",
+                                    "    pm.response.to.have.status(201);",
+                                    "});",
+                                    "",
+                                    "pm.test(\"Campo 'id' deve existir e ser um UUID válido\", function () {",
+                                    "    pm.expect(responseData).to.have.property(\"id\");",
+                                    "    pm.expect(responseData.id).to.match(uuidRegex);",
+                                    "});",
+                                    "",
+                                    "pm.test(\"Campo 'status' deve ser RECEBIDA\", function () {",
+                                    "    pm.expect(responseData).to.have.property(\"status\");",
+                                    "    pm.expect(responseData.status).to.eql(\"RECEBIDA\");",
+                                    "});",
+                                    "",
+                                    "pm.test(\"Campo 'itens' deve conter 2 itens\", function () {",
+                                    "    pm.expect(responseData).to.have.property(\"itens\");",
+                                    "    pm.expect(responseData.itens).to.be.an(\"array\");",
+                                    "    pm.expect(responseData.itens.length).to.eql(2);",
+                                    "});",
+                                    "",
+                                    "pm.test(\"Primeiro item deve ser PECA com referenciaUuid válido\", function () {",
+                                    "    const item = responseData.itens[0];",
+                                    "    pm.expect(item).to.have.property(\"tipo\");",
+                                    "    pm.expect(item.tipo).to.eql(\"PECA\");",
+                                    "    pm.expect(item).to.have.property(\"referenciaUuid\");",
+                                    "    pm.expect(item.referenciaUuid).to.match(uuidRegex);",
+                                    "    pm.expect(item).to.have.property(\"quantidade\");",
+                                    "    pm.expect(item.quantidade).to.eql(2);",
+                                    "});",
+                                    "",
+                                    "pm.test(\"Segundo item deve ser SERVICO com referenciaUuid válido\", function () {",
+                                    "    const item = responseData.itens[1];",
+                                    "    pm.expect(item).to.have.property(\"tipo\");",
+                                    "    pm.expect(item.tipo).to.eql(\"SERVICO\");",
+                                    "    pm.expect(item).to.have.property(\"referenciaUuid\");",
+                                    "    pm.expect(item.referenciaUuid).to.match(uuidRegex);",
+                                    "    pm.expect(item).to.have.property(\"quantidade\");",
+                                    "    pm.expect(item.quantidade).to.eql(1);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 201) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('osUuid', jsonData.id);",
+                                    "}"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{atendenteToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"clienteId\": \"{{clienteUuid}}\",\n  \"veiculoId\": \"{{veiculoUuid}}\",\n  \"descricaoProblema\": \"Trocar filtro de óleo e verificar alinhamento\",\n  \"itens\": [\n    {\n      \"referenciaUuid\": \"{{pecaUuid}}\",\n      \"tipo\": \"PECA\",\n      \"quantidade\": 2\n    },\n    {\n      \"referenciaUuid\": \"{{servicoUuid}}\",\n      \"tipo\": \"SERVICO\",\n      \"quantidade\": 1\n    }\n  ]\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/os",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "os"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Criar OS - erro 404 (serviço UUID inválido)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 404 Not Found\", function () {",
+                                    "    pm.response.to.have.status(404);",
+                                    "});",
+                                    "",
+                                    "pm.test(\"Mensagem em 'detail' informa serviço não encontrado\", function () {",
+                                    "    const responseData = pm.response.json();",
+                                    "    pm.expect(responseData).to.have.property(\"detail\");",
+                                    "    pm.expect(responseData.detail).to.include(\"Serviço não encontrado\");",
+                                    "});",
+                                    "",
+                                    "pm.test(\"Campo 'status' deve ser 404\", function () {",
+                                    "    const responseData = pm.response.json();",
+                                    "    pm.expect(responseData).to.have.property(\"status\");",
+                                    "    pm.expect(responseData.status).to.eql(404);",
+                                    "});"
+                                ],
+                                "type": "text/javascript",
+                                "packages": {},
+                                "requests": {}
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{atendenteToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"clienteId\": \"{{clienteUuid}}\",\n  \"veiculoId\": \"{{veiculoUuid}}\",\n  \"descricaoProblema\": \"Freio fazendo barulho\",\n  \"itens\": [\n    {\n      \"referenciaUuid\": \"00000000-0000-0000-0000-000000000000\",\n      \"tipo\": \"SERVICO\",\n      \"quantidade\": 1\n    }\n  ]\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/os",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "os"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Criação de Ordens de Serviço. A OS pode ser criada sem itens, com apenas peça, com apenas serviço, ou com ambos. Itens com UUID inválido retornam erro."
         }
     ],
     "variable": [

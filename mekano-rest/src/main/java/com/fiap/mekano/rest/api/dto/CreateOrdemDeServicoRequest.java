@@ -1,5 +1,6 @@
 package com.fiap.mekano.rest.api.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -8,6 +9,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -28,4 +30,8 @@ public class CreateOrdemDeServicoRequest {
     @Size(max = 1000, message = "Descrição deve ter no máximo 1000 caracteres")
     @Schema(required = true, description = "Descrição do problema relatado")
     private String descricaoProblema;
+
+    @Schema(description = "Lista de itens (peças/serviços) da OS")
+    @Valid
+    private List<CreateItemOsRequest> itens;
 }

@@ -32,9 +32,9 @@ class WhatsAppPagamentoObserverTest {
 
     private OrdemDeServico stubOs(UUID osUuid, UUID clienteUuid, UUID veiculoUuid) {
         return OrdemDeServico.reconstitute(osUuid, clienteUuid, veiculoUuid,
-                "Problema no motor", null, null, null, null, null, null, null,
+                "Problema no motor", null, null, null, null, null, null,
                 null, null, null, null, null, null, null, null, null, null, null, null,
-                null, 0L);
+                null, LocalDateTime.now(), 0L);
     }
 
     @Test

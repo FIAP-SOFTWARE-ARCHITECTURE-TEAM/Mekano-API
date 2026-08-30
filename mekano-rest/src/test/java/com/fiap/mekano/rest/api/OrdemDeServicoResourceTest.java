@@ -1,11 +1,15 @@
 package com.fiap.mekano.rest.api;
 
 import com.fiap.mekano.domain.model.Cliente;
+import com.fiap.mekano.domain.model.Peca;
+import com.fiap.mekano.domain.model.Servico;
 import com.fiap.mekano.domain.valueobject.ItemOrcamento;
 import com.fiap.mekano.domain.model.Orcamento;
 import com.fiap.mekano.domain.model.Veiculo;
 import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;
 import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
+import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
+import com.fiap.mekano.domain.port.out.ServicoRepositoryPort;
 import com.fiap.mekano.domain.port.out.VeiculoRepositoryPort;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
@@ -50,6 +54,12 @@ class OrdemDeServicoResourceTest {
     @InjectMock
     OrcamentoRepositoryPort orcamentoRepository;
 
+    @InjectMock
+    PecaRepositoryPort pecaRepository;
+
+    @InjectMock
+    ServicoRepositoryPort servicoRepository;
+
     private static final UUID ORCAMENTO_UUID = UUID.randomUUID();
 
     @BeforeEach
@@ -75,6 +85,15 @@ class OrdemDeServicoResourceTest {
                 List.of(itemServico, itemPeca),
                 new BigDecimal("333.60"), LocalDateTime.now());
         when(orcamentoRepository.findByUuid(ORCAMENTO_UUID)).thenReturn(Optional.of(mockOrcamento));
+
+        // Mock peca and servico to return active entities for any UUID (service validates items)
+        var fakePeca = Peca.reconstitute(UUID.randomUUID(), "PEA-001", "Óleo 5W30",
+                new BigDecimal("45.90"), 100L, 10L, LocalDateTime.now(), 0L);
+        when(pecaRepository.findById(any(UUID.class))).thenReturn(Optional.of(fakePeca));
+
+        var fakeServico = Servico.reconstitute(UUID.randomUUID(), "Troca de óleo",
+                "Troca de óleo do motor", new BigDecimal("150.00"), LocalDateTime.now());
+        when(servicoRepository.findById(any(UUID.class))).thenReturn(Optional.of(fakeServico));
     }
 
     // ─────────────── CREATE ───────────────
@@ -99,8 +118,115 @@ class OrdemDeServicoResourceTest {
                 .body("id", notNullValue())
                 .body("status", equalTo("RECEBIDA"))
                 .body("descricaoProblema", equalTo("Motor falhando ao acelerar"))
+                .body("itens", notNullValue())
+                .body("itens", hasSize(0))
                 .header("Location", notNullValue())
                 .extract().path("id");
+    }
+
+    @Test
+    @Order(1)
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void create_comPecaIdServicoId_returns201() {
+        UUID pecaUuid = UUID.randomUUID();
+        UUID servicoUuid = UUID.randomUUID();
+
+        given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {
+                          "clienteId": "%s",
+                          "veiculoId": "%s",
+                          "descricaoProblema": "Troca de óleo com peça e serviço",
+                          "itens": [
+                            {"referenciaUuid": "%s", "tipo": "PECA", "quantidade": 4},
+                            {"referenciaUuid": "%s", "tipo": "SERVICO", "quantidade": 1}
+                          ]
+                        }
+                        """.formatted(CLIENTE_UUID, VEICULO_UUID, pecaUuid, servicoUuid))
+                .when()
+                .post(BASE_PATH)
+                .then()
+                .statusCode(201)
+                .body("id", notNullValue())
+                .body("status", equalTo("RECEBIDA"))
+                .body("itens", notNullValue())
+                .body("itens", hasSize(2));
+    }
+
+    @Test
+    @Order(1)
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void create_comApenasPecaId_returns201() {
+        UUID pecaUuid = UUID.randomUUID();
+
+        given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {
+                          "clienteId": "%s",
+                          "veiculoId": "%s",
+                          "descricaoProblema": "Apenas peça associada",
+                          "itens": [
+                            {"referenciaUuid": "%s", "tipo": "PECA", "quantidade": 2}
+                          ]
+                        }
+                        """.formatted(CLIENTE_UUID, VEICULO_UUID, pecaUuid))
+                .when()
+                .post(BASE_PATH)
+                .then()
+                .statusCode(201)
+                .body("itens", notNullValue())
+                .body("itens", hasSize(1))
+                .body("itens[0].tipo", equalTo("PECA"));
+    }
+
+    @Test
+    @Order(1)
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void create_comApenasServicoId_returns201() {
+        UUID servicoUuid = UUID.randomUUID();
+
+        given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {
+                          "clienteId": "%s",
+                          "veiculoId": "%s",
+                          "descricaoProblema": "Apenas serviço associado",
+                          "itens": [
+                            {"referenciaUuid": "%s", "tipo": "SERVICO", "quantidade": 1}
+                          ]
+                        }
+                        """.formatted(CLIENTE_UUID, VEICULO_UUID, servicoUuid))
+                .when()
+                .post(BASE_PATH)
+                .then()
+                .statusCode(201)
+                .body("itens", notNullValue())
+                .body("itens", hasSize(1))
+                .body("itens[0].tipo", equalTo("SERVICO"));
+    }
+
+    @Test
+    @Order(1)
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void create_semPecaServicoId_returns201() {
+        given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {
+                          "clienteId": "%s",
+                          "veiculoId": "%s",
+                          "descricaoProblema": "OS sem peças nem serviços"
+                        }
+                        """.formatted(CLIENTE_UUID, VEICULO_UUID))
+                .when()
+                .post(BASE_PATH)
+                .then()
+                .statusCode(201)
+                .body("itens", notNullValue())
+                .body("itens", hasSize(0));
     }
 
     // ─────────────── UPDATE ───────────────
@@ -111,6 +237,8 @@ class OrdemDeServicoResourceTest {
     void update_emRecebida_returns200() {
         UUID novoCliente = UUID.randomUUID();
         UUID novoVeiculo = UUID.randomUUID();
+        UUID novaPeca = UUID.randomUUID();
+        UUID novoServico = UUID.randomUUID();
 
         String osId = given()
                 .contentType(ContentType.JSON)
@@ -124,8 +252,16 @@ class OrdemDeServicoResourceTest {
         given()
                 .contentType(ContentType.JSON)
                 .body("""
-                        {"clienteId": "%s", "veiculoId": "%s", "descricaoProblema": "Problema corrigido"}
-                        """.formatted(novoCliente, novoVeiculo))
+                        {
+                          "clienteId": "%s",
+                          "veiculoId": "%s",
+                          "descricaoProblema": "Problema corrigido",
+                          "itens": [
+                            {"referenciaUuid": "%s", "tipo": "PECA", "quantidade": 2},
+                            {"referenciaUuid": "%s", "tipo": "SERVICO", "quantidade": 1}
+                          ]
+                        }
+                        """.formatted(novoCliente, novoVeiculo, novaPeca, novoServico))
                 .when()
                 .put(BASE_PATH + "/" + osId)
                 .then()
@@ -133,7 +269,9 @@ class OrdemDeServicoResourceTest {
                 .body("clienteId", equalTo(novoCliente.toString()))
                 .body("veiculoId", equalTo(novoVeiculo.toString()))
                 .body("descricaoProblema", equalTo("Problema corrigido"))
-                .body("status", equalTo("RECEBIDA"));
+                .body("status", equalTo("RECEBIDA"))
+                .body("itens", notNullValue())
+                .body("itens", hasSize(2));
 
         given()
                 .when()
@@ -323,6 +461,8 @@ class OrdemDeServicoResourceTest {
                 .statusCode(200)
                 .body("id", equalTo(osId))
                 .body("status", equalTo("EM_DIAGNOSTICO"))
+                .body("itens", notNullValue())
+                .body("itens", hasSize(0))
                 .body("itensOrcados", notNullValue())
                 .body("itensOrcados", hasSize(0))
                 .body("itensExecutados", notNullValue())

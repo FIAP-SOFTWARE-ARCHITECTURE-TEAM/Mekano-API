@@ -4,6 +4,7 @@ import com.fiap.mekano.application.service.os.OsAuditEventPublisher;
 import com.fiap.mekano.domain.event.DiagnosticoFinalizadoEvent;
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.model.Cliente;
+import com.fiap.mekano.domain.model.ItemOs;
 import com.fiap.mekano.domain.valueobject.ItemOrcamento;
 import com.fiap.mekano.domain.model.Orcamento;
 import com.fiap.mekano.domain.model.OrdemDeServico;
@@ -12,10 +13,12 @@ import com.fiap.mekano.domain.model.Servico;
 import com.fiap.mekano.domain.model.StatusOS;
 import com.fiap.mekano.domain.model.Veiculo;
 import com.fiap.mekano.domain.os.OsAuditAction;
+import com.fiap.mekano.domain.port.in.CreateItemOsCommand;
 import com.fiap.mekano.domain.port.in.CreateOrdemDeServicoCommand;
 import com.fiap.mekano.domain.port.in.FinalizarDiagnosticoCommand;
 import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;
 import com.fiap.mekano.domain.port.out.EventPublisher;
+import com.fiap.mekano.domain.port.out.ItemOsRepositoryPort;
 import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
 import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
@@ -74,6 +77,9 @@ class OrdemDeServicoServiceTest {
     @Mock
     VeiculoRepositoryPort veiculoRepository;
 
+    @Mock
+    ItemOsRepositoryPort itemOsRepository;
+
     @InjectMocks
     OrdemDeServicoService service;
 
@@ -100,6 +106,7 @@ class OrdemDeServicoServiceTest {
         when(veiculoAtivo.getIsActive()).thenReturn(true);
         when(clienteRepository.findById(any(UUID.class))).thenReturn(Optional.of(clienteAtivo));
         when(veiculoRepository.findById(any(UUID.class))).thenReturn(Optional.of(veiculoAtivo));
+        when(itemOsRepository.findByOsUuid(any(UUID.class))).thenReturn(List.of());
     }
 
     @Test
@@ -109,7 +116,10 @@ class OrdemDeServicoServiceTest {
         Peca peca = Peca.reconstitute(pecaId, "PEA-001", "Óleo Motor 5W30",
                 new BigDecimal("45.50"), 50L, 10L, LocalDateTime.now(), 0L);
 
+        when(pecaRepository.findById(pecaId)).thenReturn(Optional.of(peca));
         when(pecaRepository.buscarPorId(pecaId)).thenReturn(Optional.of(peca));
+        var itemPersisted = ItemOs.create(os.getId(), pecaId, "PECA", "Troca de óleo", 2L);
+        when(itemOsRepository.findByOsUuid(os.getId())).thenReturn(List.of(itemPersisted));
 
         var command = new FinalizarDiagnosticoCommand(
                 osId, "Troca de óleo",
@@ -135,6 +145,8 @@ class OrdemDeServicoServiceTest {
         Servico servico = Servico.create("Troca de Óleo", "Troca com óleo sintético", new BigDecimal("89.90"));
 
         when(servicoRepository.findById(servicoId)).thenReturn(Optional.of(servico));
+        var itemPersisted = ItemOs.create(os.getId(), servicoId, "SERVICO", "Troca de óleo", 1L);
+        when(itemOsRepository.findByOsUuid(os.getId())).thenReturn(List.of(itemPersisted));
 
         var command = new FinalizarDiagnosticoCommand(
                 osId, "Troca de óleo",
@@ -255,9 +267,10 @@ class OrdemDeServicoServiceTest {
     @Test
     @DisplayName("create deve auditar CRIAR")
     void createAuditaCRIAR() {
-        var cmd = new com.fiap.mekano.domain.port.in.CreateOrdemDeServicoCommand(
-                UUID.randomUUID(), UUID.randomUUID(), "Teste");
-        var novaOs = OrdemDeServico.create(cmd.clienteId(), cmd.veiculoId(), cmd.descricaoProblema());
+        var cmd = new CreateOrdemDeServicoCommand(
+                UUID.randomUUID(), UUID.randomUUID(), "Teste", List.of());
+        var novaOs = OrdemDeServico.create(cmd.clienteId(), cmd.veiculoId(),
+                cmd.descricaoProblema());
         when(repository.save(any())).thenReturn(novaOs);
 
         service.create(cmd);
@@ -275,7 +288,7 @@ class OrdemDeServicoServiceTest {
         UUID veiculoId = UUID.randomUUID();
         when(clienteRepository.findById(clienteId)).thenReturn(Optional.empty());
 
-        var cmd = new CreateOrdemDeServicoCommand(clienteId, veiculoId, "Problema no motor");
+        var cmd = new CreateOrdemDeServicoCommand(clienteId, veiculoId, "Problema no motor", List.of());
 
         var ex = assertThrows(AppException.class, () -> service.create(cmd));
         assertEquals(404, ex.getStatus());
@@ -290,7 +303,7 @@ class OrdemDeServicoServiceTest {
         when(clienteRepository.findById(clienteId)).thenReturn(Optional.of(clienteAtivo));
         when(veiculoRepository.findById(veiculoId)).thenReturn(Optional.empty());
 
-        var cmd = new CreateOrdemDeServicoCommand(clienteId, veiculoId, "Problema no motor");
+        var cmd = new CreateOrdemDeServicoCommand(clienteId, veiculoId, "Problema no motor", List.of());
 
         var ex = assertThrows(AppException.class, () -> service.create(cmd));
         assertEquals(404, ex.getStatus());
@@ -305,13 +318,153 @@ class OrdemDeServicoServiceTest {
         when(clienteRepository.findById(clienteId)).thenReturn(Optional.of(clienteAtivo));
         when(veiculoRepository.findById(veiculoId)).thenReturn(Optional.of(veiculoAtivo));
 
-        var cmd = new CreateOrdemDeServicoCommand(clienteId, veiculoId, "Problema no motor");
+        var cmd = new CreateOrdemDeServicoCommand(clienteId, veiculoId, "Problema no motor", List.of());
         var novaOs = OrdemDeServico.create(clienteId, veiculoId, "Problema no motor");
         when(repository.save(any())).thenReturn(novaOs);
 
         service.create(cmd);
 
         verify(repository).save(any());
+    }
+
+    @Test
+    @DisplayName("create com itens de peca deve chamar itemOsRepository.save para cada item")
+    void createComItensPecaChamaItemOsSave() {
+        UUID clienteId = UUID.randomUUID();
+        UUID veiculoId = UUID.randomUUID();
+        UUID pecaId = UUID.randomUUID();
+        when(clienteRepository.findById(clienteId)).thenReturn(Optional.of(clienteAtivo));
+        when(veiculoRepository.findById(veiculoId)).thenReturn(Optional.of(veiculoAtivo));
+        var pecaAtiva = mock(Peca.class);
+        when(pecaAtiva.getIsActive()).thenReturn(true);
+        when(pecaRepository.findById(pecaId)).thenReturn(Optional.of(pecaAtiva));
+
+        var cmd = new CreateOrdemDeServicoCommand(clienteId, veiculoId, "Problema no motor",
+                List.of(new CreateItemOsCommand(pecaId, "PECA", 2L)));
+        var novaOs = OrdemDeServico.create(clienteId, veiculoId, "Problema no motor");
+        when(repository.save(any())).thenReturn(novaOs);
+
+        service.create(cmd);
+
+        verify(itemOsRepository).save(any());
+        verify(repository).save(any());
+    }
+
+    @Test
+    @DisplayName("create com itens de servico deve chamar itemOsRepository.save para cada item")
+    void createComItensServicoChamaItemOsSave() {
+        UUID clienteId = UUID.randomUUID();
+        UUID veiculoId = UUID.randomUUID();
+        UUID servicoId = UUID.randomUUID();
+        when(clienteRepository.findById(clienteId)).thenReturn(Optional.of(clienteAtivo));
+        when(veiculoRepository.findById(veiculoId)).thenReturn(Optional.of(veiculoAtivo));
+        var servicoAtivo = mock(Servico.class);
+        when(servicoAtivo.getIsActive()).thenReturn(true);
+        when(servicoRepository.findById(servicoId)).thenReturn(Optional.of(servicoAtivo));
+
+        var cmd = new CreateOrdemDeServicoCommand(clienteId, veiculoId, "Problema no motor",
+                List.of(new CreateItemOsCommand(servicoId, "SERVICO", 1L)));
+        var novaOs = OrdemDeServico.create(clienteId, veiculoId, "Problema no motor");
+        when(repository.save(any())).thenReturn(novaOs);
+
+        service.create(cmd);
+
+        verify(itemOsRepository).save(any());
+        verify(repository).save(any());
+    }
+
+    @Test
+    @DisplayName("create com item de peca inexistente deve lançar AppException 404")
+    void createComItemPecaInexistenteLanca404() {
+        UUID clienteId = UUID.randomUUID();
+        UUID veiculoId = UUID.randomUUID();
+        UUID pecaId = UUID.randomUUID();
+        when(clienteRepository.findById(clienteId)).thenReturn(Optional.of(clienteAtivo));
+        when(veiculoRepository.findById(veiculoId)).thenReturn(Optional.of(veiculoAtivo));
+        when(pecaRepository.findById(pecaId)).thenReturn(Optional.empty());
+
+        var cmd = new CreateOrdemDeServicoCommand(clienteId, veiculoId, "Problema no motor",
+                List.of(new CreateItemOsCommand(pecaId, "PECA", 1L)));
+
+        var ex = assertThrows(AppException.class, () -> service.create(cmd));
+        assertEquals(404, ex.getStatus());
+        verify(itemOsRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("create com item de servico inexistente deve lançar AppException 404")
+    void createComItemServicoInexistenteLanca404() {
+        UUID clienteId = UUID.randomUUID();
+        UUID veiculoId = UUID.randomUUID();
+        UUID servicoId = UUID.randomUUID();
+        when(clienteRepository.findById(clienteId)).thenReturn(Optional.of(clienteAtivo));
+        when(veiculoRepository.findById(veiculoId)).thenReturn(Optional.of(veiculoAtivo));
+        when(servicoRepository.findById(servicoId)).thenReturn(Optional.empty());
+
+        var cmd = new CreateOrdemDeServicoCommand(clienteId, veiculoId, "Problema no motor",
+                List.of(new CreateItemOsCommand(servicoId, "SERVICO", 1L)));
+
+        var ex = assertThrows(AppException.class, () -> service.create(cmd));
+        assertEquals(404, ex.getStatus());
+        verify(itemOsRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("create com item de peca inativo deve lançar AppException 422")
+    void createComItemPecaInativoLanca422() {
+        UUID clienteId = UUID.randomUUID();
+        UUID veiculoId = UUID.randomUUID();
+        UUID pecaId = UUID.randomUUID();
+        when(clienteRepository.findById(clienteId)).thenReturn(Optional.of(clienteAtivo));
+        when(veiculoRepository.findById(veiculoId)).thenReturn(Optional.of(veiculoAtivo));
+        var pecaInativa = mock(Peca.class);
+        when(pecaInativa.getIsActive()).thenReturn(false);
+        when(pecaRepository.findById(pecaId)).thenReturn(Optional.of(pecaInativa));
+
+        var cmd = new CreateOrdemDeServicoCommand(clienteId, veiculoId, "Problema no motor",
+                List.of(new CreateItemOsCommand(pecaId, "PECA", 1L)));
+
+        var ex = assertThrows(AppException.class, () -> service.create(cmd));
+        assertEquals(422, ex.getStatus());
+        verify(itemOsRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("create com item de servico inativo deve lançar AppException 422")
+    void createComItemServicoInativoLanca422() {
+        UUID clienteId = UUID.randomUUID();
+        UUID veiculoId = UUID.randomUUID();
+        UUID servicoId = UUID.randomUUID();
+        when(clienteRepository.findById(clienteId)).thenReturn(Optional.of(clienteAtivo));
+        when(veiculoRepository.findById(veiculoId)).thenReturn(Optional.of(veiculoAtivo));
+        var servicoInativo = mock(Servico.class);
+        when(servicoInativo.getIsActive()).thenReturn(false);
+        when(servicoRepository.findById(servicoId)).thenReturn(Optional.of(servicoInativo));
+
+        var cmd = new CreateOrdemDeServicoCommand(clienteId, veiculoId, "Problema no motor",
+                List.of(new CreateItemOsCommand(servicoId, "SERVICO", 1L)));
+
+        var ex = assertThrows(AppException.class, () -> service.create(cmd));
+        assertEquals(422, ex.getStatus());
+        verify(itemOsRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("create sem itens deve salvar OS sem chamar itemOsRepository")
+    void createSemItensNaoChamaItemOsRepository() {
+        UUID clienteId = UUID.randomUUID();
+        UUID veiculoId = UUID.randomUUID();
+        when(clienteRepository.findById(clienteId)).thenReturn(Optional.of(clienteAtivo));
+        when(veiculoRepository.findById(veiculoId)).thenReturn(Optional.of(veiculoAtivo));
+
+        var cmd = new CreateOrdemDeServicoCommand(clienteId, veiculoId, "Problema no motor", List.of());
+        var novaOs = OrdemDeServico.create(clienteId, veiculoId, "Problema no motor");
+        when(repository.save(any())).thenReturn(novaOs);
+
+        service.create(cmd);
+
+        verify(repository).save(any());
+        verify(itemOsRepository, never()).save(any());
     }
 
     @Test
@@ -323,7 +476,7 @@ class OrdemDeServicoServiceTest {
         when(clienteInativo.getIsActive()).thenReturn(false);
         when(clienteRepository.findById(clienteId)).thenReturn(Optional.of(clienteInativo));
 
-        var cmd = new CreateOrdemDeServicoCommand(clienteId, veiculoId, "Problema no motor");
+        var cmd = new CreateOrdemDeServicoCommand(clienteId, veiculoId, "Problema no motor", List.of());
 
         var ex = assertThrows(AppException.class, () -> service.create(cmd));
         assertEquals(422, ex.getStatus());
@@ -339,7 +492,7 @@ class OrdemDeServicoServiceTest {
         when(veiculoInativo.getIsActive()).thenReturn(false);
         when(veiculoRepository.findById(veiculoId)).thenReturn(Optional.of(veiculoInativo));
 
-        var cmd = new CreateOrdemDeServicoCommand(clienteId, veiculoId, "Problema no motor");
+        var cmd = new CreateOrdemDeServicoCommand(clienteId, veiculoId, "Problema no motor", List.of());
 
         var ex = assertThrows(AppException.class, () -> service.create(cmd));
         assertEquals(422, ex.getStatus());
@@ -355,7 +508,7 @@ class OrdemDeServicoServiceTest {
         when(clienteInativo.getIsActive()).thenReturn(false);
         when(clienteRepository.findById(clienteId)).thenReturn(Optional.of(clienteInativo));
 
-        var cmd = new CreateOrdemDeServicoCommand(clienteId, veiculoId, "Novo problema");
+        var cmd = new CreateOrdemDeServicoCommand(clienteId, veiculoId, "Novo problema", List.of());
 
         var ex = assertThrows(AppException.class, () -> service.update(osId, cmd));
         assertEquals(422, ex.getStatus());
@@ -371,7 +524,7 @@ class OrdemDeServicoServiceTest {
         when(veiculoInativo.getIsActive()).thenReturn(false);
         when(veiculoRepository.findById(veiculoId)).thenReturn(Optional.of(veiculoInativo));
 
-        var cmd = new CreateOrdemDeServicoCommand(clienteId, veiculoId, "Novo problema");
+        var cmd = new CreateOrdemDeServicoCommand(clienteId, veiculoId, "Novo problema", List.of());
 
         var ex = assertThrows(AppException.class, () -> service.update(osId, cmd));
         assertEquals(422, ex.getStatus());
@@ -384,7 +537,7 @@ class OrdemDeServicoServiceTest {
         UUID pecaId = UUID.randomUUID();
         Peca pecaInativa = Peca.reconstitute(pecaId, "PEA-001", "Óleo Motor 5W30",
                 new BigDecimal("45.50"), 50L, 10L, LocalDateTime.now(), 0L, false);
-        when(pecaRepository.buscarPorId(pecaId)).thenReturn(Optional.of(pecaInativa));
+        when(pecaRepository.findById(pecaId)).thenReturn(Optional.of(pecaInativa));
 
         var command = new FinalizarDiagnosticoCommand(
                 osId, "Troca de óleo",
@@ -432,7 +585,10 @@ class OrdemDeServicoServiceTest {
         UUID pecaId = UUID.randomUUID();
         Peca peca = Peca.reconstitute(pecaId, "PEA-001", "Óleo Motor 5W30",
                 new BigDecimal("45.50"), 50L, 10L, LocalDateTime.now(), 0L);
+        when(pecaRepository.findById(pecaId)).thenReturn(Optional.of(peca));
         when(pecaRepository.buscarPorId(pecaId)).thenReturn(Optional.of(peca));
+        var itemPersisted = ItemOs.create(os.getId(), pecaId, "PECA", "Troca de óleo", 2L);
+        when(itemOsRepository.findByOsUuid(os.getId())).thenReturn(List.of(itemPersisted));
 
         var command = new FinalizarDiagnosticoCommand(
                 osId, "Troca de óleo",
@@ -494,9 +650,9 @@ class OrdemDeServicoServiceTest {
         osCancel.iniciarDiagnostico();
         osCancel.finalizarDiagnostico();
 
-        when(repository.findById(osId)).thenReturn(Optional.of(osCancel));
+        when(repository.findById(osCancel.getId())).thenReturn(Optional.of(osCancel));
 
-        service.cancelar(osId, "Cliente desistiu");
+        service.cancelar(osCancel.getId(), "Cliente desistiu");
 
         verify(osAuditEventPublisher).publish(any(), eq(OsAuditAction.CANCELAR), isNull(),
                 eq("Cliente desistiu"), eq(Map.of()));
@@ -515,9 +671,9 @@ class OrdemDeServicoServiceTest {
         osEntregue.gerarCobranca();
         osEntregue.confirmarPagamento("ref-123");
 
-        when(repository.findById(osId)).thenReturn(Optional.of(osEntregue));
+        when(repository.findById(osEntregue.getId())).thenReturn(Optional.of(osEntregue));
 
-        service.entregar(osId, "João");
+        service.entregar(osEntregue.getId(), "João");
 
         verify(osAuditEventPublisher).publish(any(), eq(OsAuditAction.ENTREGAR), isNull(),
                 eq("João"), eq(Map.of()));
