@@ -4591,9 +4591,302 @@
                         }
                     },
                     "response": []
+                },
+                {
+                    "name": "GET Listar OS (paginado)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.test(\"Retorno deve conter estrutura paginada\", function () {",
+                                    "        pm.expect(jsonData).to.have.property(\"content\");",
+                                    "        pm.expect(jsonData).to.have.property(\"totalElements\");",
+                                    "    });",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{atendenteToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/os?page=0&size=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "os"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "size",
+                                    "value": "10"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET Buscar OS por ID",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.test(\"Deve retornar a OS solicitada\", function () {",
+                                    "        pm.expect(jsonData.id).to.eql(pm.collectionVariables.get(\"osUuid\"));",
+                                    "    });",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{atendenteToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/os/{{osUuid}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "os",
+                                "{{osUuid}}"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET Consultar Status da OS (Público)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.test(\"Deve retornar o status público da OS\", function () {",
+                                    "        pm.expect(jsonData).to.have.property(\"status\");",
+                                    "    });",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/os/{{osUuid}}/status",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "os",
+                                "{{osUuid}}",
+                                "status"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET Detalhamento da OS",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.test(\"Deve retornar detalhamento completo da OS\", function () {",
+                                    "        pm.expect(jsonData).to.have.property(\"itensOrcados\");",
+                                    "    });",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{atendenteToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/os/{{osUuid}}/detalhamento",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "os",
+                                "{{osUuid}}",
+                                "detalhamento"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET Tempo Médio de Execução de OS",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{atendenteToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/os/tempo-medio",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "os",
+                                "tempo-medio"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET Listar OS com Filtros",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code é 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.test(\"Deve retornar estrutura paginada da busca filtrada\", function () {",
+                                    "        pm.expect(jsonData).to.have.property(\"content\");",
+                                    "        pm.expect(jsonData.content).to.be.an(\"array\");",
+                                    "    });",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{atendenteToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/os/filtro?status=RECEBIDA&page=0&size=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "os",
+                                "filtro"
+                            ],
+                            "query": [
+                                {
+                                    "key": "status",
+                                    "value": "RECEBIDA"
+                                },
+                                {
+                                    "key": "clienteId",
+                                    "value": "{{clienteUuid}}",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "veiculoId",
+                                    "value": "{{veiculoUuid}}",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "dataInicio",
+                                    "value": "2026-01-01",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "dataFim",
+                                    "value": "2026-12-31",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "size",
+                                    "value": "10"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
                 }
             ],
-            "description": "Criação de Ordens de Serviço. A OS pode ser criada sem itens, com apenas peça, com apenas serviço, ou com ambos. Itens com UUID inválido retornam erro."
+            "description": "Gerenciamento e consultas de Ordens de Serviço."
         }
     ],
     "variable": [

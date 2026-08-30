@@ -191,6 +191,7 @@
                 <configuration>
                     <release>${maven.compiler.release}</release>
                     <parameters>true</parameters>
+                    <useIncrementalCompilation>false</useIncrementalCompilation>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
@@ -212,26 +213,6 @@
                         <arg>-Amapstruct.unmappedTargetPolicy=WARN</arg>
                     </compilerArgs>
                 </configuration>
-                <executions>
-                    <execution>
-                        <id>default-compile</id>
-                        <configuration>
-                            <useIncrementalCompilation>false</useIncrementalCompilation>
-                            <fork>true</fork>
-                            <meminitial>256m</meminitial>
-                            <maxmem>1024m</maxmem>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>default-testCompile</id>
-                        <configuration>
-                            <useIncrementalCompilation>false</useIncrementalCompilation>
-                            <fork>true</fork>
-                            <meminitial>256m</meminitial>
-                            <maxmem>1024m</maxmem>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>
