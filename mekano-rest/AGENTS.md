@@ -13,7 +13,7 @@ com.fiap.mekano.rest
 │   ├── VeiculoResource.java              — @Path("/veiculos") @RequestScoped @RolesAllowed({"admin","atendente"})
 │   ├── ServicoResource.java              — @Path("/servicos") @RequestScoped @RolesAllowed("admin")
 │   ├── PecaResource.java                 — @Path("/pecas") @RequestScoped @RolesAllowed("admin")
-│   ├── RequisicaoCompraResource.java     — @Path("/requisicoes-compra") @RequestScoped @RolesAllowed("admin")
+│   ├── RequisicaoCompraResource.java     — @Path("/requisicoes-compra") @RequestScoped @RolesAllowed({"admin","financeiro"})
 │   ├── NfEntradaResource.java            — @Path("/nf-entrada") @RequestScoped @RolesAllowed("admin")
 │   ├── AlertaResource.java               — @Path("/alertas") @RequestScoped @RolesAllowed({"admin","atendente"})
 │   ├── OrdemDeServicoResource.java       — @Path("/os") @RequestScoped @RolesAllowed({"admin","atendente","mecanico"})

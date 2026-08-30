@@ -52,9 +52,12 @@ com.fiap.mekano.application
     │   ├── NfEntradaService.java      — @ApplicationScoped, does NOT implement any port
     │   │                                ⚠ field injection, hardcoded response
     │   └── CreateNfEntradaResponse.java — record
-    └── requisicao/              ## STUB (incomplete)
+    └── requisicao/              ## FULLY IMPLEMENTED
         ├── RequisicaoCompraService.java — @ApplicationScoped, does NOT implement any port
-        │                                  ⚠ field injection, hardcoded response
+        │                                  constructor injection (RequisicaoCompraRepositoryPort + PecaRepositoryPort)
+        │                                  @Transactional on criar/cancelar/enviar/marcarComoComprada/marcarComoRecebida
+        │                                  criar(): validates peca existence via PecaRepositoryPort
+        │                                  cancelar(): blocks cancellation when motivo=ORDEM_SERVICO
         └── CreateRequisicaoCompraResponse.java — record
 ```
 
@@ -67,7 +70,7 @@ com.fiap.mekano.application
 6. Response records never expose `passwordHash` or domain entities directly
 
 ## Stub Services — What NOT to Do
-The 3 stub services (`PecaService`, `NfEntradaService`, `RequisicaoCompraService`) violate conventions:
+The 2 stub services (`PecaService`, `NfEntradaService`) violate conventions:
 - No port implementation
 - Field injection instead of constructor injection
 - No `@Transactional`
@@ -83,5 +86,5 @@ These are placeholders awaiting real implementation.
 ## Testing
 - JUnit 5 + Mockito `@ExtendWith(MockitoExtension.class)` — no Quarkus container
 - `@Mock` for ports, `@InjectMocks` for service
-- 16 test files: `UserServiceTest`, `VeiculoServiceTest`, `ServicoServiceTest`, `ClienteServiceTest`, `OrdemDeServicoServiceTest`, `OrcamentoServiceTest`, `PecaServiceTest`, `NfEntradaServiceTest`, `AdminUserServiceTest`, `AuthServiceJwtTest`, `PasswordGeneratorTest`, `RefreshTokenServiceTest`, `MockPaymentServiceTest`, `CobrancaEmitidaListenerTest`, `OsAuditEventPublisherTest`, `OsAuditQueryServiceTest`, `WhatsAppOrcamentoRespostaServiceTest`
-- No tests for stub services (Peca, NfEntrada, RequisicaoCompra)
+- 17 test files: `UserServiceTest`, `VeiculoServiceTest`, `ServicoServiceTest`, `ClienteServiceTest`, `OrdemDeServicoServiceTest`, `OrcamentoServiceTest`, `PecaServiceTest`, `NfEntradaServiceTest`, `RequisicaoCompraServiceTest`, `AdminUserServiceTest`, `AuthServiceJwtTest`, `PasswordGeneratorTest`, `RefreshTokenServiceTest`, `MockPaymentServiceTest`, `CobrancaEmitidaListenerTest`, `OsAuditEventPublisherTest`, `OsAuditQueryServiceTest`, `WhatsAppOrcamentoRespostaServiceTest`
+- No tests for stub services (Peca, NfEntrada)

@@ -3,6 +3,8 @@ package com.fiap.mekano.rest.api;
 import com.fiap.mekano.application.service.peca.PecaService;
 import com.fiap.mekano.application.service.requisicao.CreateRequisicaoCompraResponse;
 import com.fiap.mekano.application.service.requisicao.RequisicaoCompraService;
+import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.model.MotivoRequisicao;
 import com.fiap.mekano.domain.model.Peca;
 import com.fiap.mekano.domain.model.RequisicaoCompra;
 import com.fiap.mekano.domain.model.StatusRequisicao;
@@ -32,6 +34,7 @@ class RequisicaoCompraResourceTest {
 
     private static final String BASE_PATH = "/api/v1/requisicoes-compra";
     private static final UUID REQUISICAO_UUID = UUID.randomUUID();
+    private static final UUID REQUISICAO_OS_UUID = UUID.randomUUID();
     private static final UUID PECA_UUID = UUID.randomUUID();
 
     @InjectMock
@@ -50,6 +53,10 @@ class RequisicaoCompraResourceTest {
                 REQUISICAO_UUID, PECA_UUID, 10L,
                 StatusRequisicao.ABERTA, com.fiap.mekano.domain.model.MotivoRequisicao.ESTOQUE_MINIMO, LocalDateTime.now());
 
+        var mockRequisicaoOs = RequisicaoCompra.reconstitute(
+                REQUISICAO_OS_UUID, PECA_UUID, 5L,
+                StatusRequisicao.ABERTA, MotivoRequisicao.ORDEM_SERVICO, LocalDateTime.now());
+
         Mockito.when(pecaService.buscarPorId(PECA_UUID))
                 .thenReturn(mockPeca);
 
@@ -60,8 +67,16 @@ class RequisicaoCompraResourceTest {
         Mockito.when(requisicaoService.buscarPorId(REQUISICAO_UUID))
                 .thenReturn(mockRequisicao);
 
-        Mockito.when(requisicaoService.buscarPorId(Mockito.argThat(id -> !id.equals(REQUISICAO_UUID))))
-                .thenThrow(new com.fiap.mekano.domain.exception.AppException(404, "Requisição não encontrada"));
+        Mockito.when(requisicaoService.buscarPorId(REQUISICAO_OS_UUID))
+                .thenReturn(mockRequisicaoOs);
+
+        Mockito.doThrow(new AppException(409,
+                "Requisição de compra vinculada a Ordem de Serviço não pode ser cancelada"))
+                .when(requisicaoService).cancelar(REQUISICAO_OS_UUID);
+
+        Mockito.when(requisicaoService.buscarPorId(Mockito.argThat(id ->
+                !id.equals(REQUISICAO_UUID) && !id.equals(REQUISICAO_OS_UUID))))
+                .thenThrow(new AppException(404, "Requisição não encontrada"));
     }
 
     @Test
@@ -145,6 +160,18 @@ class RequisicaoCompraResourceTest {
 
     @Test
     @Order(7)
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void cancelar_ordemServico_returns409() {
+        given()
+                .when()
+                .put(BASE_PATH + "/" + REQUISICAO_OS_UUID + "/cancelar")
+                .then()
+                .statusCode(409)
+                .contentType(containsString("application/problem+json"));
+    }
+
+    @Test
+    @Order(8)
     @TestSecurity(user = "atendente", roles = {"user"})
     void create_asAtendente_returns403() {
         given()
@@ -159,7 +186,7 @@ class RequisicaoCompraResourceTest {
     }
 
     @Test
-    @Order(8)
+    @Order(9)
     @TestSecurity(user = "atendente", roles = {"user"})
     void getById_asAtendente_returns403() {
         given()
