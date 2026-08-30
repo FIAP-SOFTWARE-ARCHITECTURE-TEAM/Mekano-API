@@ -102,14 +102,15 @@ public class WhatsAppOrcamentoRespostaService {
         boolean aprovado = palavra.equals("sim") || palavra.equals("s") || palavra.equals("confirmar") || palavra.equals("1");
 
         if (aprovado) {
+            notifier.notificarRespostaOrcamento(cliente.getTelefone().getValue(), true);
             orcamentoService.aprovar(new AprovarOrcamentoCommand(orcamentoUuid));
             log.info("Orçamento {} aprovado via WhatsApp pelo cliente {}", orcamentoUuid, cliente.getId());
         } else {
+            notifier.notificarRespostaOrcamento(cliente.getTelefone().getValue(), false);
             orcamentoService.reprovar(new ReprovarOrcamentoCommand(orcamentoUuid, "Reprovado via WhatsApp"));
             log.info("Orçamento {} reprovado via WhatsApp pelo cliente {}", orcamentoUuid, cliente.getId());
         }
 
-        notifier.notificarRespostaOrcamento(cliente.getTelefone().getValue(), aprovado);
         return true;
     }
 

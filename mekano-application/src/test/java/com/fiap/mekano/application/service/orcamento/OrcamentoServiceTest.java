@@ -157,6 +157,7 @@ class OrcamentoServiceTest {
         assertEquals(StatusOrcamento.REPROVADO, result.getStatus());
         assertEquals(StatusOS.CANCELADA, os.getStatus());
         assertEquals("Cliente desistiu", os.getMotivoCancelamento());
+        verify(eventPublisher).publish(any(com.fiap.mekano.domain.event.OSCanceladaEvent.class));
     }
 
     @Test
