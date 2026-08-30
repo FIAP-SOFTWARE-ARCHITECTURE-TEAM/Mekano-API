@@ -69,9 +69,9 @@ public class WhatsAppOrcamentoRespostaService {
         // WR-03: casa apenas a primeira palavra EXATA — "não entendi..." ou
         // "simples assim" NÃO acionam aprovação/reprovação de orçamento.
         if (!palavra.equals("sim") && !palavra.equals("s")
-                && !palavra.equals("confirmar")
+                && !palavra.equals("confirmar") && !palavra.equals("1")
                 && !palavra.equals("nao") && !palavra.equals("não") && !palavra.equals("n")
-                && !palavra.equals("recusar")) {
+                && !palavra.equals("recusar") && !palavra.equals("2")) {
             log.info("Resposta WhatsApp não reconhecida — ignorando");
             return false;
         }
@@ -99,7 +99,7 @@ public class WhatsAppOrcamentoRespostaService {
         }
 
         UUID orcamentoUuid = orcamento.get().getId();
-        boolean aprovado = palavra.equals("sim") || palavra.equals("s") || palavra.equals("confirmar");
+        boolean aprovado = palavra.equals("sim") || palavra.equals("s") || palavra.equals("confirmar") || palavra.equals("1");
 
         if (aprovado) {
             orcamentoService.aprovar(new AprovarOrcamentoCommand(orcamentoUuid));

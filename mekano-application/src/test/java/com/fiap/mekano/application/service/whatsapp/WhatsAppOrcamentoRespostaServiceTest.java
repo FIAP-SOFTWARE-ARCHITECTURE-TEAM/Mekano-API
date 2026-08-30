@@ -78,8 +78,8 @@ class WhatsAppOrcamentoRespostaServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"sim", "confirmar"})
-    @DisplayName("'sim' ou 'confirmar' deve aprovar o orçamento pendente e confirmar ao cliente")
+    @ValueSource(strings = {"sim", "confirmar", "1"})
+    @DisplayName("'sim', 'confirmar' ou '1' deve aprovar o orçamento pendente e confirmar ao cliente")
     void deveAprovarOrcamentoQuandoClienteRespondeSim() {
         Cliente cliente = clienteComTelefone();
         OrdemDeServico os = osAguardandoAprovacao();
@@ -101,8 +101,8 @@ class WhatsAppOrcamentoRespostaServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"NÃO", "recusar"})
-    @DisplayName("'não' ou 'recusar' deve reprovar o orçamento pendente e confirmar ao cliente")
+    @ValueSource(strings = {"NÃO", "recusar", "2"})
+    @DisplayName("'não', 'recusar' ou '2' deve reprovar o orçamento pendente e confirmar ao cliente")
     void deveReprovarOrcamentoQuandoClienteRespondeNao() {
         Cliente cliente = clienteComTelefone();
         OrdemDeServico os = osAguardandoAprovacao();
@@ -150,6 +150,17 @@ class WhatsAppOrcamentoRespostaServiceTest {
     @DisplayName("texto iniciado com 'sim' mas sem ser resposta exata deve ser ignorado (WR-03)")
     void deveIgnorarTextoQueApenasComecaComSim() {
         boolean processado = service.processarResposta("559184847811@s.whatsapp.net", "simples assim");
+
+        assertFalse(processado);
+        verifyNoInteractions(clienteRepository);
+        verifyNoInteractions(orcamentoService);
+        verifyNoInteractions(notifier);
+    }
+
+    @Test
+    @DisplayName("'3' (número não reconhecido) deve ser ignorado")
+    void deveIgnorarNumeroNaoReconhecido() {
+        boolean processado = service.processarResposta("559184847811@s.whatsapp.net", "3");
 
         assertFalse(processado);
         verifyNoInteractions(clienteRepository);
