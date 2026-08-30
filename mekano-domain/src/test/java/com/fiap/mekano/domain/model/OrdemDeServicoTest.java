@@ -233,11 +233,11 @@ class OrdemDeServicoTest {
         LocalDateTime createdAt = LocalDateTime.of(2026, 1, 1, 10, 0);
 
         OrdemDeServico os = OrdemDeServico.reconstitute(
-                id, clienteId, veiculoId, "Barulho no motor",
+                id, clienteId, veiculoId,
+                "Barulho no motor",
                 StatusOS.EM_EXECUCAO, null, null, null,
-                null, null, null, null,
-                null, null, null, null,
-                null, null, null, null,
+                null, null, null, null, null, null, null,
+                null, null, null, null, null,
                 null, null, null, createdAt, 3L
         );
 
