@@ -27,7 +27,8 @@ public class FinalizarDiagnosticoRequest {
     public List<ItemDiagnosticado> getItens() { return itens; }
     public void setItens(List<ItemDiagnosticado> itens) { this.itens = itens; }
 
-    @Schema(description = "Item do diagnóstico referenciando peça ou serviço existente")
+    @Schema(description = "Item do diagnóstico referenciando peça ou serviço existente",
+            example = "{\"referenciaUuid\": \"123e4567-e89b-12d3-a456-426614174000\", \"tipo\": \"PECA\", \"quantidade\": 3}")
     public static class ItemDiagnosticado {
 
         @NotNull
@@ -38,9 +39,8 @@ public class FinalizarDiagnosticoRequest {
         @Schema(description = "Tipo: PECA ou SERVICO", example = "PECA")
         private String tipo;
 
-        @NotNull
         @Positive
-        @Schema(description = "Quantidade", example = "2")
+        @Schema(description = "Quantidade (obrigatória para PECA, opcional para SERVICO — default 1)", example = "2")
         private Long quantidade;
 
         public UUID getReferenciaUuid() { return referenciaUuid; }
