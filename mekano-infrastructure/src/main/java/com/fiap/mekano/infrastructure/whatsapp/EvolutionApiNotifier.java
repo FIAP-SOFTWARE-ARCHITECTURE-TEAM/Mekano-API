@@ -37,14 +37,17 @@ public class EvolutionApiNotifier implements WhatsAppNotifierPort {
     private final EvolutionApiRestClient restClient;
     private final String apiKey;
     private final String instanceName;
+    private final String publicUrl;
 
     @Inject
     public EvolutionApiNotifier(@RestClient EvolutionApiRestClient restClient,
                                 @ConfigProperty(name = "evolution.api-key", defaultValue = "dev-key") String apiKey,
-                                @ConfigProperty(name = "evolution.instance-name", defaultValue = "mekano") String instanceName) {
+                                @ConfigProperty(name = "evolution.instance-name", defaultValue = "mekano") String instanceName,
+                                @ConfigProperty(name = "mekano.public-url", defaultValue = "https://mekano.app") String publicUrl) {
         this.restClient = restClient;
         this.apiKey = apiKey;
         this.instanceName = instanceName;
+        this.publicUrl = publicUrl;
     }
 
     @Override
@@ -95,7 +98,7 @@ public class EvolutionApiNotifier implements WhatsAppNotifierPort {
                         + " já está pronto para retirada na Oficina Mekano.\n\n"
                         + "📍 Rua das Oficinas, 100 - Centro\n"
                         + "📅 Seg-Sex: 08h-18h\n\n"
-                        + "Acompanhe o status: https://mekano.app/os/" + osUuid + "/status");
+                        + "Acompanhe o status: " + publicUrl + "/os/" + osUuid + "/status");
         log.info("Enviando notificação de retirada para {} (OS {})",
                 maskPhone(number), osUuid);
         restClient.sendText(instanceName, apiKey, request);

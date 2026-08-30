@@ -18,9 +18,10 @@ class EvolutionApiNotifierTest {
 
     private static final String INSTANCE = "mekano";
     private static final String API_KEY = "test-key";
+    private static final String PUBLIC_URL = "https://test.example.com";
 
     private final EvolutionApiRestClient restClient = mock(EvolutionApiRestClient.class);
-    private final EvolutionApiNotifier notifier = new EvolutionApiNotifier(restClient, API_KEY, INSTANCE);
+    private final EvolutionApiNotifier notifier = new EvolutionApiNotifier(restClient, API_KEY, INSTANCE, PUBLIC_URL);
 
     @Test
     @DisplayName("notificarOrcamento deve chamar sendText com veículo, valor e telefone 55+")
@@ -86,6 +87,7 @@ class EvolutionApiNotifierTest {
         assertEquals("5511988888888", request.number());
         assertTrue(request.text().contains("ABC1D23"));
         assertTrue(request.text().contains(osUuid.toString()));
+        assertTrue(request.text().contains(PUBLIC_URL + "/os/" + osUuid + "/status"));
     }
 
     @Test
