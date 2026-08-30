@@ -200,6 +200,35 @@ class OrdemDeServicoCicloCobrancaPagamentoEntregaTest {
     }
 
     @Test
+    @DisplayName("deve entregar OS cancelada sem pagamento confirmado")
+    void deveEntregarOsCanceladaSemPagamento() {
+        OrdemDeServico os = novaOS();
+
+        os.cancelar("Orçamento reprovado");
+
+        EntregaConfirmadaEvent entrega = os.entregar("João Cliente");
+
+        assertEquals(StatusOS.ENTREGUE, os.getStatus());
+        assertEquals(StatusEntrega.ENTREGUE, os.getStatusEntrega());
+        assertEquals("João Cliente", os.getRecebidoPor());
+        assertNotNull(os.getEntregueEm());
+        assertEquals(os.getId(), entrega.osUuid());
+    }
+
+    @Test
+    @DisplayName("entrega de OS cancelada deve exigir recebedor")
+    void entregaDeOsCanceladaDeveExigirRecebedor() {
+        OrdemDeServico os = novaOS();
+
+        os.cancelar("Orçamento reprovado");
+
+        assertThrows(
+                AppException.class,
+                () -> os.entregar(" ")
+        );
+    }
+
+    @Test
     @DisplayName("reconstitute completo deve preservar campos de pagamento e entrega")
     void reconstituteCompletoDevePreservarPagamentoEEntrega() {
         UUID id = UUID.randomUUID();
