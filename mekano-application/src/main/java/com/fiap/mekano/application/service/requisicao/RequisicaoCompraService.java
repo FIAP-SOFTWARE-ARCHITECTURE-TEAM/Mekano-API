@@ -2,9 +2,11 @@ package com.fiap.mekano.application.service.requisicao;
 
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.exception.Messages;
+import com.fiap.mekano.domain.model.MotivoRequisicao;
 import com.fiap.mekano.domain.model.RequisicaoCompra;
 import com.fiap.mekano.domain.model.StatusRequisicao;
 import com.fiap.mekano.domain.port.in.CreateRequisicaoCompraCommand;
+import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
 import com.fiap.mekano.domain.port.out.RequisicaoCompraRepositoryPort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
@@ -16,13 +18,19 @@ import java.util.UUID;
 public class RequisicaoCompraService {
 
     private final RequisicaoCompraRepositoryPort requisicaoRepository;
+    private final PecaRepositoryPort pecaRepository;
 
-    public RequisicaoCompraService(RequisicaoCompraRepositoryPort requisicaoRepository) {
+    public RequisicaoCompraService(RequisicaoCompraRepositoryPort requisicaoRepository,
+                                   PecaRepositoryPort pecaRepository) {
         this.requisicaoRepository = requisicaoRepository;
+        this.pecaRepository = pecaRepository;
     }
 
     @Transactional
     public CreateRequisicaoCompraResponse criar(CreateRequisicaoCompraCommand command) {
+        if (pecaRepository.findById(command.pecaId()).isEmpty()) {
+            throw new AppException(404, Messages.get("requisicao_compra.peca.not.found", command.pecaId()));
+        }
         var requisicao = RequisicaoCompra.criarParaMinimo(
                 command.pecaId(),
                 command.quantidade().longValue(),
@@ -69,6 +77,9 @@ public class RequisicaoCompraService {
         var requisicao = buscarPorId(id);
         if (requisicao.getStatus() != StatusRequisicao.ABERTA) {
             throw new AppException(409, "Requisição não pode ser cancelada no status " + requisicao.getStatus());
+        }
+        if (requisicao.getMotivo() == MotivoRequisicao.ORDEM_SERVICO) {
+            throw new AppException(409, Messages.get("requisicao_compra.cancelamento.bloqueado.ordem_servico"));
         }
         var atualizada = RequisicaoCompra.reconstitute(
                 requisicao.getId(), requisicao.getPecaId(), requisicao.getQuantidade(),

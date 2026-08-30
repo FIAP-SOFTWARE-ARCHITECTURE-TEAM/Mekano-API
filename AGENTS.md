@@ -77,7 +77,7 @@ For detailed per-module conventions, read these instead of old CLAUDE.md:
 
 ## Key Inconsistencies (Tech Debt — Avoid Repeating)
 1. **Naming**: ~~`PecaRepositoryPort`/`NfEntradaRepositoryPort`/`RequisicaoCompraRepositoryPort` use PT-BR~~ **RESOLVED**: all 3 ports now use EN (`save`, `findById`) — remaining PT-BR names (`buscarPorDescricao`, `buscarPorChaveAcesso`, `remover`, `reativar`, `atualizar`, `listarAbaixoEstoqueMinimo`, `debitarSaldo`, `creditarSaldo`, `reservarSaldo`, `debitarSaldoReservado`, `liberarReserva`) are intentional (business operations or deferred)
-2. **Injection**: 3 stub services use field injection (`@Inject`) — real services use constructor injection
+2. **Injection**: 2 stub services use field injection (`@Inject`) — real services use constructor injection
 3. **Entity style**: Newer entities use `@Data` (public fields) — older ones use `@Getter/@Setter` (private)
 4. **FT/Cache**: Only User/Veiculo/Servico repos have `@Retry`+`@Timeout`+`@CacheResult` — Cliente/Peca/RequisicaoCompra/NfEntrada do NOT
 5. **Duplicate VOs**: `Placa.java` and `PlacaVeiculo.java` overlap with different regex patterns
@@ -104,6 +104,7 @@ For detailed per-module conventions, read these instead of old CLAUDE.md:
 - D-15: Eventos de domínio como records; `EventPublisher` interface pura
 - D-16: Audit fields exclusivos de infrastructure — `AuditoriaListener` (`@EntityListeners` em `BaseEntity`) preenche `createdBy` no `@PrePersist` e `updatedBy` no `@PreUpdate`; resolve via `SecurityIdentity` (subject JWT) com fallbacks `PUBLICO`/`SISTEMA`; sem backfill
 - D-17: OS ↔ Peça/Serviço é many-to-many via tabela pivô `os_itens` (não FK columns na OS). Itens adicionados na criação (atendente) e no `finalizarDiagnostico` (mecânico). Orçamento gerado automaticamente a partir de TODOS os itens da tabela pivô.
+- D-18: Requisição de Compra `criar()` valida existência da Peça via `PecaRepositoryPort.findById()` (AppException 404). `cancelar()` bloqueia quando `motivo=ORDEM_SERVICO` (AppException 409) — a requisição faz parte do fluxo de execução da OS e não pode ser cancelada livremente.
 
 ## Commands (VERIFIED)
 ```bash
