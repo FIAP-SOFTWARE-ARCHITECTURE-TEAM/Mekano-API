@@ -215,8 +215,11 @@ private final OrdemDeServicoRepositoryPort repository;
                         boolean ok = pecaRepository.debitarSaldoReservado(
                                 item.getPecaId(), item.getQuantidade().intValue());
                         if (!ok) {
+                            Peca peca = pecaRepository.findById(item.getPecaId())
+                                    .orElseThrow(() -> new AppException(404,
+                                            Messages.get("peca.not.found", item.getPecaId())));
                             throw new AppException(409, Messages.get("peca.saldo.insuficiente",
-                                    item.getDescricao(), 0, item.getQuantidade()));
+                                    item.getDescricao(), peca.getSaldoAtual(), item.getQuantidade()));
                         }
                     }
                 }

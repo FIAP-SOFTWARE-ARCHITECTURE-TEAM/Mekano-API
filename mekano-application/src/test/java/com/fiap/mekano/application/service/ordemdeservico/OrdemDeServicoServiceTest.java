@@ -195,8 +195,14 @@ class OrdemDeServicoServiceTest {
                 List.of(new ItemOrcamento("Peça A", 5L, BigDecimal.TEN, pecaId)));
         orcamento.aprovar();
 
+        Peca peca = Peca.reconstitute(
+                pecaId, "PEA-001", "Peça A", BigDecimal.TEN,
+                0L, 5L, LocalDateTime.now(), 0L
+        );
+
         when(repository.findById(osId)).thenReturn(Optional.of(osExec));
         when(pecaRepository.debitarSaldoReservado(pecaId, 5)).thenReturn(false);
+        when(pecaRepository.findById(pecaId)).thenReturn(Optional.of(peca));
         when(orcamentoRepository.findByUuid(orcamentoUuid)).thenReturn(Optional.of(orcamento));
 
         var ex = assertThrows(AppException.class,
