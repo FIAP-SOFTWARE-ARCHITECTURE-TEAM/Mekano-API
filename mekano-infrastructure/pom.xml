@@ -106,6 +106,12 @@
 			<artifactId>quarkus-junit5</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- Quarkus JaCoCo — coverage para @QuarkusTest (resolve incompatibilidade com Maven JaCoCo) -->
+		<dependency>
+			<groupId>io.quarkus</groupId>
+			<artifactId>quarkus-jacoco</artifactId>
+			<scope>test</scope>
+		</dependency>
 		<!-- AssertJ — fluent assertions em testes de integração -->
 		<dependency>
 			<groupId>org.assertj</groupId>
