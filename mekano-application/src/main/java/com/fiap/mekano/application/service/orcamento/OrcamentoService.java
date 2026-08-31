@@ -1,6 +1,7 @@
 package com.fiap.mekano.application.service.orcamento;
 
 import com.fiap.mekano.application.service.os.OsAuditEventPublisher;
+import com.fiap.mekano.domain.event.OSCanceladaEvent;
 import com.fiap.mekano.domain.event.OrcamentoAprovadoEvent;
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.exception.Messages;
@@ -94,6 +95,7 @@ public class OrcamentoService implements OrcamentoServicePort {
         if (osUuid != null) {
             osAuditEventPublisher.publish(osUuid, OsAuditAction.CANCELAR, null,
                     "Orçamento reprovado pelo cliente", Map.of());
+            eventPublisher.publish(OSCanceladaEvent.of(osUuid, "Orçamento reprovado pelo cliente"));
         }
 
         return saved;

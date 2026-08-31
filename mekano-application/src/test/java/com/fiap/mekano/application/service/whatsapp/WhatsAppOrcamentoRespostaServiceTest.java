@@ -12,6 +12,8 @@ import com.fiap.mekano.domain.port.out.WhatsAppNotifierPort;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -75,8 +77,9 @@ class WhatsAppOrcamentoRespostaServiceTest {
         return orcamento;
     }
 
-    @Test
-    @DisplayName("'sim' deve aprovar o orçamento pendente e confirmar ao cliente")
+    @ParameterizedTest
+    @ValueSource(strings = {"sim", "confirmar", "1"})
+    @DisplayName("'sim', 'confirmar' ou '1' deve aprovar o orçamento pendente e confirmar ao cliente")
     void deveAprovarOrcamentoQuandoClienteRespondeSim() {
         Cliente cliente = clienteComTelefone();
         OrdemDeServico os = osAguardandoAprovacao();
@@ -97,8 +100,9 @@ class WhatsAppOrcamentoRespostaServiceTest {
         verify(orcamentoService, never()).reprovar(any());
     }
 
-    @Test
-    @DisplayName("'não' deve reprovar o orçamento pendente e confirmar ao cliente")
+    @ParameterizedTest
+    @ValueSource(strings = {"NÃO", "recusar", "2"})
+    @DisplayName("'não', 'recusar' ou '2' deve reprovar o orçamento pendente e confirmar ao cliente")
     void deveReprovarOrcamentoQuandoClienteRespondeNao() {
         Cliente cliente = clienteComTelefone();
         OrdemDeServico os = osAguardandoAprovacao();
@@ -146,6 +150,17 @@ class WhatsAppOrcamentoRespostaServiceTest {
     @DisplayName("texto iniciado com 'sim' mas sem ser resposta exata deve ser ignorado (WR-03)")
     void deveIgnorarTextoQueApenasComecaComSim() {
         boolean processado = service.processarResposta("559184847811@s.whatsapp.net", "simples assim");
+
+        assertFalse(processado);
+        verifyNoInteractions(clienteRepository);
+        verifyNoInteractions(orcamentoService);
+        verifyNoInteractions(notifier);
+    }
+
+    @Test
+    @DisplayName("'3' (número não reconhecido) deve ser ignorado")
+    void deveIgnorarNumeroNaoReconhecido() {
+        boolean processado = service.processarResposta("559184847811@s.whatsapp.net", "3");
 
         assertFalse(processado);
         verifyNoInteractions(clienteRepository);

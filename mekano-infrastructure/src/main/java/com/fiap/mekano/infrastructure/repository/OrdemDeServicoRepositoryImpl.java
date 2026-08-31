@@ -115,11 +115,21 @@ public class OrdemDeServicoRepositoryImpl implements OrdemDeServicoRepositoryPor
         return panacheRepository.count("isActive = ?1", true);
     }
 
+    private static final String STATUS_PRIORITY_ORDER =
+            " ORDER BY CASE status" +
+            " WHEN 'EM_EXECUCAO' THEN 0" +
+            " WHEN 'AGUARDANDO_APROVACAO' THEN 1" +
+            " WHEN 'EM_DIAGNOSTICO' THEN 2" +
+            " WHEN 'RECEBIDA' THEN 3" +
+            " WHEN 'AGUARDANDO_EXECUCAO' THEN 4" +
+            " ELSE 5 END ASC, createdAt ASC";
+
     @Override
     public List<OrdemDeServico> findAllWithFilters(String status, UUID clienteUuid, UUID veiculoUuid,
                                                     LocalDateTime dataInicio, LocalDateTime dataFim,
                                                     int page, int size) {
-        StringBuilder query = new StringBuilder("isActive = :active");
+        StringBuilder query = new StringBuilder(
+                "isActive = :active AND status NOT IN ('FINALIZADA', 'ENTREGUE', 'CANCELADA')");
         Map<String, Object> params = new HashMap<>();
         params.put("active", true);
 
@@ -144,7 +154,9 @@ public class OrdemDeServicoRepositoryImpl implements OrdemDeServicoRepositoryPor
             params.put("dataFim", dataFim);
         }
 
-        return panacheRepository.find(query.toString(), Sort.by("createdAt").descending(), params)
+        query.append(STATUS_PRIORITY_ORDER);
+
+        return panacheRepository.find(query.toString(), params)
                 .page(Page.of(page, size)).list()
                 .stream().map(mapper::toDomain).toList();
     }

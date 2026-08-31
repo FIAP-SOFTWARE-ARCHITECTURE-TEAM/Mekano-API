@@ -13,16 +13,24 @@ import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 import com.fiap.mekano.application.service.MockPaymentService;
+import com.fiap.mekano.domain.model.ItemOs;
 import com.fiap.mekano.domain.model.OrdemDeServico;
+import com.fiap.mekano.domain.model.Peca;
+import com.fiap.mekano.domain.model.StatusOrcamento;
+import com.fiap.mekano.domain.port.in.CreateItemOsCommand;
 import com.fiap.mekano.domain.port.in.CreateOrdemDeServicoCommand;
 import com.fiap.mekano.domain.port.in.FinalizarDiagnosticoCommand;
 import com.fiap.mekano.domain.port.in.OrdemDeServicoServicePort;
+import com.fiap.mekano.domain.port.out.ItemOsRepositoryPort;
+import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
+import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
 import com.fiap.mekano.rest.api.dto.CreateOrdemDeServicoRequest;
 import com.fiap.mekano.rest.api.dto.FinalizarDiagnosticoRequest;
 import com.fiap.mekano.rest.api.dto.FinalizarExecucaoRequest;
 import com.fiap.mekano.rest.api.dto.IniciarExecucaoRequest;
 import com.fiap.mekano.rest.api.dto.OrdemDeServicoDetailResponse;
 import com.fiap.mekano.rest.api.dto.OrdemDeServicoPageResponse;
+import com.fiap.mekano.rest.api.dto.ItemOsResponse;
 import com.fiap.mekano.rest.api.dto.OrdemDeServicoResponse;
 import com.fiap.mekano.rest.api.dto.OrdemDeServicoStatusResponse;
 import com.fiap.mekano.rest.api.dto.PagamentoResponse;
@@ -55,7 +63,8 @@ import jakarta.ws.rs.core.UriInfo;
  * Roles mistas (D-14, D-15):
  * - POST: admin, atendente
  * - PUT transições: mecanico, admin
-     * - GET /status: @PermitAll (público, D-01/AUTH-03 — UUID é a chave de acesso, D-02)
+ * - GET /status: @PermitAll (público, D-01/AUTH-03 — UUID é a chave de acesso,
+ * D-02)
  * - GET lista: admin, atendente
  */
 @Path("/os")
@@ -69,17 +78,34 @@ public class OrdemDeServicoResource {
     @Inject
     MockPaymentService paymentService;
 
+    @Inject
+    ItemOsRepositoryPort itemOsRepository;
+
+    @Inject
+    OrcamentoRepositoryPort orcamentoRepository;
+
+    @Inject
+    PecaRepositoryPort pecaRepository;
+
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({"admin", "atendente"})
+    @RolesAllowed({ "admin", "atendente" })
     @Operation(summary = "Criar nova OS")
     @APIResponse(responseCode = "201", description = "OS criada com sucesso")
     public Response create(@Valid CreateOrdemDeServicoRequest request, @Context UriInfo uriInfo) {
+        List<CreateItemOsCommand> itensCmd = request.getItens() != null
+                ? request.getItens().stream()
+                        .map(i -> new CreateItemOsCommand(i.getReferenciaUuid(), i.getTipo(),
+                                i.getQuantidade() != null ? i.getQuantidade() : 1L))
+                        .toList()
+                : List.of();
         var command = new CreateOrdemDeServicoCommand(
-                request.getClienteId(), request.getVeiculoId(), request.getDescricaoProblema());
+                request.getClienteId(), request.getVeiculoId(),
+                request.getDescricaoProblema(), itensCmd);
         OrdemDeServico os = osService.create(command);
-        OrdemDeServicoResponse response = toResponse(os);
+        List<ItemOsResponse> itensResponse = fetchItensOs(os.getId());
+        OrdemDeServicoResponse response = toResponse(os, itensResponse, false);
         URI location = uriInfo.getAbsolutePathBuilder().path(response.id().toString()).build();
         return Response.created(location).entity(response).build();
     }
@@ -92,7 +118,10 @@ public class OrdemDeServicoResource {
             @QueryParam("page") @DefaultValue("0") int page,
             @QueryParam("size") @DefaultValue("10") int size,
             @QueryParam("sort") @DefaultValue("createdAt,desc") String sort) {
-        var content = osService.findAll(page, size, sort).stream().map(this::toResponse).toList();
+        var content = osService.findAll(page, size, sort).stream()
+                .map(os -> toResponse(os, fetchItensOs(os.getId()),
+                        calcularLiberadoParaExecucao(os)))
+                .toList();
         long total = osService.countAll();
         int totalPages = (int) Math.ceil((double) total / size);
         return Response.ok(new OrdemDeServicoPageResponse(content, page, size, total, totalPages)).build();
@@ -113,42 +142,54 @@ public class OrdemDeServicoResource {
     @GET
     @Path("/{id}")
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({"admin", "atendente", "mecanico"})
+    @RolesAllowed({ "admin", "atendente", "mecanico" })
     @Operation(summary = "Buscar OS por ID")
     public Response getById(@PathParam("id") UUID id) {
-        return Response.ok(toResponse(osService.findById(id))).build();
+        OrdemDeServico os = osService.findById(id);
+        List<ItemOsResponse> itensResponse = fetchItensOs(os.getId());
+        return Response.ok(toResponse(os, itensResponse, false)).build();
     }
 
     @PUT
     @Path("/{id}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({"admin", "atendente"})
+    @RolesAllowed({ "admin", "atendente" })
     @Operation(summary = "Atualizar dados da OS", description = "Atualiza cliente, veículo e descrição. Permitido apenas em RECEBIDA.")
-    public Response update(@PathParam("id") UUID id, @Valid CreateOrdemDeServicoRequest request, @Context UriInfo uriInfo) {
+    public Response update(@PathParam("id") UUID id, @Valid CreateOrdemDeServicoRequest request,
+            @Context UriInfo uriInfo) {
+        List<CreateItemOsCommand> itensCmd = request.getItens() != null
+                ? request.getItens().stream()
+                        .map(i -> new CreateItemOsCommand(i.getReferenciaUuid(), i.getTipo(),
+                                i.getQuantidade() != null ? i.getQuantidade() : 1L))
+                        .toList()
+                : List.of();
         var command = new CreateOrdemDeServicoCommand(
-                request.getClienteId(), request.getVeiculoId(), request.getDescricaoProblema());
+                request.getClienteId(), request.getVeiculoId(),
+                request.getDescricaoProblema(), itensCmd);
         OrdemDeServico os = osService.update(id, command);
-        return Response.ok(toResponse(os)).build();
+        List<ItemOsResponse> itensResponse = fetchItensOs(os.getId());
+        return Response.ok(toResponse(os, itensResponse, false)).build();
     }
 
     @PUT
     @Path("/{id}/iniciar-diagnostico")
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({"mecanico", "admin"})
+    @RolesAllowed({ "mecanico", "admin" })
     @Operation(summary = "Iniciar diagnóstico da OS")
     public Response iniciarDiagnostico(@PathParam("id") UUID id) {
-        return Response.ok(toResponse(osService.iniciarDiagnostico(id))).build();
+        OrdemDeServico os = osService.iniciarDiagnostico(id);
+        return Response.ok(toResponse(os, fetchItensOs(os.getId()), false)).build();
     }
 
     @PUT
     @Path("/{id}/finalizar-diagnostico")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({"mecanico", "admin"})
-    @Operation(summary = "Finalizar diagnóstico e gerar orçamento",
-               description = "Finaliza o diagnóstico e dispara a geração automática do orçamento via evento. " +
-                             "Os itens referenciam peças e serviços já cadastrados no sistema.")
+    @RolesAllowed({ "mecanico", "admin" })
+    @Operation(summary = "Finalizar diagnóstico e gerar orçamento", description = "Finaliza o diagnóstico e dispara a geração automática do orçamento via evento. "
+            +
+            "Os itens referenciam peças e serviços já cadastrados no sistema.")
     @APIResponse(responseCode = "200", description = "Diagnóstico finalizado, orçamento gerado automaticamente")
     public Response finalizarDiagnostico(@PathParam("id") UUID id, @Valid FinalizarDiagnosticoRequest request) {
         var itens = request.getItens().stream()
@@ -156,35 +197,38 @@ public class OrdemDeServicoResource {
                         i.getReferenciaUuid(), i.getTipo(), i.getQuantidade()))
                 .toList();
         var command = new FinalizarDiagnosticoCommand(id, request.getDescricao(), itens);
-        return Response.ok(toResponse(osService.finalizarDiagnostico(command))).build();
+        OrdemDeServico os = osService.finalizarDiagnostico(command);
+        return Response.ok(toResponse(os, fetchItensOs(os.getId()), false)).build();
     }
 
     @PUT
     @Path("/{id}/cancelar")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({"admin"})
+    @RolesAllowed({ "admin" })
     @Operation(summary = "Cancelar OS")
     public Response cancelar(@PathParam("id") UUID id, MotivoRequest body) {
-        return Response.ok(toResponse(osService.cancelar(id, body.motivo()))).build();
+        OrdemDeServico os = osService.cancelar(id, body.motivo());
+        return Response.ok(toResponse(os, fetchItensOs(os.getId()), false)).build();
     }
 
     @PATCH
     @Path("/{id}/entregar")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({"admin", "atendente"})
+    @RolesAllowed({ "admin", "atendente" })
     @Operation(summary = "Entregar veículo ao cliente")
     @APIResponse(responseCode = "200", description = "Entrega registrada")
     @APIResponse(responseCode = "422", description = "Pagamento pendente ou OS não finalizada")
     public Response entregar(@PathParam("id") UUID id, @Valid RecebidoPorRequest body) {
-        return Response.ok(toResponse(osService.entregar(id, body.getRecebidoPor()))).build();
+        OrdemDeServico os = osService.entregar(id, body.getRecebidoPor());
+        return Response.ok(toResponse(os, fetchItensOs(os.getId()), false)).build();
     }
 
     @PATCH
     @Path("/{id}/confirmar-pagamento")
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({"admin", "financeiro"})
+    @RolesAllowed({ "admin", "financeiro" })
     @Operation(summary = "Confirmar pagamento da OS")
     @APIResponse(responseCode = "200", description = "Pagamento confirmado com sucesso")
     @APIResponse(responseCode = "409", description = "Pagamento não está pendente")
@@ -197,46 +241,46 @@ public class OrdemDeServicoResource {
                 os.getStatusPagamento().name(),
                 os.getReferenciaPagamento(),
                 os.getValorCobrado(),
-                os.getPagamentoConfirmadoEm()
-        )).build();
+                os.getPagamentoConfirmadoEm())).build();
     }
 
     @PUT
     @Path("/{id}/iniciar-execucao")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({"mecanico", "admin"})
+    @RolesAllowed({ "mecanico", "admin" })
     @Operation(summary = "Iniciar execução da OS")
     @APIResponse(responseCode = "200", description = "Execução iniciada")
     @APIResponse(responseCode = "400", description = "OS não está em AGUARDANDO_APROVACAO")
     public Response iniciarExecucao(@PathParam("id") UUID id, @Valid IniciarExecucaoRequest request) {
         OrdemDeServico os = osService.iniciarExecucao(id, request.getMecanicoUuid(), request.getObservacao());
-        return Response.ok(toResponse(os)).build();
+        return Response.ok(toResponse(os, fetchItensOs(os.getId()), false)).build();
     }
 
     @PUT
     @Path("/{id}/finalizar-execucao")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({"mecanico", "admin"})
+    @RolesAllowed({ "mecanico", "admin" })
     @Operation(summary = "Finalizar execução da OS")
     @APIResponse(responseCode = "200", description = "Execução finalizada, evento publicado")
     @APIResponse(responseCode = "400", description = "OS não está em EM_EXECUCAO")
     public Response finalizarExecucao(@PathParam("id") UUID id, @Valid FinalizarExecucaoRequest request) {
         OrdemDeServico os = osService.finalizarExecucao(id, request.getObservacao());
-        return Response.ok(toResponse(os)).build();
+        return Response.ok(toResponse(os, fetchItensOs(os.getId()), false)).build();
     }
 
     @GET
     @Path("/{id}/detalhamento")
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({"admin", "atendente"})
+    @RolesAllowed({ "admin", "atendente" })
     @Operation(summary = "Detalhamento da OS com itens orçados")
     @APIResponse(responseCode = "200", description = "Detalhamento da OS")
     public Response getDetalhamento(@PathParam("id") UUID id) {
         OrdemDeServico os = osService.findById(id);
         var orcamentoUuid = osService.findOrcamentoUuidByOsId(id);
         var itensOrcados = osService.buscarItensOrcados(id);
+        List<ItemOsResponse> itensResponse = fetchItensOs(os.getId());
         var response = new OrdemDeServicoDetailResponse(
                 os.getId(), os.getClienteId(), os.getVeiculoId(),
                 os.getDescricaoProblema(), os.getStatus().name(),
@@ -252,17 +296,17 @@ public class OrdemDeServicoResource {
                 os.getRecebidoPor(),
                 os.getPagamentoConfirmadoEm(),
                 os.getEntregueEm(),
+                itensResponse,
                 itensOrcados,
                 Collections.emptyList(),
-                os.getCreatedAt()
-        );
+                os.getCreatedAt());
         return Response.ok(response).build();
     }
 
     @GET
     @Path("/tempo-medio")
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({"admin", "atendente"})
+    @RolesAllowed({ "admin", "atendente" })
     @Operation(summary = "Tempo médio de execução de OS com breakdown por mecânico")
     @APIResponse(responseCode = "200", description = "Tempo médio calculado")
     public Response getTempoMedio(
@@ -278,7 +322,7 @@ public class OrdemDeServicoResource {
     @GET
     @Path("/filtro")
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({"admin", "atendente"})
+    @RolesAllowed({ "admin", "atendente" })
     @Operation(summary = "Listar OS com filtros (status, cliente, veículo, data)")
     @APIResponse(responseCode = "200", description = "Lista filtrada de OS")
     public Response findAllWithFilters(
@@ -292,13 +336,24 @@ public class OrdemDeServicoResource {
         LocalDateTime inicio = dataInicio != null ? dataInicio.atStartOfDay() : null;
         LocalDateTime fim = dataFim != null ? dataFim.atTime(LocalTime.MAX) : null;
         var content = osService.findAllWithFilters(status, clienteId, veiculoId, inicio, fim, page, size)
-                .stream().map(this::toResponse).toList();
+                .stream().map(os -> toResponse(os, fetchItensOs(os.getId()),
+                        calcularLiberadoParaExecucao(os)))
+                .toList();
         return Response.ok(new OrdemDeServicoPageResponse(content, page, size, content.size(), 1)).build();
     }
 
     // ─────────────── Helper ───────────────
 
-    private OrdemDeServicoResponse toResponse(OrdemDeServico os) {
+    private List<ItemOsResponse> fetchItensOs(UUID osUuid) {
+        return itemOsRepository.findByOsUuid(osUuid).stream()
+                .map(item -> new ItemOsResponse(
+                        item.getId(), item.getReferenciaUuid(), item.getTipo(),
+                        item.getDescricao(), item.getQuantidade()))
+                .toList();
+    }
+
+    private OrdemDeServicoResponse toResponse(OrdemDeServico os, List<ItemOsResponse> itens,
+            boolean liberadoParaExecucao) {
         return new OrdemDeServicoResponse(
                 os.getId(), os.getClienteId(), os.getVeiculoId(),
                 os.getDescricaoProblema(), os.getStatus().name(),
@@ -312,9 +367,34 @@ public class OrdemDeServicoResource {
                 os.getRecebidoPor(),
                 os.getPagamentoConfirmadoEm(),
                 os.getEntregueEm(),
-                os.getCreatedAt()
-        );
+                os.getCreatedAt(),
+                itens,
+                liberadoParaExecucao);
     }
 
-    public record MotivoRequest(String motivo) {}
+    private boolean calcularLiberadoParaExecucao(OrdemDeServico os) {
+        if (os.getOrcamentoUuid() == null) {
+            return false;
+        }
+        var orcamento = orcamentoRepository.findByUuid(os.getOrcamentoUuid());
+        if (orcamento.isEmpty() || orcamento.get().getStatus() != StatusOrcamento.APROVADO) {
+            return false;
+        }
+        List<ItemOs> itens = itemOsRepository.findByOsUuid(os.getId());
+        List<ItemOs> pecas = itens.stream().filter(ItemOs::isPeca).toList();
+        for (ItemOs peca : pecas) {
+            var pecaOpt = pecaRepository.findById(peca.getReferenciaUuid());
+            if (pecaOpt.isEmpty()) {
+                return false;
+            }
+            Long disponivel = pecaOpt.get().disponivel();
+            if (disponivel < peca.getQuantidade()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public record MotivoRequest(String motivo) {
+    }
 }

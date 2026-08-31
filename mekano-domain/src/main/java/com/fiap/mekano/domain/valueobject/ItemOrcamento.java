@@ -30,33 +30,38 @@ public class ItemOrcamento {
     private final Long quantidade;
     private final BigDecimal valorUnitario;
     private final UUID pecaId;
+    private final UUID servicoId;
 
     /**
-     * Construtor com validação (sem pecaId — retrocompatível com itens de SERVICO).
-     *
-     * @param descricao nome/descrição do item (peça ou serviço)
-     * @param quantidade quantidade do item
-     * @param valorUnitario valor unitário do item
-     * @throws AppException se validações falharem
+     * Construtor retrocompatível (sem pecaId nem servicoId).
      */
     public ItemOrcamento(String descricao, Long quantidade, BigDecimal valorUnitario) {
-        this(descricao, quantidade, valorUnitario, null);
+        this(descricao, quantidade, valorUnitario, null, null);
     }
 
     /**
-     * Construtor completo com validação e pecaId opcional.
+     * Construtor com pecaId (retrocompatível).
+     */
+    public ItemOrcamento(String descricao, Long quantidade, BigDecimal valorUnitario, UUID pecaId) {
+        this(descricao, quantidade, valorUnitario, pecaId, null);
+    }
+
+    /**
+     * Construtor completo com pecaId e servicoId opcionais.
      *
      * @param descricao nome/descrição do item
      * @param quantidade quantidade do item
      * @param valorUnitario valor unitário do item
      * @param pecaId UUID da peça (null para itens de serviço)
+     * @param servicoId UUID do serviço (null para itens de peça)
      * @throws AppException se validações falharem
      */
-    public ItemOrcamento(String descricao, Long quantidade, BigDecimal valorUnitario, UUID pecaId) {
+    public ItemOrcamento(String descricao, Long quantidade, BigDecimal valorUnitario, UUID pecaId, UUID servicoId) {
         this.descricao = validateDescricao(descricao);
         this.quantidade = validateQuantidade(quantidade);
         this.valorUnitario = validateValorUnitario(valorUnitario);
         this.pecaId = pecaId;
+        this.servicoId = servicoId;
     }
 
     private static String validateDescricao(String descricao) {

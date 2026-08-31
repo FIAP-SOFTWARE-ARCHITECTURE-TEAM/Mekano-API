@@ -26,6 +26,7 @@ public record OrdemDeServicoDetailResponse(
         @Schema(description = "Quem recebeu o veículo") String recebidoPor,
         @Schema(description = "Data do pagamento") LocalDateTime pagamentoConfirmadoEm,
         @Schema(description = "Data da entrega") LocalDateTime entregueEm,
+        @Schema(description = "Itens da OS (peças/serviços)") List<ItemOsResponse> itens,
         @Schema(description = "Itens orçados") List<String> itensOrcados,
         @Schema(description = "Itens executados") List<String> itensExecutados,
         @Schema(description = "Data de criação") LocalDateTime createdAt

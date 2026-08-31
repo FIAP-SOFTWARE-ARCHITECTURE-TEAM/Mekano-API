@@ -37,9 +37,9 @@ class WhatsAppOrcamentoObserverTest {
 
     private OrdemDeServico stubOs(UUID osUuid, UUID clienteUuid, UUID veiculoUuid) {
         return OrdemDeServico.reconstitute(osUuid, clienteUuid, veiculoUuid,
-                "Problema no motor", null, null, null, null, null, null, null,
+                "Problema no motor", null, null, null, null, null, null,
                 null, null, null, null, null, null, null, null, null, null, null, null,
-                null, 0L);
+                null, LocalDateTime.now(), 0L);
     }
 
     @Test
@@ -71,7 +71,8 @@ class WhatsAppOrcamentoObserverTest {
         observer.aoFinalizarDiagnostico(event);
 
         verify(notifier).notificarOrcamento("11999999999", "João", "Fiat", "Uno", "ABC1D23",
-                BigDecimal.valueOf(150));
+                BigDecimal.valueOf(150),
+                List.of(new ItemOrcamento("Troca óleo", 1L, BigDecimal.valueOf(150))));
     }
 
     @Test
@@ -93,7 +94,7 @@ class WhatsAppOrcamentoObserverTest {
         observer.aoFinalizarDiagnostico(event);
 
         verify(notifier, never()).notificarOrcamento(anyString(), anyString(), anyString(), anyString(),
-                anyString(), any(BigDecimal.class));
+                anyString(), any(BigDecimal.class), anyList());
     }
 
     @Test
@@ -113,6 +114,6 @@ class WhatsAppOrcamentoObserverTest {
         assertDoesNotThrow(() -> observer.aoFinalizarDiagnostico(event));
 
         verify(notifier, never()).notificarOrcamento(anyString(), anyString(), anyString(), anyString(),
-                anyString(), any(BigDecimal.class));
+                anyString(), any(BigDecimal.class), anyList());
     }
 }

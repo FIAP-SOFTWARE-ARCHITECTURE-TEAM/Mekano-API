@@ -143,7 +143,7 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
     @CacheInvalidate(cacheName = CacheNames.PECAS)
     public boolean reservarSaldo(UUID uuid, Integer quantidade) {
         int rowsUpdated = em.createNativeQuery(
-                "UPDATE pecas SET saldo_reservado = saldo_reservado + :qtd, updated_by = :sistemaUuid WHERE uuid = :uuid AND (saldo - saldo_reservado) >= :qtd"
+                "UPDATE pecas SET saldo_reservado = saldo_reservado + :qtd, updated_by = :sistemaUuid WHERE uuid = :uuid"
         )
                 .setParameter("uuid", uuid)
                 .setParameter("qtd", quantidade)
@@ -157,7 +157,7 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
     @CacheInvalidate(cacheName = CacheNames.PECAS)
     public boolean debitarSaldoReservado(UUID uuid, Integer quantidade) {
         int rowsUpdated = em.createNativeQuery(
-                "UPDATE pecas SET saldo = saldo - :qtd, saldo_reservado = saldo_reservado - :qtd, updated_by = :sistemaUuid WHERE uuid = :uuid AND saldo_reservado >= :qtd"
+                "UPDATE pecas SET saldo = saldo - :qtd, saldo_reservado = saldo_reservado - :qtd, updated_by = :sistemaUuid WHERE uuid = :uuid AND saldo >= :qtd AND saldo_reservado >= :qtd"
         )
                 .setParameter("uuid", uuid)
                 .setParameter("qtd", quantidade)

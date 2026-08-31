@@ -1,13 +1,18 @@
 package com.fiap.mekano.application.service.requisicao;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public record CreateRequisicaoCompraResponse(
     UUID id,
-    UUID pecaId,
-    Long quantidade,
+    List<ItemRequisicaoCompraItemResponse> itens,
     String status,
     String motivo,
     LocalDateTime createdAt
-) {}
+) {
+    public record ItemRequisicaoCompraItemResponse(
+        UUID pecaId,
+        Long quantidade
+    ) {}
+}

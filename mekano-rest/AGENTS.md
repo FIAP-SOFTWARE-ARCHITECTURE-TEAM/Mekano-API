@@ -11,11 +11,14 @@ com.fiap.mekano.rest
 │   ├── MekanoApiApplication.java         — @OpenAPIDefinition, extends Application (bootstrap)
 │   ├── UserResource.java                 — @Path("/users") @RequestScoped @RolesAllowed("user")
 │   ├── VeiculoResource.java              — @Path("/veiculos") @RequestScoped @RolesAllowed({"admin","atendente"})
- │   ├── ServicoResource.java              — @Path("/servicos") @RequestScoped @RolesAllowed("admin")
+│   ├── ServicoResource.java              — @Path("/servicos") @RequestScoped @RolesAllowed("admin")
 │   ├── PecaResource.java                 — @Path("/pecas") @RequestScoped @RolesAllowed("admin")
-│   ├── RequisicaoCompraResource.java      — @Path("/requisicoes-compra") @RequestScoped @RolesAllowed("admin")
-│   ├── NfEntradaResource.java             — @Path("/nf-entrada") @RequestScoped @RolesAllowed("admin")
+│   ├── RequisicaoCompraResource.java     — @Path("/requisicoes-compra") @RequestScoped @RolesAllowed({"admin","financeiro"})
+│   ├── NfEntradaResource.java            — @Path("/nf-entrada") @RequestScoped @RolesAllowed("admin")
 │   ├── AlertaResource.java               — @Path("/alertas") @RequestScoped @RolesAllowed({"admin","atendente"})
+│   ├── OrdemDeServicoResource.java       — @Path("/os") @RequestScoped @RolesAllowed({"admin","atendente","mecanico"})
+│   ├── PagamentoResource.java            — @Path("/pagamentos") @RequestScoped @RolesAllowed({"admin","financeiro"})
+│   ├── OrcamentoResource.java            — @Path("/orcamentos") @RequestScoped @RolesAllowed({"admin","cliente"})
 │   ├── dto/
 │   │   ├── CreateUserRequest.java        — Input Lombok: @NotBlank name, @Email email, @Size(min=6) password
 │   │   ├── UserResponse.java             — Output record
@@ -41,7 +44,14 @@ com.fiap.mekano.rest
 │   │   ├── CreateNfEntradaRequest.java   — Input Lombok: @NotBlank numero, serie, cnpjFornecedor, nomeFornecedor, chaveAcesso + @DecimalMin campos NF-e + @NotNull pecaId, requisicaoCompraId, quantidade
 │   │   ├── NfEntradaResponse.java        — Output record: full NF-e fields + id, createdAt
 │   │   ├── NfEntradaPageResponse.java    — Output record (paginated)
-│   │   └── AlertaResponse.java           — Output record: pecaId, codigo, descricao, saldoAtual, estoqueMinimo
+│   │   ├── AlertaResponse.java           — Output record: pecaId, codigo, descricao, saldoAtual, estoqueMinimo
+│   │   ├── CreateOrdemDeServicoRequest.java — Input Lombok: @NotNull clienteId, veiculoId, @NotBlank descricaoProblema, List<CreateItemOsRequest> itens
+│   │   ├── CreateItemOsRequest.java      — Input Lombok: @NotNull referenciaUuid, @NotBlank tipo ("PECA"|"SERVICO"), quantidade
+│   │   ├── OrdemDeServicoResponse.java   — Output record: id, clienteId, veiculoId, descricaoProblema, status, ..., List<ItemOsResponse> itens
+│   │   ├── ItemOsResponse.java           — Output record: id, referenciaUuid, tipo, descricao, quantidade
+│   │   ├── OrdemDeServicoDetailResponse.java — Output record: full OS + itens + itensOrcados
+│   │   ├── OrdemDeServicoPageResponse.java — Output record (paginated)
+│   │   └── ... (other DTOs)
 │   ├── mapper/
 │   │   ├── UserDtoMapper.java            — @Mapper(componentModel = "cdi")
 │   │   ├── VeiculoDtoMapper.java         — @Mapper(componentModel = "cdi")
@@ -70,6 +80,9 @@ com.fiap.mekano.rest
 | RequisicaoCompraResource | ✓ EXISTS — DTOs, mapper, resource, tests |
 | NfEntradaResource | ✓ EXISTS — DTOs, mapper, resource, tests |
 | AlertaResource | ✓ EXISTS — DTO, resource, tests |
+| OrdemDeServicoResource | ✓ EXISTS — full CRUD + lifecycle transitions (diagnostico, execucao, pagamento, entrega) |
+| PagamentoResource | ✓ EXISTS — confirmacao de pagamento |
+| OrcamentoResource | ✓ EXISTS — aprovacao/reprovacao |
 | Cliente DTOs + Mapper | ✓ EXISTS — but NO ClienteResource (no controller yet) |
 | ApiExceptionMapper | ✓ EXISTS |
 | ProblemDetail | ✓ EXISTS |
@@ -106,6 +119,9 @@ com.fiap.mekano.rest
 | RequisicaoCompraResource | admin | POST, GET (list+byId), PUT enviar/cancelar/receber |
 | NfEntradaResource | admin | POST, GET (list+byId) |
 | AlertaResource | admin, atendente | GET (list) |
+| OrdemDeServicoResource | admin, atendente, mecanico | POST, PUT, GET (list+byId+detalhamento), POST iniciar/finalizar diagnostico, POST iniciar/finalizar execucao, POST cancelar, POST entregar, POST confirmar pagamento |
+| PagamentoResource | admin, financeiro | POST confirmar |
+| OrcamentoResource | admin, cliente | POST aprovar/reprovar |
 | ClienteResource | NOT YET IMPLEMENTED | DTOs + mapper exist, no controller |
 
 ## Exception Handling

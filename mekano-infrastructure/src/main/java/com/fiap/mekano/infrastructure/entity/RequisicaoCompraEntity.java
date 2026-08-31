@@ -23,12 +23,6 @@ public class RequisicaoCompraEntity extends BaseEntity {
     @Column(name = "uuid", unique = true, nullable = false)
     private UUID uuid = UUID.randomUUID();
 
-    @Column(name = "peca_id", nullable = false)
-    private UUID pecaId;
-
-    @Column(name = "quantidade", nullable = false)
-    private Integer quantidade;
-
     @Column(name = "status", nullable = false)
     private String status;
 

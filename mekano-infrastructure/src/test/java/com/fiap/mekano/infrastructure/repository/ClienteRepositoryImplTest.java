@@ -168,4 +168,154 @@ class ClienteRepositoryImplTest {
         assertThat(repository.countAll(true)).isGreaterThanOrEqualTo(1L);
         assertThat(repository.countAll(false)).isGreaterThanOrEqualTo(1L);
     }
+
+    @Test
+    @TestTransaction
+    void findByCpf_deveRetornarClienteQuandoExiste() {
+        repository.create(novoCliente());
+
+        Optional<Cliente> encontrado = repository.findByCpf("52998224725");
+
+        assertThat(encontrado).isPresent();
+        assertThat(encontrado.get().getCpf().getValue()).isEqualTo("52998224725");
+    }
+
+    @Test
+    @TestTransaction
+    void findByCpf_comMascara_deveNormalizar() {
+        repository.create(novoCliente());
+
+        Optional<Cliente> encontrado = repository.findByCpf("529.982.247-25");
+
+        assertThat(encontrado).isPresent();
+    }
+
+    @Test
+    @TestTransaction
+    void findByCpf_null_deveRetornarVazio() {
+        Optional<Cliente> encontrado = repository.findByCpf(null);
+        assertThat(encontrado).isEmpty();
+    }
+
+    @Test
+    @TestTransaction
+    void findByCpf_blank_deveRetornarVazio() {
+        Optional<Cliente> encontrado = repository.findByCpf("   ");
+        assertThat(encontrado).isEmpty();
+    }
+
+    @Test
+    @TestTransaction
+    void findByCpf_inexistente_deveRetornarVazio() {
+        Optional<Cliente> encontrado = repository.findByCpf("00000000000");
+        assertThat(encontrado).isEmpty();
+    }
+
+    @Test
+    @TestTransaction
+    void findByTelefone_exato_deveRetornarCliente() {
+        repository.create(novoCliente());
+
+        Optional<Cliente> encontrado = repository.findByTelefone("11999999999");
+
+        assertThat(encontrado).isPresent();
+        assertThat(encontrado.get().getTelefone().getValue()).isEqualTo("11999999999");
+    }
+
+    @Test
+    @TestTransaction
+    void findByTelefone_comMascara_deveNormalizar() {
+        repository.create(novoCliente());
+
+        Optional<Cliente> encontrado = repository.findByTelefone("(11) 99999-9999");
+
+        assertThat(encontrado).isPresent();
+    }
+
+    @Test
+    @TestTransaction
+    void findByTelefone_null_deveRetornarVazio() {
+        Optional<Cliente> encontrado = repository.findByTelefone(null);
+        assertThat(encontrado).isEmpty();
+    }
+
+    @Test
+    @TestTransaction
+    void findByTelefone_blank_deveRetornarVazio() {
+        Optional<Cliente> encontrado = repository.findByTelefone("   ");
+        assertThat(encontrado).isEmpty();
+    }
+
+    @Test
+    @TestTransaction
+    void existsByCpf_true_quandoExiste() {
+        repository.create(novoCliente());
+
+        boolean exists = repository.existsByCpf("52998224725");
+
+        assertThat(exists).isTrue();
+    }
+
+    @Test
+    @TestTransaction
+    void existsByCpf_false_quandoNaoExiste() {
+        boolean exists = repository.existsByCpf("00000000000");
+        assertThat(exists).isFalse();
+    }
+
+    @Test
+    @TestTransaction
+    void existsByCpf_false_quandoNull() {
+        boolean exists = repository.existsByCpf(null);
+        assertThat(exists).isFalse();
+    }
+
+    @Test
+    @TestTransaction
+    void existsByCpf_false_quandoBlank() {
+        boolean exists = repository.existsByCpf("   ");
+        assertThat(exists).isFalse();
+    }
+
+    @Test
+    @TestTransaction
+    void update_deveAtualizarClienteExistente() {
+        Cliente salvo = repository.create(novoCliente());
+
+        Cliente atualizado = Cliente.reconstitute(
+                salvo.getId(),
+                "Nome Atualizado",
+                salvo.getCpf().getValue(),
+                "novo@email.com",
+                "11988888888",
+                "Rua C",
+                "300",
+                "Novo Bairro",
+                "São Paulo",
+                "SP",
+                "02002000",
+                salvo.getCreatedAt());
+
+        Cliente resultado = repository.update(atualizado);
+
+        assertThat(resultado.getNome()).isEqualTo("Nome Atualizado");
+        assertThat(resultado.getEmail().getValue()).isEqualTo("novo@email.com");
+    }
+
+    @Test
+    @TestTransaction
+    void update_clienteInexistente_deveLancar404() {
+        Cliente fantasma = Cliente.reconstitute(
+                java.util.UUID.randomUUID(),
+                "Fantasma",
+                "52998224725",
+                "fantasma@test.com",
+                null,
+                "Rua X", "1", "Bairro", "Cidade", "SP", "00000000",
+                java.time.LocalDateTime.now());
+
+        assertThatThrownBy(() -> repository.update(fantasma))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(404));
+    }
 }

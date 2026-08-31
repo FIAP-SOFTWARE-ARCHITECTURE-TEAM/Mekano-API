@@ -1,9 +1,11 @@
 package com.fiap.mekano.rest.api;
 
 import com.fiap.mekano.domain.model.Cliente;
+import com.fiap.mekano.domain.model.Servico;
 import com.fiap.mekano.domain.model.Veiculo;
 import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;
 import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
+import com.fiap.mekano.domain.port.out.ServicoRepositoryPort;
 import com.fiap.mekano.domain.port.out.VeiculoRepositoryPort;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
@@ -15,6 +17,7 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 import static io.restassured.RestAssured.given;
@@ -30,11 +33,15 @@ class PagamentoResourceTest {
 
     private static String osId;
     private static String pecaId;
+    private static String servicoId;
     private static String clienteId;
     private static String veiculoId;
 
     @Inject
     PecaRepositoryPort pecaRepository;
+
+    @Inject
+    ServicoRepositoryPort servicoRepository;
 
     @Inject
     ClienteRepositoryPort clienteRepository;
@@ -73,6 +80,11 @@ class PagamentoResourceTest {
             Veiculo veiculo = Veiculo.create(cliente.getId(), "ZZZ0000", "Fiat", "Uno", 2020);
             veiculo = veiculoRepository.create(veiculo);
             veiculoId = veiculo.getId().toString();
+
+            Servico servico = Servico.create("Troca de Óleo E2E", "Troca com óleo sintético", new BigDecimal("89.90"));
+            servico = servicoRepository.save(servico);
+            servicoId = servico.getId().toString();
+
             utx.commit();
         } catch (Exception e) {
             utx.rollback();
@@ -109,8 +121,9 @@ class PagamentoResourceTest {
                 .contentType(ContentType.JSON)
                 .body("""
                         {"descricao": "Diagnostico E2E",
-                         "itens": [{"referenciaUuid": "%s", "tipo": "PECA", "quantidade": 1}]}
-                        """.formatted(pecaId))
+                         "itens": [{"referenciaUuid": "%s", "tipo": "PECA", "quantidade": 1},
+                                   {"referenciaUuid": "%s", "tipo": "SERVICO"}]}
+                        """.formatted(pecaId, servicoId))
                 .when()
                 .put(OS_PATH + "/" + osId + "/finalizar-diagnostico")
                 .then()
@@ -122,6 +135,15 @@ class PagamentoResourceTest {
     @Order(3)
     @TestSecurity(user = "cliente", roles = {"cliente"})
     void aprovarOrcamento() {
+        given()
+                .when()
+                .get(ORCAMENTO_PATH + "?osUuid=" + osId)
+                .then()
+                .statusCode(200)
+                .body("itens.size()", equalTo(2))
+                .body("itens.pecaId", hasItem(notNullValue()))
+                .body("itens.servicoId", hasItem(notNullValue()));
+
         String orcUuid = given()
                 .when()
                 .get(ORCAMENTO_PATH + "?osUuid=" + osId)

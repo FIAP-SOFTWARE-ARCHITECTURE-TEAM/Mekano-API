@@ -18,6 +18,8 @@ import java.util.UUID;
  * - Criação APENAS via factory method {@link #create} ou {@link #reconstitute}.
  * - O builder é privado para forçar o uso dos factory methods.
  * - Chave de acesso NFe (44 dígitos) é obrigatória
+ * - A NF está vinculada a uma RequisicaoCompra (requisicaoCompraId)
+ * - Os itens da NF são derivados dos itens da RequisicaoCompra
  * - Imutável após criação: campos final, sem setters.
  *
  * Mapeamento JPA (NfEntradaEntity) é responsabilidade do módulo infrastructure.
@@ -30,7 +32,6 @@ public class NfEntrada {
     private final UUID id;
     private final String chaveAcesso;
     private final BigDecimal valorTotal;
-    private final UUID pecaId;
     private final UUID requisicaoCompraId;
     private final LocalDateTime createdAt;
 
@@ -38,17 +39,15 @@ public class NfEntrada {
      * Factory method — único ponto de criação de uma nota fiscal.
      */
     public static NfEntrada create(String chaveAcesso, BigDecimal valorTotal,
-                                   UUID pecaId, UUID requisicaoCompraId) {
+                                   UUID requisicaoCompraId) {
         validateChaveAcesso(chaveAcesso);
         validateValorTotal(valorTotal);
-        validatePecaId(pecaId);
         validateRequisicaoCompraId(requisicaoCompraId);
 
         return NfEntrada.builder()
                 .id(UUID.randomUUID())
                 .chaveAcesso(chaveAcesso)
                 .valorTotal(valorTotal)
-                .pecaId(pecaId)
                 .requisicaoCompraId(requisicaoCompraId)
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -58,18 +57,16 @@ public class NfEntrada {
      * Factory method para reconstrução a partir de dados persistidos.
      */
     public static NfEntrada reconstitute(UUID id, String chaveAcesso, BigDecimal valorTotal,
-                                         UUID pecaId, UUID requisicaoCompraId,
+                                         UUID requisicaoCompraId,
                                          LocalDateTime createdAt) {
         validateChaveAcesso(chaveAcesso);
         validateValorTotal(valorTotal);
-        validatePecaId(pecaId);
         validateRequisicaoCompraId(requisicaoCompraId);
 
         return NfEntrada.builder()
                 .id(id)
                 .chaveAcesso(chaveAcesso)
                 .valorTotal(valorTotal)
-                .pecaId(pecaId)
                 .requisicaoCompraId(requisicaoCompraId)
                 .createdAt(createdAt)
                 .build();
@@ -88,12 +85,6 @@ public class NfEntrada {
     private static void validateValorTotal(BigDecimal valor) {
         if (valor == null || valor.compareTo(BigDecimal.ZERO) <= 0) {
             throw new AppException(400, Messages.get("nf_entrada.valor_mercadoria.invalido"));
-        }
-    }
-
-    private static void validatePecaId(UUID pecaId) {
-        if (pecaId == null) {
-            throw new AppException(400, "ID da peça é obrigatório");
         }
     }
 

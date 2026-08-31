@@ -49,6 +49,12 @@ class OrcamentoResourceTest {
         Mockito.when(orcamentoService.buscarPorId(Mockito.argThat(id -> !id.equals(ORCAMENTO_UUID))))
                 .thenThrow(new AppException(404, "Orçamento não encontrado"));
 
+        Mockito.when(orcamentoService.buscarPorOrdemServico(OS_UUID))
+                .thenReturn(pendente);
+
+        Mockito.when(orcamentoService.buscarPorOrdemServico(Mockito.argThat(osId -> !osId.equals(OS_UUID))))
+                .thenThrow(new AppException(404, "Nenhum orçamento encontrado para a OS: " + OS_UUID));
+
         Mockito.when(orcamentoService.aprovar(Mockito.any()))
                 .thenReturn(aprovado);
 
@@ -133,10 +139,47 @@ class OrcamentoResourceTest {
                 .contentType(containsString("application/problem+json"));
     }
 
+    @Test
+    @Order(5)
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void buscarPorId_passandoUuidOsValido_retorna404() {
+        given()
+                .when()
+                .get(BASE_PATH + "/" + OS_UUID)
+                .then()
+                .statusCode(404)
+                .contentType(containsString("application/problem+json"));
+    }
+
+    @Test
+    @Order(6)
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void buscarPorOS_existente_returns200() {
+        given()
+                .when()
+                .get(BASE_PATH + "/os/" + OS_UUID)
+                .then()
+                .statusCode(200)
+                .body("id", equalTo(ORCAMENTO_UUID.toString()))
+                .body("ordemServicoUuid", equalTo(OS_UUID.toString()));
+    }
+
+    @Test
+    @Order(7)
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void buscarPorOS_inexistente_returns404() {
+        given()
+                .when()
+                .get(BASE_PATH + "/os/" + UUID.randomUUID())
+                .then()
+                .statusCode(404)
+                .contentType(containsString("application/problem+json"));
+    }
+
     // ─────────────── ANÔNIMOS (públicos) ───────────────
 
     @Test
-    @Order(5)
+    @Order(8)
     void aprovar_anonimo_retorna200() {
         given()
                 .contentType(ContentType.JSON)
@@ -149,7 +192,7 @@ class OrcamentoResourceTest {
     }
 
     @Test
-    @Order(6)
+    @Order(9)
     void reprovar_anonimo_retorna200() {
         given()
                 .contentType(ContentType.JSON)
@@ -165,11 +208,11 @@ class OrcamentoResourceTest {
     }
 
     @Test
-    @Order(7)
+    @Order(10)
     void buscarPorOS_withoutAuth_returns401() {
         given()
                 .when()
-                .get(BASE_PATH + "?osUuid=" + UUID.randomUUID())
+                .get(BASE_PATH + "/os/" + UUID.randomUUID())
                 .then()
                 .statusCode(401);
     }

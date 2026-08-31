@@ -10,11 +10,13 @@ import java.util.UUID;
 
 import com.fiap.mekano.application.service.os.OsAuditEventPublisher;
 import com.fiap.mekano.domain.event.DiagnosticoFinalizadoEvent;
+import com.fiap.mekano.domain.event.OSCanceladaEvent;
 import com.fiap.mekano.domain.event.OSFinalizadaEvent;
 import com.fiap.mekano.domain.event.OrdemDeServicoCriadaEvent;
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.domain.valueobject.ItemOrcamento;
+import com.fiap.mekano.domain.model.ItemOs;
 import com.fiap.mekano.domain.model.OrdemDeServico;
 import com.fiap.mekano.domain.model.Peca;
 import com.fiap.mekano.domain.model.Servico;
@@ -24,6 +26,7 @@ import com.fiap.mekano.domain.port.in.FinalizarDiagnosticoCommand;
 import com.fiap.mekano.domain.port.in.OrdemDeServicoServicePort;
 import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;
 import com.fiap.mekano.domain.port.out.EventPublisher;
+import com.fiap.mekano.domain.port.out.ItemOsRepositoryPort;
 import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
 import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
@@ -48,13 +51,15 @@ private final OrdemDeServicoRepositoryPort repository;
     private final OsAuditEventPublisher osAuditEventPublisher;
     private final ClienteRepositoryPort clienteRepository;
     private final VeiculoRepositoryPort veiculoRepository;
+    private final ItemOsRepositoryPort itemOsRepository;
 
     public OrdemDeServicoService(OrdemDeServicoRepositoryPort repository, EventPublisher eventPublisher,
                                   PecaRepositoryPort pecaRepository, ServicoRepositoryPort servicoRepository,
                                   OrcamentoRepositoryPort orcamentoRepository,
                                   OsAuditEventPublisher osAuditEventPublisher,
                                   ClienteRepositoryPort clienteRepository,
-                                  VeiculoRepositoryPort veiculoRepository) {
+                                  VeiculoRepositoryPort veiculoRepository,
+                                  ItemOsRepositoryPort itemOsRepository) {
         this.repository = repository;
         this.eventPublisher = eventPublisher;
         this.pecaRepository = pecaRepository;
@@ -63,6 +68,7 @@ private final OrdemDeServicoRepositoryPort repository;
         this.osAuditEventPublisher = osAuditEventPublisher;
         this.clienteRepository = clienteRepository;
         this.veiculoRepository = veiculoRepository;
+        this.itemOsRepository = itemOsRepository;
     }
 
     @Override
@@ -79,8 +85,21 @@ private final OrdemDeServicoRepositoryPort repository;
         if (!Boolean.TRUE.equals(veiculo.getIsActive())) {
             throw new AppException(422, Messages.get("veiculo.inactive", command.veiculoId()));
         }
-        OrdemDeServico os = OrdemDeServico.create(command.clienteId(), command.veiculoId(), command.descricaoProblema());
+
+        OrdemDeServico os = OrdemDeServico.create(command.clienteId(), command.veiculoId(),
+                command.descricaoProblema());
         OrdemDeServico saved = repository.save(os);
+
+        // Persistir itens na junction table
+        if (command.itens() != null) {
+            for (var itemCmd : command.itens()) {
+                String descricao = resolveItemDescricao(itemCmd.referenciaUuid(), itemCmd.tipo());
+                ItemOs itemOs = ItemOs.create(saved.getId(), itemCmd.referenciaUuid(),
+                        itemCmd.tipo(), descricao, itemCmd.quantidade());
+                itemOsRepository.save(itemOs);
+            }
+        }
+
         eventPublisher.publish(OrdemDeServicoCriadaEvent.of(saved));
         osAuditEventPublisher.publish(saved.getId(), OsAuditAction.CRIAR, null,
                 OsAuditAction.CRIAR.getObservacaoDefault(), Map.of());
@@ -107,8 +126,22 @@ private final OrdemDeServicoRepositoryPort repository;
         if (!Boolean.TRUE.equals(veiculo.getIsActive())) {
             throw new AppException(422, Messages.get("veiculo.inactive", command.veiculoId()));
         }
+
         os.atualizar(command.clienteId(), command.veiculoId(), command.descricaoProblema());
-        return repository.save(os);
+        OrdemDeServico saved = repository.save(os);
+
+        // Substituir itens na junction table
+        if (command.itens() != null) {
+            itemOsRepository.deleteByOsUuid(saved.getId());
+            for (var itemCmd : command.itens()) {
+                String descricao = resolveItemDescricao(itemCmd.referenciaUuid(), itemCmd.tipo());
+                ItemOs itemOs = ItemOs.create(saved.getId(), itemCmd.referenciaUuid(),
+                        itemCmd.tipo(), descricao, itemCmd.quantidade());
+                itemOsRepository.save(itemOs);
+            }
+        }
+
+        return saved;
     }
 
     @Override
@@ -136,36 +169,70 @@ private final OrdemDeServicoRepositoryPort repository;
     @Transactional
     public OrdemDeServico finalizarDiagnostico(FinalizarDiagnosticoCommand command) {
         OrdemDeServico os = findById(command.osId());
-        List<ItemOrcamento> itens = new ArrayList<>();
 
-        for (var item : command.itens()) {
-            switch (item.tipo().toUpperCase()) {
-                case "PECA" -> {
-                    Peca peca = pecaRepository.buscarPorId(item.referenciaUuid())
-                            .orElseThrow(() -> new AppException(404, "Peça não encontrada: " + item.referenciaUuid()));
-                    if (!Boolean.TRUE.equals(peca.getIsActive())) {
-                        throw new AppException(422, Messages.get("peca.inactive", item.referenciaUuid()));
-                    }
-                    itens.add(new ItemOrcamento(peca.getDescricao(), item.quantidade(), peca.getValorUnitario(), peca.getId()));
+        // Adicionar novos itens do mecânico à junction table
+        if (command.itens() != null) {
+            for (var item : command.itens()) {
+                String descricao = resolveItemDescricao(item.referenciaUuid(), item.tipo());
+                ItemOs itemOs = ItemOs.create(os.getId(), item.referenciaUuid(),
+                        item.tipo(), descricao, item.quantidade());
+                itemOsRepository.save(itemOs);
+            }
+        }
+
+        // Ler TODOS os itens da junction table para criar o orçamento
+        List<ItemOs> todosItens = itemOsRepository.findByOsUuid(os.getId());
+        List<ItemOrcamento> itensOrcamento = new ArrayList<>();
+
+        for (ItemOs itemOs : todosItens) {
+            if (itemOs.isPeca()) {
+                Peca peca = pecaRepository.buscarPorId(itemOs.getReferenciaUuid())
+                        .orElseThrow(() -> new AppException(404, "Peça não encontrada: " + itemOs.getReferenciaUuid()));
+                if (!Boolean.TRUE.equals(peca.getIsActive())) {
+                    throw new AppException(422, Messages.get("peca.inactive", itemOs.getReferenciaUuid()));
                 }
-                case "SERVICO" -> {
-                    Servico servico = servicoRepository.findById(item.referenciaUuid())
-                            .orElseThrow(() -> new AppException(404, "Serviço não encontrado: " + item.referenciaUuid()));
-                    if (!Boolean.TRUE.equals(servico.getIsActive())) {
-                        throw new AppException(422, Messages.get("servico.inactive", item.referenciaUuid()));
-                    }
-                    itens.add(new ItemOrcamento(servico.getNome(), item.quantidade(), servico.getValor()));
+                itensOrcamento.add(new ItemOrcamento(peca.getDescricao(), itemOs.getQuantidade(),
+                        peca.getValorUnitario(), peca.getId()));
+            } else if (itemOs.isServico()) {
+                Servico servico = servicoRepository.findById(itemOs.getReferenciaUuid())
+                        .orElseThrow(() -> new AppException(404, "Serviço não encontrado: " + itemOs.getReferenciaUuid()));
+                if (!Boolean.TRUE.equals(servico.getIsActive())) {
+                    throw new AppException(422, Messages.get("servico.inactive", itemOs.getReferenciaUuid()));
                 }
-                default -> throw new AppException(400, "Tipo de item inválido: " + item.tipo());
+                itensOrcamento.add(new ItemOrcamento(servico.getNome(), itemOs.getQuantidade(),
+                        servico.getValor(), null, servico.getId()));
             }
         }
 
         os.finalizarDiagnostico();
         repository.save(os);
-        eventPublisher.publish(DiagnosticoFinalizadoEvent.of(os.getId(), command.descricao(), itens));
+        eventPublisher.publish(DiagnosticoFinalizadoEvent.of(os.getId(), command.descricao(), itensOrcamento));
         osAuditEventPublisher.publish(os.getId(), OsAuditAction.ORCAR, null,
-                OsAuditAction.ORCAR.getObservacaoDefault(), Map.of("itens", itens.size()));
+                OsAuditAction.ORCAR.getObservacaoDefault(), Map.of("itens", itensOrcamento.size()));
         return os;
+    }
+
+    private String resolveItemDescricao(UUID referenciaUuid, String tipo) {
+        if ("PECA".equalsIgnoreCase(tipo)) {
+            return pecaRepository.findById(referenciaUuid)
+                    .map(peca -> {
+                        if (!Boolean.TRUE.equals(peca.getIsActive())) {
+                            throw new AppException(422, Messages.get("peca.inactive", referenciaUuid));
+                        }
+                        return peca.getDescricao();
+                    })
+                    .orElseThrow(() -> new AppException(404, Messages.get("os.peca.not.found", referenciaUuid)));
+        } else if ("SERVICO".equalsIgnoreCase(tipo)) {
+            return servicoRepository.findById(referenciaUuid)
+                    .map(servico -> {
+                        if (!Boolean.TRUE.equals(servico.getIsActive())) {
+                            throw new AppException(422, Messages.get("servico.inactive", referenciaUuid));
+                        }
+                        return servico.getNome();
+                    })
+                    .orElseThrow(() -> new AppException(404, Messages.get("os.servico.not.found", referenciaUuid)));
+        }
+        throw new AppException(400, Messages.get("itemos.tipo.invalido", tipo));
     }
 
     @Override
@@ -185,6 +252,7 @@ private final OrdemDeServicoRepositoryPort repository;
         os.cancelar(motivo);
         OrdemDeServico saved = repository.save(os);
         osAuditEventPublisher.publish(saved.getId(), OsAuditAction.CANCELAR, null, motivo, Map.of());
+        eventPublisher.publish(OSCanceladaEvent.of(saved.getId(), motivo));
         return saved;
     }
 
@@ -215,8 +283,11 @@ private final OrdemDeServicoRepositoryPort repository;
                         boolean ok = pecaRepository.debitarSaldoReservado(
                                 item.getPecaId(), item.getQuantidade().intValue());
                         if (!ok) {
+                            Peca peca = pecaRepository.findById(item.getPecaId())
+                                    .orElseThrow(() -> new AppException(404,
+                                            Messages.get("peca.not.found", item.getPecaId())));
                             throw new AppException(409, Messages.get("peca.saldo.insuficiente",
-                                    item.getDescricao(), 0, item.getQuantidade()));
+                                    item.getDescricao(), peca.getSaldoAtual(), item.getQuantidade()));
                         }
                     }
                 }
