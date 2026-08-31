@@ -28,5 +28,6 @@ public record OrdemDeServicoResponse(
         @Schema(description = "Data do pagamento") LocalDateTime pagamentoConfirmadoEm,
         @Schema(description = "Data da entrega") LocalDateTime entregueEm,
         @Schema(description = "Data de criação") LocalDateTime createdAt,
-        @Schema(description = "Itens da OS (peças/serviços)") List<ItemOsResponse> itens
+        @Schema(description = "Itens da OS (peças/serviços)") List<ItemOsResponse> itens,
+        @Schema(description = "Indica se a OS está liberada para execução (orçamento aprovado e estoque disponível)") boolean liberadoParaExecucao
 ) {}
