@@ -12,17 +12,14 @@ import com.fiap.mekano.infrastructure.entity.NfEntradaEntity;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.persistence.EntityManager;
 
 @ApplicationScoped
 public class NfEntradaRepositoryImpl implements NfEntradaRepositoryPort {
 
     private final NfEntradaPanacheRepository panacheRepository;
-    private final EntityManager em;
 
-    public NfEntradaRepositoryImpl(NfEntradaPanacheRepository panacheRepository, EntityManager em) {
+    public NfEntradaRepositoryImpl(NfEntradaPanacheRepository panacheRepository) {
         this.panacheRepository = panacheRepository;
-        this.em = em;
     }
 
     @Override
@@ -35,7 +32,6 @@ public class NfEntradaRepositoryImpl implements NfEntradaRepositoryPort {
         entity.setUuid(nfEntrada.getId());
         entity.setChaveAcesso(nfEntrada.getChaveAcesso());
         entity.setValorTotal(nfEntrada.getValorTotal());
-        entity.setPecaId(nfEntrada.getPecaId());
         entity.setRequisicaoCompraId(nfEntrada.getRequisicaoCompraId());
         entity.setDataRecebimento(nfEntrada.getCreatedAt());
         if (entity.getCreatedAt() == null) {
@@ -46,7 +42,6 @@ public class NfEntradaRepositoryImpl implements NfEntradaRepositoryPort {
 
         if (entity.getId() == null) {
             panacheRepository.persist(entity);
-            em.flush();
         }
 
         return toDomain(entity);
@@ -86,7 +81,6 @@ public class NfEntradaRepositoryImpl implements NfEntradaRepositoryPort {
                 entity.getUuid(),
                 entity.getChaveAcesso(),
                 entity.getValorTotal(),
-                entity.getPecaId(),
                 entity.getRequisicaoCompraId(),
                 entity.getCreatedAt() == null ? LocalDateTime.now() : entity.getCreatedAt()
         );

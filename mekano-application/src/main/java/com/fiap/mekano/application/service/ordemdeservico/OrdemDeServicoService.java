@@ -93,9 +93,9 @@ private final OrdemDeServicoRepositoryPort repository;
         // Persistir itens na junction table
         if (command.itens() != null) {
             for (var itemCmd : command.itens()) {
+                String descricao = resolveItemDescricao(itemCmd.referenciaUuid(), itemCmd.tipo());
                 ItemOs itemOs = ItemOs.create(saved.getId(), itemCmd.referenciaUuid(),
-                        itemCmd.tipo(), command.descricaoProblema(), itemCmd.quantidade());
-                validateAndPersistItem(itemOs);
+                        itemCmd.tipo(), descricao, itemCmd.quantidade());
                 itemOsRepository.save(itemOs);
             }
         }
@@ -134,9 +134,9 @@ private final OrdemDeServicoRepositoryPort repository;
         if (command.itens() != null) {
             itemOsRepository.deleteByOsUuid(saved.getId());
             for (var itemCmd : command.itens()) {
+                String descricao = resolveItemDescricao(itemCmd.referenciaUuid(), itemCmd.tipo());
                 ItemOs itemOs = ItemOs.create(saved.getId(), itemCmd.referenciaUuid(),
-                        itemCmd.tipo(), command.descricaoProblema(), itemCmd.quantidade());
-                validateAndPersistItem(itemOs);
+                        itemCmd.tipo(), descricao, itemCmd.quantidade());
                 itemOsRepository.save(itemOs);
             }
         }
@@ -173,9 +173,9 @@ private final OrdemDeServicoRepositoryPort repository;
         // Adicionar novos itens do mecânico à junction table
         if (command.itens() != null) {
             for (var item : command.itens()) {
+                String descricao = resolveItemDescricao(item.referenciaUuid(), item.tipo());
                 ItemOs itemOs = ItemOs.create(os.getId(), item.referenciaUuid(),
-                        item.tipo(), command.descricao(), item.quantidade());
-                validateAndPersistItem(itemOs);
+                        item.tipo(), descricao, item.quantidade());
                 itemOsRepository.save(itemOs);
             }
         }
@@ -212,20 +212,27 @@ private final OrdemDeServicoRepositoryPort repository;
         return os;
     }
 
-    private void validateAndPersistItem(ItemOs itemOs) {
-        if (itemOs.isPeca()) {
-            var peca = pecaRepository.findById(itemOs.getReferenciaUuid())
-                    .orElseThrow(() -> new AppException(404, Messages.get("os.peca.not.found", itemOs.getReferenciaUuid())));
-            if (!Boolean.TRUE.equals(peca.getIsActive())) {
-                throw new AppException(422, Messages.get("peca.inactive", itemOs.getReferenciaUuid()));
-            }
-        } else if (itemOs.isServico()) {
-            var servico = servicoRepository.findById(itemOs.getReferenciaUuid())
-                    .orElseThrow(() -> new AppException(404, Messages.get("os.servico.not.found", itemOs.getReferenciaUuid())));
-            if (!Boolean.TRUE.equals(servico.getIsActive())) {
-                throw new AppException(422, Messages.get("servico.inactive", itemOs.getReferenciaUuid()));
-            }
+    private String resolveItemDescricao(UUID referenciaUuid, String tipo) {
+        if ("PECA".equalsIgnoreCase(tipo)) {
+            return pecaRepository.findById(referenciaUuid)
+                    .map(peca -> {
+                        if (!Boolean.TRUE.equals(peca.getIsActive())) {
+                            throw new AppException(422, Messages.get("peca.inactive", referenciaUuid));
+                        }
+                        return peca.getDescricao();
+                    })
+                    .orElseThrow(() -> new AppException(404, Messages.get("os.peca.not.found", referenciaUuid)));
+        } else if ("SERVICO".equalsIgnoreCase(tipo)) {
+            return servicoRepository.findById(referenciaUuid)
+                    .map(servico -> {
+                        if (!Boolean.TRUE.equals(servico.getIsActive())) {
+                            throw new AppException(422, Messages.get("servico.inactive", referenciaUuid));
+                        }
+                        return servico.getNome();
+                    })
+                    .orElseThrow(() -> new AppException(404, Messages.get("os.servico.not.found", referenciaUuid)));
         }
+        throw new AppException(400, Messages.get("itemos.tipo.invalido", tipo));
     }
 
     @Override

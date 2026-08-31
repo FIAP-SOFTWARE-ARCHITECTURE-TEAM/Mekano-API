@@ -16,19 +16,17 @@ class NfEntradaTest {
     @Test
     @DisplayName("deve criar nota fiscal")
     void deveCriarNfEntrada() {
-        UUID pecaId = UUID.randomUUID();
         UUID requisicaoId = UUID.randomUUID();
 
         NfEntrada nf = NfEntrada.create(
                 "12345678901234567890123456789012345678901234",
                 new BigDecimal("1875.00"),
-                pecaId, requisicaoId
+                requisicaoId
         );
 
         assertThat(nf.getId()).isNotNull();
         assertThat(nf.getChaveAcesso()).isEqualTo("12345678901234567890123456789012345678901234");
         assertThat(nf.getValorTotal()).isEqualTo(new BigDecimal("1875.00"));
-        assertThat(nf.getPecaId()).isEqualTo(pecaId);
         assertThat(nf.getRequisicaoCompraId()).isEqualTo(requisicaoId);
     }
 
@@ -38,7 +36,7 @@ class NfEntradaTest {
         assertThatThrownBy(() -> NfEntrada.create(
                 "1234",
                 BigDecimal.ONE,
-                UUID.randomUUID(), UUID.randomUUID()
+                UUID.randomUUID()
         )).isInstanceOf(AppException.class);
     }
 
@@ -48,7 +46,7 @@ class NfEntradaTest {
         assertThatThrownBy(() -> NfEntrada.create(
                 "12345678901234567890123456789012345678901234",
                 BigDecimal.ZERO,
-                UUID.randomUUID(), UUID.randomUUID()
+                UUID.randomUUID()
         )).isInstanceOf(AppException.class);
     }
 
@@ -59,21 +57,11 @@ class NfEntradaTest {
 
         NfEntrada nf = NfEntrada.create(
                 chave, BigDecimal.ONE,
-                UUID.randomUUID(), UUID.randomUUID()
+                UUID.randomUUID()
         );
 
         assertThat(nf.chaveAcessoFormatada())
                 .isEqualTo("12.3456.7890.1234.5678.9012.3456.7890.1234.5678901234");
-    }
-
-    @Test
-    @DisplayName("deve rejeitar pecaId nulo")
-    void deveRejeitarPecaIdNulo() {
-        assertThatThrownBy(() -> NfEntrada.create(
-                "12345678901234567890123456789012345678901234",
-                BigDecimal.ONE,
-                null, UUID.randomUUID()
-        )).isInstanceOf(AppException.class);
     }
 
     @Test
@@ -82,7 +70,7 @@ class NfEntradaTest {
         assertThatThrownBy(() -> NfEntrada.create(
                 "12345678901234567890123456789012345678901234",
                 BigDecimal.ONE,
-                UUID.randomUUID(), null
+                null
         )).isInstanceOf(AppException.class);
     }
 }

@@ -3,7 +3,9 @@ package com.fiap.mekano.rest.api;
 import com.fiap.mekano.application.service.peca.PecaService;
 import com.fiap.mekano.application.service.requisicao.RequisicaoCompraService;
 import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.model.ItemRequisicaoCompra;
 import com.fiap.mekano.rest.api.dto.CreateRequisicaoCompraRequest;
+import com.fiap.mekano.rest.api.dto.ItemRequisicaoCompraResponse;
 import com.fiap.mekano.rest.api.dto.PecaResumidaResponse;
 import com.fiap.mekano.rest.api.dto.RequisicaoCompraPageResponse;
 import com.fiap.mekano.rest.api.dto.RequisicaoCompraResponse;
@@ -33,6 +35,7 @@ import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 
 @Path("/requisicoes-compra")
@@ -53,16 +56,16 @@ public class RequisicaoCompraResource {
         @POST
         @Consumes(MediaType.APPLICATION_JSON)
         @Produces(MediaType.APPLICATION_JSON)
-        @Operation(summary = "Criar requisição de compra", description = "Cria uma nova requisição de compra (status ABERTA).")
+        @Operation(summary = "Criar requisição de compra", description = "Cria uma nova requisição de compra com múltiplos itens (status ABERTA).")
         @APIResponse(responseCode = "201", description = "Requisição criada com sucesso", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = RequisicaoCompraResponse.class)))
         @APIResponse(responseCode = "400", description = "Dados de entrada inválidos", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = ProblemDetail.class)))
         public Response create(@Valid CreateRequisicaoCompraRequest request, @Context UriInfo uriInfo) {
                 var command = requisicaoDtoMapper.toCreateCommand(request);
                 var result = requisicaoService.criar(command);
                 URI location = uriInfo.getAbsolutePathBuilder().path(result.id().toString()).build();
-                var pecaInfo = lookupPeca(result.pecaId());
+                var itensResponse = buildItensResponse(result.itens());
                 var response = new RequisicaoCompraResponse(
-                                result.id(), pecaInfo, result.quantidade(),
+                                result.id(), itensResponse,
                                 result.status(), result.motivo(), result.createdAt());
                 return Response.created(location).entity(response).build();
         }
@@ -139,11 +142,26 @@ public class RequisicaoCompraResource {
         }
 
         private RequisicaoCompraResponse toResponse(com.fiap.mekano.domain.model.RequisicaoCompra requisicao) {
-                var pecaInfo = lookupPeca(requisicao.getPecaId());
+                var itensResponse = requisicao.getItens().stream()
+                                .map(item -> new ItemRequisicaoCompraResponse(
+                                                item.getPecaId(),
+                                                lookupPeca(item.getPecaId()),
+                                                item.getQuantidade()))
+                                .toList();
                 return new RequisicaoCompraResponse(
-                                requisicao.getId(), pecaInfo, requisicao.getQuantidade(),
+                                requisicao.getId(), itensResponse,
                                 requisicao.getStatus().name(), requisicao.getMotivo().name(),
                                 requisicao.getCreatedAt());
+        }
+
+        private List<ItemRequisicaoCompraResponse> buildItensResponse(
+                        List<com.fiap.mekano.application.service.requisicao.CreateRequisicaoCompraResponse.ItemRequisicaoCompraItemResponse> itens) {
+                return itens.stream()
+                                .map(item -> new ItemRequisicaoCompraResponse(
+                                                item.pecaId(),
+                                                lookupPeca(item.pecaId()),
+                                                item.quantidade()))
+                                .toList();
         }
 
         private PecaResumidaResponse lookupPeca(UUID pecaId) {

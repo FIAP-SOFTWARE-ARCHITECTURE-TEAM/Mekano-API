@@ -31,8 +31,9 @@ class EstoqueMinimoObserverTest {
         verify(requisicaoService, times(1)).criar(captor.capture());
 
         CreateRequisicaoCompraCommand command = captor.getValue();
-        assertEquals(pecaId, command.pecaId());
-        assertEquals(3, command.quantidade());
+        assertEquals(1, command.itens().size());
+        assertEquals(pecaId, command.itens().get(0).pecaId());
+        assertEquals(3, command.itens().get(0).quantidade());
         assertEquals(MotivoRequisicao.ESTOQUE_MINIMO, command.motivo());
     }
 
