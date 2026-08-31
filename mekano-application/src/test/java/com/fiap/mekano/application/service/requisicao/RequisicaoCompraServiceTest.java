@@ -1,6 +1,7 @@
 package com.fiap.mekano.application.service.requisicao;
 
 import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.model.ItemRequisicaoCompra;
 import com.fiap.mekano.domain.model.MotivoRequisicao;
 import com.fiap.mekano.domain.model.Peca;
 import com.fiap.mekano.domain.model.RequisicaoCompra;
@@ -48,7 +49,6 @@ class RequisicaoCompraServiceTest {
     @InjectMocks
     RequisicaoCompraService requisicaoService;
 
-    private UUID pecaId;
     private UUID pecaId1;
     private UUID pecaId2;
     private UUID requisicaoId;
@@ -59,7 +59,6 @@ class RequisicaoCompraServiceTest {
     void setUp() {
         pecaId1 = UUID.randomUUID();
         pecaId2 = UUID.randomUUID();
-        pecaId = pecaId1;
         requisicaoId = UUID.randomUUID();
         mockPeca1 = Peca.reconstitute(
                 pecaId1, "PEA-001", "Óleo do Motor 5W30",
@@ -80,8 +79,8 @@ class RequisicaoCompraServiceTest {
                 new ItemRequisicaoCompraCommand(pecaId2, 5));
 
         var requisicao = RequisicaoCompra.criarParaMinimo(
-                List.of(new com.fiap.mekano.domain.model.ItemRequisicaoCompra(pecaId1, 10L),
-                        new com.fiap.mekano.domain.model.ItemRequisicaoCompra(pecaId2, 5L)),
+                List.of(new ItemRequisicaoCompra(pecaId1, 10L),
+                        new ItemRequisicaoCompra(pecaId2, 5L)),
                 MotivoRequisicao.ESTOQUE_MINIMO);
         when(requisicaoRepository.save(any())).thenReturn(requisicao);
 
@@ -117,7 +116,7 @@ class RequisicaoCompraServiceTest {
     @Test
     @DisplayName("cancelar deve cancelar requisicao com motivo ESTOQUE_MINIMO")
     void cancelarDeveCancelarRequisicaoComMotivoEstoqueMinimo() {
-        var itens = List.of(new com.fiap.mekano.domain.model.ItemRequisicaoCompra(pecaId1, 10L));
+        var itens = List.of(new ItemRequisicaoCompra(pecaId1, 10L));
         var requisicao = RequisicaoCompra.reconstitute(
                 requisicaoId, itens,
                 StatusRequisicao.ABERTA, MotivoRequisicao.ESTOQUE_MINIMO, LocalDateTime.now());
@@ -132,7 +131,7 @@ class RequisicaoCompraServiceTest {
     @Test
     @DisplayName("cancelar deve lancar excecao quando motivo e ORDEM_SERVICO")
     void cancelarDeveLancarExcecaoQuandoMotivoERdemServico() {
-        var itens = List.of(new com.fiap.mekano.domain.model.ItemRequisicaoCompra(pecaId1, 10L));
+        var itens = List.of(new ItemRequisicaoCompra(pecaId1, 10L));
         var requisicao = RequisicaoCompra.reconstitute(
                 requisicaoId, itens,
                 StatusRequisicao.ABERTA, MotivoRequisicao.ORDEM_SERVICO, LocalDateTime.now());
@@ -147,7 +146,7 @@ class RequisicaoCompraServiceTest {
     @Test
     @DisplayName("cancelar deve lancar excecao quando status nao e ABERTA")
     void cancelarDeveLancarExcecaoQuandoStatusNaoEAberta() {
-        var itens = List.of(new com.fiap.mekano.domain.model.ItemRequisicaoCompra(pecaId1, 10L));
+        var itens = List.of(new ItemRequisicaoCompra(pecaId1, 10L));
         var requisicao = RequisicaoCompra.reconstitute(
                 requisicaoId, itens,
                 StatusRequisicao.ENVIADA, MotivoRequisicao.ESTOQUE_MINIMO, LocalDateTime.now());
@@ -167,5 +166,132 @@ class RequisicaoCompraServiceTest {
 
         AppException ex = assertThrows(AppException.class, () -> requisicaoService.buscarPorId(idInexistente));
         assertEquals(404, ex.getStatus());
+    }
+
+    @Test
+    @DisplayName("enviar deve transicionar de ABERTA para ENVIADA")
+    void enviarDeveTransicionarParaEnviada() {
+        var itens = List.of(new ItemRequisicaoCompra(pecaId1, 10L));
+        var requisicao = RequisicaoCompra.reconstitute(
+                requisicaoId, itens,
+                StatusRequisicao.ABERTA, MotivoRequisicao.ESTOQUE_MINIMO, LocalDateTime.now());
+        when(requisicaoRepository.findById(requisicaoId)).thenReturn(Optional.of(requisicao));
+        when(requisicaoRepository.atualizar(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        requisicaoService.enviar(requisicaoId);
+
+        verify(requisicaoRepository).atualizar(any());
+    }
+
+    @Test
+    @DisplayName("enviar deve lancar 409 quando status nao e ABERTA")
+    void enviarDeveLancar409QuandoStatusNaoEAberta() {
+        var itens = List.of(new ItemRequisicaoCompra(pecaId1, 10L));
+        var requisicao = RequisicaoCompra.reconstitute(
+                requisicaoId, itens,
+                StatusRequisicao.ENVIADA, MotivoRequisicao.ESTOQUE_MINIMO, LocalDateTime.now());
+        when(requisicaoRepository.findById(requisicaoId)).thenReturn(Optional.of(requisicao));
+
+        AppException ex = assertThrows(AppException.class, () -> requisicaoService.enviar(requisicaoId));
+        assertEquals(409, ex.getStatus());
+
+        verify(requisicaoRepository, never()).atualizar(any());
+    }
+
+    @Test
+    @DisplayName("marcarComoComprada deve transicionar de ABERTA para COMPRA_APROVADA")
+    void marcarComoCompradaDeveTransicionar() {
+        var itens = List.of(new ItemRequisicaoCompra(pecaId1, 10L));
+        var requisicao = RequisicaoCompra.reconstitute(
+                requisicaoId, itens,
+                StatusRequisicao.ABERTA, MotivoRequisicao.ESTOQUE_MINIMO, LocalDateTime.now());
+        when(requisicaoRepository.findById(requisicaoId)).thenReturn(Optional.of(requisicao));
+        when(requisicaoRepository.atualizar(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        requisicaoService.marcarComoComprada(requisicaoId);
+
+        verify(requisicaoRepository).atualizar(any());
+    }
+
+    @Test
+    @DisplayName("marcarComoComprada deve lancar 409 quando status e ENVIADA")
+    void marcarComoCompradaDeveLancar409QuandoEnviada() {
+        var itens = List.of(new ItemRequisicaoCompra(pecaId1, 10L));
+        var requisicao = RequisicaoCompra.reconstitute(
+                requisicaoId, itens,
+                StatusRequisicao.ENVIADA, MotivoRequisicao.ESTOQUE_MINIMO, LocalDateTime.now());
+        when(requisicaoRepository.findById(requisicaoId)).thenReturn(Optional.of(requisicao));
+
+        AppException ex = assertThrows(AppException.class, () -> requisicaoService.marcarComoComprada(requisicaoId));
+        assertEquals(409, ex.getStatus());
+
+        verify(requisicaoRepository, never()).atualizar(any());
+    }
+
+    @Test
+    @DisplayName("marcarComoRecebida deve transicionar de ENVIADA para PRODUTO_RECEBIDO")
+    void marcarComoRecebidaDeveTransicionar() {
+        var itens = List.of(new ItemRequisicaoCompra(pecaId1, 10L));
+        var requisicao = RequisicaoCompra.reconstitute(
+                requisicaoId, itens,
+                StatusRequisicao.ENVIADA, MotivoRequisicao.ESTOQUE_MINIMO, LocalDateTime.now());
+        when(requisicaoRepository.findById(requisicaoId)).thenReturn(Optional.of(requisicao));
+        when(requisicaoRepository.atualizar(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        requisicaoService.marcarComoRecebida(requisicaoId);
+
+        verify(requisicaoRepository).atualizar(any());
+    }
+
+    @Test
+    @DisplayName("marcarComoRecebida deve transicionar de COMPRA_APROVADA para PRODUTO_RECEBIDO")
+    void marcarComoRecebidaDeveTransicionarDeComprada() {
+        var itens = List.of(new ItemRequisicaoCompra(pecaId1, 10L));
+        var requisicao = RequisicaoCompra.reconstitute(
+                requisicaoId, itens,
+                StatusRequisicao.COMPRA_APROVADA, MotivoRequisicao.ESTOQUE_MINIMO, LocalDateTime.now());
+        when(requisicaoRepository.findById(requisicaoId)).thenReturn(Optional.of(requisicao));
+        when(requisicaoRepository.atualizar(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        requisicaoService.marcarComoRecebida(requisicaoId);
+
+        verify(requisicaoRepository).atualizar(any());
+    }
+
+    @Test
+    @DisplayName("marcarComoRecebida deve lancar 409 quando status e ABERTA")
+    void marcarComoRecebidaDeveLancar409QuandoAberta() {
+        var itens = List.of(new ItemRequisicaoCompra(pecaId1, 10L));
+        var requisicao = RequisicaoCompra.reconstitute(
+                requisicaoId, itens,
+                StatusRequisicao.ABERTA, MotivoRequisicao.ESTOQUE_MINIMO, LocalDateTime.now());
+        when(requisicaoRepository.findById(requisicaoId)).thenReturn(Optional.of(requisicao));
+
+        AppException ex = assertThrows(AppException.class, () -> requisicaoService.marcarComoRecebida(requisicaoId));
+        assertEquals(409, ex.getStatus());
+
+        verify(requisicaoRepository, never()).atualizar(any());
+    }
+
+    @Test
+    @DisplayName("findAll deve delegar ao repository")
+    void findAllDeveDelegarAoRepository() {
+        when(requisicaoRepository.findAll(0, 10)).thenReturn(List.of());
+
+        var result = requisicaoService.findAll(0, 10);
+
+        assertNotNull(result);
+        verify(requisicaoRepository).findAll(0, 10);
+    }
+
+    @Test
+    @DisplayName("countAll deve delegar ao repository")
+    void countAllDeveDelegarAoRepository() {
+        when(requisicaoRepository.countAll()).thenReturn(5L);
+
+        long result = requisicaoService.countAll();
+
+        assertEquals(5L, result);
+        verify(requisicaoRepository).countAll();
     }
 }
