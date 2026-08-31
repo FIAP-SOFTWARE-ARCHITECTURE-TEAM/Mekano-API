@@ -133,6 +133,12 @@
             <artifactId>quarkus-junit5</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Quarkus JaCoCo — coverage para @QuarkusTest -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jacoco</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-test-security</artifactId>
@@ -213,6 +219,72 @@
                         <arg>-Amapstruct.unmappedTargetPolicy=WARN</arg>
                     </compilerArgs>
                 </configuration>
+            </plugin>
+            <!-- JaCoCo: merge + report-aggregate + check (aggregate coverage gate) -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <executions>
+                    <!-- Combina todos os .exec dos módulos dependentes em um único arquivo -->
+                    <execution>
+                        <id>jacoco-merge</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>merge</goal>
+                        </goals>
+                        <configuration>
+                            <fileSets>
+                                <fileSet>
+                                    <directory>${project.basedir}/../mekano-domain/target</directory>
+                                    <includes>
+                                        <include>jacoco.exec</include>
+                                    </includes>
+                                </fileSet>
+                                <fileSet>
+                                    <directory>${project.basedir}/../mekano-application/target</directory>
+                                    <includes>
+                                        <include>jacoco.exec</include>
+                                    </includes>
+                                </fileSet>
+                                <fileSet>
+                                    <directory>${project.basedir}/../mekano-infrastructure/target</directory>
+                                    <includes>
+                                        <include>jacoco.exec</include>
+                                    </includes>
+                                </fileSet>
+                                <fileSet>
+                                    <directory>${project.build.directory}</directory>
+                                    <includes>
+                                        <include>jacoco.exec</include>
+                                    </includes>
+                                </fileSet>
+                            </fileSets>
+                            <destFile>${project.build.directory}/jacoco-merged.exec</destFile>
+                        </configuration>
+                    </execution>
+                    <!-- Relatório unificado HTML/XML/CSV -->
+                    <execution>
+                        <id>jacoco-report-aggregate</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report-aggregate</goal>
+                        </goals>
+                        <configuration>
+                            <excludes>
+                                <exclude>**/*Dto.class</exclude>
+                                <exclude>**/*DTO.class</exclude>
+                                <exclude>**/*Request.class</exclude>
+                                <exclude>**/*Response.class</exclude>
+                                <exclude>**/*ExceptionMapper.class</exclude>
+                                <exclude>**/*Config.class</exclude>
+                                <exclude>**/*Resource.class</exclude>
+                                <exclude>**/*Entity.class</exclude>
+                                <exclude>**/*MapperImpl.class</exclude>
+                                <exclude>**/*PanacheRepository*.class</exclude>
+                            </excludes>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

@@ -67,7 +67,9 @@ public class OrcamentoEntityMapperImpl implements OrcamentoEntityMapper {
                     .append('|')
                     .append(item.getValorUnitario())
                     .append('|')
-                    .append(item.getPecaId() != null ? item.getPecaId() : "");
+                    .append(item.getPecaId() != null ? item.getPecaId() : "")
+                    .append('|')
+                    .append(item.getServicoId() != null ? item.getServicoId() : "");
         }
         return sb.toString();
     }
@@ -78,10 +80,10 @@ public class OrcamentoEntityMapperImpl implements OrcamentoEntityMapper {
         }
         List<ItemOrcamento> itens = new ArrayList<>();
         for (String part : ITEM_PATTERN.split(json)) {
-            String[] fields = FIELD_PATTERN.split(part, 4);
+            String[] fields = FIELD_PATTERN.split(part, 5);
             if (fields.length >= 3) {
                 UUID pecaId = null;
-                if (fields.length == 4 && fields[3] != null && !fields[3].isBlank()) {
+                if (fields.length >= 4 && fields[3] != null && !fields[3].isBlank()) {
                     try {
                         pecaId = UUID.fromString(fields[3].strip());
                     } catch (IllegalArgumentException e) {
@@ -89,11 +91,21 @@ public class OrcamentoEntityMapperImpl implements OrcamentoEntityMapper {
                                 "UUID de peça inválido no item do orçamento: " + fields[3]);
                     }
                 }
+                UUID servicoId = null;
+                if (fields.length == 5 && fields[4] != null && !fields[4].isBlank()) {
+                    try {
+                        servicoId = UUID.fromString(fields[4].strip());
+                    } catch (IllegalArgumentException e) {
+                        throw new com.fiap.mekano.domain.exception.AppException(400,
+                                "UUID de serviço inválido no item do orçamento: " + fields[4]);
+                    }
+                }
                 itens.add(new ItemOrcamento(
                         unescape(fields[0]),
                         Long.parseLong(fields[1]),
                         new BigDecimal(fields[2]),
-                        pecaId
+                        pecaId,
+                        servicoId
                 ));
             }
         }

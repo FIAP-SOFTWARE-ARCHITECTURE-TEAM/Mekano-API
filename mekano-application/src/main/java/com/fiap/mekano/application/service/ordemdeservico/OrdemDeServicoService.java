@@ -200,7 +200,7 @@ private final OrdemDeServicoRepositoryPort repository;
                     throw new AppException(422, Messages.get("servico.inactive", itemOs.getReferenciaUuid()));
                 }
                 itensOrcamento.add(new ItemOrcamento(servico.getNome(), itemOs.getQuantidade(),
-                        servico.getValor()));
+                        servico.getValor(), null, servico.getId()));
             }
         }
 
