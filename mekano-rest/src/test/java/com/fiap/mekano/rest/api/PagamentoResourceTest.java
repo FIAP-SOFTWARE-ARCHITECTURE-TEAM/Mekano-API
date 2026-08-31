@@ -135,6 +135,15 @@ class PagamentoResourceTest {
     @Order(3)
     @TestSecurity(user = "cliente", roles = {"cliente"})
     void aprovarOrcamento() {
+        given()
+                .when()
+                .get(ORCAMENTO_PATH + "?osUuid=" + osId)
+                .then()
+                .statusCode(200)
+                .body("itens.size()", equalTo(2))
+                .body("itens.pecaId", hasItem(notNullValue()))
+                .body("itens.servicoId", hasItem(notNullValue()));
+
         String orcUuid = given()
                 .when()
                 .get(ORCAMENTO_PATH + "?osUuid=" + osId)
