@@ -3550,7 +3550,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"pecaId\": \"{{pecaUuid}}\",\n  \"quantidade\": 10,\n  \"motivo\": \"ESTOQUE_MINIMO\"\n}"
+                            "raw": "{\n  \"motivo\": \"ESTOQUE_MINIMO\",\n  \"itens\": [\n    {\n      \"pecaUuid\": \"{{pecaUuid}}\",\n      \"quantidade\": 10\n    }\n  ]\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/requisicoes-compra",
@@ -3694,7 +3694,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"pecaId\": \"{{pecaUuid}}\",\n  \"quantidade\": 10,\n  \"motivo\": \"ESTOQUE_MINIMO\"\n}"
+                            "raw": "{\n  \"motivo\": \"ESTOQUE_MINIMO\",\n  \"itens\": [\n    {\n      \"pecaUuid\": \"{{pecaUuid}}\",\n      \"quantidade\": 10\n    }\n  ]\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/requisicoes-compra",
