@@ -1,6 +1,9 @@
 package com.fiap.mekano.application.service.peca;
 
+import com.fiap.mekano.domain.event.EstoqueMinimoAtingidoEvent;
+import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.model.Peca;
+import com.fiap.mekano.domain.port.in.CreatePecaCommand;
 import com.fiap.mekano.domain.port.in.UpdatePecaCommand;
 import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
@@ -148,5 +151,115 @@ class PecaServiceTest {
         assertEquals(4L, total);
         verify(pecaRepository, times(1)).findAll(0, 10, false);
         verify(pecaRepository, times(1)).countAll(false);
+    }
+
+    @Test
+    @DisplayName("criar deve persistir peca e retornar response")
+    void criarDevePersistirPeca() {
+        Peca peca = Peca.create("PEA-001", "Filtro de óleo", new BigDecimal("25.00"), 5L);
+        when(pecaRepository.save(any(Peca.class))).thenReturn(peca);
+
+        var command = new CreatePecaCommand("PEA-001", "Filtro de óleo", new BigDecimal("25.00"), 5L);
+        var response = pecaService.criar(command);
+
+        assertNotNull(response);
+        assertEquals("PEA-001", response.codigo());
+        verify(pecaRepository, times(1)).save(any(Peca.class));
+    }
+
+    @Test
+    @DisplayName("debitarSaldo com sucesso deve publicar EstoqueMinimoAtingidoEvent quando estoque cai abaixo do minimo")
+    void debitarSaldoDevePublicarEventoEstoqueMinimo() {
+        Peca peca = Peca.reconstitute(
+                pecaId, "PEA-001", "Óleo", new BigDecimal("45.90"),
+                10L, 5L, LocalDateTime.now(), 0L);
+        when(pecaRepository.findById(pecaId)).thenReturn(java.util.Optional.of(peca));
+        when(pecaRepository.debitarSaldo(pecaId, 8)).thenReturn(true);
+
+        boolean result = pecaService.debitarSaldo(pecaId, 8);
+
+        assertTrue(result);
+        verify(eventPublisher, times(1)).publish(any(EstoqueMinimoAtingidoEvent.class));
+    }
+
+    @Test
+    @DisplayName("debitarSaldo com estoque acima do minimo nao deve publicar evento")
+    void debitarSaldoNaoDevePublicarEventoQuandoEstoqueOk() {
+        Peca peca = Peca.reconstitute(
+                pecaId, "PEA-001", "Óleo", new BigDecimal("45.90"),
+                50L, 5L, LocalDateTime.now(), 0L);
+        when(pecaRepository.findById(pecaId)).thenReturn(java.util.Optional.of(peca));
+        when(pecaRepository.debitarSaldo(pecaId, 2)).thenReturn(true);
+
+        boolean result = pecaService.debitarSaldo(pecaId, 2);
+
+        assertTrue(result);
+        verify(eventPublisher, never()).publish(any(EstoqueMinimoAtingidoEvent.class));
+    }
+
+    @Test
+    @DisplayName("debitarSaldo com falha nao deve publicar evento")
+    void debitarSaldoComFalhaNaoDevePublicarEvento() {
+        Peca peca = Peca.reconstitute(
+                pecaId, "PEA-001", "Óleo", new BigDecimal("45.90"),
+                10L, 5L, LocalDateTime.now(), 0L);
+        when(pecaRepository.findById(pecaId)).thenReturn(java.util.Optional.of(peca));
+        when(pecaRepository.debitarSaldo(pecaId, 999)).thenReturn(false);
+
+        boolean result = pecaService.debitarSaldo(pecaId, 999);
+
+        assertFalse(result);
+        verify(eventPublisher, never()).publish(any());
+    }
+
+    @Test
+    @DisplayName("creditarSaldo deve delegar ao repository")
+    void creditarSaldoDeveDelegarAoRepository() {
+        pecaService.creditarSaldo(pecaId, 10);
+
+        verify(pecaRepository, times(1)).creditarSaldo(pecaId, 10);
+    }
+
+    @Test
+    @DisplayName("debitarSaldoReservado deve retornar false quando falha")
+    void debitarSaldoReservadoDeveRetornarFalseQuandoFalha() {
+        when(pecaRepository.debitarSaldoReservado(pecaId, 999)).thenReturn(false);
+
+        boolean result = pecaService.debitarSaldoReservado(pecaId, 999);
+
+        assertFalse(result);
+    }
+
+    @Test
+    @DisplayName("buscarPorId deve lancar 404 quando nao encontrado")
+    void buscarPorIdDeveLancar404QuandoNaoEncontrado() {
+        when(pecaRepository.findById(pecaId)).thenReturn(java.util.Optional.empty());
+
+        AppException ex = assertThrows(AppException.class, () -> pecaService.buscarPorId(pecaId));
+        assertEquals(404, ex.getStatus());
+    }
+
+    @Test
+    @DisplayName("excluir deve lancar 409 quando peca vinculada a OS ativa")
+    void excluirDeveLancar409QuandoVinculadaAOsAtiva() {
+        when(orcamentoRepository.existsByPecaIdVinculadaAOrdemComStatus(
+                pecaId, java.util.List.of("AGUARDANDO_APROVACAO", "EM_EXECUCAO")))
+                .thenReturn(true);
+
+        AppException ex = assertThrows(AppException.class, () -> pecaService.excluir(pecaId));
+        assertEquals(409, ex.getStatus());
+
+        verify(pecaRepository, never()).remover(any());
+    }
+
+    @Test
+    @DisplayName("listarAbaixoEstoqueMinimo deve delegar ao repository")
+    void listarAbaixoEstoqueMinimoDeveDelegarAoRepository() {
+        when(pecaRepository.listarAbaixoEstoqueMinimo()).thenReturn(java.util.List.of());
+
+        var result = pecaService.listarAbaixoEstoqueMinimo();
+
+        assertNotNull(result);
+        verify(pecaRepository, times(1)).listarAbaixoEstoqueMinimo();
     }
 }

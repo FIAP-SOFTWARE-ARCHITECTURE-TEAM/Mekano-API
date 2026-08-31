@@ -21,10 +21,13 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -136,5 +139,125 @@ class RequisicaoCompraServiceTest {
 
         AppException ex = assertThrows(AppException.class, () -> requisicaoService.buscarPorId(idInexistente));
         assertEquals(404, ex.getStatus());
+    }
+
+    @Test
+    @DisplayName("enviar deve transicionar de ABERTA para ENVIADA")
+    void enviarDeveTransicionarParaEnviada() {
+        var requisicao = RequisicaoCompra.reconstitute(
+                requisicaoId, pecaId, 10L,
+                StatusRequisicao.ABERTA, MotivoRequisicao.ESTOQUE_MINIMO, LocalDateTime.now());
+        when(requisicaoRepository.findById(requisicaoId)).thenReturn(Optional.of(requisicao));
+        when(requisicaoRepository.atualizar(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        requisicaoService.enviar(requisicaoId);
+
+        verify(requisicaoRepository).atualizar(any());
+    }
+
+    @Test
+    @DisplayName("enviar deve lancar 409 quando status nao e ABERTA")
+    void enviarDeveLancar409QuandoStatusNaoEAberta() {
+        var requisicao = RequisicaoCompra.reconstitute(
+                requisicaoId, pecaId, 10L,
+                StatusRequisicao.ENVIADA, MotivoRequisicao.ESTOQUE_MINIMO, LocalDateTime.now());
+        when(requisicaoRepository.findById(requisicaoId)).thenReturn(Optional.of(requisicao));
+
+        AppException ex = assertThrows(AppException.class, () -> requisicaoService.enviar(requisicaoId));
+        assertEquals(409, ex.getStatus());
+
+        verify(requisicaoRepository, never()).atualizar(any());
+    }
+
+    @Test
+    @DisplayName("marcarComoComprada deve transicionar de ABERTA para COMPRA_APROVADA")
+    void marcarComoCompradaDeveTransicionar() {
+        var requisicao = RequisicaoCompra.reconstitute(
+                requisicaoId, pecaId, 10L,
+                StatusRequisicao.ABERTA, MotivoRequisicao.ESTOQUE_MINIMO, LocalDateTime.now());
+        when(requisicaoRepository.findById(requisicaoId)).thenReturn(Optional.of(requisicao));
+        when(requisicaoRepository.atualizar(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        requisicaoService.marcarComoComprada(requisicaoId);
+
+        verify(requisicaoRepository).atualizar(any());
+    }
+
+    @Test
+    @DisplayName("marcarComoComprada deve lancar 409 quando status e ENVIADA")
+    void marcarComoCompradaDeveLancar409QuandoEnviada() {
+        var requisicao = RequisicaoCompra.reconstitute(
+                requisicaoId, pecaId, 10L,
+                StatusRequisicao.ENVIADA, MotivoRequisicao.ESTOQUE_MINIMO, LocalDateTime.now());
+        when(requisicaoRepository.findById(requisicaoId)).thenReturn(Optional.of(requisicao));
+
+        AppException ex = assertThrows(AppException.class, () -> requisicaoService.marcarComoComprada(requisicaoId));
+        assertEquals(409, ex.getStatus());
+
+        verify(requisicaoRepository, never()).atualizar(any());
+    }
+
+    @Test
+    @DisplayName("marcarComoRecebida deve transicionar de ENVIADA para PRODUTO_RECEBIDO")
+    void marcarComoRecebidaDeveTransicionar() {
+        var requisicao = RequisicaoCompra.reconstitute(
+                requisicaoId, pecaId, 10L,
+                StatusRequisicao.ENVIADA, MotivoRequisicao.ESTOQUE_MINIMO, LocalDateTime.now());
+        when(requisicaoRepository.findById(requisicaoId)).thenReturn(Optional.of(requisicao));
+        when(requisicaoRepository.atualizar(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        requisicaoService.marcarComoRecebida(requisicaoId);
+
+        verify(requisicaoRepository).atualizar(any());
+    }
+
+    @Test
+    @DisplayName("marcarComoRecebida deve transicionar de COMPRA_APROVADA para PRODUTO_RECEBIDO")
+    void marcarComoRecebidaDeveTransicionarDeComprada() {
+        var requisicao = RequisicaoCompra.reconstitute(
+                requisicaoId, pecaId, 10L,
+                StatusRequisicao.COMPRA_APROVADA, MotivoRequisicao.ESTOQUE_MINIMO, LocalDateTime.now());
+        when(requisicaoRepository.findById(requisicaoId)).thenReturn(Optional.of(requisicao));
+        when(requisicaoRepository.atualizar(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        requisicaoService.marcarComoRecebida(requisicaoId);
+
+        verify(requisicaoRepository).atualizar(any());
+    }
+
+    @Test
+    @DisplayName("marcarComoRecebida deve lancar 409 quando status e ABERTA")
+    void marcarComoRecebidaDeveLancar409QuandoAberta() {
+        var requisicao = RequisicaoCompra.reconstitute(
+                requisicaoId, pecaId, 10L,
+                StatusRequisicao.ABERTA, MotivoRequisicao.ESTOQUE_MINIMO, LocalDateTime.now());
+        when(requisicaoRepository.findById(requisicaoId)).thenReturn(Optional.of(requisicao));
+
+        AppException ex = assertThrows(AppException.class, () -> requisicaoService.marcarComoRecebida(requisicaoId));
+        assertEquals(409, ex.getStatus());
+
+        verify(requisicaoRepository, never()).atualizar(any());
+    }
+
+    @Test
+    @DisplayName("findAll deve delegar ao repository")
+    void findAllDeveDelegarAoRepository() {
+        when(requisicaoRepository.findAll(0, 10)).thenReturn(List.of());
+
+        var result = requisicaoService.findAll(0, 10);
+
+        assertNotNull(result);
+        verify(requisicaoRepository).findAll(0, 10);
+    }
+
+    @Test
+    @DisplayName("countAll deve delegar ao repository")
+    void countAllDeveDelegarAoRepository() {
+        when(requisicaoRepository.countAll()).thenReturn(5L);
+
+        long result = requisicaoService.countAll();
+
+        assertEquals(5L, result);
+        verify(requisicaoRepository).countAll();
     }
 }

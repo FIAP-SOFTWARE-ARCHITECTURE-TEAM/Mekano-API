@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -184,6 +185,155 @@ class OrdemDeServicoRepositoryImplTest {
         // Mais antigas primeiro (createdAt ASC)
         assertThat(resultado).extracting(OrdemDeServico::getId)
                 .containsExactly(antiga.getId(), media.getId(), nova.getId());
+    }
+
+    @Test
+    @TestTransaction
+    void findAllWithFilters_porDataInicio_retornaFiltradas() {
+        repository.save(criarOSComStatusECreatedAt("Antiga", StatusOS.RECEBIDA, LocalDateTime.now().minusDays(10)));
+        repository.save(criarOSComStatusECreatedAt("Nova", StatusOS.RECEBIDA, LocalDateTime.now().minusDays(1)));
+
+        var resultado = repository.findAllWithFilters(null, null, null,
+                LocalDateTime.now().minusDays(5), null, 0, 100);
+
+        assertThat(resultado).hasSize(1);
+        assertThat(resultado.get(0).getDescricaoProblema()).isEqualTo("Nova");
+    }
+
+    @Test
+    @TestTransaction
+    void findAllWithFilters_porDataFim_retornaFiltradas() {
+        repository.save(criarOSComStatusECreatedAt("Antiga", StatusOS.RECEBIDA, LocalDateTime.now().minusDays(10)));
+        repository.save(criarOSComStatusECreatedAt("Nova", StatusOS.RECEBIDA, LocalDateTime.now().minusDays(1)));
+
+        var resultado = repository.findAllWithFilters(null, null, null,
+                null, LocalDateTime.now().minusDays(5), 0, 100);
+
+        assertThat(resultado).hasSize(1);
+        assertThat(resultado.get(0).getDescricaoProblema()).isEqualTo("Antiga");
+    }
+
+    @Test
+    @TestTransaction
+    void calcularTempoMedioExecucao_comOSFinalizadas_retornaMedia() {
+        var os1 = criarOS("Problema A");
+        avancarParaFinalizada(os1, UUID.randomUUID());
+        var os2 = criarOS("Problema B");
+        avancarParaFinalizada(os2, UUID.randomUUID());
+
+        var media = repository.calcularTempoMedioExecucao(null, null);
+
+        assertThat(media).isPresent();
+    }
+
+    @Test
+    @TestTransaction
+    void calcularTempoMedioExecucao_semOSFinalizadas_retornaVazio() {
+        repository.save(criarOS("Problema"));
+
+        var media = repository.calcularTempoMedioExecucao(null, null);
+
+        assertThat(media).isEmpty();
+    }
+
+    @Test
+    @TestTransaction
+    void markAsDeleted_deveFazerSoftDelete() {
+        var os = repository.save(criarOS("Para deletar"));
+
+        repository.markAsDeleted(os.getId());
+
+        var encontrada = repository.findById(os.getId());
+        assertThat(encontrada).isEmpty();
+    }
+
+    @Test
+    @TestTransaction
+    void markAsDeleted_idInexistente_naoLancaExcecao() {
+        repository.markAsDeleted(UUID.randomUUID());
+    }
+
+    @Test
+    @TestTransaction
+    void existsByClienteUuidAndStatusIn_deveRetornarTrueQuandoExiste() {
+        UUID cliente = UUID.randomUUID();
+        repository.save(criarOS(cliente, UUID.randomUUID(), "Problema"));
+
+        boolean exists = repository.existsByClienteUuidAndStatusIn(cliente, List.of("RECEBIDA"));
+
+        assertThat(exists).isTrue();
+    }
+
+    @Test
+    @TestTransaction
+    void existsByClienteUuidAndStatusIn_deveRetornarFalseQuandoNaoExiste() {
+        UUID cliente = UUID.randomUUID();
+
+        boolean exists = repository.existsByClienteUuidAndStatusIn(cliente, List.of("RECEBIDA"));
+
+        assertThat(exists).isFalse();
+    }
+
+    @Test
+    @TestTransaction
+    void findOrcamentoUuidByOsId_deveRetornarOrcamentoUuid() {
+        UUID orcamentoUuid = UUID.randomUUID();
+        var os = OrdemDeServico.reconstitute(
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+                "Problema", StatusOS.AGUARDANDO_APROVACAO, null,
+                orcamentoUuid, null, null, null, null, null,
+                StatusPagamento.NAO_COBRADO, null, null, null, null,
+                StatusEntrega.NAO_LIBERADA, null, null, null, null, null,
+                LocalDateTime.now(), 0L);
+        var saved = repository.save(os);
+
+        var resultado = repository.findOrcamentoUuidByOsId(saved.getId());
+
+        assertThat(resultado).isPresent();
+        assertThat(resultado.get()).isEqualTo(orcamentoUuid);
+    }
+
+    @Test
+    @TestTransaction
+    void findOrcamentoUuidByOsId_semOrcamento_retornaVazio() {
+        var os = repository.save(criarOS("Sem orçamento"));
+
+        var resultado = repository.findOrcamentoUuidByOsId(os.getId());
+
+        assertThat(resultado).isEmpty();
+    }
+
+    @Test
+    @TestTransaction
+    void findByIdWithItems_deveRetornarOS() {
+        var os = repository.save(criarOS("Problema"));
+
+        var resultado = repository.findByIdWithItems(os.getId());
+
+        assertThat(resultado).isPresent();
+        assertThat(resultado.get().getId()).isEqualTo(os.getId());
+    }
+
+    @Test
+    @TestTransaction
+    void countAll_deveRetornarContagem() {
+        repository.save(criarOS("A"));
+        repository.save(criarOS("B"));
+
+        long count = repository.countAll();
+
+        assertThat(count).isGreaterThanOrEqualTo(2);
+    }
+
+    @Test
+    @TestTransaction
+    void findAll_deveRetornarPagina() {
+        repository.save(criarOS("A"));
+        repository.save(criarOS("B"));
+
+        var resultado = repository.findAll(0, 10, "createdAt,desc");
+
+        assertThat(resultado).hasSizeGreaterThanOrEqualTo(2);
     }
 
     // ─────────────── Helpers ───────────────
