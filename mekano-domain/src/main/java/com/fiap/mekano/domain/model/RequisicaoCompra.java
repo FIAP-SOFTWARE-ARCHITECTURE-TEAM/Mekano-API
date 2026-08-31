@@ -8,6 +8,9 @@ import lombok.Getter;
 import lombok.ToString;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -24,6 +27,7 @@ import java.util.UUID;
  * aprovação)
  * - Status pode transitar: ABERTA → ENVIADA → RECEBIDA; ou COMPRADA → RECEBIDA
  * - Imutável após criação: campos final, sem setters.
+ * - Cada requisição pode conter múltiplos itens (peças/insumos).
  *
  * Mapeamento JPA (RequisicaoCompraEntity) é responsabilidade do módulo
  * infrastructure.
@@ -34,8 +38,7 @@ import java.util.UUID;
 public class RequisicaoCompra {
 
     private final UUID id;
-    private final UUID pecaId;
-    private final Long quantidade;
+    private final List<ItemRequisicaoCompra> itens;
     private final StatusRequisicao status;
     private final MotivoRequisicao motivo;
     private final LocalDateTime createdAt;
@@ -46,19 +49,16 @@ public class RequisicaoCompra {
      * Requisições vinculadas a orçamentos já nascem com status COMPRADA,
      * pois presumem-se aprovadas como parte do orçamento do cliente.
      *
-     * @param pecaId     referência à peça
-     * @param quantidade quantidade a comprar
-     * @param motivo     razão da compra
+     * @param itens   lista de itens (peças/insumos) a comprar
+     * @param motivo  razão da compra
      */
-    public static RequisicaoCompra criarParaOrcamento(UUID pecaId, Long quantidade, MotivoRequisicao motivo) {
-        validatePecaId(pecaId);
-        validateQuantidade(quantidade);
+    public static RequisicaoCompra criarParaOrcamento(List<ItemRequisicaoCompra> itens, MotivoRequisicao motivo) {
+        validateItens(itens);
         validateMotivo(motivo);
 
         return RequisicaoCompra.builder()
                 .id(UUID.randomUUID())
-                .pecaId(pecaId)
-                .quantidade(quantidade)
+                .itens(new ArrayList<>(itens))
                 .status(StatusRequisicao.COMPRA_APROVADA)
                 .motivo(motivo)
                 .createdAt(LocalDateTime.now())
@@ -71,19 +71,16 @@ public class RequisicaoCompra {
      * Requisições por mínimo nascem com status ABERTA,
      * e requerem aprovação manual antes de serem enviadas ao fornecedor.
      *
-     * @param pecaId     referência à peça
-     * @param quantidade quantidade a comprar
-     * @param motivo     razão da compra
+     * @param itens   lista de itens (peças/insumos) a comprar
+     * @param motivo  razão da compra
      */
-    public static RequisicaoCompra criarParaMinimo(UUID pecaId, Long quantidade, MotivoRequisicao motivo) {
-        validatePecaId(pecaId);
-        validateQuantidade(quantidade);
+    public static RequisicaoCompra criarParaMinimo(List<ItemRequisicaoCompra> itens, MotivoRequisicao motivo) {
+        validateItens(itens);
         validateMotivo(motivo);
 
         return RequisicaoCompra.builder()
                 .id(UUID.randomUUID())
-                .pecaId(pecaId)
-                .quantidade(quantidade)
+                .itens(new ArrayList<>(itens))
                 .status(StatusRequisicao.ABERTA)
                 .motivo(motivo)
                 .createdAt(LocalDateTime.now())
@@ -94,31 +91,22 @@ public class RequisicaoCompra {
      * Factory method para reconstrução a partir de dados persistidos.
      * NÃO gera novo UUID nem timestamp — preserva exatamente os valores do banco.
      */
-    public static RequisicaoCompra reconstitute(UUID id, UUID pecaId, Long quantidade,
+    public static RequisicaoCompra reconstitute(UUID id, List<ItemRequisicaoCompra> itens,
             StatusRequisicao status, MotivoRequisicao motivo, LocalDateTime createdAt) {
-        validatePecaId(pecaId);
-        validateQuantidade(quantidade);
         validateMotivo(motivo);
 
         return RequisicaoCompra.builder()
                 .id(id)
-                .pecaId(pecaId)
-                .quantidade(quantidade)
+                .itens(itens == null ? Collections.emptyList() : new ArrayList<>(itens))
                 .status(status)
                 .motivo(motivo)
                 .createdAt(createdAt)
                 .build();
     }
 
-    private static void validatePecaId(UUID pecaId) {
-        if (pecaId == null) {
-            throw new AppException(400, Messages.get("requisicao_compra.peca_id.required"));
-        }
-    }
-
-    private static void validateQuantidade(Long quantidade) {
-        if (quantidade == null || quantidade <= 0) {
-            throw new AppException(400, Messages.get("requisicao_compra.quantidade.invalida"));
+    private static void validateItens(List<ItemRequisicaoCompra> itens) {
+        if (itens == null || itens.isEmpty()) {
+            throw new AppException(400, Messages.get("requisicao_compra.itens.required"));
         }
     }
 

@@ -3,6 +3,7 @@ package com.fiap.mekano.application.service.nfentrada;
 import com.fiap.mekano.domain.event.EstoqueMinimoAtingidoEvent;
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.exception.Messages;
+import com.fiap.mekano.domain.model.ItemRequisicaoCompra;
 import com.fiap.mekano.domain.model.NfEntrada;
 import com.fiap.mekano.domain.model.Peca;
 import com.fiap.mekano.domain.model.RequisicaoCompra;
@@ -56,27 +57,24 @@ public class NfEntradaService {
 
         var nfEntrada = NfEntrada.create(
                 command.chaveAcesso(), command.valorTotal(),
-                requisicao.getPecaId(), command.requisicaoCompraId());
+                command.requisicaoCompraId());
         var saved = nfRepository.save(nfEntrada);
 
-        pecaRepository.creditarSaldo(requisicao.getPecaId(), requisicao.getQuantidade().intValue());
+        for (ItemRequisicaoCompra item : requisicao.getItens()) {
+            pecaRepository.creditarSaldo(item.getPecaId(), item.getQuantidade().intValue());
 
-        Optional<Peca> pecaOpt = pecaRepository.findById(requisicao.getPecaId());
-        pecaOpt.ifPresent(peca -> {
-            if (peca.isEstoqueMinimoAtingido()) {
-                eventPublisher.publish(new EstoqueMinimoAtingidoEvent(
-                        peca.getId(), peca.disponivel().intValue(), peca.getEstoqueMinimo().intValue()));
-            }
-        });
-
-        var atualizada = RequisicaoCompra.reconstitute(
-                requisicao.getId(), requisicao.getPecaId(), requisicao.getQuantidade(),
-                StatusRequisicao.PRODUTO_RECEBIDO, requisicao.getMotivo(), requisicao.getCreatedAt());
-        requisicaoRepository.atualizar(atualizada);
+            Optional<Peca> pecaOpt = pecaRepository.findById(item.getPecaId());
+            pecaOpt.ifPresent(peca -> {
+                if (peca.isEstoqueMinimoAtingido()) {
+                    eventPublisher.publish(new EstoqueMinimoAtingidoEvent(
+                            peca.getId(), peca.disponivel().intValue(), peca.getEstoqueMinimo().intValue()));
+                }
+            });
+        }
 
         return new CreateNfEntradaResponse(
                 saved.getId(), saved.getChaveAcesso(), saved.getValorTotal(),
-                saved.getPecaId(), saved.getRequisicaoCompraId(), saved.getCreatedAt());
+                saved.getRequisicaoCompraId(), saved.getCreatedAt());
     }
 
     public NfEntrada buscarPorId(UUID id) {

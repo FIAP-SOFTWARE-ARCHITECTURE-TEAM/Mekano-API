@@ -1,11 +1,14 @@
 package com.fiap.mekano.application.service.requisicao;
 
 import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.model.ItemRequisicaoCompra;
 import com.fiap.mekano.domain.model.MotivoRequisicao;
 import com.fiap.mekano.domain.model.Peca;
 import com.fiap.mekano.domain.model.RequisicaoCompra;
 import com.fiap.mekano.domain.model.StatusRequisicao;
 import com.fiap.mekano.domain.port.in.CreateRequisicaoCompraCommand;
+import com.fiap.mekano.domain.port.in.ItemRequisicaoCompraCommand;
+import com.fiap.mekano.domain.port.out.ItemRequisicaoCompraRepositoryPort;
 import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
 import com.fiap.mekano.domain.port.out.RequisicaoCompraRepositoryPort;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -42,46 +46,69 @@ class RequisicaoCompraServiceTest {
     @Mock
     PecaRepositoryPort pecaRepository;
 
+    @Mock
+    ItemRequisicaoCompraRepositoryPort itemRepository;
+
     @InjectMocks
     RequisicaoCompraService requisicaoService;
 
-    private UUID pecaId;
+    private UUID pecaId1;
+    private UUID pecaId2;
     private UUID requisicaoId;
-    private Peca mockPeca;
+    private Peca mockPeca1;
+    private Peca mockPeca2;
 
     @BeforeEach
     void setUp() {
-        pecaId = UUID.randomUUID();
+        pecaId1 = UUID.randomUUID();
+        pecaId2 = UUID.randomUUID();
         requisicaoId = UUID.randomUUID();
-        mockPeca = Peca.reconstitute(
-                pecaId, "PEA-001", "Óleo do Motor 5W30",
+        mockPeca1 = Peca.reconstitute(
+                pecaId1, "PEA-001", "Óleo do Motor 5W30",
                 new BigDecimal("45.90"), 50L, 10L, LocalDateTime.now(), 0L);
+        mockPeca2 = Peca.reconstitute(
+                pecaId2, "PEA-002", "Filtro de Ar",
+                new BigDecimal("25.00"), 30L, 5L, LocalDateTime.now(), 0L);
     }
 
     @Test
-    @DisplayName("criar deve retornar resposta quando peca existe")
-    void criarDeveRetornarRespostaQuandoPecaExiste() {
-        when(pecaRepository.findById(pecaId)).thenReturn(Optional.of(mockPeca));
+    @DisplayName("criar deve retornar resposta com múltiplos itens quando peças existem")
+    void criarDeveRetornarRespostaQuandoPecasExistem() {
+        when(pecaRepository.findById(pecaId1)).thenReturn(Optional.of(mockPeca1));
+        when(pecaRepository.findById(pecaId2)).thenReturn(Optional.of(mockPeca2));
 
-        var requisicao = RequisicaoCompra.criarParaMinimo(pecaId, 10L, MotivoRequisicao.ESTOQUE_MINIMO);
+        var itens = List.of(
+                new ItemRequisicaoCompraCommand(pecaId1, 10),
+                new ItemRequisicaoCompraCommand(pecaId2, 5));
+
+        var requisicao = RequisicaoCompra.criarParaMinimo(
+                List.of(new ItemRequisicaoCompra(pecaId1, 10L),
+                        new ItemRequisicaoCompra(pecaId2, 5L)),
+                MotivoRequisicao.ESTOQUE_MINIMO);
         when(requisicaoRepository.save(any())).thenReturn(requisicao);
 
-        var command = new CreateRequisicaoCompraCommand(pecaId, 10, MotivoRequisicao.ESTOQUE_MINIMO);
+        var command = new CreateRequisicaoCompraCommand(itens, MotivoRequisicao.ESTOQUE_MINIMO);
         var response = requisicaoService.criar(command);
 
         assertNotNull(response);
-        assertEquals(pecaId, response.pecaId());
+        assertEquals(2, response.itens().size());
         assertEquals("ABERTA", response.status());
         assertEquals("ESTOQUE_MINIMO", response.motivo());
         verify(requisicaoRepository).save(any());
+        verify(itemRepository).saveAll(any(), any());
     }
 
     @Test
-    @DisplayName("criar deve lancar excecao quando peca nao existe")
-    void criarDeveLancarExcecaoQuandoPecaNaoExiste() {
-        when(pecaRepository.findById(pecaId)).thenReturn(Optional.empty());
+    @DisplayName("criar deve lancar excecao quando uma das peças não existe (rejeição parcial)")
+    void criarDeveLancarExcecaoQuandoUmaPecaNaoExiste() {
+        when(pecaRepository.findById(pecaId1)).thenReturn(Optional.of(mockPeca1));
+        when(pecaRepository.findById(pecaId2)).thenReturn(Optional.empty());
 
-        var command = new CreateRequisicaoCompraCommand(pecaId, 10, MotivoRequisicao.ESTOQUE_MINIMO);
+        var itens = List.of(
+                new ItemRequisicaoCompraCommand(pecaId1, 10),
+                new ItemRequisicaoCompraCommand(pecaId2, 5));
+
+        var command = new CreateRequisicaoCompraCommand(itens, MotivoRequisicao.ESTOQUE_MINIMO);
 
         AppException ex = assertThrows(AppException.class, () -> requisicaoService.criar(command));
         assertEquals(404, ex.getStatus());
@@ -92,8 +119,9 @@ class RequisicaoCompraServiceTest {
     @Test
     @DisplayName("cancelar deve cancelar requisicao com motivo ESTOQUE_MINIMO")
     void cancelarDeveCancelarRequisicaoComMotivoEstoqueMinimo() {
+        var itens = List.of(new ItemRequisicaoCompra(pecaId1, 10L));
         var requisicao = RequisicaoCompra.reconstitute(
-                requisicaoId, pecaId, 10L,
+                requisicaoId, itens,
                 StatusRequisicao.ABERTA, MotivoRequisicao.ESTOQUE_MINIMO, LocalDateTime.now());
         when(requisicaoRepository.findById(requisicaoId)).thenReturn(Optional.of(requisicao));
         when(requisicaoRepository.atualizar(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -106,8 +134,9 @@ class RequisicaoCompraServiceTest {
     @Test
     @DisplayName("cancelar deve lancar excecao quando motivo e ORDEM_SERVICO")
     void cancelarDeveLancarExcecaoQuandoMotivoERdemServico() {
+        var itens = List.of(new ItemRequisicaoCompra(pecaId1, 10L));
         var requisicao = RequisicaoCompra.reconstitute(
-                requisicaoId, pecaId, 10L,
+                requisicaoId, itens,
                 StatusRequisicao.ABERTA, MotivoRequisicao.ORDEM_SERVICO, LocalDateTime.now());
         when(requisicaoRepository.findById(requisicaoId)).thenReturn(Optional.of(requisicao));
 
@@ -120,8 +149,9 @@ class RequisicaoCompraServiceTest {
     @Test
     @DisplayName("cancelar deve lancar excecao quando status nao e ABERTA")
     void cancelarDeveLancarExcecaoQuandoStatusNaoEAberta() {
+        var itens = List.of(new ItemRequisicaoCompra(pecaId1, 10L));
         var requisicao = RequisicaoCompra.reconstitute(
-                requisicaoId, pecaId, 10L,
+                requisicaoId, itens,
                 StatusRequisicao.ENVIADA, MotivoRequisicao.ESTOQUE_MINIMO, LocalDateTime.now());
         when(requisicaoRepository.findById(requisicaoId)).thenReturn(Optional.of(requisicao));
 
@@ -144,8 +174,9 @@ class RequisicaoCompraServiceTest {
     @Test
     @DisplayName("enviar deve transicionar de ABERTA para ENVIADA")
     void enviarDeveTransicionarParaEnviada() {
+        var itens = List.of(new ItemRequisicaoCompra(pecaId1, 10L));
         var requisicao = RequisicaoCompra.reconstitute(
-                requisicaoId, pecaId, 10L,
+                requisicaoId, itens,
                 StatusRequisicao.ABERTA, MotivoRequisicao.ESTOQUE_MINIMO, LocalDateTime.now());
         when(requisicaoRepository.findById(requisicaoId)).thenReturn(Optional.of(requisicao));
         when(requisicaoRepository.atualizar(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -158,8 +189,9 @@ class RequisicaoCompraServiceTest {
     @Test
     @DisplayName("enviar deve lancar 409 quando status nao e ABERTA")
     void enviarDeveLancar409QuandoStatusNaoEAberta() {
+        var itens = List.of(new ItemRequisicaoCompra(pecaId1, 10L));
         var requisicao = RequisicaoCompra.reconstitute(
-                requisicaoId, pecaId, 10L,
+                requisicaoId, itens,
                 StatusRequisicao.ENVIADA, MotivoRequisicao.ESTOQUE_MINIMO, LocalDateTime.now());
         when(requisicaoRepository.findById(requisicaoId)).thenReturn(Optional.of(requisicao));
 
@@ -172,8 +204,9 @@ class RequisicaoCompraServiceTest {
     @Test
     @DisplayName("marcarComoComprada deve transicionar de ABERTA para COMPRA_APROVADA")
     void marcarComoCompradaDeveTransicionar() {
+        var itens = List.of(new ItemRequisicaoCompra(pecaId1, 10L));
         var requisicao = RequisicaoCompra.reconstitute(
-                requisicaoId, pecaId, 10L,
+                requisicaoId, itens,
                 StatusRequisicao.ABERTA, MotivoRequisicao.ESTOQUE_MINIMO, LocalDateTime.now());
         when(requisicaoRepository.findById(requisicaoId)).thenReturn(Optional.of(requisicao));
         when(requisicaoRepository.atualizar(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -186,8 +219,9 @@ class RequisicaoCompraServiceTest {
     @Test
     @DisplayName("marcarComoComprada deve lancar 409 quando status e ENVIADA")
     void marcarComoCompradaDeveLancar409QuandoEnviada() {
+        var itens = List.of(new ItemRequisicaoCompra(pecaId1, 10L));
         var requisicao = RequisicaoCompra.reconstitute(
-                requisicaoId, pecaId, 10L,
+                requisicaoId, itens,
                 StatusRequisicao.ENVIADA, MotivoRequisicao.ESTOQUE_MINIMO, LocalDateTime.now());
         when(requisicaoRepository.findById(requisicaoId)).thenReturn(Optional.of(requisicao));
 
@@ -200,8 +234,9 @@ class RequisicaoCompraServiceTest {
     @Test
     @DisplayName("marcarComoRecebida deve transicionar de ENVIADA para PRODUTO_RECEBIDO")
     void marcarComoRecebidaDeveTransicionar() {
+        var itens = List.of(new ItemRequisicaoCompra(pecaId1, 10L));
         var requisicao = RequisicaoCompra.reconstitute(
-                requisicaoId, pecaId, 10L,
+                requisicaoId, itens,
                 StatusRequisicao.ENVIADA, MotivoRequisicao.ESTOQUE_MINIMO, LocalDateTime.now());
         when(requisicaoRepository.findById(requisicaoId)).thenReturn(Optional.of(requisicao));
         when(requisicaoRepository.atualizar(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -214,8 +249,9 @@ class RequisicaoCompraServiceTest {
     @Test
     @DisplayName("marcarComoRecebida deve transicionar de COMPRA_APROVADA para PRODUTO_RECEBIDO")
     void marcarComoRecebidaDeveTransicionarDeComprada() {
+        var itens = List.of(new ItemRequisicaoCompra(pecaId1, 10L));
         var requisicao = RequisicaoCompra.reconstitute(
-                requisicaoId, pecaId, 10L,
+                requisicaoId, itens,
                 StatusRequisicao.COMPRA_APROVADA, MotivoRequisicao.ESTOQUE_MINIMO, LocalDateTime.now());
         when(requisicaoRepository.findById(requisicaoId)).thenReturn(Optional.of(requisicao));
         when(requisicaoRepository.atualizar(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -228,8 +264,9 @@ class RequisicaoCompraServiceTest {
     @Test
     @DisplayName("marcarComoRecebida deve lancar 409 quando status e ABERTA")
     void marcarComoRecebidaDeveLancar409QuandoAberta() {
+        var itens = List.of(new ItemRequisicaoCompra(pecaId1, 10L));
         var requisicao = RequisicaoCompra.reconstitute(
-                requisicaoId, pecaId, 10L,
+                requisicaoId, itens,
                 StatusRequisicao.ABERTA, MotivoRequisicao.ESTOQUE_MINIMO, LocalDateTime.now());
         when(requisicaoRepository.findById(requisicaoId)).thenReturn(Optional.of(requisicao));
 

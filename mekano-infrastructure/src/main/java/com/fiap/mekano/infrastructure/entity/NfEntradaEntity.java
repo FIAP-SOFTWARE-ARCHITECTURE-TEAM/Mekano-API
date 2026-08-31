@@ -31,9 +31,6 @@ public class NfEntradaEntity extends BaseEntity {
     @Column(name = "valor_total", nullable = false)
     private BigDecimal valorTotal;
 
-    @Column(name = "peca_id", nullable = false)
-    private UUID pecaId;
-
     @Column(name = "requisicao_compra_id", nullable = false)
     private UUID requisicaoCompraId;
 

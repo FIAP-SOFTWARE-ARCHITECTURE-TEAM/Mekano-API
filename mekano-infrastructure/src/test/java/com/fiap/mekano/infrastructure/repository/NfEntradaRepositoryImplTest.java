@@ -27,16 +27,14 @@ class NfEntradaRepositoryImplTest {
     @TestTransaction
     @DisplayName("save deve persistir nova NF de entrada")
     void saveDevePersistirNovaNfEntrada() {
-        UUID pecaId = UUID.randomUUID();
         UUID reqId = UUID.randomUUID();
-        NfEntrada nf = NfEntrada.create(CHAVE_ACESSO, new BigDecimal("1500.00"), pecaId, reqId);
+        NfEntrada nf = NfEntrada.create(CHAVE_ACESSO, new BigDecimal("1500.00"), reqId);
 
         NfEntrada saved = repository.save(nf);
 
         assertThat(saved.getId()).isNotNull();
         assertThat(saved.getChaveAcesso()).isEqualTo(CHAVE_ACESSO);
         assertThat(saved.getValorTotal()).isEqualByComparingTo(new BigDecimal("1500.00"));
-        assertThat(saved.getPecaId()).isEqualTo(pecaId);
         assertThat(saved.getRequisicaoCompraId()).isEqualTo(reqId);
     }
 
@@ -44,14 +42,13 @@ class NfEntradaRepositoryImplTest {
     @TestTransaction
     @DisplayName("save deve atualizar NF existente")
     void saveDeveAtualizarNfExistente() {
-        UUID pecaId = UUID.randomUUID();
         UUID reqId = UUID.randomUUID();
-        NfEntrada nf = NfEntrada.create(CHAVE_ACESSO, new BigDecimal("1500.00"), pecaId, reqId);
+        NfEntrada nf = NfEntrada.create(CHAVE_ACESSO, new BigDecimal("1500.00"), reqId);
         NfEntrada saved = repository.save(nf);
 
         NfEntrada atualizada = NfEntrada.reconstitute(
                 saved.getId(), CHAVE_ACESSO, new BigDecimal("2000.00"),
-                pecaId, reqId, saved.getCreatedAt());
+                reqId, saved.getCreatedAt());
 
         NfEntrada result = repository.save(atualizada);
 
@@ -63,9 +60,8 @@ class NfEntradaRepositoryImplTest {
     @TestTransaction
     @DisplayName("findById deve retornar NF when found")
     void findByIdDeveRetornarQuandoEncontrado() {
-        UUID pecaId = UUID.randomUUID();
         UUID reqId = UUID.randomUUID();
-        NfEntrada nf = NfEntrada.create(CHAVE_ACESSO, new BigDecimal("1500.00"), pecaId, reqId);
+        NfEntrada nf = NfEntrada.create(CHAVE_ACESSO, new BigDecimal("1500.00"), reqId);
         NfEntrada saved = repository.save(nf);
 
         Optional<NfEntrada> found = repository.findById(saved.getId());
@@ -87,15 +83,14 @@ class NfEntradaRepositoryImplTest {
     @TestTransaction
     @DisplayName("buscarPorChaveAcesso deve retornar NF when found")
     void buscarPorChaveAcessoDeveRetornarQuandoEncontrado() {
-        UUID pecaId = UUID.randomUUID();
         UUID reqId = UUID.randomUUID();
-        NfEntrada nf = NfEntrada.create(CHAVE_ACESSO, new BigDecimal("1500.00"), pecaId, reqId);
+        NfEntrada nf = NfEntrada.create(CHAVE_ACESSO, new BigDecimal("1500.00"), reqId);
         repository.save(nf);
 
         Optional<NfEntrada> found = repository.buscarPorChaveAcesso(CHAVE_ACESSO);
 
         assertThat(found).isPresent();
-        assertThat(found.get().getPecaId()).isEqualTo(pecaId);
+        assertThat(found.get().getRequisicaoCompraId()).isEqualTo(reqId);
     }
 
     @Test
@@ -111,9 +106,8 @@ class NfEntradaRepositoryImplTest {
     @TestTransaction
     @DisplayName("findAll deve retornar pagina de NF ativas")
     void findAllDeveRetornarPaginaDeNfAtivas() {
-        UUID pecaId = UUID.randomUUID();
         UUID reqId = UUID.randomUUID();
-        repository.save(NfEntrada.create(CHAVE_ACESSO, new BigDecimal("1500.00"), pecaId, reqId));
+        repository.save(NfEntrada.create(CHAVE_ACESSO, new BigDecimal("1500.00"), reqId));
 
         List<NfEntrada> result = repository.findAll(0, 10);
 
@@ -126,9 +120,8 @@ class NfEntradaRepositoryImplTest {
     void countAllDeveRetornarContagem() {
         long before = repository.countAll();
 
-        UUID pecaId = UUID.randomUUID();
         UUID reqId = UUID.randomUUID();
-        repository.save(NfEntrada.create(CHAVE_ACESSO, new BigDecimal("1500.00"), pecaId, reqId));
+        repository.save(NfEntrada.create(CHAVE_ACESSO, new BigDecimal("1500.00"), reqId));
 
         long after = repository.countAll();
 

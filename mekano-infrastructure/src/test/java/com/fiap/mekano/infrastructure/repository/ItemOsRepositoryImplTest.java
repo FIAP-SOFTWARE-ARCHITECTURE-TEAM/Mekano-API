@@ -47,13 +47,13 @@ class ItemOsRepositoryImplTest {
         ItemOs saved = repository.save(item);
 
         ItemOs atualizado = ItemOs.reconstitute(
-                saved.getId(), osUuid, refUuid, "SERVICO", "Troca de óleo", 1L,
+                saved.getId(), osUuid, refUuid, "PECA", "Troca de óleo", 1L,
                 saved.getCreatedAt(), true);
 
         ItemOs result = repository.save(atualizado);
 
         assertThat(result.getId()).isEqualTo(saved.getId());
-        assertThat(result.getTipo()).isEqualTo("SERVICO");
+        assertThat(result.getTipo()).isEqualTo("PECA");
         assertThat(result.getDescricao()).isEqualTo("Troca de óleo");
     }
 

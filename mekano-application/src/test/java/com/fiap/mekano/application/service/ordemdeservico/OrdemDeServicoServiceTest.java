@@ -338,6 +338,7 @@ class OrdemDeServicoServiceTest {
         when(veiculoRepository.findById(veiculoId)).thenReturn(Optional.of(veiculoAtivo));
         var pecaAtiva = mock(Peca.class);
         when(pecaAtiva.getIsActive()).thenReturn(true);
+        when(pecaAtiva.getDescricao()).thenReturn("Pastilha de freio");
         when(pecaRepository.findById(pecaId)).thenReturn(Optional.of(pecaAtiva));
 
         var cmd = new CreateOrdemDeServicoCommand(clienteId, veiculoId, "Problema no motor",
@@ -361,6 +362,7 @@ class OrdemDeServicoServiceTest {
         when(veiculoRepository.findById(veiculoId)).thenReturn(Optional.of(veiculoAtivo));
         var servicoAtivo = mock(Servico.class);
         when(servicoAtivo.getIsActive()).thenReturn(true);
+        when(servicoAtivo.getNome()).thenReturn("Troca de óleo");
         when(servicoRepository.findById(servicoId)).thenReturn(Optional.of(servicoAtivo));
 
         var cmd = new CreateOrdemDeServicoCommand(clienteId, veiculoId, "Problema no motor",

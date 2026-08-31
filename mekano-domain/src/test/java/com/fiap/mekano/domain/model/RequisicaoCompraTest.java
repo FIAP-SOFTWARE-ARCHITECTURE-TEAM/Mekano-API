@@ -4,6 +4,7 @@ import com.fiap.mekano.domain.exception.AppException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.UUID;
 
 import static com.fiap.mekano.domain.model.MotivoRequisicao.ESTOQUE_MINIMO;
@@ -16,37 +17,52 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class RequisicaoCompraTest {
 
     @Test
-    @DisplayName("deve criar requisição para orçamento com status COMPRA APROVADA")
+    @DisplayName("deve criar requisição para orçamento com múltiplos itens e status COMPRA APROVADA")
     void deveCriarRequisicaoParaOrcamento() {
-        UUID pecaId = UUID.randomUUID();
+        UUID peca1 = UUID.randomUUID();
+        UUID peca2 = UUID.randomUUID();
 
-        RequisicaoCompra requisicao = RequisicaoCompra.criarParaOrcamento(pecaId, 50L, ORDEM_SERVICO);
+        List<ItemRequisicaoCompra> itens = List.of(
+                new ItemRequisicaoCompra(peca1, 50L),
+                new ItemRequisicaoCompra(peca2, 30L));
+
+        RequisicaoCompra requisicao = RequisicaoCompra.criarParaOrcamento(itens, ORDEM_SERVICO);
 
         assertThat(requisicao.getId()).isNotNull();
         assertThat(requisicao.getStatus()).isEqualTo(StatusRequisicao.COMPRA_APROVADA);
-        assertThat(requisicao.getPecaId()).isEqualTo(pecaId);
-        assertThat(requisicao.getQuantidade()).isEqualTo(50L);
+        assertThat(requisicao.getItens()).hasSize(2);
+        assertThat(requisicao.getItens().get(0).getPecaId()).isEqualTo(peca1);
+        assertThat(requisicao.getItens().get(0).getQuantidade()).isEqualTo(50L);
+        assertThat(requisicao.getItens().get(1).getPecaId()).isEqualTo(peca2);
+        assertThat(requisicao.getItens().get(1).getQuantidade()).isEqualTo(30L);
     }
 
     @Test
-    @DisplayName("deve criar requisição para mínimo com status ABERTA")
+    @DisplayName("deve criar requisição para mínimo com múltiplos itens e status ABERTA")
     void deveCriarRequisicaoParaMinimo() {
-        UUID pecaId = UUID.randomUUID();
+        UUID peca1 = UUID.randomUUID();
+        UUID peca2 = UUID.randomUUID();
 
-        RequisicaoCompra requisicao = RequisicaoCompra.criarParaMinimo(pecaId, 100L, ESTOQUE_MINIMO);
+        List<ItemRequisicaoCompra> itens = List.of(
+                new ItemRequisicaoCompra(peca1, 100L),
+                new ItemRequisicaoCompra(peca2, 200L));
+
+        RequisicaoCompra requisicao = RequisicaoCompra.criarParaMinimo(itens, ESTOQUE_MINIMO);
 
         assertThat(requisicao.getId()).isNotNull();
         assertThat(requisicao.getStatus()).isEqualTo(StatusRequisicao.ABERTA);
-        assertThat(requisicao.getPecaId()).isEqualTo(pecaId);
-        assertThat(requisicao.getQuantidade()).isEqualTo(100L);
+        assertThat(requisicao.getItens()).hasSize(2);
+        assertThat(requisicao.getItens().get(0).getPecaId()).isEqualTo(peca1);
+        assertThat(requisicao.getItens().get(0).getQuantidade()).isEqualTo(100L);
     }
 
     @Test
     @DisplayName("deve verificar se pode ser enviada (status ABERTA)")
     void deveVerificarSePodeSerEnviada() {
-        RequisicaoCompra requisicaoAberta = RequisicaoCompra.criarParaMinimo(UUID.randomUUID(), 50L, ESTOQUE_MINIMO);
-        RequisicaoCompra requisicaoComprada = RequisicaoCompra.criarParaOrcamento(UUID.randomUUID(), 50L,
-                ORDEM_SERVICO);
+        List<ItemRequisicaoCompra> itens = List.of(new ItemRequisicaoCompra(UUID.randomUUID(), 50L));
+
+        RequisicaoCompra requisicaoAberta = RequisicaoCompra.criarParaMinimo(itens, ESTOQUE_MINIMO);
+        RequisicaoCompra requisicaoComprada = RequisicaoCompra.criarParaOrcamento(itens, ORDEM_SERVICO);
 
         assertThat(requisicaoAberta.podeSerEnviada()).isTrue();
         assertThat(requisicaoComprada.podeSerEnviada()).isFalse();
@@ -55,23 +71,39 @@ class RequisicaoCompraTest {
     @Test
     @DisplayName("deve verificar se pode ser recebida (status ENVIADA ou COMPRADA)")
     void deveVerificarSePodeSerRecebida() {
-        RequisicaoCompra requisicaoComprada = RequisicaoCompra.criarParaOrcamento(UUID.randomUUID(), 50L,
-                ORDEM_SERVICO);
-        RequisicaoCompra requisicaoAberta = RequisicaoCompra.criarParaMinimo(UUID.randomUUID(), 50L, ESTOQUE_MINIMO);
+        List<ItemRequisicaoCompra> itens = List.of(new ItemRequisicaoCompra(UUID.randomUUID(), 50L));
+
+        RequisicaoCompra requisicaoComprada = RequisicaoCompra.criarParaOrcamento(itens, ORDEM_SERVICO);
+        RequisicaoCompra requisicaoAberta = RequisicaoCompra.criarParaMinimo(itens, ESTOQUE_MINIMO);
 
         assertThat(requisicaoComprada.podeSerRecebida()).isTrue();
         assertThat(requisicaoAberta.podeSerRecebida()).isFalse();
     }
 
     @Test
-    @DisplayName("deve rejeitar quantidade <= 0")
-    void deveRejeitarQuantidadeInvalida() {
-        UUID pecaId = UUID.randomUUID();
-
-        assertThatThrownBy(() -> RequisicaoCompra.criarParaMinimo(pecaId, 0L, ESTOQUE_MINIMO))
+    @DisplayName("deve rejeitar lista de itens vazia")
+    void deveRejeitarItensVazios() {
+        assertThatThrownBy(() -> RequisicaoCompra.criarParaMinimo(List.of(), ESTOQUE_MINIMO))
                 .isInstanceOf(AppException.class);
 
-        assertThatThrownBy(() -> RequisicaoCompra.criarParaOrcamento(pecaId, -1L, ORDEM_SERVICO))
+        assertThatThrownBy(() -> RequisicaoCompra.criarParaOrcamento(null, ORDEM_SERVICO))
+                .isInstanceOf(AppException.class);
+    }
+
+    @Test
+    @DisplayName("deve rejeitar item com quantidade <= 0")
+    void deveRejeitarItemComQuantidadeInvalida() {
+        assertThatThrownBy(() -> new ItemRequisicaoCompra(UUID.randomUUID(), 0L))
+                .isInstanceOf(AppException.class);
+
+        assertThatThrownBy(() -> new ItemRequisicaoCompra(UUID.randomUUID(), -1L))
+                .isInstanceOf(AppException.class);
+    }
+
+    @Test
+    @DisplayName("deve rejeitar item com pecaId nulo")
+    void deveRejeitarItemComPecaIdNulo() {
+        assertThatThrownBy(() -> new ItemRequisicaoCompra(null, 10L))
                 .isInstanceOf(AppException.class);
     }
 }

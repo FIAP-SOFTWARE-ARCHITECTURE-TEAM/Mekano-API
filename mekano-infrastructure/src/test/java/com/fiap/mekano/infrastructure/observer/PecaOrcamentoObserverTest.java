@@ -69,13 +69,13 @@ class PecaOrcamentoObserverTest {
 
         observer.aoOrcamentoAprovado(event);
 
-        // disponivel = 10 - 7 = 3; 3 - 10 = -7 → faltante 7
         ArgumentCaptor<CreateRequisicaoCompraCommand> captor = ArgumentCaptor.forClass(CreateRequisicaoCompraCommand.class);
         verify(requisicaoService, times(1)).criar(captor.capture());
 
         CreateRequisicaoCompraCommand command = captor.getValue();
-        assertEquals(pecaId, command.pecaId());
-        assertEquals(7, command.quantidade());
+        assertEquals(1, command.itens().size());
+        assertEquals(pecaId, command.itens().get(0).pecaId());
+        assertEquals(7, command.itens().get(0).quantidade());
         assertEquals(MotivoRequisicao.ORDEM_SERVICO, command.motivo());
     }
 
@@ -101,7 +101,6 @@ class PecaOrcamentoObserverTest {
 
         observer.aoOrcamentoAprovado(event);
 
-        // disponivel = 15 - 10 = 5; 5 - 5 = 0 → não cria req
         verify(pecaService).reservarSaldo(pecaId, 5);
         verify(requisicaoService, never()).criar(any());
     }

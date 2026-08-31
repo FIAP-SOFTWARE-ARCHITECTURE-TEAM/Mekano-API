@@ -21,7 +21,10 @@ public class ItemOsRepositoryImpl implements ItemOsRepositoryPort {
 
     @Override
     public ItemOs save(ItemOs itemOs) {
-        ItemOsEntity entity = panacheRepository.find("uuid = ?1", itemOs.getId()).firstResult();
+        ItemOsEntity entity = panacheRepository.find(
+                "osUuid = ?1 and referenciaUuid = ?2 and tipo = ?3",
+                itemOs.getOsUuid(), itemOs.getReferenciaUuid(), itemOs.getTipo())
+                .firstResult();
         if (entity == null) {
             entity = new ItemOsEntity();
         }
@@ -56,8 +59,7 @@ public class ItemOsRepositoryImpl implements ItemOsRepositoryPort {
 
     @Override
     public void deleteByOsUuid(UUID osUuid) {
-        panacheRepository.update("isActive = false, deletedAt = ?1 WHERE osUuid = ?2 AND isActive = true",
-                LocalDateTime.now(), osUuid);
+        panacheRepository.find("osUuid = ?1", osUuid).list().forEach(panacheRepository::delete);
     }
 
     private static ItemOs toDomain(ItemOsEntity entity) {

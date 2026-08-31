@@ -49,7 +49,7 @@ public class NfEntradaResource {
         @POST
         @Consumes(MediaType.APPLICATION_JSON)
         @Produces(MediaType.APPLICATION_JSON)
-        @Operation(summary = "Registrar NF de entrada", description = "Registra uma nota fiscal de entrada e credita o saldo da peça vinculada.")
+        @Operation(summary = "Registrar NF de entrada", description = "Registra uma nota fiscal de entrada e credita o saldo das peças vinculadas à requisição.")
         @APIResponse(responseCode = "201", description = "NF registrada com sucesso", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = NfEntradaResponse.class)))
         @APIResponse(responseCode = "400", description = "Dados de entrada inválidos", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = ProblemDetail.class)))
         public Response create(@Valid CreateNfEntradaRequest request, @Context UriInfo uriInfo) {
@@ -60,7 +60,7 @@ public class NfEntradaResource {
                 URI location = uriInfo.getAbsolutePathBuilder().path(response.id().toString()).build();
                 var nfResponse = new NfEntradaResponse(
                                 response.id(), response.chaveAcesso(), response.valorTotal(),
-                                response.pecaId(), response.requisicaoCompraId(), response.createdAt());
+                                response.requisicaoCompraId(), response.createdAt());
                 return Response.created(location).entity(nfResponse).build();
         }
 

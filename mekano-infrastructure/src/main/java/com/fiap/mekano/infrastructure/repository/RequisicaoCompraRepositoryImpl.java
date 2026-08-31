@@ -1,13 +1,16 @@
 package com.fiap.mekano.infrastructure.repository;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.fiap.mekano.domain.model.ItemRequisicaoCompra;
 import com.fiap.mekano.domain.model.MotivoRequisicao;
 import com.fiap.mekano.domain.model.RequisicaoCompra;
 import com.fiap.mekano.domain.model.StatusRequisicao;
+import com.fiap.mekano.domain.port.out.ItemRequisicaoCompraRepositoryPort;
 import com.fiap.mekano.domain.port.out.RequisicaoCompraRepositoryPort;
 import com.fiap.mekano.infrastructure.entity.RequisicaoCompraEntity;
 
@@ -19,9 +22,12 @@ import jakarta.enterprise.context.ApplicationScoped;
 public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositoryPort {
 
     private final RequisicaoCompraPanacheRepository panacheRepository;
+    private final ItemRequisicaoCompraRepositoryPort itemRepository;
 
-    public RequisicaoCompraRepositoryImpl(RequisicaoCompraPanacheRepository panacheRepository) {
+    public RequisicaoCompraRepositoryImpl(RequisicaoCompraPanacheRepository panacheRepository,
+                                          ItemRequisicaoCompraRepositoryPort itemRepository) {
         this.panacheRepository = panacheRepository;
+        this.itemRepository = itemRepository;
     }
 
     @Override
@@ -32,8 +38,6 @@ public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositor
         }
 
         entity.setUuid(requisicao.getId());
-        entity.setPecaId(requisicao.getPecaId());
-        entity.setQuantidade(requisicao.getQuantidade().intValue());
         entity.setStatus(requisicao.getStatus().name());
         entity.setMotivo(requisicao.getMotivo().name());
         if (entity.getCreatedAt() == null) {
@@ -46,14 +50,17 @@ public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositor
             panacheRepository.persist(entity);
         }
 
-        return toDomain(entity);
+        return toDomain(entity, requisicao.getItens());
     }
 
     @Override
     public Optional<RequisicaoCompra> findById(UUID id) {
         return panacheRepository.find("uuid = ?1 and isActive = ?2", id, true)
                 .firstResultOptional()
-                .map(RequisicaoCompraRepositoryImpl::toDomain);
+                .map(entity -> {
+                    List<ItemRequisicaoCompra> itens = itemRepository.findByRequisicaoCompraId(entity.getUuid());
+                    return toDomain(entity, itens);
+                });
     }
 
     @Override
@@ -62,7 +69,10 @@ public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositor
                 .page(Page.of(page, size))
                 .list()
                 .stream()
-                .map(RequisicaoCompraRepositoryImpl::toDomain)
+                .map(entity -> {
+                    List<ItemRequisicaoCompra> itens = itemRepository.findByRequisicaoCompraId(entity.getUuid());
+                    return toDomain(entity, itens);
+                })
                 .toList();
     }
 
@@ -76,11 +86,10 @@ public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositor
         return save(requisicao);
     }
 
-    private static RequisicaoCompra toDomain(RequisicaoCompraEntity entity) {
+    private static RequisicaoCompra toDomain(RequisicaoCompraEntity entity, List<ItemRequisicaoCompra> itens) {
         return RequisicaoCompra.reconstitute(
                 entity.getUuid(),
-                entity.getPecaId(),
-                entity.getQuantidade() == null ? 0L : entity.getQuantidade().longValue(),
+                itens == null ? new ArrayList<>() : itens,
                 parseStatus(entity.getStatus()),
                 parseMotivo(entity.getMotivo()),
                 entity.getCreatedAt() == null ? LocalDateTime.now() : entity.getCreatedAt()

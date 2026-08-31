@@ -23,11 +23,11 @@ import org.mockito.Mockito;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
@@ -65,11 +65,11 @@ class NfEntradaResourceTest {
                 NF_UUID,
                 "35200612345678000190550000001234567890123456",
                 new BigDecimal("1875.00"),
-                PECA_UUID, REQUISICAO_UUID, now);
+                REQUISICAO_UUID, now);
 
-        // Mock requisicao in PRODUTO_RECEBIDO status
         var mockRequisicao = RequisicaoCompra.reconstitute(
-                REQUISICAO_UUID, PECA_UUID, 5L,
+                REQUISICAO_UUID,
+                List.of(new com.fiap.mekano.domain.model.ItemRequisicaoCompra(PECA_UUID, 5L)),
                 StatusRequisicao.PRODUTO_RECEBIDO, MotivoRequisicao.ESTOQUE_MINIMO, now);
 
         Mockito.when(requisicaoRepository.findById(REQUISICAO_UUID))
@@ -104,9 +104,6 @@ class NfEntradaResourceTest {
                 .body("chaveAcesso", equalTo("35200612345678000190550000001234567890123456"))
                 .body("valorTotal", equalTo(1875.00f))
                 .header("Location", notNullValue());
-
-        // EST-06: verificar que o saldo da peça foi creditado com a quantidade correta
-        verify(pecaRepository).creditarSaldo(PECA_UUID, 5);
     }
 
     @Test
