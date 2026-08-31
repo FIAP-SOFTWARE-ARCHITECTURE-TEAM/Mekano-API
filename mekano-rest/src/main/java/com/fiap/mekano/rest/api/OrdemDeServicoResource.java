@@ -15,11 +15,15 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import com.fiap.mekano.application.service.MockPaymentService;
 import com.fiap.mekano.domain.model.ItemOs;
 import com.fiap.mekano.domain.model.OrdemDeServico;
+import com.fiap.mekano.domain.model.Peca;
+import com.fiap.mekano.domain.model.StatusOrcamento;
 import com.fiap.mekano.domain.port.in.CreateItemOsCommand;
 import com.fiap.mekano.domain.port.in.CreateOrdemDeServicoCommand;
 import com.fiap.mekano.domain.port.in.FinalizarDiagnosticoCommand;
 import com.fiap.mekano.domain.port.in.OrdemDeServicoServicePort;
 import com.fiap.mekano.domain.port.out.ItemOsRepositoryPort;
+import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
+import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
 import com.fiap.mekano.rest.api.dto.CreateOrdemDeServicoRequest;
 import com.fiap.mekano.rest.api.dto.FinalizarDiagnosticoRequest;
 import com.fiap.mekano.rest.api.dto.FinalizarExecucaoRequest;
@@ -77,6 +81,12 @@ public class OrdemDeServicoResource {
     @Inject
     ItemOsRepositoryPort itemOsRepository;
 
+    @Inject
+    OrcamentoRepositoryPort orcamentoRepository;
+
+    @Inject
+    PecaRepositoryPort pecaRepository;
+
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
@@ -95,7 +105,7 @@ public class OrdemDeServicoResource {
                 request.getDescricaoProblema(), itensCmd);
         OrdemDeServico os = osService.create(command);
         List<ItemOsResponse> itensResponse = fetchItensOs(os.getId());
-        OrdemDeServicoResponse response = toResponse(os, itensResponse);
+        OrdemDeServicoResponse response = toResponse(os, itensResponse, false);
         URI location = uriInfo.getAbsolutePathBuilder().path(response.id().toString()).build();
         return Response.created(location).entity(response).build();
     }
@@ -109,7 +119,9 @@ public class OrdemDeServicoResource {
             @QueryParam("size") @DefaultValue("10") int size,
             @QueryParam("sort") @DefaultValue("createdAt,desc") String sort) {
         var content = osService.findAll(page, size, sort).stream()
-                .map(os -> toResponse(os, fetchItensOs(os.getId()))).toList();
+                .map(os -> toResponse(os, fetchItensOs(os.getId()),
+                        calcularLiberadoParaExecucao(os)))
+                .toList();
         long total = osService.countAll();
         int totalPages = (int) Math.ceil((double) total / size);
         return Response.ok(new OrdemDeServicoPageResponse(content, page, size, total, totalPages)).build();
@@ -135,7 +147,7 @@ public class OrdemDeServicoResource {
     public Response getById(@PathParam("id") UUID id) {
         OrdemDeServico os = osService.findById(id);
         List<ItemOsResponse> itensResponse = fetchItensOs(os.getId());
-        return Response.ok(toResponse(os, itensResponse)).build();
+        return Response.ok(toResponse(os, itensResponse, false)).build();
     }
 
     @PUT
@@ -157,7 +169,7 @@ public class OrdemDeServicoResource {
                 request.getDescricaoProblema(), itensCmd);
         OrdemDeServico os = osService.update(id, command);
         List<ItemOsResponse> itensResponse = fetchItensOs(os.getId());
-        return Response.ok(toResponse(os, itensResponse)).build();
+        return Response.ok(toResponse(os, itensResponse, false)).build();
     }
 
     @PUT
@@ -167,7 +179,7 @@ public class OrdemDeServicoResource {
     @Operation(summary = "Iniciar diagnóstico da OS")
     public Response iniciarDiagnostico(@PathParam("id") UUID id) {
         OrdemDeServico os = osService.iniciarDiagnostico(id);
-        return Response.ok(toResponse(os, fetchItensOs(os.getId()))).build();
+        return Response.ok(toResponse(os, fetchItensOs(os.getId()), false)).build();
     }
 
     @PUT
@@ -186,7 +198,7 @@ public class OrdemDeServicoResource {
                 .toList();
         var command = new FinalizarDiagnosticoCommand(id, request.getDescricao(), itens);
         OrdemDeServico os = osService.finalizarDiagnostico(command);
-        return Response.ok(toResponse(os, fetchItensOs(os.getId()))).build();
+        return Response.ok(toResponse(os, fetchItensOs(os.getId()), false)).build();
     }
 
     @PUT
@@ -197,7 +209,7 @@ public class OrdemDeServicoResource {
     @Operation(summary = "Cancelar OS")
     public Response cancelar(@PathParam("id") UUID id, MotivoRequest body) {
         OrdemDeServico os = osService.cancelar(id, body.motivo());
-        return Response.ok(toResponse(os, fetchItensOs(os.getId()))).build();
+        return Response.ok(toResponse(os, fetchItensOs(os.getId()), false)).build();
     }
 
     @PATCH
@@ -210,7 +222,7 @@ public class OrdemDeServicoResource {
     @APIResponse(responseCode = "422", description = "Pagamento pendente ou OS não finalizada")
     public Response entregar(@PathParam("id") UUID id, @Valid RecebidoPorRequest body) {
         OrdemDeServico os = osService.entregar(id, body.getRecebidoPor());
-        return Response.ok(toResponse(os, fetchItensOs(os.getId()))).build();
+        return Response.ok(toResponse(os, fetchItensOs(os.getId()), false)).build();
     }
 
     @PATCH
@@ -242,7 +254,7 @@ public class OrdemDeServicoResource {
     @APIResponse(responseCode = "400", description = "OS não está em AGUARDANDO_APROVACAO")
     public Response iniciarExecucao(@PathParam("id") UUID id, @Valid IniciarExecucaoRequest request) {
         OrdemDeServico os = osService.iniciarExecucao(id, request.getMecanicoUuid(), request.getObservacao());
-        return Response.ok(toResponse(os, fetchItensOs(os.getId()))).build();
+        return Response.ok(toResponse(os, fetchItensOs(os.getId()), false)).build();
     }
 
     @PUT
@@ -255,7 +267,7 @@ public class OrdemDeServicoResource {
     @APIResponse(responseCode = "400", description = "OS não está em EM_EXECUCAO")
     public Response finalizarExecucao(@PathParam("id") UUID id, @Valid FinalizarExecucaoRequest request) {
         OrdemDeServico os = osService.finalizarExecucao(id, request.getObservacao());
-        return Response.ok(toResponse(os, fetchItensOs(os.getId()))).build();
+        return Response.ok(toResponse(os, fetchItensOs(os.getId()), false)).build();
     }
 
     @GET
@@ -324,7 +336,9 @@ public class OrdemDeServicoResource {
         LocalDateTime inicio = dataInicio != null ? dataInicio.atStartOfDay() : null;
         LocalDateTime fim = dataFim != null ? dataFim.atTime(LocalTime.MAX) : null;
         var content = osService.findAllWithFilters(status, clienteId, veiculoId, inicio, fim, page, size)
-                .stream().map(os -> toResponse(os, fetchItensOs(os.getId()))).toList();
+                .stream().map(os -> toResponse(os, fetchItensOs(os.getId()),
+                        calcularLiberadoParaExecucao(os)))
+                .toList();
         return Response.ok(new OrdemDeServicoPageResponse(content, page, size, content.size(), 1)).build();
     }
 
@@ -338,7 +352,8 @@ public class OrdemDeServicoResource {
                 .toList();
     }
 
-    private OrdemDeServicoResponse toResponse(OrdemDeServico os, List<ItemOsResponse> itens) {
+    private OrdemDeServicoResponse toResponse(OrdemDeServico os, List<ItemOsResponse> itens,
+            boolean liberadoParaExecucao) {
         return new OrdemDeServicoResponse(
                 os.getId(), os.getClienteId(), os.getVeiculoId(),
                 os.getDescricaoProblema(), os.getStatus().name(),
@@ -353,7 +368,31 @@ public class OrdemDeServicoResource {
                 os.getPagamentoConfirmadoEm(),
                 os.getEntregueEm(),
                 os.getCreatedAt(),
-                itens);
+                itens,
+                liberadoParaExecucao);
+    }
+
+    private boolean calcularLiberadoParaExecucao(OrdemDeServico os) {
+        if (os.getOrcamentoUuid() == null) {
+            return false;
+        }
+        var orcamento = orcamentoRepository.findByUuid(os.getOrcamentoUuid());
+        if (orcamento.isEmpty() || orcamento.get().getStatus() != StatusOrcamento.APROVADO) {
+            return false;
+        }
+        List<ItemOs> itens = itemOsRepository.findByOsUuid(os.getId());
+        List<ItemOs> pecas = itens.stream().filter(ItemOs::isPeca).toList();
+        for (ItemOs peca : pecas) {
+            var pecaOpt = pecaRepository.findById(peca.getReferenciaUuid());
+            if (pecaOpt.isEmpty()) {
+                return false;
+            }
+            Long disponivel = pecaOpt.get().disponivel();
+            if (disponivel < peca.getQuantidade()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public record MotivoRequest(String motivo) {
