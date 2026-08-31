@@ -48,6 +48,7 @@ class RequisicaoCompraServiceTest {
     @InjectMocks
     RequisicaoCompraService requisicaoService;
 
+    private UUID pecaId;
     private UUID pecaId1;
     private UUID pecaId2;
     private UUID requisicaoId;
@@ -58,6 +59,7 @@ class RequisicaoCompraServiceTest {
     void setUp() {
         pecaId1 = UUID.randomUUID();
         pecaId2 = UUID.randomUUID();
+        pecaId = pecaId1;
         requisicaoId = UUID.randomUUID();
         mockPeca1 = Peca.reconstitute(
                 pecaId1, "PEA-001", "Óleo do Motor 5W30",
