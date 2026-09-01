@@ -1,0 +1,174 @@
+apiVersion: apps/v1
+
+kind: Deployment
+
+metadata:
+  name: mekano
+  namespace: mekano-system
+
+  labels:
+    app: mekano
+    app.kubernetes.io/name: mekano-api
+
+spec:
+  replicas: 2
+
+  revisionHistoryLimit: 5
+
+  progressDeadlineSeconds: 600
+
+  strategy:
+    type: RollingUpdate
+
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+
+  selector:
+    matchLabels:
+      app: mekano
+
+  template:
+    metadata:
+      labels:
+        app: mekano
+        app.kubernetes.io/name: mekano-api
+
+    spec:
+      imagePullSecrets:
+        - name: ghcr-secret
+
+      terminationGracePeriodSeconds: 30
+
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 185
+
+      containers:
+        - name: mekano
+
+          # A imagem completa será injetada pelo GitHub Actions.
+          image: __MEKANO_IMAGE__
+
+          imagePullPolicy: Always
+
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+
+          # ==================================================
+          # Configurações não sensíveis
+          # ==================================================
+
+          envFrom:
+            - configMapRef:
+                name: mekano-config
+
+          # ==================================================
+          # Secrets
+          # ==================================================
+
+          env:
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mekano-secret
+                  key: DB_USER
+
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mekano-secret
+                  key: DB_PASSWORD
+
+            # ==================================================
+            # Evolution API
+            # ==================================================
+
+            - name: EVOLUTION_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: mekano-secret
+                  key: EVOLUTION_API_KEY
+
+            - name: EVOLUTION_WEBHOOK_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: mekano-secret
+                  key: EVOLUTION_WEBHOOK_TOKEN
+
+            # ==================================================
+            # JWT
+            # ==================================================
+
+            - name: SMALLRYE_JWT_SIGN_KEY_LOCATION
+              value: /home/jboss/.mekano/secrets/privatekey.pem
+
+            - name: MP_JWT_VERIFY_PUBLICKEY_LOCATION
+              value: file:/home/jboss/.mekano/secrets/publicKey.pem
+
+          volumeMounts:
+            - name: jwt-keys
+              mountPath: /home/jboss/.mekano/secrets
+              readOnly: true
+
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+
+          startupProbe:
+            httpGet:
+              path: /q/health/started
+              port: http
+
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 24
+
+          livenessProbe:
+            httpGet:
+              path: /q/health/live
+              port: http
+
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /q/health/ready
+              port: http
+
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          securityContext:
+            allowPrivilegeEscalation: false
+
+            capabilities:
+              drop:
+                - ALL
+
+            seccompProfile:
+              type: RuntimeDefault
+
+      volumes:
+        - name: jwt-keys
+          secret:
+            secretName: mekano-secret
+
+            defaultMode: 0400
+
+            items:
+              - key: privatekey.pem
+                path: privatekey.pem
+
+              - key: publicKey.pem
+                path: publicKey.pem
