@@ -106,7 +106,7 @@ spec:
               value: /home/jboss/.mekano/secrets/privatekey.pem
 
             - name: MP_JWT_VERIFY_PUBLICKEY_LOCATION
-              value: /home/jboss/.mekano/secrets/publicKey.pem
+              value: file:/home/jboss/.mekano/secrets/publicKey.pem
 
           volumeMounts:
             - name: jwt-keys

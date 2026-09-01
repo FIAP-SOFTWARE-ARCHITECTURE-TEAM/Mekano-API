@@ -90,44 +90,8 @@ variable "github_actions_principal_arn" {
 }
 
 # ============================================================
-# Evolution API - PostgreSQL
+# Evolution API - PostgreSQL (shared with Mekano RDS)
+# Evolution runs inside the cluster and uses the same RDS
+# instance as Mekano, with a dedicated database named "evolution".
+# No separate RDS or Redis is provisioned.
 # ============================================================
-
-variable "evolution_db_name" {
-  description = "Evolution API PostgreSQL database name"
-  type        = string
-  default     = "evolution"
-}
-
-variable "evolution_db_username" {
-  description = "Evolution API PostgreSQL master username"
-  type        = string
-  default     = "evolution"
-}
-
-variable "evolution_db_password" {
-  description = "Evolution API PostgreSQL password. Prefer TF_VAR_evolution_db_password in CI."
-  type        = string
-  sensitive   = true
-
-  validation {
-    condition     = length(var.evolution_db_password) >= 12
-    error_message = "evolution_db_password must contain at least 12 characters."
-  }
-}
-
-variable "evolution_db_instance_class" {
-  description = "RDS instance class for Evolution API"
-  type        = string
-  default     = "db.t4g.micro"
-}
-
-# ============================================================
-# Evolution API - Redis
-# ============================================================
-
-variable "evolution_redis_node_type" {
-  description = "ElastiCache Redis node type for Evolution API"
-  type        = string
-  default     = "cache.t4g.micro"
-}

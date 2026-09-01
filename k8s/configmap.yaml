@@ -31,3 +31,6 @@ data:
 
   # Nome da instância WhatsApp cadastrada na Evolution API.
   EVOLUTION_INSTANCE_NAME: "mekano"
+
+  # URL pública da aplicação — usada em links de WhatsApp
+  MEKANO_PUBLIC_URL: "https://mekano.app"

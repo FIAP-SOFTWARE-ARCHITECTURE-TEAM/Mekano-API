@@ -41,28 +41,6 @@ output "configure_kubectl" {
   value       = "aws eks update-kubeconfig --region ${var.region} --name ${module.eks.cluster_name}"
 }
 
-# ============================================================
-# Evolution API - PostgreSQL
-# ============================================================
-
-output "evolution_db_endpoint" {
-  description = "Evolution PostgreSQL endpoint"
-  value       = module.evolution_db.db_instance_address
-}
-
-# ============================================================
-# Evolution API - Redis
-# ============================================================
-
-output "evolution_redis_endpoint" {
-  description = "Evolution Redis endpoint"
-  value       = aws_elasticache_replication_group.evolution.primary_endpoint_address
-}
-
-# ============================================================
-# Evolution API - Kubernetes
-# ============================================================
-
 output "evolution_service_url" {
   description = "Internal Kubernetes Evolution API URL"
   value       = "http://evolution-api:5033"
