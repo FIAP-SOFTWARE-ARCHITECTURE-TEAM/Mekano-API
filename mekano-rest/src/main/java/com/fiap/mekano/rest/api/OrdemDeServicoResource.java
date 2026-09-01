@@ -251,7 +251,7 @@ public class OrdemDeServicoResource {
     @RolesAllowed({ "mecanico", "admin" })
     @Operation(summary = "Iniciar execução da OS")
     @APIResponse(responseCode = "200", description = "Execução iniciada")
-    @APIResponse(responseCode = "400", description = "OS não está em AGUARDANDO_APROVACAO")
+    @APIResponse(responseCode = "400", description = "OS não está em AGUARDANDO_EXECUCAO")
     public Response iniciarExecucao(@PathParam("id") UUID id, @Valid IniciarExecucaoRequest request) {
         OrdemDeServico os = osService.iniciarExecucao(id, request.getMecanicoUuid(), request.getObservacao());
         return Response.ok(toResponse(os, fetchItensOs(os.getId()), false)).build();
@@ -322,7 +322,7 @@ public class OrdemDeServicoResource {
     @GET
     @Path("/filtro")
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({ "admin", "atendente" })
+    @RolesAllowed({ "admin", "atendente", "mecanico" })
     @Operation(summary = "Listar OS com filtros (status, cliente, veículo, data)")
     @APIResponse(responseCode = "200", description = "Lista filtrada de OS")
     public Response findAllWithFilters(
