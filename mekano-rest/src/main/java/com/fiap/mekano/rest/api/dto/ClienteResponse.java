@@ -18,5 +18,6 @@ public record ClienteResponse(
         @Schema(description = "Cidade") String enderecoCidade,
         @Schema(description = "UF") String enderecoUf,
         @Schema(description = "CEP") String enderecoCep,
-        @Schema(description = "Data de criacao") LocalDateTime createdAt
+        @Schema(description = "Data de criacao") LocalDateTime createdAt,
+        @Schema(description = "Indica se o registro está ativo") Boolean isActive
 ) {}

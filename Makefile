@@ -65,7 +65,7 @@ native:
 # ── Testes ──
 
 test:
-	$(MAVEN) clean verify -pl mekano-rest -am
+	$(MAVEN) test-compile -pl mekano-rest -am && $(MAVEN) test -pl mekano-rest
 
 test-domain:
 	$(MAVEN) test -pl mekano-domain
@@ -77,7 +77,7 @@ test-infra:
 	$(MAVEN) test -pl mekano-infrastructure -am
 
 test-rest:
-	$(MAVEN) test -pl mekano-rest -am
+	$(MAVEN) test-compile -pl mekano-rest -am && $(MAVEN) test -pl mekano-rest
 
 test-one:
 	$(MAVEN) test -pl mekano-rest -am -Dtest=$(TEST) -Dsurefire.failIfNoSpecifiedTests=false

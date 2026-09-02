@@ -16,6 +16,7 @@ import com.fiap.mekano.rest.api.dto.OrcamentoResponse;
 import com.fiap.mekano.rest.api.dto.ReprovarMotivoRequest;
 import com.fiap.mekano.rest.api.exception.ProblemDetail;
 
+import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
@@ -40,10 +41,26 @@ public class OrcamentoResource {
     OrcamentoServicePort orcamentoService;
 
     @GET
+    @Path("/os/{osUuid}")
     @Produces(MediaType.APPLICATION_JSON)
-    @Operation(summary = "Buscar orçamento por OS", description = "Busca o orçamento associado a uma ordem de serviço")
-    @APIResponse(responseCode = "200", description = "Lista de orçamentos")
-    public Response buscarPorOS(@QueryParam("osUuid") UUID osUuid) {
+    @Operation(summary = "Buscar orçamento por OS", description = "Busca o orçamento associado ao UUID de uma ordem de serviço")
+    @APIResponse(responseCode = "200", description = "Orçamento encontrado",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = OrcamentoResponse.class)))
+    @APIResponse(responseCode = "404", description = "Orçamento não encontrado para a OS",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = ProblemDetail.class)))
+    public Response buscarPorOSPath(@PathParam("osUuid") UUID osUuid) {
+        Orcamento orcamento = orcamentoService.buscarPorOrdemServico(osUuid);
+        return Response.ok(OrcamentoResponse.from(orcamento)).build();
+    }
+
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(summary = "Buscar orçamento por OS (query param)", description = "Busca o orçamento associado ao UUID de uma ordem de serviço via query parameter")
+    @APIResponse(responseCode = "200", description = "Orçamento encontrado",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = OrcamentoResponse.class)))
+    @APIResponse(responseCode = "404", description = "Orçamento não encontrado para a OS",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = ProblemDetail.class)))
+    public Response buscarPorOSQuery(@QueryParam("osUuid") UUID osUuid) {
         Orcamento orcamento = orcamentoService.buscarPorOrdemServico(osUuid);
         return Response.ok(OrcamentoResponse.from(orcamento)).build();
     }
@@ -51,7 +68,7 @@ public class OrcamentoResource {
     @GET
     @Path("/{uuid}")
     @Produces(MediaType.APPLICATION_JSON)
-    @Operation(summary = "Buscar orçamento por UUID")
+    @Operation(summary = "Buscar orçamento por UUID", description = "Busca um orçamento pelo seu próprio UUID")
     @APIResponse(responseCode = "200", description = "Orçamento encontrado",
             content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = OrcamentoResponse.class)))
     @APIResponse(responseCode = "404", description = "Orçamento não encontrado",
@@ -64,7 +81,7 @@ public class OrcamentoResource {
     @POST
     @Path("/{uuid}/aprovar")
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({ "admin", "cliente"})
+    @PermitAll
     @Operation(summary = "Aprovar orçamento", description = "Cliente aprova o orçamento — OS transiciona para EM_EXECUCAO")
     @APIResponse(responseCode = "200", description = "Orçamento aprovado",
             content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = OrcamentoResponse.class)))
@@ -79,7 +96,7 @@ public class OrcamentoResource {
     @Path("/{uuid}/reprovar")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({ "admin", "cliente" })
+    @PermitAll
     @Operation(summary = "Reprovar orçamento", description = "Cliente reprova o orçamento — OS transiciona para CANCELADA")
     @APIResponse(responseCode = "200", description = "Orçamento reprovado",
             content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = OrcamentoResponse.class)))

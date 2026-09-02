@@ -1,6 +1,6 @@
 package com.fiap.mekano.infrastructure.listener;
 
-import com.fiap.mekano.domain.event.OSEntregueEvent;
+import com.fiap.mekano.domain.event.EntregaConfirmadaEvent;
 import com.fiap.mekano.domain.os.OsAuditAction;
 import com.fiap.mekano.domain.port.out.OsAuditLogRepositoryPort;
 import org.junit.jupiter.api.DisplayName;
@@ -11,6 +11,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -27,12 +28,12 @@ class OSEntregueListenerTest {
     OSEntregueListener listener;
 
     @Test
-    @DisplayName("deve registrar auditoria ao receber OSEntregueEvent")
+    @DisplayName("deve registrar auditoria ao receber EntregaConfirmadaEvent")
     void deveRegistrarAuditoriaAoReceberEvento() {
         UUID osId = UUID.randomUUID();
-        var event = OSEntregueEvent.of(osId, "Cliente retirou o veículo");
+        var event = new EntregaConfirmadaEvent(osId, "João Silva", LocalDateTime.now());
 
-        listener.onOSEntregue(event);
+        listener.onEntregaConfirmada(event);
 
         ArgumentCaptor<OsAuditLogRepositoryPort.CreateOsAuditLogCommand> captor =
                 ArgumentCaptor.forClass(OsAuditLogRepositoryPort.CreateOsAuditLogCommand.class);
@@ -42,22 +43,37 @@ class OSEntregueListenerTest {
         assertEquals(osId, command.osUuid());
         assertEquals(OsAuditAction.ENTREGA_REALIZADA, command.acao());
         assertEquals("sistema", command.usuarioEmail());
-        assertEquals("Cliente retirou o veículo", command.observacao());
+        assertEquals("João Silva", command.observacao());
         assertTrue(command.metadataJson().contains("dataEntrega"));
     }
 
     @Test
-    @DisplayName("deve usar observação default quando null")
+    @DisplayName("deve usar 'Entrega realizada' quando recebidoPor é null")
     void deveUsarObservacaoDefaultQuandoNull() {
         UUID osId = UUID.randomUUID();
-        var event = OSEntregueEvent.of(osId, null);
+        var event = new EntregaConfirmadaEvent(osId, "Entrega realizada", LocalDateTime.now());
 
-        listener.onOSEntregue(event);
+        listener.onEntregaConfirmada(event);
 
         ArgumentCaptor<OsAuditLogRepositoryPort.CreateOsAuditLogCommand> captor =
                 ArgumentCaptor.forClass(OsAuditLogRepositoryPort.CreateOsAuditLogCommand.class);
         verify(auditRepository).save(captor.capture());
 
         assertEquals("Entrega realizada", captor.getValue().observacao());
+    }
+
+    @Test
+    @DisplayName("deve usar osUuid do evento de entrega confirmada")
+    void deveUsarOsUuidCorreto() {
+        UUID osId = UUID.randomUUID();
+        var event = new EntregaConfirmadaEvent(osId, "Maria", LocalDateTime.now());
+
+        listener.onEntregaConfirmada(event);
+
+        ArgumentCaptor<OsAuditLogRepositoryPort.CreateOsAuditLogCommand> captor =
+                ArgumentCaptor.forClass(OsAuditLogRepositoryPort.CreateOsAuditLogCommand.class);
+        verify(auditRepository).save(captor.capture());
+
+        assertEquals(osId, captor.getValue().osUuid());
     }
 }

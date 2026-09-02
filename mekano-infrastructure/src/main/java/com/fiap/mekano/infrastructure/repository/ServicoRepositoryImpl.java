@@ -10,6 +10,7 @@ import com.fiap.mekano.infrastructure.mapper.ServicoEntityMapper;
 import io.quarkus.cache.CacheInvalidate;
 import io.quarkus.cache.CacheResult;
 import io.quarkus.panache.common.Page;
+import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -86,7 +87,7 @@ public class ServicoRepositoryImpl implements ServicoRepositoryPort {
     @Retry(maxRetries = 3)
     @CacheResult(cacheName = CacheNames.SERVICOS)
     public Optional<Servico> findById(UUID id) {
-        return panacheRepository.find("uuid = ?1 AND isActive = ?2", id, true)
+        return panacheRepository.find("uuid = ?1", id)
                 .firstResultOptional().map(mapper::toDomain);
     }
 
@@ -101,7 +102,7 @@ public class ServicoRepositoryImpl implements ServicoRepositoryPort {
     }
 
     @Override
-    public List<Servico> findAll(int page, int size, String sort) {
+    public List<Servico> findAll(int page, int size, String sort, Boolean isActive) {
         String sortValue = sort == null || sort.isBlank() ? "nome,asc" : sort;
         String[] sortParts = sortValue.split(",", 2);
         String sortField = sortParts[0].strip();
@@ -110,15 +111,19 @@ public class ServicoRepositoryImpl implements ServicoRepositoryPort {
         }
         boolean ascending = sortParts.length < 2 || !"desc".equalsIgnoreCase(sortParts[1].strip());
         var direction = ascending ? Sort.Direction.Ascending : Sort.Direction.Descending;
-        var query = panacheRepository.find("isActive = ?1",
-                Sort.by(sortField).direction(direction), true);
+        var sortBy = Sort.by(sortField).direction(direction);
+        PanacheQuery<ServicoEntity> query = isActive == null
+                ? panacheRepository.findAll(sortBy)
+                : panacheRepository.find("isActive = ?1", sortBy, isActive);
         return query.page(Page.of(Math.max(page, 0), normalizeSize(size))).list()
                 .stream().map(mapper::toDomain).toList();
     }
 
     @Override
-    public long countAll() {
-        return panacheRepository.count("isActive = ?1", true);
+    public long countAll(Boolean isActive) {
+        return isActive == null
+                ? panacheRepository.count()
+                : panacheRepository.count("isActive = ?1", isActive);
     }
 
     @Override
@@ -129,6 +134,16 @@ public class ServicoRepositoryImpl implements ServicoRepositoryPort {
                 .orElseThrow(() -> new AppException(404, Messages.get("servico.not.found", id)));
         entity.setDeletedAt(LocalDateTime.now());
         entity.setIsActive(false);
+    }
+
+    @Override
+    @Transactional
+    @CacheInvalidate(cacheName = CacheNames.SERVICOS)
+    public void reactivate(UUID id) {
+        ServicoEntity entity = panacheRepository.find("uuid", id).firstResultOptional()
+                .orElseThrow(() -> new AppException(404, Messages.get("servico.not.found", id)));
+        entity.setDeletedAt(null);
+        entity.setIsActive(true);
     }
 
     private static int normalizeSize(int size) {

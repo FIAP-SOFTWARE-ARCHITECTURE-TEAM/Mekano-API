@@ -18,8 +18,6 @@ public class MockPaymentService {
     private final ProcessedEventsRepositoryPort processedEventsRepository;
     private final EventPublisher eventPublisher;
 
-    // TODO(#33): substituir ProcessedEventsRepositoryPort pela implementação real
-    //            (processed_events table + ProcessedEventEntity + ProcessedEventRepository)
     public MockPaymentService(OrdemDeServicoRepositoryPort ordemDeServicoRepository,
                               ProcessedEventsRepositoryPort processedEventsRepository,
                               EventPublisher eventPublisher) {
@@ -33,12 +31,13 @@ public class MockPaymentService {
         var os = ordemDeServicoRepository.findById(osUuid)
                 .orElseThrow(() -> new AppException(404, "OS não encontrada: " + osUuid));
 
-        if (os.getStatusPagamento() != StatusPagamento.AGUARDANDO_PAGAMENTO) {
-            throw new AppException(409, "Pagamento não está pendente");
-        }
-
+        // D-06: idempotência — se já processado, retorna silenciosamente (200, não 409)
         if (processedEventsRepository.existsFor("PAGAMENTO_CONFIRMADO", osUuid)) {
             return;
+        }
+
+        if (os.getStatusPagamento() != StatusPagamento.AGUARDANDO_PAGAMENTO) {
+            throw new AppException(409, "Pagamento não está pendente");
         }
 
         try {

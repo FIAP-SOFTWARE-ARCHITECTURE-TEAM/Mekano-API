@@ -1,0 +1,134 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: mekano-gp3
+provisioner: ebs.csi.aws.com
+parameters:
+  type: gp3
+  encrypted: "true"
+reclaimPolicy: Delete
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: evolution-instances
+  namespace: mekano-system
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: mekano-gp3
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: evolution-api
+  namespace: mekano-system
+  labels:
+    app: evolution-api
+    app.kubernetes.io/name: evolution-api
+spec:
+  type: ClusterIP
+  selector:
+    app: evolution-api
+  ports:
+    - name: http
+      port: 5033
+      targetPort: http
+      protocol: TCP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: evolution-api
+  namespace: mekano-system
+  labels:
+    app: evolution-api
+    app.kubernetes.io/name: evolution-api
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  progressDeadlineSeconds: 600
+
+  # The Evolution instance files are stored on an EBS ReadWriteOnce volume.
+  # Recreate avoids two pods trying to mount the same EBS volume during rollout.
+  strategy:
+    type: Recreate
+
+  selector:
+    matchLabels:
+      app: evolution-api
+
+  template:
+    metadata:
+      labels:
+        app: evolution-api
+        app.kubernetes.io/name: evolution-api
+
+    spec:
+      terminationGracePeriodSeconds: 30
+
+      containers:
+        - name: evolution-api
+          image: evoapicloud/evolution-api:v2.3.7
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: http
+              containerPort: 5033
+              protocol: TCP
+
+          envFrom:
+            - configMapRef:
+                name: evolution-config
+
+            - secretRef:
+                name: evolution-secret
+
+          volumeMounts:
+            - name: evolution-instances
+              mountPath: /evolution/instances
+
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+
+          startupProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 60
+
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+
+          livenessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          securityContext:
+            allowPrivilegeEscalation: false
+
+      volumes:
+        - name: evolution-instances
+          persistentVolumeClaim:
+            claimName: evolution-instances

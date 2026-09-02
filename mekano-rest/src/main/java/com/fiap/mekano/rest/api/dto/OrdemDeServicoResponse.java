@@ -4,6 +4,7 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Schema(description = "Dados completos da Ordem de Serviço")
@@ -26,5 +27,7 @@ public record OrdemDeServicoResponse(
         @Schema(description = "Quem recebeu o veículo") String recebidoPor,
         @Schema(description = "Data do pagamento") LocalDateTime pagamentoConfirmadoEm,
         @Schema(description = "Data da entrega") LocalDateTime entregueEm,
-        @Schema(description = "Data de criação") LocalDateTime createdAt
+        @Schema(description = "Data de criação") LocalDateTime createdAt,
+        @Schema(description = "Itens da OS (peças/serviços)") List<ItemOsResponse> itens,
+        @Schema(description = "Indica se a OS está liberada para execução (orçamento aprovado e estoque disponível)") boolean liberadoParaExecucao
 ) {}

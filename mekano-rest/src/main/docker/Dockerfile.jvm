@@ -1,5 +1,5 @@
 # --- Stage 1: Build ---
-FROM registry.access.redhat.com/ubi9/openjdk-17 AS build
+FROM registry.access.redhat.com/ubi9/openjdk-17:1.24 AS build
 USER root
 RUN microdnf install -y unzip && microdnf clean all
 WORKDIR /app
@@ -7,7 +7,7 @@ COPY --chown=185:0 --chmod=755 . .
 # Converte CRLF → LF (Windows) no mvnw e scripts .sh
 RUN find . \( -name "mvnw" -o -name "*.sh" \) -exec sed -i 's/\r$//' {} +
 USER 185
-RUN ./mvnw package -pl mekano-rest -am -DskipTests -B -q
+RUN ./mvnw install -pl mekano-rest -am -DskipTests -B
 
 # --- Stage 2: Runtime ---
 FROM registry.access.redhat.com/ubi9/openjdk-17-runtime:1.24

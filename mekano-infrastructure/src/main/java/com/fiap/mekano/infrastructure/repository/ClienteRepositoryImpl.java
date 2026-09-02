@@ -1,12 +1,16 @@
 package com.fiap.mekano.infrastructure.repository;
 
+import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.domain.model.Cliente;
 import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;
 import com.fiap.mekano.infrastructure.entity.ClienteEntity;
 import com.fiap.mekano.infrastructure.mapper.ClienteEntityMapper;
 import io.quarkus.panache.common.Page;
+import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.transaction.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,12 +29,8 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
     }
 
     @Override
-    public Cliente save(Cliente cliente) {
-        ClienteEntity entity = panacheRepository.find("uuid = ?1", cliente.getId()).firstResult();
-        if (entity == null) {
-            entity = new ClienteEntity();
-        }
-
+    public Cliente create(Cliente cliente) {
+        ClienteEntity entity = new ClienteEntity();
         entity.setUuid(cliente.getId());
         entity.setNome(cliente.getNome());
         entity.setCpf(cliente.getCpf().getValue());
@@ -42,22 +42,29 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
         entity.setEnderecoCidade(cliente.getEndereco().getCidade());
         entity.setEnderecoUf(cliente.getEndereco().getUf());
         entity.setEnderecoCep(cliente.getEndereco().getCep());
-        if (entity.getCreatedAt() == null) {
-            entity.setCreatedAt(cliente.getCreatedAt());
-        }
+        entity.setCreatedAt(cliente.getCreatedAt());
         entity.setDeletedAt(null);
         entity.setIsActive(true);
 
-        if (entity.getId() == null) {
-            panacheRepository.persist(entity);
-        }
+        panacheRepository.persist(entity);
+
+        return clienteEntityMapper.toDomain(entity);
+    }
+
+    @Override
+    public Cliente update(Cliente cliente) {
+        ClienteEntity entity = panacheRepository.find("uuid = ?1", cliente.getId())
+                .firstResultOptional()
+                .orElseThrow(() -> new AppException(404, Messages.get("cliente.not.found", cliente.getId())));
+
+        clienteEntityMapper.updateEntity(cliente, entity);
 
         return clienteEntityMapper.toDomain(entity);
     }
 
     @Override
     public Optional<Cliente> findById(UUID id) {
-        return panacheRepository.find("uuid = ?1 and isActive = ?2", id, true)
+        return panacheRepository.find("uuid = ?1", id)
                 .firstResultOptional()
                 .map(clienteEntityMapper::toDomain);
     }
@@ -75,6 +82,39 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
     }
 
     @Override
+    public Optional<Cliente> findByTelefone(String telefone) {
+        if (telefone == null || telefone.isBlank()) {
+            return Optional.empty();
+        }
+
+        String digits = telefone.replaceAll("\\D", "");
+        Optional<ClienteEntity> exact = panacheRepository
+                .find("telefone = ?1 and isActive = ?2",
+                        Sort.by("createdAt").descending(), digits, true)
+                .firstResultOptional();
+        if (exact.isPresent()) {
+            return exact.map(clienteEntityMapper::toDomain);
+        }
+
+        // WR-04: fallback por sufixo incluindo o DDD (últimos 10 dígitos) com
+        // ORDER BY createdAt (determinístico) e retorno APENAS quando há uma
+        // única correspondência — múltiplos clientes com o mesmo número local
+        // em DDDs diferentes tornam o resultado ambíguo (retorna vazio).
+        if (digits.length() >= 10) {
+            String suffix = digits.substring(digits.length() - 10);
+            List<ClienteEntity> matches = panacheRepository
+                    .find("telefone like ?1 and isActive = ?2",
+                            Sort.by("createdAt").descending(), "%" + suffix, true)
+                    .list();
+            if (matches.size() == 1) {
+                return Optional.of(matches.get(0)).map(clienteEntityMapper::toDomain);
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    @Override
     public boolean existsByCpf(String cpf) {
         if (cpf == null || cpf.isBlank()) {
             return false;
@@ -85,9 +125,12 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
     }
 
     @Override
-    public List<Cliente> findAll(int page, int size, String sort) {
-        return panacheRepository.find("isActive = ?1", parseSort(sort), true)
-                .page(Page.of(Math.max(page, 0), normalizeSize(size)))
+    public List<Cliente> findAll(int page, int size, String sort, Boolean isActive) {
+        Sort panacheSort = parseSort(sort);
+        PanacheQuery<ClienteEntity> query = isActive == null
+                ? panacheRepository.findAll(panacheSort)
+                : panacheRepository.find("isActive = ?1", panacheSort, isActive);
+        return query.page(Page.of(Math.max(page, 0), normalizeSize(size)))
                 .list()
                 .stream()
                 .map(clienteEntityMapper::toDomain)
@@ -95,18 +138,30 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
     }
 
     @Override
-    public long countAll() {
-        return panacheRepository.count("isActive = ?1", true);
+    public long countAll(Boolean isActive) {
+        return isActive == null
+                ? panacheRepository.count()
+                : panacheRepository.count("isActive = ?1", isActive);
     }
 
     @Override
+    @Transactional
     public void markAsDeleted(UUID id) {
-        panacheRepository.find("uuid = ?1 and isActive = ?2", id, true)
+        ClienteEntity entity = panacheRepository.find("uuid = ?1", id)
                 .firstResultOptional()
-                .ifPresent(entity -> {
-                    entity.setIsActive(false);
-                    entity.setDeletedAt(LocalDateTime.now());
-                });
+                .orElseThrow(() -> new AppException(404, Messages.get("cliente.not.found", id)));
+        entity.setIsActive(false);
+        entity.setDeletedAt(LocalDateTime.now());
+    }
+
+    @Override
+    @Transactional
+    public void reactivate(UUID id) {
+        ClienteEntity entity = panacheRepository.find("uuid = ?1", id)
+                .firstResultOptional()
+                .orElseThrow(() -> new AppException(404, Messages.get("cliente.not.found", id)));
+        entity.setIsActive(true);
+        entity.setDeletedAt(null);
     }
 
     private static int normalizeSize(int size) {

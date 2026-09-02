@@ -37,9 +37,8 @@ import com.fiap.mekano.domain.port.out.VeiculoRepositoryPort;
  * ✅ criação com sucesso
  * ✅ cliente inexistente
  * ✅ placa duplicada
- * ✅ atualização com sucesso
+ * ✅ atualização com sucesso (placa preservada — imutável)
  * ✅ atualização de veículo inexistente
- * ✅ atualização para placa já utilizada
  * ✅ busca por ID
  * ✅ listagem paginada
  * ✅ soft delete
@@ -90,7 +89,7 @@ class VeiculoServiceTest {
         when(veiculoRepository.existsByPlaca("ABC1234"))
                 .thenReturn(false);
 
-        when(veiculoRepository.save(any(Veiculo.class)))
+        when(veiculoRepository.create(any(Veiculo.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         Veiculo result = veiculoService.execute(command);
@@ -102,7 +101,7 @@ class VeiculoServiceTest {
         assertEquals(2020, result.getAno());
 
         verify(veiculoRepository, times(1))
-                .save(any(Veiculo.class));
+                .create(any(Veiculo.class));
 
         verify(eventPublisher, times(1))
                 .publish(any(VeiculoCriadoEvent.class));
@@ -129,7 +128,7 @@ class VeiculoServiceTest {
                 () -> veiculoService.execute(command));
 
         verify(veiculoRepository, never())
-                .save(any());
+                .create(any());
     }
 
     @Test
@@ -165,7 +164,7 @@ class VeiculoServiceTest {
                 () -> veiculoService.execute(command));
 
         verify(veiculoRepository, never())
-                .save(any());
+                .create(any());
     }
 
     @Test
@@ -185,7 +184,6 @@ class VeiculoServiceTest {
                 LocalDateTime.now());
 
         UpdateVeiculoCommand command = new UpdateVeiculoCommand(
-                "ABC1D23",
                 "Toyota",
                 "Yaris",
                 2022);
@@ -193,10 +191,7 @@ class VeiculoServiceTest {
         when(veiculoRepository.findById(veiculoId))
                 .thenReturn(Optional.of(existente));
 
-        when(veiculoRepository.existsByPlaca("ABC1D23"))
-                .thenReturn(false);
-
-        when(veiculoRepository.save(any(Veiculo.class)))
+        when(veiculoRepository.update(any(Veiculo.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         Veiculo atualizado = veiculoService.update(
@@ -204,7 +199,7 @@ class VeiculoServiceTest {
                 command);
 
         assertEquals(
-                "ABC1D23",
+                "ABC1234",
                 atualizado.getPlaca().getValue());
 
         assertEquals(
@@ -216,7 +211,7 @@ class VeiculoServiceTest {
                 atualizado.getAno());
 
         verify(veiculoRepository)
-                .save(any(Veiculo.class));
+                .update(any(Veiculo.class));
     }
 
     @Test
@@ -226,7 +221,6 @@ class VeiculoServiceTest {
         UUID veiculoId = UUID.randomUUID();
 
         UpdateVeiculoCommand command = new UpdateVeiculoCommand(
-                "ABC1D23",
                 "Toyota",
                 "Yaris",
                 2022);
@@ -242,40 +236,47 @@ class VeiculoServiceTest {
     }
 
     @Test
-    @DisplayName("deve lançar AppException(409) ao atualizar para placa já existente")
-    void deveLancarExcecaoAoAtualizarParaPlacaDuplicada() {
+    @DisplayName("deve atualizar veículo inativo sem tratá-lo como inexistente")
+    void deveAtualizarVeiculoInativo() {
 
         UUID veiculoId = UUID.randomUUID();
+        UUID clienteUuid = UUID.randomUUID();
 
-        Veiculo existente = Veiculo.reconstitute(
+        Veiculo existenteInativo = Veiculo.reconstitute(
                 veiculoId,
-                UUID.randomUUID(),
+                clienteUuid,
                 "ABC1234",
                 "Toyota",
                 "Corolla",
                 2020,
-                LocalDateTime.now());
+                LocalDateTime.now(),
+                false);
 
         UpdateVeiculoCommand command = new UpdateVeiculoCommand(
-                "XYZ9999",
                 "Toyota",
                 "Yaris",
                 2022);
 
         when(veiculoRepository.findById(veiculoId))
-                .thenReturn(Optional.of(existente));
+                .thenReturn(Optional.of(existenteInativo));
 
-        when(veiculoRepository.existsByPlaca("XYZ9999"))
-                .thenReturn(true);
+        when(veiculoRepository.update(any(Veiculo.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
-        assertThrows(
-                AppException.class,
-                () -> veiculoService.update(
-                        veiculoId,
-                        command));
+        Veiculo atualizado = veiculoService.update(
+                veiculoId,
+                command);
 
-        verify(veiculoRepository, never())
-                .save(any());
+        assertEquals(
+                "Yaris",
+                atualizado.getModelo());
+
+        assertEquals(
+                2022,
+                atualizado.getAno());
+
+        verify(veiculoRepository)
+                .update(any(Veiculo.class));
     }
 
     @Test
@@ -306,13 +307,14 @@ class VeiculoServiceTest {
     @DisplayName("deve listar veículos")
     void deveListarVeiculos() {
 
-        when(veiculoRepository.findAll(0, 10, "placa,asc"))
+        when(veiculoRepository.findAll(0, 10, "placa,asc", null))
                 .thenReturn(List.of());
 
         List<Veiculo> resultado = veiculoService.findAll(
                 0,
                 10,
-                "placa,asc");
+                "placa,asc",
+                null);
 
         assertNotNull(resultado);
 
@@ -320,7 +322,32 @@ class VeiculoServiceTest {
                 .findAll(
                         0,
                         10,
-                        "placa,asc");
+                        "placa,asc",
+                        null);
+    }
+
+    @Test
+    @DisplayName("deve repassar filtro isActive na listagem")
+    void deveRepassarFiltroIsActiveNaListagem() {
+
+        when(veiculoRepository.findAll(0, 10, "placa,asc", false))
+                .thenReturn(List.of());
+        when(veiculoRepository.countAll(false)).thenReturn(0L);
+
+        List<Veiculo> resultado = veiculoService.findAll(
+                0,
+                10,
+                "placa,asc",
+                false);
+        long total = veiculoService.countAll(false);
+
+        assertNotNull(resultado);
+        assertEquals(0L, total);
+
+        verify(veiculoRepository)
+                .findAll(0, 10, "placa,asc", false);
+        verify(veiculoRepository)
+                .countAll(false);
     }
 
     @Test
@@ -333,5 +360,17 @@ class VeiculoServiceTest {
 
         verify(veiculoRepository)
                 .markAsDeleted(veiculoId);
+    }
+
+    @Test
+    @DisplayName("deve reativar veículo")
+    void deveReativarVeiculo() {
+
+        UUID veiculoId = UUID.randomUUID();
+
+        veiculoService.reactivate(veiculoId);
+
+        verify(veiculoRepository)
+                .reactivate(veiculoId);
     }
 }

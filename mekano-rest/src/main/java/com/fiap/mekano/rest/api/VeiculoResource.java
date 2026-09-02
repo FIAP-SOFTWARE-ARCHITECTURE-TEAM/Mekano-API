@@ -98,14 +98,16 @@ public class VeiculoResource {
 
                         @QueryParam("size") @DefaultValue("10") int size,
 
-                        @QueryParam("sort") @DefaultValue("placa,asc") String sort) {
+                        @QueryParam("sort") @DefaultValue("placa,asc") String sort,
 
-                List<VeiculoResponse> content = veiculoService.findAll(page, size, sort)
+                        @QueryParam("isActive") Boolean isActive) {
+
+                List<VeiculoResponse> content = veiculoService.findAll(page, size, sort, isActive)
                                 .stream()
                                 .map(veiculoDtoMapper::toResponse)
                                 .toList();
 
-                long total = veiculoService.countAll();
+                long total = veiculoService.countAll(isActive);
 
                 int totalPages = (int) Math.ceil((double) total / size);
 
@@ -139,6 +141,17 @@ public class VeiculoResource {
                         @PathParam("id") UUID id) {
 
                 veiculoService.delete(id);
+
+                return Response.noContent().build();
+        }
+
+        @PUT
+        @Path("/{id}/ativar")
+        @Operation(summary = "Reativar veículo", description = "Reativa um veículo inativo. Se o veículo já estiver ativo, nenhuma alteração é feita.")
+        public Response reativar(
+                        @PathParam("id") UUID id) {
+
+                veiculoService.reactivate(id);
 
                 return Response.noContent().build();
         }

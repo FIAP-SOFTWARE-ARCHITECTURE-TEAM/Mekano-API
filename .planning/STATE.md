@@ -1,15 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: Em execução — Fase 3
-last_updated: "2026-06-29T23:59:00.000Z"
+milestone: v2.0
+milestone_name: infra-docs-quality-whatsapp
+status: planning
+last_updated: "2026-08-08T22:13:08.444Z"
+last_activity: 2026-08-08 — Phase 7 plans created (07-01 endpoint verification, 07-02 OS priority ordering)
 progress:
-  total_phases: 3
-  completed_phases: 2
-  total_plans: 14
-  completed_plans: 14
-  percent: 80
+  total_phases: 5
+  completed_phases: 0
+  total_plans: 12
+  completed_plans: 0
+  percent: 0
 ---
 
 # STATE: Mekano
@@ -25,90 +26,68 @@ progress:
 |-----|-------|
 | Stack | Java 17, Quarkus 3.36.0, PostgreSQL 16, Maven multi-module |
 | Architecture | Clean Architecture (domain → application → infrastructure → rest) |
-| Bounded Contexts | User/Auth, OS, Estoque (implementados), Pagamento (em andamento) |
+| Bounded Contexts | User/Auth, OS, Estoque, Pagamento (todos implementados) |
 | Team | 5 developers |
-| Timeline | 10 days (Dias 1-8 decorridos) |
+| Timeline | 10 days |
 | Granularity | standard |
-| Mode | mvp |
+| Milestone | v2.0 infra-docs-quality-whatsapp |
 
 ## Current Position
 
-| Attribute | Value |
-|-----------|-------|
-| **Phase** | 3 — Pagamento & Delivery |
-| **Status** | Em execução — 3 de 6 issues fechadas |
-| **Progress** | ████████████████░░░░ 80% |
-| **Milestone** | v1 |
+Phase: 7 of 8 (API Improvements)
+Plan: 07-01, 07-02
+Status: Planning complete — ready to execute
+Last activity: 2026-08-08 — Phase 7 plans created (07-01 endpoint verification, 07-02 OS priority ordering)
+
+Progress: [████████░░] 80% (planning complete)
 
 ## Performance Metrics
 
-| Metric | Current | Target | Notes |
-|--------|---------|--------|-------|
-| Issues fechadas | 25/28 | 28 | ✓ Fases 1 e 2 completas |
-| Requirements mapped | 37/37 | 37 | ✓ Full coverage |
-| Phases defined | 3 | — | Auth & OS → OS Cont. & Estoque → Pagamento & Delivery |
-| Fases concluídas | 2/3 | 3 | Fase 3 em andamento |
+**By Phase:**
+
+| Phase | Plans | Total | Avg/Plan |
+|-------|-------|-------|----------|
+| 4. Infrastructure Foundation | 2 | - | - |
+| 5. WhatsApp Integration | 3 | - | - |
+| 6. Quality & Bug Fixes | 5 | - | - |
+| 7. API Improvements | 2 | - | - |
+| 8. Documentation & Polish | TBD | - | - |
 
 ## Accumulated Context
 
-### Key Decisions (from research/planning)
+### Decisions
 
 | Decision | Rationale | Status |
 |----------|-----------|--------|
-| Vertical slice strategy | Avoids integration chaos with 5 devs in parallel | Executado |
-| OS state machine with transition matrix | Prevents illegal state transitions | Implementado |
-| CDI events for inter-context comm | Decoupled contexts without Kafka overengineering | Implementado |
-| Orcamento as separate aggregate | Prevents mega-aggregate (Pitfall 1) | Implementado |
-| Atomic stock reservation (UPDATE ... WHERE saldo >= qtd) | Prevents race condition (Pitfall 3) | Implementado |
-| Payment idempotency via processed_events table | Prevents double-processing (Pitfall 4) | Parcial — stub no-op |
-| Auth construído como task da Phase 1 | Não revisar codebase existente, tratar como task | Implementado |
-| JWT Ed25519 | Ed25519/EdDSA por segurança e performance | Implementado |
-| Refresh rotation com PESSIMISTIC_WRITE | Previne ataque de reuse | Implementado |
-| JaCoCo 80% LINE + OWASP CVSS≥7 | Gates de qualidade | Configurado (sem CI) |
+| WhatsApp como port/adapter em infrastructure | Segue padrão hexagonal existente, sem novo módulo | Pendente |
+| JaCoCo report-aggregate em mekano-rest | Evita false pass de 80% por módulo individual | Pendente |
+| Terraform S3 backend desde o dia 1 | Previne perda/corrupção de estado | Pendente |
+| CDI events com AFTER_SUCCESS para WhatsApp | HTTP fora de @Transactional, previne pool exhaustion | Pendente |
+| Clean Code refactoring com lista fixa 5-10 itens | Previne scope creep e regressões | Pendente |
+| Kind para cluster K8s local | Docker-based, 30s startup, sem Helm | Pendente |
+| Vídeo gravado por último (dia 9-10) | Documentação reflete estado final do sistema | Pendente |
 
-### Pending Decisions
+### Pending Todos
 
-- [x] **Roles**: admin, atendente, mecanico, almoxarife, financeiro, cliente — confirmadas e implementadas
-- [x] **JWT strategy**: Ed25519 existente reutilizado
-- [ ] **SLA policy values**: Em implementação na Fase 3
-- [ ] **Simulated bank service**: Mock com delay de 2s definido (#34), aguardando endpoint REST (#37)
+Nenhum ainda.
 
-### Open Todos
+### Blockers/Concerns
 
-- [x] Criar AGENTS.md para aplicar engenharia de contexto no projeto
-- [x] PLAN.md: Phase 1 — Auth & OS Foundation (6 planos executados)
-- [x] PLAN.md: Phase 2 — OS Continuation & Estoque (8 planos executados)
-- [x] Criar tasks individuais para GitHub Issues
-- [ ] Fechar Issues #33 (idempotência real), #37 (REST pagamento/entrega)
-- [ ] Atualizar README.md com arquitetura e módulos
-- [ ] Criar CI/CD pipeline (.github/workflows)
-- [ ] Alinhar branches main/develop
+- WhatsApp template approval na Meta pode levar horas-dias (submeter dia 1)
+- OIDC GitHub Actions ↔ AWS pode estar bloqueado por permissões (fallback: GHCR + kubectl manual)
+- Kind não vem com metrics-server — necessário para testar HPA localmente
 
-### Blockers
+## Deferred Items
 
-- ProcessedEventsRepositoryStub — sem idempotência real (#33)
-- PagamentoResource e EntregaResource não existem (#37)
+| Category | Item | Status | Deferred At |
+|----------|------|--------|-------------|
+| Monitoramento | Prometheus/Grafana (MON-01, MON-02) | Deferred to v2.x | v2.0 init |
+| Integrações | Gateway de pagamento real (INT-02) | Deferred to v2.x | v2.0 init |
+| Push | Notificação push mobile (INT-01) | Deferred to v2.x | v2.0 init |
+| WhatsApp | Two-way conversation, payment links, multi-branch | Beyond v2.0 scope | v2.0 init |
 
 ## Session Continuity
 
-**Last session:** 2026-06-29T23:59:00.000Z
-**Next action:** Implementar ProcessedEventEntity + real idempotency (#33) e criar PagamentoResource + EntregaResource (#37).
-
-### Threads
-
-| Thread | Phase | Status | Owner | Context |
-|--------|-------|--------|-------|---------|
-| Roadmap restructured | 1-3 | ✅ Done | GSD | All 37 v1 mapped, 3 phases, vertical slices |
-| Phase 1 execution | 1 | ✅ Done | Equipe | 12 issues fechadas, 6 planos |
-| Phase 2 execution | 2 | ✅ Done | Equipe | 9 issues fechadas, 8 planos |
-| Phase 3 execution | 3 | 🔄 Em andamento | Equipe | 3/6 issues fechadas |
-
-### Next Phase Brief
-
-**Phase 3 — Pagamento & Delivery** (em execução):
-
-1. Implementar `ProcessedEventEntity` + real idempotency (substituir stub)
-2. Criar `PagamentoResource` (POST /pagamentos/{osUuid}/confirmar)
-3. Criar `EntregaResource` (PATCH /os/{uuid}/entrega) com guarda de pagamento
-4. Executar full test suite + relatório
-5. Atualizar CONTRIBUTING.md com fluxos de pagamento/entrega
+**Last session:** 2026-08-08T22:13:08.439Z
+**Next action:** Plan Phase 4 — `/gsd-plan-phase 4`
+**Resume file:** .planning/phases/08-documentation-polish/08-CONTEXT.md

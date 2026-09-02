@@ -8,10 +8,10 @@ import jakarta.enterprise.context.ApplicationScoped;
 public class ProcessedEventPanacheRepository implements PanacheRepository<ProcessedEventEntity> {
 
     public boolean eventoJaProcessado(String eventoId) {
-        return count("evento_id = ?1", eventoId) > 0;
+        return count("eventoId = ?1", eventoId) > 0;
     }
 
     public ProcessedEventEntity buscarPorEventoId(String eventoId) {
-        return find("evento_id = ?1", eventoId).firstResult();
+        return find("eventoId = ?1", eventoId).firstResult();
     }
 }

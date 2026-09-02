@@ -13,5 +13,6 @@ public record VeiculoResponse(
         String marca,
         String modelo,
         Integer ano,
-        LocalDateTime createdAt) {
+        LocalDateTime createdAt,
+        @Schema(description = "Indica se o registro está ativo") Boolean isActive) {
 }

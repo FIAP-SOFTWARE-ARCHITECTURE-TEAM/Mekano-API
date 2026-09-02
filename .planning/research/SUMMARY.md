@@ -1,188 +1,182 @@
-# Research Summary
+# Project Research Summary
 
-**Project:** Mekano — Sistema Integrado de Atendimento e Execução de Serviços para Oficina Mecânica
-**Domain:** Brazilian mechanical workshop management (Ordem de Serviço, Estoque, Pagamento)
-**Researched:** 2026-06-20
-**Confidence:** HIGH (all 4 research files verified against official docs, competitor analysis, and existing codebase)
+**Project:** Mekano v2.0 — infra-docs-quality-whatsapp
+**Domain:** Quarkus 3.36 Clean Architecture REST API for mechanical workshop management (Java 17)
+**Researched:** 2026-08-08
+**Confidence:** HIGH (verified via Context7 official docs + existing codebase analysis)
 
 ## Executive Summary
 
-Mekano is a **modular monolith API** for managing mechanical workshop operations in Brazil — specifically the complete Ordem de Serviço lifecycle (reception to delivery), integrated inventory control, and payment processing. The existing foundation (Java 17, Quarkus 3.36.0, Clean Architecture 4-module Maven structure, JWT auth with Ed25519) is solid and well-tested. Research confirms the architecture should expand from the existing User/Auth subsystem into three new bounded contexts: **Ordem de Serviço** (core), **Gestão de Estoque**, and **Ordem de Pagamento** — communicating exclusively via **CDI domain events** (`jakarta.enterprise.event.Event`), not direct service calls or message brokers.
+Mekano v2.0 extends an existing Quarkus 3.36 Clean Architecture API (4 modules, 517 tests) with WhatsApp notifications, Kubernetes deployment, Terraform provisioning, an 80% JaCoCo coverage gate, dead code removal, and academic documentation. The product is a well-structured monolith following hexagonal architecture — the research confirms the existing patterns are solid and v2.0 additions fit cleanly within them.
 
-The recommended approach is a **vertical-slice strategy**: build one complete end-to-end OS flow before adding stock or payment complexity. Research across 14 Brazilian competitors shows the MVP must include: OS lifecycle with a 7-status state machine, client/vehicle registration with CPF/CNPJ/Placa validation, budget generation with client approval (mandatory per CDC Art. 40), parts CRUD with balance invariants, stock reservation on budget approval, and payment processing with vehicle delivery. Key differentiators vs competitors: **SLA auto-expiration** (no competitor offers this), **public status tracking** (only ~20% of competitors), and the API-first architecture itself (competitors are closed SaaS).
+**Recommended approach:** Add WhatsApp as a new output port adapter in `mekano-infrastructure` (not a new module), using `quarkus-rest-client-jackson` to call Meta's WhatsApp Cloud API directly (no Twilio SDK). Infra uses plain YAML K8s manifests (no Helm for v2.0), Terraform with S3 backend for state, and JaCoCo `report-aggregate` for true cross-module coverage. The phase order prioritizes infrastructure foundation first (needed for deployment), then WhatsApp integration (highest user value), quality fixes in parallel, API improvements, and documentation last.
 
-The #1 risk is **parallel-development integration chaos** (Pitfall 9) — a 5-person team dividing by context instead of by vertical slice. Mitigation: first 4 days with all developers on OS Core to establish patterns, then split 3/2 for Estoque and Pagamento. Other critical risks: building a mega-aggregate `OrdemDeServico` that absorbs Cliente/Veiculo/Orcamento (Pitfall 1), inventory overselling from non-atomic reservation (Pitfall 3), and payment webhook non-idempotency (Pitfall 4). All have documented prevention strategies with ArchUnit enforcement and high-confidence test patterns.
+**Key risks:** (1) WhatsApp Cloud API tokens expire every 24 hours — a token refresh service must be built on day 1, not as an afterthought. (2) JaCoCo's per-module `BUNDLE` check gives false 80% passes — `report-aggregate` in `mekano-rest` is mandatory for truthful coverage. (3) Clean Code refactoring is a scope-creep trap — a fixed 5-10 item list must be agreed before any changes. (4) Terraform local state checked into git is a data-loss disaster — remote backend + `.gitignore` from the first `terraform init`.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The existing stack (Java 17, Quarkus 3.36.0, PostgreSQL 16, Maven multi-module, MapStruct 1.6.3, Lombok 1.18.36) is the correct foundation. Three new libraries are needed, all verified on Maven Central with 2025-2026 releases:
+WhatsApp integration uses **Meta's Cloud API** (free tier: 1,000 conversations/month) called via **Quarkus REST Client** (`quarkus-rest-client-jackson`) with declarative `@RegisterRestClient` interfaces — no Twilio Java SDK or third-party wrappers. Infrastructure uses **Terraform v1.8+** with `hashicorp/aws` for EKS + RDS provisioning, **plain YAML** K8s manifests (no Helm — overkill for single-service API), and **Kind 0.20+** for local cluster testing. Quality gate uses **JaCoCo 0.8.12** with `LINE` counter at 80% minimum, `BUNDLE` element per module, and `report-aggregate` in `mekano-rest` for a single project-wide report.
 
-**Core additions:**
-- **CDI Events** (`jakarta.enterprise.event.Event`) — built into Quarkus, zero dependencies. This is the inter-context communication backbone for the modular monolith. Use `fire()` for immediate consistency (stock reservation) and `fireAsync()` for eventual consistency (payment → delivery release). Confirmed by Quarkus discussion #51183 as the recommended pattern. **Do NOT use Kafka/RabbitMQ** for in-process events — overkill for a monolith where producer and consumer share the same JVM and transaction.
-- **cpf-cnpj-utils** (1.0.0-alpha, felseje) — Brazilian document validation that supports **alphanumeric CNPJ** (mandatory from July 2026 per IN RFB 2.229). Alternatives are either dead projects (last updated 2012), GPLv3-licensed, or Spring Boot-specific. Zero runtime dependencies, Java 17+.
-- **ArchUnit** (1.3.0) — enforces bounded context isolation at test time. Non-negotiable for a multi-context monolith. Catches cross-context imports that would prevent future extraction to microservices. Configured via `@AnalyzeClasses` with context boundary rules.
-- **cnpj-alfanumerico** (1.1.0, optional) — provides `@CNPJ` Bean Validation annotation for REST DTOs if desired.
-
-**Domain value object patterns:**
-- `Documento` — sealed abstract class with `CPF` and `CNPJ` subtypes. Validates Mod 11 check digits, supports alphanumeric CNPJ base-36 conversion. Type-safe — the domain knows whether it's CPF or CNPJ at compile time.
-- `Placa` — Java record accepting both old format (`ABC-1234`) and Mercosul format (`ABC1D23`). Regex excludes confusing letters I, O, Q per DENATRAN rules.
-- Monetary values must use `BigDecimal` or `Long` (cents) — never `double`/`float`.
-
-**Event pattern:** Integration events are Java records with only primitive types (serializable). Domain events stay inside their context. Taxonomy: `OrcamentoAprovadoEvent` (OS→Estoque, sync, same-tx), `OSFinalizadaEvent` (OS→Pagamento, sync), `PagamentoConfirmadoEvent` (Pagamento→OS, sync). Choreography-based saga — no orchestrator needed.
+**Core technologies:**
+- **WhatsApp Cloud API v19.0+**: Direct-to-Meta notification messaging — free tier, no middleman fees, template-based messages with URL buttons for budget approval and text templates for OS finished notifications
+- **Quarkus REST Client 3.36.0** (`quarkus-rest-client-jackson`): Declarative HTTP client — fits existing Mekano pattern, zero boilerplate, testable via WireMock. **Reactive variant** recommended for consistency with existing `quarkus-rest-jackson` server
+- **WireMock 3.x** (`quarkus-wiremock:1.6.3`): Mock WhatsApp API in tests — Quarkus DevService, auto-starts in dev/test, native `@ConnectWireMock` annotation
+- **JaCoCo Maven Plugin 0.8.12**: `LINE` counter at 80%, `BUNDLE` element, `report-aggregate` for cross-module report. Excludes: DTOs, Entities, Resources, ExceptionMappers, Config, MapStruct Impl, REST Client proxies
+- **Terraform v1.8+**: IaC with `hashicorp/aws ~> 5.0` for EKS + RDS. S3 backend with state locking. **No Helm** — plain YAML `kubectl apply -f` for v2.0
+- **Kind 0.20+**: Local K8s cluster — Docker-based, 30s startup, `kind load docker-image` for local testing
+- **HPA `autoscaling/v2`**: CPU 70% + memory 80% targets, minReplicas: 2, maxReplicas: 8, scaleDown stabilization window: 120s
 
 ### Expected Features
 
-**Must-have for MVP (Phase 1) — 8 features:**
-1. OS Lifecycle with 7-status state machine (RECEBIDA → EM_DIAGNOSTICO → AGUARDANDO_APROVACAO → CANCELADA/EM_EXECUCAO → FINALIZADA → ENTREGUE)
-2. Client Registration with CPF/CNPJ validation and uniqueness
-3. Vehicle Registration with Mercosul plate validation and uniqueness per client
-4. Service Type Catalog (CRUD)
-5. Budget Generation + Client Approval via public link (CDC Art. 40 compliance)
-6. Parts/Supplies CRUD with non-negative balance invariants
-7. Stock Reservation on Budget Approval (cross-aggregate coordination via event)
-8. Payment Processing + Vehicle Delivery (completes business cycle)
-Plus: Public Client Status Tracking, Minimum Stock Alerts, OS Listing with Filters
+**Must have (P1 — core milestone scope):**
+- **WPP-01**: WhatsApp notification on orçamento creation — template message with URL button linking to `/orcamentos/{uuid}/aprovar` (public endpoint, already `@PermitAll`). Customer taps → opens browser → approves/rejects
+- **WPP-02**: WhatsApp notification when OS transitions to `FINALIZADA` — text template informing customer vehicle is ready for pickup
+- **API-04**: Ordered OS listing by status priority — `EM_EXECUCAO` > `AGUARDANDO_APROVACAO` > `EM_DIAGNOSTICO` > `RECEBIDA` > `AGUARDANDO_EXECUCAO`, sorted FIFO within same priority. Implemented via **JPQL ORDER BY CASE** (single query, no denormalization)
+- **INF-01/INF-02**: Docker review + K8s manifests (Deployment, Service, ConfigMap, Secret, HPA, Ingress)
+- **QLD-01**: 80% LINE coverage — currently ~60-65% overall. Biggest gaps in infrastructure (50-60%) and REST resources (60-70%). Domain is already ~90%+
+- **DOC-05/DOC-08**: README + Swagger/Postman — Swagger already exists via `quarkus-smallrye-openapi`, Postman collection exists at root
 
-**Differentiators (competitive moat):**
-- **SLA auto-expiration** — no competitor offers this. `PoliticaSLA` value object with `tempoMaximoAprovacao`. Auto-cancels OS when budget expires.
-- **Public status tracking** — only ~20% of competitors offer this. Reduces atendente phone calls.
-- **API-first architecture** — competitors are closed SaaS. Our Clean Architecture enables mobile/web/third-party integrations they cannot match.
-- **Automatic stock reservation on approval** — few competitors link OS, orçamento, and estoque atomically.
-- **Auto-purchase requisition** — triggers when stock insufficient for approved OS or below minimum.
+**Should have (P2):**
+- **INF-03**: Terraform scripts for EKS + RDS provisioning
+- **INF-04**: CD pipeline (GitHub Actions → Docker build → push to registry → `kubectl set image`)
+- **QLD-02**: Clean Code/SOLID refactoring — strictly scoped to 5-10 specific items (fix `NfEntradaRepositoryImpl` copy-paste bug, fix `ClienteService.updateCliente`, merge `Placa`/`PlacaVeiculo` VOs, remove empty mappers, fix field injection in stub services)
+- **DOC-06/DOC-07**: Sequence diagrams + CI/CD flow diagram (Mermaid in README)
 
-**Legal requirements:**
-- CDC Art. 40: Orçamento prévio detalhado with explicit client approval. Items cannot be added after approval without re-authorization.
-- CDC Art. 26: 90-day minimum warranty on services and parts. Record warranty start date per item.
-- IN RFB 2.229: Alphanumeric CNPJ mandatory from July 2026. Validate with base-36 check-digit algorithm.
-- NFS-e Nacional: Mandatory from Jan 2026 per LC 214/2024. Target national standard API.
-
-**Anti-features (defer):** Real-time chat, full accounting (DRE/SPED), AI diagnostics, mobile app, real payment gateway integration, multi-workshop, online scheduling.
+**Defer (v3+):**
+- Full WhatsApp two-way conversation (requires webhook server + NLP)
+- WhatsApp payment links (PCI compliance)
+- Multiple WhatsApp business numbers (multi-branch)
+- Prometheus/Grafana monitoring (beyond current scope — Micrometer metrics already exist)
+- Redis-backed cache (Caffeine local cache is sufficient for 60s TTL)
 
 ### Architecture Approach
 
-**4-module Clean Architecture** with bounded contexts grouped within each layer. Three new contexts (Ordem de Serviço, Estoque, Pagamento) join the existing User/Auth context. Each context has its own packages in domain/model/, application/service/, infrastructure/entity+repository, and rest/api/.
+WhatsApp integration follows the existing Port/Adapter (hexagonal) pattern: a pure Java `NotificationOutputPort` interface in `mekano-domain`, implemented by `TwilioWhatsAppAdapter` in `mekano-infrastructure`. Notifications are triggered via CDI events (`OrcamentoAprovadoEvent`, `OSFinalizadaEvent`) observed with `TransactionPhase.AFTER_SUCCESS` — keeping HTTP calls outside `@Transactional` scope. No new Maven module is created (WhatsApp-only notification doesn't justify a 5th module). Configuration uses the existing 3-layer strategy (`@ConfigMapping` + YAML config file + K8s Secret/env vars).
 
-**Major architectural patterns:**
-1. **OS State Machine** — 7 statuses with explicit transition methods on the aggregate root (`iniciarDiagnostico()`, `finalizarDiagnostico()`, `aprovarOrcamento()`, etc.). No `setStatus()` — transitions are business methods that validate guards. Transition matrix with `Map<StatusOS, Set<StatusOS>>` as single source of truth.
-2. **Domain Events for Inter-Context Communication** — CDI `Event.fire()` (same transaction) for critical flows (stock reservation must succeed or OS approval rolls back). `Event.fireAsync()` for non-critical flows (payment confirmation → delivery). Integration events are Java records with primitives only.
-3. **Aggregate Design with UUID References** — `Cliente` and `Veiculo` are separate aggregates referenced by UUID from `OrdemDeServico`. `Orcamento` is a separate aggregate root with its own lifecycle. `ReservaEstoque` lives inside `Estoque` aggregate (consistency boundary for reservation).
-4. **Service as Consistency Coordinator** — `@Transactional` on Service methods. Event publisher fires after domain state change. Listeners in other contexts run in same/separate transaction depending on `@Observes` vs `@ObservesAsync`.
-
-**Major components per bounded context:**
-| Component | Responsibility |
-|-----------|----------------|
-| `OrdemDeServico` (AR) | OS state machine, item list, orçamento reference |
-| `Cliente` (AR) | Client registration, CPF/CNPJ validation |
-| `Veiculo` (AR) | Vehicle registration, plate uniqueness |
-| `Orcamento` (AR) | Budget generation, SLA expiry, approval workflow |
-| `Estoque` (AR) | Inventory balance, reservation, minimum stock |
-| `RequisicaoDeCompra` (AR) | Purchase requisition when stock insufficient |
-| `OrdemDePagamento` (AR) | Payment tracking, cobrança emission, delivery release |
-| `CdiEventPublisher` | Dispatches domain events via CDI Event bus |
-| `EventConsumer` | Listens for events, triggers cross-context reactions |
-
-**Test pyramid:** Domain tests (pure JUnit 5, no framework) → Component tests (`@QuarkusComponentTest`) → Integration tests (`@QuarkusTest` + REST Assured + DevServices) → ArchUnit boundary tests (1 per context). Cross-context flows tested via direct `Event.fire()` in test harness (deterministic, no timing issues).
+**Major components:**
+1. **`NotificationOutputPort`** (domain/port/out) — Pure Java interface: `sendOrcamentoApproved(Telefone, Orcamento)`, `sendOrcamentoRejected(...)`, `sendOSCompleted(Telefone, UUID)`. Zero framework annotations
+2. **`TwilioWhatsAppAdapter`** (infrastructure/notification/whatsapp) — Implements the port. Uses `@RegisterRestClient` for HTTP calls, `@Retry(maxRetries=2)`, `@CircuitBreaker`, `@Timeout(3000)`. REST Client interface is package-private
+3. **`WhatsAppNotificationObserver`** (infrastructure) — CDI event listener observing domain events with `@Observes(during = TransactionPhase.AFTER_SUCCESS)`. Calls the adapter, fires after the database transaction commits
+4. **K8s manifests** (k8s/) — Plain YAML: Deployment (2 replicas, health probes at `/q/health/live/ready/started`, resources 512Mi-1Gi/500m-2000m), Service (ClusterIP:8080), HPA (CPU 70%, mem 80%, 2-8 replicas)
+5. **Terraform modules** (terraform/) — `eks/`, `rds/`, `networking/` modules. S3 backend. Applied via GitHub Actions with OIDC auth
 
 ### Critical Pitfalls
 
-Top 5 pitfalls (all HIGH confidence, verified against multiple sources):
+1. **WhatsApp token expiration (24h)** — Meta access tokens expire daily. Without a programmatic refresh service using `app_id` + `app_secret`, notifications stop silently after day one. **Mitigation:** Build TokenManager as first WhatsApp component. Store token in K8s Secret (never ConfigMap/properties). Add a readiness check that pings WhatsApp API to verify token validity. Monitor HTTP 401 responses
 
-1. **Mega-Aggregate OS** — Putting Cliente, Veiculo, Orcamento, ItemOS inside OrdemDeServico creates transaction contention and performance degradation. *Prevention:* Split Orcamento into separate aggregate root. Reference Cliente/Veiculo by UUID only. Enforce with ArchUnit: `noClasses().that().resideInPackage("..ordemservico..").should().dependOn(Cliente.class)`.
+2. **JaCoCo multi-module false pass** — Current `BUNDLE` element checks per module independently. `mekano-domain` at 95% + `mekano-rest` at 70% passes the build even though overall coverage may be below 80%. **Mitigation:** Add `jacoco:report-aggregate` goal in `mekano-rest` POM. This collects `.exec` files from all dependent modules and produces a single project-wide report. Also add exclusions for `*MapperImpl.class` (MapStruct generated) and `*$RestClient*class` (REST Client proxies)
 
-2. **Incomplete State Machine** — Missing transition edges (e.g., re-orçamento from EM_EXECUCAO back to AGUARDANDO_APROVACAO) or illegal flows not enforced. *Prevention:* Build transition matrix as `Map<StatusOS, Set<StatusOS>>` with single parameterized test covering all 49 possible transitions. StatusOS is a value object with `canTransitionTo()`.
+3. **Clean Code refactoring scope creep** — "QLD-02: Clean Code and SOLID" is a trap. Without a fixed list of ≤10 specific items, developers will rename variables, extract methods, and reformat working code — introducing bugs in 517 passing tests. **Mitigation:** Create a written scope list with 5-10 items max. Ban stylistic changes. Run full test suite after every change. Accept "good enough" — 10 days left
 
-3. **Inventory Reservation Race Condition** — Two parallel OS approvals both read `saldoAtual = 5`, both pass the availability check, both write — overselling stock. *Prevention:* Atomic database-level `UPDATE item_estoque SET saldo_atual = saldo_atual - :qtd WHERE id = :id AND saldo_atual >= :qtd`. Use `LockModeType.PESSIMISTIC_WRITE` and `@Version`. Write concurrent test: 10 parallel requests for the same item, assert exactly N succeed (N = available stock).
+4. **Notification inside @Transactional** — Calling an HTTP API inside a `@Transactional` method holds the database connection open during network latency (potentially seconds). Under load, connection pool exhaustion follows. **Mitigation:** CDI events with `TransactionPhase.AFTER_SUCCESS` are the established pattern. The business transaction commits before any HTTP call. @Retry on the adapter doesn't compound the problem
 
-4. **Payment Webhook Idempotency** — Duplicate callbacks from bank service cause double-processing or 500 errors. Timing races between "OS finalized" and "payment confirmed" events. *Prevention:* Idempotency key (UUID) on every Cobranca. Check `processedEvents.exists(key)` before processing. Async boundary: `Pagamento.confirmar()` emits `PagamentoConfirmadoEvent` → separate handler calls `os.entregar()`. Validate payment amount >= cobranca amount.
+5. **Terraform state management** — Local `terraform.tfstate` files get committed to git, lost, or corrupted by concurrent `apply`. **Mitigation:** Use S3 backend from day 1. Enable `use_lockfile` for state locking. Add `*.tfstate*` to `.gitignore`. Pin provider versions with `required_providers`
 
-5. **Concurrent OS Status Writes** — Atendente, mecânico, and SLA timer all mutate the same OS concurrently. Default `READ_COMMITTED` isolation doesn't prevent lost updates. *Prevention:* `@Version` on OS aggregate. Explicit transition methods (not `setStatus()`). SLA timer checks status guard before transitioning.
+6. **HPA misconfiguration for JVM apps** — Quarkus on Java 17 with 512MB heap typically sits at 30-50% CPU under normal load. Default CPU 80% target may never trigger scaling. **Mitigation:** Benchmark before configuring HPA. Set CPU target to 70%. Add memory target. Verify `requests` are set (HPA needs them). Test with `kubectl run load-generator`
 
-**Deadline risk:** Building all 3 contexts in parallel without vertical slicing leads to day-8 integration scramble (Pitfall 9). **Mitigation:** Vertical slices — first 4 days all-hands on OS Core (establishes patterns), then split. Daily working demo by day 4 minimum.
+7. **Documentation drift** — README and Mermaid diagrams go stale within days of code changes. **Mitigation:** Swagger is auto-generated (source of truth for API). Keep README architecture docs high-level. Record demo video LAST (day 9-10). Add CI warning when README isn't updated alongside API changes
 
 ## Implications for Roadmap
 
-Based on combined research (feature dependencies, architecture build order, and pitfall prevention), the recommended phase structure follows a **vertical slice strategy** — completing one end-to-end flow before adding the next dimension of complexity.
+Based on research, the suggested phase structure for 10 days / 5 developers:
 
-### Phase 1: OS Foundation (Days 1-4)
-**Rationale:** OS Core is the dependency root — everything else (Estoque, Pagamento) builds on it. All 5 developers work on OS context to establish patterns (aggregates, value objects, state machine, events) that Estoque and Pagamento will replicate. Avoiding the horizontal-split trap (Pitfall 9).
-**Delivers:** Complete service-only OS lifecycle end-to-end. Cliente CRUD with Documento value object (CPF/CNPJ validation including alphanumeric). Veiculo CRUD with Placa value object (both old and Mercosul formats). Servico catalog CRUD. OS state machine with all 7 statuses and transition matrix. Budget generation with public approval link.
-**Addresses:** FEATURES P1-P3 (OS lifecycle, Client/Vehicle/Service, Budget/Approval) plus P6 (public status tracking — simple since OS lifecycle is done). Also covers OS-01 through OS-10 from PROJECT.md.
-**Avoids:** Pitfall 1 (mega-aggregate — enforce via ArchUnit from day 1), Pitfall 2 (incomplete state machine — transition matrix + parameterized test), Pitfall 6 (CPF/CNPJ validation — Documento VO with full edge case suite), Pitfall 7 (Mercosul plate — Placa VO with both formats), Pitfall 8 (Quarkus CDI — verify Jandex and annotation processor order), Pitfall 10 (soft delete + unique — partial unique indexes in Flyway migrations).
-**Research flag:** No additional research needed — patterns are well-established from existing codebase (User/UserEntity pattern, CdiEventPublisher, etc.) and confirmed by Quarkus docs.
+### Phase 1: Infrastructure Foundation (Days 1-2, 2-3 devs)
+**Rationale:** Docker must work before K8s manifests can be tested. K8s manifests must exist before CD pipeline. Terraform and CD can be parallel. This phase unblocks all deployment work
+**Delivers:** Verified Dockerfiles, `k8s/` manifests (Deployment, Service, ConfigMap, Secret skeleton, HPA, Ingress), local Kind cluster validation, Terraform scaffold with S3 backend
+**Addresses:** INF-01 (Docker review), INF-02 (K8s manifests), INF-03 (Terraform scaffold + backend config)
+**Stack:** Kind, plain YAML, Terraform, `quarkus.kubernetes.*` config properties
+**Avoids:** Pitfall 3 (probe confusion — define proper liveness=/live, readiness=/ready, startup=/started from the start), Pitfall 7 (Terraform state — configure S3 backend and .gitignore before first apply), Pitfall 9 (HPA — set realistic 70% CPU, 80% memory targets)
 
-### Phase 2: Estoque Integration (Days 5-7)
-**Rationale:** Building on the OS approval event. Stock reservation triggers on `OrcamentoAprovadoEvent` — the event shape was defined in Phase 1. 3 devs continue OS improvements (edge cases, SLA), 2 devs build Estoque context.
-**Delivers:** Parts/supplies CRUD with balance invariants. Stock reservation (atomic `UPDATE` pattern, `@Version`, `@Lock(PESSIMISTIC_WRITE)`). Parts withdrawal on execution start. Minimum stock alerts. Purchase requisition auto-generation. NF-e entry registration (simulated).
-**Addresses:** FEATURES P4 (Parts CRUD), P5 (Stock Reservation), P6 (Parts Withdrawal), P10 (Purchase Requisition). Covers EST-01 through EST-06 from PROJECT.md. Also OS-12 (SLA auto-expiration — uses the PoliticaSLA value object designed in Phase 1).
-**Uses:** CDI Event `@Observes(OrcamentoAprovadoEvent)` for reservation trigger. ArchUnit rules for Estoque context isolation. Caffeine cache for stock queries (extend existing pattern).
-**Avoids:** Pitfall 3 (inventory race condition — atomic UPDATE + concurrent test). Pitfall 5 (concurrent writes — `@Version` on Estoque aggregate).
-**Research flag:** No additional research needed — standard patterns for inventory reservation (O'Reilly DDIA, Vaughn Vernon IDDD). The atomic UPDATE pattern and pessimistic locking are well-documented.
+### Phase 2: WhatsApp Integration (Days 2-4, 1-2 devs, parallel with Phase 1)
+**Rationale:** Highest user value. Templates must be submitted to Meta on day 1 (approval takes hours to days). Port/adapter design is additive and doesn't block other work. Async with Phase 1 (different module, different concern)
+**Delivers:** `NotificationOutputPort` in domain, `TwilioWhatsAppAdapter` + `TwilioWhatsAppConfig` + REST Client interface in infrastructure, `WhatsAppNotificationObserver` (CDI event listener), `whatsapp-config.yml`, WireMock integration tests, 2 Meta templates submitted
+**Addresses:** WPP-01 (orçamento approval notification), WPP-02 (OS finished notification)
+**Stack:** `quarkus-rest-client-reactive`, `quarkus-wiremock`, WhatsApp Cloud API sandbox
+**Architecture:** Port/Adapter pattern, CDI events with `TransactionPhase.AFTER_SUCCESS`, `@Retry/@CircuitBreaker/@Timeout` on adapter
+**Avoids:** Pitfall 1 (token expiration — build TokenManager first), Pitfall 2 (rate limits — implement rate limiter), Pitfall 6 (mock-only — use WireMock with real error scenarios), Pitfall 11 (token in application.properties — store in K8s Secret)
 
-### Phase 3: Pagamento + Delivery (Days 8-10)
-**Rationale:** Payment processing completes the business cycle. Depends on OS finalized event (`OSFinalizadaEvent`) which produces the cobrança. 3 devs finalize OS edge cases and integration tests, 2 devs build Pagamento context.
-**Delivers:** OrdemDePagamento creation on OS finalization. Cobrança emission (simulated bank service). Payment confirmation with idempotency handling. Vehicle delivery registration (blocks until payment confirmed).
-**Addresses:** FEATURES P7 (Payment + Delivery). Covers PAG-01 through PAG-03 from PROJECT.md. Also public status tracking (now shows complete flow including payment status).
-**Uses:** CDI Event `@Observes(OSFinalizadaEvent)` for cobrança emission. `@Observes(PagamentoConfirmadoEvent)` for delivery release. `ServicoBancarioPort` interface in domain with simulated implementation in infrastructure.
-**Avoids:** Pitfall 4 (payment webhook idempotency — idempotency key + processed events table + async boundary). Pitfall 5 (concurrent writes — `@Version` on OrdemDePagamento).
-**Research flag:** Phase may benefit from deeper research if real bank integration is attempted (requires per-gateway certification). For MVP with simulated bank, patterns are standard.
-**Integration test critical path (from "Looks Done But Isn't" checklist):** Create OS with parts → approve orçamento → verify stock reservation → finalize OS → verify cobrança emitted → confirm payment → verify OS becomes ENTREGUE. Test idempotency: send same webhook twice → assert no double-processing.
+### Phase 3: Quality & Bug Fixes (Days 3-6, 2-3 devs, starts mid-Phase 2)
+**Rationale:** Fixes existing data corruption bugs before adding more features. JaCoCo gate must be correctly configured before measuring. Test coverage added continuously — not a single burst
+**Delivers:** Fixed `NfEntradaRepositoryImpl` copy-paste bug, fixed `ClienteService.updateCliente`, merged `Placa`/`PlacaVeiculo` VOs, removed empty mappers, switched 3 stub services to constructor injection, added infrastructure tests for NfEntrada + RequisicaoCompra repos, added WhatsApp adapter tests, configured JaCoCo `report-aggregate` in `mekano-rest`, verified 80% LINE coverage
+**Addresses:** QLD-01 (80% coverage), QLD-02 (Clean Code refactoring — scoped list only)
+**Stack:** JaCoCo 0.8.12, H2 for infra tests, WireMock for WhatsApp tests
+**Architecture:** Proper `report-aggregate` in `mekano-rest`, exclusions for generated code
+**Avoids:** Pitfall 4 (JaCoCo aggregation — use `report-aggregate` not per-module), Pitfall 5 (scope creep — fixed 5-10 item list, no stylistic changes), Pitfall 8 (low-value tests — focus on domain logic + edge cases, ban getter/setter tests)
+
+### Phase 4: API Improvements (Days 5-7, 1 dev, overlaps with Phase 3)
+**Rationale:** Small, additive feature. Single repository method + endpoint param. Doesn't block or get blocked by other phases
+**Delivers:** `GET /os?sort=priority&statusFilter=active` endpoint with JPQL `ORDER BY CASE` query, FIFO ordering within same priority, terminal states excluded, existing `listAll()` unchanged
+**Addresses:** API-04 (Ordered OS listing by status priority)
+**Stack:** JPQL, existing `StatusOS` enum
+**Architecture:** New port method `findAllActiveOrderedByPriority()` in `OrdemDeServicoServicePort`, new impl in `OrdemDeServicoServiceImpl`
+
+### Phase 5: Documentation & Polish (Days 7-9, 2-3 devs, can start earlier)
+**Rationale:** Docs must reflect final state. Record video last. Terraform CD pipeline needs infra and K8s to be stable first
+**Delivers:** README with architecture overview + ADRs, Mermaid sequence diagrams (WhatsApp flow, CI/CD), Swagger verified in production (`quarkus.swagger-ui.always-include=true`), updated Postman collection, Miro board, Terraform `apply` CD pipeline in GitHub Actions, HPA load test section in README, demo video (recorded last)
+**Addresses:** DOC-04 (demo video), DOC-05 (README), DOC-06/07 (diagrams), DOC-08 (API spec), DOC-09/10/11 (Miro, architecture doc, HPA explanation)
+**Stack:** Mermaid, `quarkus-smallrye-openapi`, GitHub Actions CD
+**Avoids:** Pitfall 10 (documentation drift — auto-generate Swagger, record video last, CI warning for doc changes)
 
 ### Phase Ordering Rationale
 
-- **Dependency graph is linear:** User/Auth (exists) → OS Core (Phase 1) → Estoque (Phase 2) and Pagamento (Phase 3). Phase 2 and 3 are independent of each other and can be built in parallel by different sub-teams once Phase 1 is complete.
-- **CDI events are the coupling mechanism:** The event shape (`OrcamentoAprovadoEvent`, `OSFinalizadaEvent`) must be defined in Phase 1 before consumers in Estoque/Pagamento can be implemented. Attempting parallel phase 1 for all three contexts means defining events without having implemented the producer — risky and error-prone.
-- **Pitfall 9 (deadline rush) dictates the sequencing:** The vertical-slice approach (one complete flow first) is the recommended strategy specifically to avoid integration-failure-on-day-8. All-hands on OS Core for 4 days establishes patterns, reduces context-switching overhead, and produces a demo-able result.
-- **Legal compliance drives feature priority:** CDC Art. 40 (orçamento prévio) makes budget generation and client approval non-negotiable for Phase 1. Without this flow, the workshop operates illegally. Payment processing (Phase 3) is secondary to the approval flow.
+- **Infrastructure first** because K8s manifests and Terraform scaffold are needed before any deployment automation can work. Docker verification is a quick win (already exists) but must be validated
+- **WhatsApp in parallel** with infra because the port/adapter pattern is additive — it doesn't touch existing code paths. Template approval lead time (hours-days) demands starting on day 1
+- **Quality early** (not last) because bug fixes and JaCoCo aggregation need to be in place before new features add more untested code. The coverage gate catches regressions during feature development, not after
+- **API improvement mid-cycle** because the ordered listing is a single-endpoint change with zero dependencies on WhatsApp or infra. It's a quick win that keeps momentum
+- **Documentation last** because the video, README, and diagrams must reflect the final, working system. Documenting WhatsApp before it's built means documenting intentions, not reality
+- **CD pipeline after K8s+Terraform** because CD needs a stable target (EKS cluster, RDS DB) to deploy to. The GitHub Actions workflow is the last automation piece
 
 ### Research Flags
 
 Phases likely needing deeper research during planning:
-- **Phase 3:** If real bank/payment gateway integration (PIX, boleto) is attempted instead of simulated `ServicoBancario` — requires per-gateway API research, webhook certification, and async callback architecture. Recommend deferring to Phase 3+ and using simulated service for MVP.
-- **Phase 2 (NF-e XML Import — EST-05):** If real NF-e XML parsing is required for MVP (not simulated), needs research on SEFAZ schema validation, NFe/XSD parser libraries, and fiscal layout mapping. Currently marked as Phase 3+ in FEATURES.md. Defer to Phase 2+.
+- **Phase 2 (WhatsApp):** WhatsApp template submission process (Meta Business Manager UI flow, approval times, template rejection reasons). The HTTP integration is well-understood; the administrative process is a blind spot. Also verify which domain events already exist vs need creation (`OrcamentoCriadoEvent` may not exist yet)
+- **Phase 3 (Quality):** Current coverage numbers per module need exact measurement via `jacoco:report` before setting a realistic plan. The ~60-65% estimate needs verification. The `NfEntradaRepositoryImpl` bug fix needs exact code review
+- **Phase 5 (Docs):** Whether Quarkus Swagger UI works in production (`quarkus.swagger-ui.always-include=true`). Video recording tooling and hosting requirements
 
 Phases with standard patterns (skip research-phase):
-- **Phase 1:** All patterns confirmed by existing codebase and Quarkus official docs. Clean Architecture, CDI events, MapStruct mappers, JPA repositories — all established patterns. Add ArchUnit boundary tests.
-- **Phase 2 (stock reservation):** Well-documented in DDIA, Vaughn Vernon IDDD. Atomic UPDATE pattern is standard. No niche library research needed.
-- **Phase 3 (payment simulation):** Standard port-adapter pattern already established in project (EventPublisher, PasswordHasher). Simulated bank is a simple `ServicoBancarioPort` impl.
+- **Phase 1 (Infra):** K8s manifests, Dockerfiles, HPA configuration — all well-documented Kubernetes patterns. Quarkus health endpoints are standard. Terraform EKS modules are documented by HashiCorp
+- **Phase 4 (API):** JPQL `ORDER BY CASE` is a standard SQL pattern. Adding a query parameter to an existing endpoint is routine
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | **HIGH** | All libraries verified on Maven Central with 2025-2026 releases. Quarkus CDI events confirmed by official docs and community discussion #51183. Existing codebase patterns validated. |
-| Features | **HIGH** | Verified against 14 competitor products (all HIGH/MEDIUM confidence sources), official Brazilian legislation (CDC, RFB, DENATRAN), and project's own Event Storming docs. Feature prioritization cross-referenced with legal requirements. |
-| Architecture | **HIGH** | Patterns verified against existing compiled codebase, Quarkus official docs, DDD reference literature (Vernon, Krzybek), and Quarkus blog. 3 bounded contexts mapped from Event Storming with clear aggregate boundaries and event flows. |
-| Pitfalls | **HIGH** | Multi-source verified: project's own G1-G10 gotcha list (from real experience), Vaughn Vernon aggregate design papers, O'Reilly DDIA, Quarkus CDI reference, Stripe payment patterns, Brazilian government regulations. |
+| Stack | HIGH | All recommendations verified via Context7 official docs (Quarkus 3.36 REST Client, JaCoCo 0.8.12, Terraform 1.8+, WhatsApp Cloud API). Stack alignment with existing codebase confirmed |
+| Features | HIGH | WhatsApp flow (template messages with URL buttons, free tier limits) confirmed via Meta docs. Priority ordering logic verified from existing StatusOS enum. Codebase analysis confirmed existing DTOs, events, and 517 tests. Bug inventory from AGENTS.md cross-referenced with source |
+| Architecture | HIGH | Existing module structure, dependency graph, and patterns verified against source code. Port/Adapter pattern confirmed across all 4 modules. Event publishing pattern (`CdiEventPublisher`) confirmed. Config file segregation pattern already in use |
+| Pitfalls | HIGH | WhatsApp token behavior, rate limits, and webhook validation confirmed via Meta docs. JaCoCo multi-module aggregation issue is a known pattern. K8s probe best practices from Quarkus guides. Terraform state management from HashiCorp docs. Clean Code scope creep is experiential but well-documented |
 
-**Overall confidence: HIGH** — all 4 research areas have strong source triangulation (official docs + community patterns + existing codebase + competitor analysis). No major gaps or conflicting information across the 4 files.
+**Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Real payment gateway specifics:** The research assumes a simulated `ServicoBancario` for MVP. If Phase 3 scope expands to include real PIX/boleto integration, per-gateway API research (Asaas, Stone, Cielo) will be needed during the Pagamento Foundation Phase. The idempotency patterns and async webhook architecture from Pitfall 4 provide the structural foundation but gateway-specific certification requirements are undeclared.
-- **NF-e XML integration depth:** Research covers the requirement (EST-05) and the anti-pattern (re-implementing SEFAZ validation) but does not specify which XML parsing library to use. If this moves into MVP scope, a dedicated library research task is needed.
-- **Workshop-scale performance validation:** Performance traps are documented but not benchmarked. The research assumes workshop-scale traffic (<100 OS/month) won't hit bottlenecks. If the deployment context changes (multi-workshop on day 1), re-validation needed. Not a blocker for the 10-day sprint.
+- **WhatsApp template approval timeline**: Meta approval can take hours to days with rejection risks (policy violations, unclear template purpose). **Action:** Submit both templates on day 1. Have fallback text notifications ready if approval is delayed
+- **Exact current coverage numbers**: Estimated ~60-65% but not measured exactly. **Action:** Run `./mvnw verify -pl mekano-rest -am` with `jacoco:report` on current code (before v2.0 changes) to establish baseline. Check if `*MapperImpl.class` exclusions are already effective
+- **`OrcamentoCriadoEvent` existence**: The domain event that should fire when orçamento is created may not exist. The state machine transitions exist but the event may need creation. **Action:** Verify in `mekano-domain/event/` — create event if missing
+- **WhatsApp Cloud API sandbox availability**: The sandbox (test numbers + pre-approved templates) behavior needs verification. **Action:** Create Meta Business Account and test number on day 1 as proof of concept before building the adapter
+- **K8s metrics-server in Kind**: Kind doesn't ship metrics-server. HPA won't work without it. **Action:** Verify `kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml` works with Kind. This is needed for HPA testing in local dev
+- **CD pipeline OIDC setup**: GitHub Actions OIDC trust with AWS needs IAM role creation (may be blocked by permissions). **Action:** Document the manual AWS setup steps. Consider a fallback: push to GHCR + manual `kubectl` for demo if OIDC is blocked
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- **Existing codebase** — `.planning/codebase/ARCHITECTURE.md`, `.planning/codebase/STRUCTURE.md`, `CLAUDE.md` — compiled code patterns for User/Auth context. All patterns verified against compiled code.
-- **Project documentation** — `docs/EventStorming_Mermaid.md` (aggregate definitions, events, state machine), `docs/MEKANO_DOCUMENTATION.md` (functional requirements), `.planning/PROJECT.md` (current context).
-- **Quarkus CDI Reference** — Official docs confirming `jakarta.enterprise.event.Event` API and `@Observes` patterns. Quarkus Discussion #51183 confirming CDI events for bounded contexts in monoliths.
-- **Quarkus Testing Guide** — `@QuarkusTest` vs `@QuarkusComponentTest` patterns for multi-context testing. Published 2025.
-- **Brazilian Legislation** — CDC Lei 8.078/90 (Art. 35, 39, 40), IN RFB 2.229 (alphanumeric CNPJ from July 2026), LC 214/2024 (NFS-e Nacional from Jan 2026), DENATRAN Res. 780/2019 (Mercosul plate).
-- **Vaughn Vernon "Effective Aggregate Design"** (DDDCommunity, 2011) — Parts I-III. Primary source for aggregate consistency boundaries and the "mega-aggregate" anti-pattern.
-- **O'Reilly "Designing Data-Intensive Applications"** — Inventory reservation race condition patterns (atomic updates, pessimistic locking).
-- **Existing Gotcha List (G1-G10)** — Project's own CLAUDE.md, derived from real experience building the auth subsystem. Covers Quarkus multi-module CDI failures, MapStruct processor ordering, Flyway naming, JWT scoping.
+- **Context7 `/quarkusio/quarkus`** — REST Client declarations, Mutiny Uni patterns, `@ConfigMapping`, SmallRye Fault Tolerance (`@Retry/@CircuitBreaker/@Timeout`), K8s config/secret mapping, health probes, `quarkus.kubernetes.*` properties, OpenAPI/Swagger UI
+- **Context7 `/jacoco/jacoco`** — `check` mojo parameters, `LINE` counter, `BUNDLE` element, `report-aggregate` goal, exclusion patterns
+- **Context7 `/hashicorp/terraform`** — S3 backend configuration, state locking (`use_lockfile`), `required_providers` version constraints
+- **Context7 `/kubernetes/website`** — HPA v2 API, resource/custom metrics, scaling behavior, stabilization window
+- **Context7 `/llmstxt/twilio_llms_txt`** — Twilio WhatsApp message POST endpoint, form-encoded body, Basic Auth pattern
+- **Existing codebase analysis** — Module structure, dependency graph, 517 tests, AGENTS.md cross-referenced bug inventory, JaCoCo config in parent pom.xml, health check implementations, existing event system, `StatusOS` enum, `OrdemDeServico` state machine
+- **PROJECT.md** — Milestone requirements, feature IDs (WPP-*, API-04, INF-*, QLD-*, DOC-*), capacity (10 days, 5 devs)
 
 ### Secondary (MEDIUM confidence)
-- **14 Competitor Products Analyzed** — MecPro, Ultracar, Garage, AutoERP, MecânicaFlow, and 10 others. Feature matrix cross-reference for table stakes vs differentiators.
-- **Modular Monolith with DDD (Krzybek, GitHub)** — Reference architecture for integration events vs domain events pattern. High-quality patterns but not officially Quarkus-specific.
-- **ArchUnit Part 2: Enforcing DDD Boundaries (Jitin Kayyala, 2026)** — Specific ArchUnit rules for bounded context isolation.
-- **Brazilian document validation libraries** — Multiple alternatives evaluated (danielfariati, jereztech, andrelamego, robsonkades) before selecting `cpf-cnpj-utils`. Dead project dates and license restrictions verified on Maven Central.
+- **WhatsApp Cloud API free tier limits** — 1,000 conversations/month confirmed via Meta developer docs but free tier exact billing could not be directly verified via API call (400 error on endpoint). Multiple sources agree on the 1K conversation/month tier
+
+### Tertiary (LOW confidence)
+- **Twilio template SID format** — Exact ContentSid format for WhatsApp template messages needs verification against Twilio console. The architecture uses the correct POST endpoint but template variable format may differ
 
 ---
 
-*Research completed: 2026-06-20*
+*Research completed: 2026-08-08*
 *Ready for roadmap: yes*

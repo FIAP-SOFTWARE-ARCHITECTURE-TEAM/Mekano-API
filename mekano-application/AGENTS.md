@@ -13,9 +13,10 @@ com.fiap.mekano.application
     │   │                                constructor injection, @Transactional on execute/deleteUser
     │   │                                creates User, hashes password, publishes UserCreatedEvent
     │   └── CreateUserResponse.java    — record(UUID id, String name, String email, LocalDateTime createdAt)
-    ├── cliente/                 ## IMPLEMENTED (with bug)
+    ├── cliente/                 ## FULLY IMPLEMENTED
     │   ├── ClienteService.java        — @ApplicationScoped, implements ClienteServicePort
-    │   │                                ⚠ updateCliente() finds entity but DOES NOT APPLY updates (bug)
+    │   │                                constructor injection, @Transactional on execute/update/delete
+    │   │                                validates required fields, preserves cpf/createdAt on update
     │   └── CreateClienteResponse.java — record
     ├── vehicle/                 ## FULLY IMPLEMENTED
     │   ├── VeiculoService.java        — @ApplicationScoped, implements VeiculoServicePort
@@ -27,6 +28,21 @@ com.fiap.mekano.application
     │   │                                constructor injection, @Transactional on create/update/delete
     │   │                                nome normalization, uniqueness check with existsByNomeAndIdNot
     │   └── (no response record — returns domain entity directly)
+    ├── ordemdeservico/          ## FULLY IMPLEMENTED
+    │   ├── OrdemDeServicoService.java — @ApplicationScoped, implements OrdemDeServicoServicePort
+    │   │                                constructor injection, @Transactional on all write methods
+    │   │                                manages OS lifecycle (create → diagnose → execute → deliver)
+    │   │                                validates items via ItemOsRepositoryPort + PecaRepository/ServicoRepository
+    │   │                                create(): persists items to os_itens junction table
+    │   │                                update(): deletes old items, persists new ones
+    │   │                                finalizarDiagnostico(): adds mechanic items, creates Orcamento from ALL items
+    │   └── (no response record — returns domain entity directly)
+    ├── orcamento/               ## FULLY IMPLEMENTED
+    │   └── OrcamentoService.java      — @ApplicationScoped, implements OrcamentoServicePort
+    │                                    aprovacao/reprovacao with status validation
+    ├── pagamento/               ## FULLY IMPLEMENTED
+    │   └── PagamentoService.java      — @ApplicationScoped
+    │                                    confirmacao with status validation
     ├── peca/                    ## STUB (incomplete)
     │   ├── PecaService.java           — @ApplicationScoped, does NOT implement any port
     │   │                                ⚠ field injection (@Inject) — violates constructor injection convention
@@ -36,9 +52,12 @@ com.fiap.mekano.application
     │   ├── NfEntradaService.java      — @ApplicationScoped, does NOT implement any port
     │   │                                ⚠ field injection, hardcoded response
     │   └── CreateNfEntradaResponse.java — record
-    └── requisicao/              ## STUB (incomplete)
+    └── requisicao/              ## FULLY IMPLEMENTED
         ├── RequisicaoCompraService.java — @ApplicationScoped, does NOT implement any port
-        │                                  ⚠ field injection, hardcoded response
+        │                                  constructor injection (RequisicaoCompraRepositoryPort + PecaRepositoryPort)
+        │                                  @Transactional on criar/cancelar/enviar/marcarComoComprada/marcarComoRecebida
+        │                                  criar(): validates peca existence via PecaRepositoryPort
+        │                                  cancelar(): blocks cancellation when motivo=ORDEM_SERVICO
         └── CreateRequisicaoCompraResponse.java — record
 ```
 
@@ -51,16 +70,13 @@ com.fiap.mekano.application
 6. Response records never expose `passwordHash` or domain entities directly
 
 ## Stub Services — What NOT to Do
-The 3 stub services (`PecaService`, `NfEntradaService`, `RequisicaoCompraService`) violate conventions:
+The 2 stub services (`PecaService`, `NfEntradaService`) violate conventions:
 - No port implementation
 - Field injection instead of constructor injection
 - No `@Transactional`
 - Return hardcoded values
 
 These are placeholders awaiting real implementation.
-
-## Known Bug
-- `ClienteService.updateCliente(UUID, UpdateClienteCommand)` — finds entity but does not apply update fields from command
 
 ## Dependencies
 - **compile**: mekano-domain, quarkus-arc
@@ -70,5 +86,5 @@ These are placeholders awaiting real implementation.
 ## Testing
 - JUnit 5 + Mockito `@ExtendWith(MockitoExtension.class)` — no Quarkus container
 - `@Mock` for ports, `@InjectMocks` for service
-- 3 test files: `UserServiceTest`, `VeiculoServiceTest`, `ServicoServiceTest`
-- No tests for stub services (Peca, NfEntrada, RequisicaoCompra)
+- 17 test files: `UserServiceTest`, `VeiculoServiceTest`, `ServicoServiceTest`, `ClienteServiceTest`, `OrdemDeServicoServiceTest`, `OrcamentoServiceTest`, `PecaServiceTest`, `NfEntradaServiceTest`, `RequisicaoCompraServiceTest`, `AdminUserServiceTest`, `AuthServiceJwtTest`, `PasswordGeneratorTest`, `RefreshTokenServiceTest`, `MockPaymentServiceTest`, `CobrancaEmitidaListenerTest`, `OsAuditEventPublisherTest`, `OsAuditQueryServiceTest`, `WhatsAppOrcamentoRespostaServiceTest`
+- No tests for stub services (Peca, NfEntrada)

@@ -8,7 +8,6 @@ public record CreateNfEntradaResponse(
     UUID id,
     String chaveAcesso,
     BigDecimal valorTotal,
-    UUID pecaId,
     UUID requisicaoCompraId,
     LocalDateTime createdAt
 ) {}

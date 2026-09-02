@@ -2,38 +2,53 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: mekano-postgres
+    restart: unless-stopped
     ports:
       - "5432:5432"
     environment:
       POSTGRES_DB: mekano
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_USER: ${DB_USER:?DB_USER is required}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init-evolution-db.sql:/docker-entrypoint-initdb.d/init-evolution-db.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d mekano"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d mekano"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     deploy:
       restart_policy:
         condition: on-failure
         delay: 10s
         max_attempts: 3
+    networks:
+      - mekano-net
 
   mekano:
-    image: ${MEKANO_IMAGE:-mekano-api:latest}
-    container_name: mekano-api
+    image: ${DOCKER_REGISTRY}/${PROJECT_NAME:-mekano-api}:${IMAGE_TAG:-latest}
+    container_name: ${PROJECT_NAME:-mekano-api}_backend_prod
+    restart: unless-stopped
     ports:
       - "8080:8080"
     environment:
       QUARKUS_PROFILE: prod
       DB_URL: jdbc:postgresql://postgres:5432/mekano
-      DB_USER: ${POSTGRES_USER}
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
-      SMALLRYE_JWT_SIGN_KEY_LOCATION: /etc/mekano/secrets/privatekey.pem
-      MP_JWT_VERIFY_PUBLICKEY_LOCATION: /etc/mekano/secrets/publicKey.pem
+      DB_USER: ${DB_USER:?DB_USER is required}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      SMALLRYE_JWT_SIGN_KEY_LOCATION: file:/etc/mekano/secrets/privatekey.pem
+      MP_JWT_VERIFY_PUBLICKEY_LOCATION: file:/etc/mekano/secrets/publicKey.pem
+      EVOLUTION_API_URL: ${EVOLUTION_API_URL:-http://evolution-api:5033}
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:?EVOLUTION_API_KEY is required}
+      EVOLUTION_INSTANCE_NAME: ${EVOLUTION_INSTANCE_NAME:-mekano}
+      EVOLUTION_WEBHOOK_TOKEN: ${EVOLUTION_WEBHOOK_TOKEN:?EVOLUTION_WEBHOOK_TOKEN is required}
+      MEKANO_PUBLIC_URL: ${MEKANO_PUBLIC_URL:?MEKANO_PUBLIC_URL is required}
     volumes:
       - /etc/mekano/secrets:/etc/mekano/secrets:ro
     depends_on:
@@ -50,6 +65,50 @@ services:
         condition: on-failure
         delay: 10s
         max_attempts: 5
+    networks:
+      - mekano-net
+
+  evolution-api:
+    image: evoapicloud/evolution-api:latest
+    container_name: mekano-evolution-api
+    restart: unless-stopped
+    ports:
+      - "5033:5033"
+    environment:
+      SERVER_URL: ${EVOLUTION_SERVER_URL:?EVOLUTION_SERVER_URL is required}
+      SERVER_PORT: "5033"
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:?EVOLUTION_API_KEY is required}
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/evolution?schema=public
+      DATABASE_SAVE_DATA_INSTANCE: "true"
+      DATABASE_SAVE_DATA_NEW_MESSAGE: "true"
+      DATABASE_SAVE_MESSAGE_UPDATE: "true"
+      DATABASE_SAVE_DATA_CONTACTS: "true"
+      DATABASE_SAVE_DATA_CHATS: "true"
+      CACHE_LOCAL_ENABLED: "true"
+      CACHE_LOCAL_TTL: 3600
+      CACHE_REDIS_ENABLED: "false"
+      WEBHOOK_GLOBAL_ENABLED: "true"
+      WEBHOOK_GLOBAL_URL: http://mekano:8080/api/v1/webhooks/evolution
+      WEBHOOK_GLOBAL_EVENTS: MESSAGES_UPSERT
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - mekano-net
+
+networks:
+  mekano-net:
+    driver: bridge
 
 volumes:
   postgres_data:

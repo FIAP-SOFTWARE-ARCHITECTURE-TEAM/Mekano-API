@@ -65,11 +65,11 @@ public class AdminUserService implements AdminUserServicePort {
     }
 
     @Override
-    public List<AdminUserSummary> listar(int page, int size) {
+    public List<AdminUserSummary> listar(int page, int size, Boolean isActive) {
         int safePage = Math.max(page, 0);
         int safeSize = Math.min(Math.max(size, 1), 100);
 
-        return userRepository.findAll(safePage, safeSize, "createdAt desc")
+        return userRepository.findAll(safePage, safeSize, "createdAt desc", isActive)
                 .stream()
                 .map(user -> new AdminUserSummary(
                         user.getId(),

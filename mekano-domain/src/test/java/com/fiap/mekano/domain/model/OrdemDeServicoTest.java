@@ -29,7 +29,7 @@ class OrdemDeServicoTest {
             StatusOS.EM_EXECUCAO, Set.of(StatusOS.FINALIZADA, StatusOS.CANCELADA),
             StatusOS.FINALIZADA, Set.of(StatusOS.ENTREGUE),
             StatusOS.ENTREGUE, Set.of(),
-            StatusOS.CANCELADA, Set.of()
+            StatusOS.CANCELADA, Set.of(StatusOS.ENTREGUE)
     );
 
     /**
@@ -158,7 +158,7 @@ class OrdemDeServicoTest {
         OrdemDeServico os = criarOS();
         os.cancelarPorSLA();
         assertEquals(StatusOS.CANCELADA, os.getStatus());
-        assertEquals("Cancelamento automático por SLA", os.getMotivoCancelamento());
+        assertEquals("SLA expirado", os.getMotivoCancelamento());
     }
 
     @Test
@@ -206,14 +206,16 @@ class OrdemDeServicoTest {
     }
 
     @Test
-    @DisplayName("CANCELADA é terminal — nenhuma transição de saída")
-    void canceladaDeveSerTerminal() {
+    @DisplayName("CANCELADA permite transição para ENTREGUE (devolução de veículo)")
+    void canceladaDevePermitirEntrega() {
         OrdemDeServico os = criarOS();
         os.cancelar("motivo");
 
         assertThrows(AppException.class, os::iniciarDiagnostico);
         assertThrows(AppException.class, () -> os.finalizarExecucao(null));
-        assertThrows(AppException.class, () -> os.entregar("Cliente"));
+
+        os.entregar("Cliente");
+        assertEquals(StatusOS.ENTREGUE, os.getStatus());
     }
 
     @Test
@@ -233,11 +235,11 @@ class OrdemDeServicoTest {
         LocalDateTime createdAt = LocalDateTime.of(2026, 1, 1, 10, 0);
 
         OrdemDeServico os = OrdemDeServico.reconstitute(
-                id, clienteId, veiculoId, "Barulho no motor",
+                id, clienteId, veiculoId,
+                "Barulho no motor",
                 StatusOS.EM_EXECUCAO, null, null, null,
-                null, null, null, null,
-                null, null, null, null,
-                null, null, null, null,
+                null, null, null, null, null, null, null,
+                null, null, null, null, null,
                 null, null, null, createdAt, 3L
         );
 

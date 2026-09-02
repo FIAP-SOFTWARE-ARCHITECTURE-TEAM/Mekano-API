@@ -10,6 +10,7 @@ import com.fiap.mekano.domain.port.in.UpdateClienteCommand;
 import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;
 import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
@@ -24,7 +25,7 @@ public class ClienteService implements ClienteServicePort {
     private final OrdemDeServicoRepositoryPort osRepository;
 
     public ClienteService(ClienteRepositoryPort clienteRepository, EventPublisher eventPublisher,
-                          OrdemDeServicoRepositoryPort osRepository) {
+            OrdemDeServicoRepositoryPort osRepository) {
         this.clienteRepository = clienteRepository;
         this.eventPublisher = eventPublisher;
         this.osRepository = osRepository;
@@ -33,41 +34,96 @@ public class ClienteService implements ClienteServicePort {
     @Override
     @Transactional
     public Cliente execute(CreateClienteCommand command) {
+        if (clienteRepository.existsByCpf(command.cpf())) {
+            throw new AppException(409, Messages.get("cliente.already.exists", command.cpf()));
+        }
+
         Cliente cliente = Cliente.create(command.nome(), command.cpf(), command.email(),
-            command.telefone(), command.logradouro(), command.numero(), command.bairro(),
-            command.cidade(), command.uf(), command.cep());
-        Cliente saved = clienteRepository.save(cliente);
-        eventPublisher.publish(ClienteCriadoEvent.of(saved));
-        return saved;
+                command.telefone(), command.logradouro(), command.numero(), command.bairro(),
+                command.cidade(), command.uf(), command.cep());
+        Cliente criado = clienteRepository.create(cliente);
+        eventPublisher.publish(ClienteCriadoEvent.of(criado));
+        return criado;
     }
 
     @Override
+    @Transactional
     public Cliente updateCliente(UUID id, UpdateClienteCommand command) {
-        return clienteRepository.findById(id)
-            .orElseThrow(() -> new AppException(404, Messages.get("cliente.not.found", id)));
+        Cliente cliente = clienteRepository.findById(id)
+                .orElseThrow(() -> new AppException(404, Messages.get("cliente.not.found", id)));
+
+        // Validar campos obrigatórios
+        validarUpdate(command);
+
+        cliente.atualizar(
+                command.nome(),
+                command.email(),
+                command.telefone(),
+                command.logradouro(),
+                command.numero(),
+                command.bairro(),
+                command.cidade(),
+                command.uf(),
+                command.cep());
+
+        return clienteRepository.update(cliente);
+    }
+
+    private void validarUpdate(UpdateClienteCommand command) {
+        if (command.nome() == null || command.nome().isBlank()) {
+            throw new AppException(400, Messages.get("cliente.name.required"));
+        }
+        if (command.email() == null || command.email().isBlank()) {
+            throw new AppException(400, "E-mail é obrigatório");
+        }
+        if (command.logradouro() == null || command.logradouro().isBlank()) {
+            throw new AppException(400, "Logradouro é obrigatório");
+        }
+        if (command.numero() == null || command.numero().isBlank()) {
+            throw new AppException(400, "Número é obrigatório");
+        }
+        if (command.bairro() == null || command.bairro().isBlank()) {
+            throw new AppException(400, "Bairro é obrigatório");
+        }
+        if (command.cidade() == null || command.cidade().isBlank()) {
+            throw new AppException(400, "Cidade é obrigatória");
+        }
+        if (command.uf() == null || command.uf().isBlank()) {
+            throw new AppException(400, "UF é obrigatória");
+        }
+        if (command.cep() == null || command.cep().isBlank()) {
+            throw new AppException(400, "CEP é obrigatório");
+        }
     }
 
     @Override
     public Cliente findClienteById(UUID id) {
         return clienteRepository.findById(id)
-            .orElseThrow(() -> new AppException(404, Messages.get("cliente.not.found", id)));
+                .orElseThrow(() -> new AppException(404, Messages.get("cliente.not.found", id)));
     }
 
     @Override
-    public List<Cliente> findAllClientes(int page, int size, String sort) {
-        return clienteRepository.findAll(page, size, sort);
+    public List<Cliente> findAllClientes(int page, int size, String sort, Boolean isActive) {
+        return clienteRepository.findAll(page, size, sort, isActive);
     }
 
     @Override
-    public long countAllClientes() {
-        return clienteRepository.countAll();
+    public long countAllClientes(Boolean isActive) {
+        return clienteRepository.countAll(isActive);
     }
 
     @Override
+    @Transactional
     public void deleteCliente(UUID id) {
         if (osRepository.existsByClienteUuidAndStatusIn(id, List.of("EM_EXECUCAO", "AGUARDANDO_APROVACAO"))) {
             throw new AppException(409, Messages.get("os.cliente.possui.os.ativa"));
         }
         clienteRepository.markAsDeleted(id);
+    }
+
+    @Override
+    @Transactional
+    public void reactivate(UUID id) {
+        clienteRepository.reactivate(id);
     }
 }

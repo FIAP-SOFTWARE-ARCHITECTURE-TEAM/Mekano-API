@@ -1,12 +1,19 @@
 package com.fiap.mekano.rest.api;
 
-import com.fiap.mekano.application.service.nfentrada.CreateNfEntradaResponse;
 import com.fiap.mekano.application.service.nfentrada.NfEntradaService;
+import com.fiap.mekano.domain.model.MotivoRequisicao;
 import com.fiap.mekano.domain.model.NfEntrada;
+import com.fiap.mekano.domain.model.RequisicaoCompra;
+import com.fiap.mekano.domain.model.StatusRequisicao;
+import com.fiap.mekano.domain.port.out.EventPublisher;
+import com.fiap.mekano.domain.port.out.NfEntradaRepositoryPort;
+import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
+import com.fiap.mekano.domain.port.out.RequisicaoCompraRepositoryPort;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
 import io.restassured.http.ContentType;
+import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -16,6 +23,8 @@ import org.mockito.Mockito;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -34,8 +43,20 @@ class NfEntradaResourceTest {
     private static final UUID PECA_UUID = UUID.randomUUID();
     private static final UUID REQUISICAO_UUID = UUID.randomUUID();
 
-    @InjectMock
+    @Inject
     NfEntradaService nfEntradaService;
+
+    @InjectMock
+    NfEntradaRepositoryPort nfEntradaRepository;
+
+    @InjectMock
+    PecaRepositoryPort pecaRepository;
+
+    @InjectMock
+    RequisicaoCompraRepositoryPort requisicaoRepository;
+
+    @InjectMock
+    EventPublisher eventPublisher;
 
     @BeforeEach
     void setUp() {
@@ -44,19 +65,27 @@ class NfEntradaResourceTest {
                 NF_UUID,
                 "35200612345678000190550000001234567890123456",
                 new BigDecimal("1875.00"),
-                PECA_UUID, REQUISICAO_UUID, now);
+                REQUISICAO_UUID, now);
 
-        Mockito.when(nfEntradaService.registrar(any()))
-                .thenReturn(new CreateNfEntradaResponse(NF_UUID,
-                        "35200612345678000190550000001234567890123456",
-                        new BigDecimal("1875.00"),
-                        PECA_UUID, REQUISICAO_UUID, now));
+        var mockRequisicao = RequisicaoCompra.reconstitute(
+                REQUISICAO_UUID,
+                List.of(new com.fiap.mekano.domain.model.ItemRequisicaoCompra(PECA_UUID, 5L)),
+                StatusRequisicao.PRODUTO_RECEBIDO, MotivoRequisicao.ESTOQUE_MINIMO, now);
 
-        Mockito.when(nfEntradaService.buscarPorId(NF_UUID))
+        Mockito.when(requisicaoRepository.findById(REQUISICAO_UUID))
+                .thenReturn(Optional.of(mockRequisicao));
+
+        Mockito.when(nfEntradaRepository.save(any()))
                 .thenReturn(mockNf);
 
-        Mockito.when(nfEntradaService.buscarPorId(Mockito.argThat(id -> !id.equals(NF_UUID))))
-                .thenThrow(new com.fiap.mekano.domain.exception.AppException(404, "NF não encontrada"));
+        Mockito.when(nfEntradaRepository.findById(NF_UUID))
+                .thenReturn(Optional.of(mockNf));
+
+        Mockito.when(nfEntradaRepository.findById(Mockito.argThat(id -> !id.equals(NF_UUID))))
+                .thenReturn(Optional.empty());
+
+        Mockito.when(pecaRepository.findById(PECA_UUID))
+                .thenReturn(Optional.empty());
     }
 
     @Test

@@ -5,7 +5,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
@@ -13,27 +14,31 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "pecas")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class PecaEntity extends BaseEntity {
 
     @Column(name = "uuid", unique = true, nullable = false)
-    public UUID uuid = UUID.randomUUID();
+    private UUID uuid = UUID.randomUUID();
 
     @Column(name = "codigo", nullable = false)
-    public String codigo;
+    private String codigo;
 
     @Column(name = "descricao", nullable = false)
-    public String descricao;
+    private String descricao;
 
     @Column(name = "valor_unitario", nullable = false)
-    public BigDecimal valorUnitario;
+    private BigDecimal valorUnitario;
 
     @Column(name = "saldo", nullable = false)
-    public Integer saldo;
+    private Integer saldo;
 
     @Column(name = "estoque_minimo", nullable = false)
-    public Integer estoqueMinimo;
+    private Integer estoqueMinimo;
+
+    @Column(name = "saldo_reservado", nullable = false)
+    private Integer saldoReservado = 0;
 }

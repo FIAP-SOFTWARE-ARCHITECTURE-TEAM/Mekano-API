@@ -96,14 +96,15 @@ public class ClienteResource {
     public Response listAll(
             @QueryParam("page") @DefaultValue("0") int page,
             @QueryParam("size") @DefaultValue("10") int size,
-            @QueryParam("sort") @DefaultValue("nome,asc") String sort) {
+            @QueryParam("sort") @DefaultValue("nome,asc") String sort,
+            @QueryParam("isActive") Boolean isActive) {
 
-        List<ClienteResponse> content = clienteService.findAllClientes(page, size, sort)
+        List<ClienteResponse> content = clienteService.findAllClientes(page, size, sort, isActive)
                 .stream()
                 .map(clienteDtoMapper::toResponse)
                 .toList();
 
-        long total = clienteService.countAllClientes();
+        long total = clienteService.countAllClientes(isActive);
 
         int totalPages = (int) Math.ceil((double) total / size);
 
@@ -137,6 +138,17 @@ public class ClienteResource {
             @PathParam("id") UUID id) {
 
         clienteService.deleteCliente(id);
+
+        return Response.noContent().build();
+    }
+
+    @PUT
+    @Path("/{id}/ativar")
+    @Operation(summary = "Reativar cliente", description = "Reativa um cliente inativo. Se o cliente já estiver ativo, nenhuma alteração é feita.")
+    public Response reativar(
+            @PathParam("id") UUID id) {
+
+        clienteService.reactivate(id);
 
         return Response.noContent().build();
     }

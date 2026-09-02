@@ -62,19 +62,25 @@ public class ServicoService implements ServicoServicePort {
     }
 
     @Override
-    public List<Servico> findAll(int page, int size, String sort) {
-        return servicoRepository.findAll(page, size, sort);
+    public List<Servico> findAll(int page, int size, String sort, Boolean isActive) {
+        return servicoRepository.findAll(page, size, sort, isActive);
     }
 
     @Override
-    public long countAll() {
-        return servicoRepository.countAll();
+    public long countAll(Boolean isActive) {
+        return servicoRepository.countAll(isActive);
     }
 
     @Override
     @Transactional
     public void delete(UUID id) {
         servicoRepository.markAsDeleted(id);
+    }
+
+    @Override
+    @Transactional
+    public void reactivate(UUID id) {
+        servicoRepository.reactivate(id);
     }
 
     private static String normalizeNome(String nome) {

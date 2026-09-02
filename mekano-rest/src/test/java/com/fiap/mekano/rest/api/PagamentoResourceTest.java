@@ -1,13 +1,23 @@
 package com.fiap.mekano.rest.api;
 
+import com.fiap.mekano.domain.model.Cliente;
+import com.fiap.mekano.domain.model.Servico;
+import com.fiap.mekano.domain.model.Veiculo;
+import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;
+import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
+import com.fiap.mekano.domain.port.out.ServicoRepositoryPort;
+import com.fiap.mekano.domain.port.out.VeiculoRepositoryPort;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
 import io.restassured.http.ContentType;
+import jakarta.inject.Inject;
+import jakarta.transaction.UserTransaction;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 import static io.restassured.RestAssured.given;
@@ -23,11 +33,29 @@ class PagamentoResourceTest {
 
     private static String osId;
     private static String pecaId;
+    private static String servicoId;
+    private static String clienteId;
+    private static String veiculoId;
+
+    @Inject
+    PecaRepositoryPort pecaRepository;
+
+    @Inject
+    ServicoRepositoryPort servicoRepository;
+
+    @Inject
+    ClienteRepositoryPort clienteRepository;
+
+    @Inject
+    VeiculoRepositoryPort veiculoRepository;
+
+    @Inject
+    UserTransaction utx;
 
     @Test
     @Order(1)
     @TestSecurity(user = "admin", roles = {"admin"})
-    void createPecaEOS() {
+    void createPecaEOS() throws Exception {
         pecaId = given()
                 .contentType(ContentType.JSON)
                 .body("""
@@ -40,12 +68,35 @@ class PagamentoResourceTest {
                 .statusCode(201)
                 .extract().path("id");
 
+        pecaRepository.creditarSaldo(UUID.fromString(pecaId), 10);
+
+        utx.begin();
+        try {
+            Cliente cliente = Cliente.create("Cliente E2E", "52998224725", "cliente@e2e.com",
+                    "51999999999", "Rua A", "100", "Centro", "Porto Alegre", "RS", "90010000");
+            cliente = clienteRepository.create(cliente);
+            clienteId = cliente.getId().toString();
+
+            Veiculo veiculo = Veiculo.create(cliente.getId(), "ZZZ0000", "Fiat", "Uno", 2020);
+            veiculo = veiculoRepository.create(veiculo);
+            veiculoId = veiculo.getId().toString();
+
+            Servico servico = Servico.create("Troca de Óleo E2E", "Troca com óleo sintético", new BigDecimal("89.90"));
+            servico = servicoRepository.save(servico);
+            servicoId = servico.getId().toString();
+
+            utx.commit();
+        } catch (Exception e) {
+            utx.rollback();
+            throw e;
+        }
+
         osId = given()
                 .contentType(ContentType.JSON)
                 .body("""
                         {"clienteId": "%s", "veiculoId": "%s", \
                          "descricaoProblema": "E2E fluxo pagamento"}
-                        """.formatted(UUID.randomUUID(), UUID.randomUUID()))
+                        """.formatted(clienteId, veiculoId))
                 .when()
                 .post(OS_PATH)
                 .then()
@@ -70,8 +121,9 @@ class PagamentoResourceTest {
                 .contentType(ContentType.JSON)
                 .body("""
                         {"descricao": "Diagnostico E2E",
-                         "itens": [{"referenciaUuid": "%s", "tipo": "PECA", "quantidade": 1}]}
-                        """.formatted(pecaId))
+                         "itens": [{"referenciaUuid": "%s", "tipo": "PECA", "quantidade": 1},
+                                   {"referenciaUuid": "%s", "tipo": "SERVICO"}]}
+                        """.formatted(pecaId, servicoId))
                 .when()
                 .put(OS_PATH + "/" + osId + "/finalizar-diagnostico")
                 .then()
@@ -83,6 +135,15 @@ class PagamentoResourceTest {
     @Order(3)
     @TestSecurity(user = "cliente", roles = {"cliente"})
     void aprovarOrcamento() {
+        given()
+                .when()
+                .get(ORCAMENTO_PATH + "?osUuid=" + osId)
+                .then()
+                .statusCode(200)
+                .body("itens.size()", equalTo(2))
+                .body("itens.pecaId", hasItem(notNullValue()))
+                .body("itens.servicoId", hasItem(notNullValue()));
+
         String orcUuid = given()
                 .when()
                 .get(ORCAMENTO_PATH + "?osUuid=" + osId)
@@ -201,13 +262,30 @@ class PagamentoResourceTest {
     @Test
     @Order(10)
     @TestSecurity(user = "admin", roles = {"admin"})
-    void pagamentoSemCobranca_retorna409() {
+    void pagamentoSemCobranca_retorna409() throws Exception {
+        utx.begin();
+        String cId;
+        String vId;
+        try {
+            Cliente c = Cliente.create("Cliente 409", "57738361069", "cliente409@e2e.com",
+                    "51999999998", "Rua B", "200", "Centro", "POA", "RS", "90020000");
+            c = clienteRepository.create(c);
+            cId = c.getId().toString();
+            Veiculo v = Veiculo.create(c.getId(), "ZZZ0001", "VW", "Gol", 2021);
+            v = veiculoRepository.create(v);
+            vId = v.getId().toString();
+            utx.commit();
+        } catch (Exception e) {
+            utx.rollback();
+            throw e;
+        }
+
         String novaOsId = given()
                 .contentType(ContentType.JSON)
                 .body("""
                         {"clienteId": "%s", "veiculoId": "%s", \
                          "descricaoProblema": "Erro pagamento"}
-                        """.formatted(UUID.randomUUID(), UUID.randomUUID()))
+                        """.formatted(cId, vId))
                 .when()
                 .post(OS_PATH)
                 .then()
@@ -219,5 +297,18 @@ class PagamentoResourceTest {
                 .patch(OS_PATH + "/" + novaOsId + "/confirmar-pagamento")
                 .then()
                 .statusCode(409);
+    }
+
+    @Test
+    @Order(11)
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void confirmarPagamentoDuplicado_retorna200() {
+        // D-06: segunda confirmação deve retornar 200 (idempotente), não 409
+        given()
+                .when()
+                .patch(OS_PATH + "/" + osId + "/confirmar-pagamento")
+                .then()
+                .statusCode(200)
+                .body("status", equalTo("CONFIRMADO"));
     }
 }

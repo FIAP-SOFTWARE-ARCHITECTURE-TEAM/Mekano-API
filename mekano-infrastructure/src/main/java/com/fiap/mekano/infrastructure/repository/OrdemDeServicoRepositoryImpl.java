@@ -3,11 +3,13 @@ package com.fiap.mekano.infrastructure.repository;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.eclipse.microprofile.faulttolerance.Retry;
 
@@ -113,11 +115,21 @@ public class OrdemDeServicoRepositoryImpl implements OrdemDeServicoRepositoryPor
         return panacheRepository.count("isActive = ?1", true);
     }
 
+    private static final String STATUS_PRIORITY_ORDER =
+            " ORDER BY CASE status" +
+            " WHEN 'EM_EXECUCAO' THEN 0" +
+            " WHEN 'AGUARDANDO_APROVACAO' THEN 1" +
+            " WHEN 'EM_DIAGNOSTICO' THEN 2" +
+            " WHEN 'RECEBIDA' THEN 3" +
+            " WHEN 'AGUARDANDO_EXECUCAO' THEN 4" +
+            " ELSE 5 END ASC, createdAt ASC";
+
     @Override
     public List<OrdemDeServico> findAllWithFilters(String status, UUID clienteUuid, UUID veiculoUuid,
                                                     LocalDateTime dataInicio, LocalDateTime dataFim,
                                                     int page, int size) {
-        StringBuilder query = new StringBuilder("isActive = :active");
+        StringBuilder query = new StringBuilder(
+                "isActive = :active AND status NOT IN ('FINALIZADA', 'ENTREGUE', 'CANCELADA')");
         Map<String, Object> params = new HashMap<>();
         params.put("active", true);
 
@@ -142,7 +154,9 @@ public class OrdemDeServicoRepositoryImpl implements OrdemDeServicoRepositoryPor
             params.put("dataFim", dataFim);
         }
 
-        return panacheRepository.find(query.toString(), Sort.by("createdAt").descending(), params)
+        query.append(STATUS_PRIORITY_ORDER);
+
+        return panacheRepository.find(query.toString(), params)
                 .page(Page.of(page, size)).list()
                 .stream().map(mapper::toDomain).toList();
     }
@@ -183,6 +197,36 @@ public class OrdemDeServicoRepositoryImpl implements OrdemDeServicoRepositoryPor
                 .orElse(0.0);
 
         return Optional.of(media);
+    }
+
+    @Override
+    public Map<UUID, Double> calcularTempoMedioPorMecanico(LocalDateTime dataInicio, LocalDateTime dataFim) {
+        StringBuilder query = new StringBuilder("status = ?1 AND isActive = ?2 AND mecanicoUuid IS NOT NULL");
+        List<Object> params = new java.util.ArrayList<>();
+        params.add("FINALIZADA");
+        params.add(true);
+
+        if (dataInicio != null) {
+            query.append(" AND execucaoFinalizadaEm >= ?").append(params.size() + 1);
+            params.add(dataInicio);
+        }
+        if (dataFim != null) {
+            query.append(" AND execucaoFinalizadaEm <= ?").append(params.size() + 1);
+            params.add(dataFim);
+        }
+
+        List<OrdemDeServicoEntity> finalizadas = panacheRepository
+                .find(query.toString(), params.toArray()).list();
+
+        return finalizadas.stream()
+                .filter(e -> e.getMecanicoUuid() != null
+                        && e.getExecucaoIniciadaEm() != null
+                        && e.getExecucaoFinalizadaEm() != null)
+                .collect(Collectors.groupingBy(
+                        OrdemDeServicoEntity::getMecanicoUuid,
+                        LinkedHashMap::new,
+                        Collectors.averagingDouble(e ->
+                                ChronoUnit.HOURS.between(e.getExecucaoIniciadaEm(), e.getExecucaoFinalizadaEm()))));
     }
 
     @Override

@@ -84,6 +84,23 @@ class MockPaymentServiceTest {
         assertThrows(AppException.class, () -> mockPaymentService.confirmarPagamento(osUuid));
     }
 
+    @Test
+    @DisplayName("confirmarPagamento com pagamento já processado deve retornar silenciosamente sem exceção")
+    void confirmarPagamento_deveRetornarSilenciosoSeJaProcessado() {
+        var os = criarOSComCobrancaPendente();
+        var osUuid = os.getId();
+
+        when(ordemDeServicoRepository.findById(osUuid)).thenReturn(Optional.of(os));
+        when(processedEventsRepository.existsFor("PAGAMENTO_CONFIRMADO", osUuid)).thenReturn(true);
+
+        // Não deve lançar exceção mesmo que status seja AGUARDANDO_PAGAMENTO
+        mockPaymentService.confirmarPagamento(osUuid);
+
+        verify(eventPublisher, never()).publish(any());
+        verify(ordemDeServicoRepository, never()).save(any());
+        verify(processedEventsRepository, never()).save(any(), any());
+    }
+
     private static OrdemDeServico criarOSComCobrancaPendente() {
         var os = OrdemDeServico.create(UUID.randomUUID(), UUID.randomUUID(), "Problema");
         os.iniciarDiagnostico();

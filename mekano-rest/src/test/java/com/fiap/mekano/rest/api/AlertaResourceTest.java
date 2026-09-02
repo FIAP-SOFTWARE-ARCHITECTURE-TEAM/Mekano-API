@@ -33,11 +33,11 @@ class AlertaResourceTest {
     void setUp() {
         var abaixoMinimo = Peca.reconstitute(
                 UUID.randomUUID(), "PEA-001", "Óleo do Motor 5W30",
-                new BigDecimal("45.90"), 3L, 10L, LocalDateTime.now());
+                new BigDecimal("45.90"), 3L, 10L, LocalDateTime.now(), 0L);
 
         var acimaMinimo = Peca.reconstitute(
                 UUID.randomUUID(), "PEA-002", "Filtro de Óleo",
-                new BigDecimal("15.50"), 50L, 5L, LocalDateTime.now());
+                new BigDecimal("15.50"), 50L, 5L, LocalDateTime.now(), 0L);
 
         Mockito.when(pecaService.listarAbaixoEstoqueMinimo())
                 .thenReturn(List.of(abaixoMinimo));

@@ -1,7 +1,7 @@
 package com.fiap.mekano.rest.api;
 
 import com.fiap.mekano.domain.exception.AppException;
-import com.fiap.mekano.domain.model.ItemOrcamento;
+import com.fiap.mekano.domain.valueobject.ItemOrcamento;
 import com.fiap.mekano.domain.model.Orcamento;
 import com.fiap.mekano.domain.model.StatusOrcamento;
 import com.fiap.mekano.domain.port.in.OrcamentoServicePort;
@@ -24,6 +24,7 @@ import java.util.UUID;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
 
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -47,6 +48,12 @@ class OrcamentoResourceTest {
 
         Mockito.when(orcamentoService.buscarPorId(Mockito.argThat(id -> !id.equals(ORCAMENTO_UUID))))
                 .thenThrow(new AppException(404, "Orçamento não encontrado"));
+
+        Mockito.when(orcamentoService.buscarPorOrdemServico(OS_UUID))
+                .thenReturn(pendente);
+
+        Mockito.when(orcamentoService.buscarPorOrdemServico(Mockito.argThat(osId -> !osId.equals(OS_UUID))))
+                .thenThrow(new AppException(404, "Nenhum orçamento encontrado para a OS: " + OS_UUID));
 
         Mockito.when(orcamentoService.aprovar(Mockito.any()))
                 .thenReturn(aprovado);
@@ -130,5 +137,83 @@ class OrcamentoResourceTest {
                 .then()
                 .statusCode(404)
                 .contentType(containsString("application/problem+json"));
+    }
+
+    @Test
+    @Order(5)
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void buscarPorId_passandoUuidOsValido_retorna404() {
+        given()
+                .when()
+                .get(BASE_PATH + "/" + OS_UUID)
+                .then()
+                .statusCode(404)
+                .contentType(containsString("application/problem+json"));
+    }
+
+    @Test
+    @Order(6)
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void buscarPorOS_existente_returns200() {
+        given()
+                .when()
+                .get(BASE_PATH + "/os/" + OS_UUID)
+                .then()
+                .statusCode(200)
+                .body("id", equalTo(ORCAMENTO_UUID.toString()))
+                .body("ordemServicoUuid", equalTo(OS_UUID.toString()));
+    }
+
+    @Test
+    @Order(7)
+    @TestSecurity(user = "admin", roles = {"admin"})
+    void buscarPorOS_inexistente_returns404() {
+        given()
+                .when()
+                .get(BASE_PATH + "/os/" + UUID.randomUUID())
+                .then()
+                .statusCode(404)
+                .contentType(containsString("application/problem+json"));
+    }
+
+    // ─────────────── ANÔNIMOS (públicos) ───────────────
+
+    @Test
+    @Order(8)
+    void aprovar_anonimo_retorna200() {
+        given()
+                .contentType(ContentType.JSON)
+                .when()
+                .post(BASE_PATH + "/" + ORCAMENTO_UUID + "/aprovar")
+                .then()
+                .statusCode(200)
+                .body("id", equalTo(ORCAMENTO_UUID.toString()))
+                .body("status", equalTo("APROVADO"));
+    }
+
+    @Test
+    @Order(9)
+    void reprovar_anonimo_retorna200() {
+        given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {"motivo": "Orçamento muito caro"}
+                        """)
+                .when()
+                .post(BASE_PATH + "/" + ORCAMENTO_UUID + "/reprovar")
+                .then()
+                .statusCode(200)
+                .body("id", equalTo(ORCAMENTO_UUID.toString()))
+                .body("status", equalTo("REPROVADO"));
+    }
+
+    @Test
+    @Order(10)
+    void buscarPorOS_withoutAuth_returns401() {
+        given()
+                .when()
+                .get(BASE_PATH + "/os/" + UUID.randomUUID())
+                .then()
+                .statusCode(401);
     }
 }

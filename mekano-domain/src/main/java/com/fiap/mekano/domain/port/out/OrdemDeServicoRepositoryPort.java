@@ -4,6 +4,7 @@ import com.fiap.mekano.domain.model.OrdemDeServico;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -24,6 +25,8 @@ public interface OrdemDeServicoRepositoryPort {
     Optional<OrdemDeServico> findByIdWithItems(UUID id);
 
     Optional<Double> calcularTempoMedioExecucao(LocalDateTime dataInicio, LocalDateTime dataFim);
+
+    Map<UUID, Double> calcularTempoMedioPorMecanico(LocalDateTime dataInicio, LocalDateTime dataFim);
 
     boolean existsByClienteUuidAndStatusIn(UUID clienteUuid, List<String> statuses);
 

@@ -6,8 +6,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface NfEntradaRepositoryPort {
-    NfEntrada salvar(NfEntrada nfEntrada);
-    Optional<NfEntrada> buscarPorId(UUID id);
+    NfEntrada save(NfEntrada nfEntrada);
+    Optional<NfEntrada> findById(UUID id);
+    Optional<NfEntrada> buscarPorChaveAcesso(String chaveAcesso);
     List<NfEntrada> findAll(int page, int size);
     long countAll();
 }

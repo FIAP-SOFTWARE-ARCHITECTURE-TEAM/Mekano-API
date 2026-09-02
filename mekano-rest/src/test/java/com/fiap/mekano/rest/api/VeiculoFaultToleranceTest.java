@@ -51,7 +51,7 @@ public class VeiculoFaultToleranceTest {
 
         assertDoesNotThrow(() -> {
 
-            Veiculo saved = repository.save(veiculo);
+            Veiculo saved = repository.create(veiculo);
 
             assertThat(saved).isNotNull();
         });
@@ -62,7 +62,7 @@ public class VeiculoFaultToleranceTest {
     @TestTransaction
     void cacheResult_sameVehicleRepeatedCalls() {
 
-        Veiculo veiculo = repository.save(
+        Veiculo veiculo = repository.create(
                 Veiculo.create(
                         UUID.randomUUID(),
                         "ABC1234",

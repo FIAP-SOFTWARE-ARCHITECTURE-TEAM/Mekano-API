@@ -38,6 +38,7 @@ nb-configuration.xml
 
 # Local environment
 .env
+.local/
 
 # Plugin directory
 /.quarkus/cli/plugins/
@@ -47,3 +48,9 @@ nb-configuration.xml
 # JWT keys (Phase 8 / D-08) — chaves privadas são dev-locais; nunca commitar
 privateKey*.pem
 **/privateKey.pem
+.mekano/
+
+#sonar
+.env.sonar
+.mvn/sonar-local.config
+

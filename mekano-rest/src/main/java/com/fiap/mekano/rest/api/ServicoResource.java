@@ -132,16 +132,17 @@ public class ServicoResource {
     public Response listAll(
             @QueryParam("page") @DefaultValue("0") int page,
             @QueryParam("size") @DefaultValue("10") int size,
-            @QueryParam("sort") @DefaultValue("nome,asc") String sort) {
+            @QueryParam("sort") @DefaultValue("nome,asc") String sort,
+            @QueryParam("isActive") Boolean isActive) {
         int normalizedPage = Math.max(page, 0);
         int normalizedSize = normalizeSize(size);
         String normalizedSort = sort == null || sort.isBlank() ? "nome,asc" : sort;
 
-        var content = servicoServicePort.findAll(normalizedPage, normalizedSize, normalizedSort)
+        var content = servicoServicePort.findAll(normalizedPage, normalizedSize, normalizedSort, isActive)
                 .stream()
                 .map(servicoDtoMapper::toResponse)
                 .toList();
-        long total = servicoServicePort.countAll();
+        long total = servicoServicePort.countAll(isActive);
         int totalPages = (int) Math.ceil((double) total / normalizedSize);
         var response = new ServicoPageResponse(content, normalizedPage, normalizedSize, total, totalPages);
         return Response.ok(response).build();
@@ -165,6 +166,20 @@ public class ServicoResource {
             content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = ProblemDetail.class)))
     public Response delete(@PathParam("id") UUID id) {
         servicoServicePort.delete(id);
+        return Response.noContent().build();
+    }
+
+    /**
+     * Reativa um serviço inativo (idempotente).
+     */
+    @PUT
+    @Path("/{id}/ativar")
+    @Operation(summary = "Reativar serviço", description = "Reativa um serviço inativo. Se o serviço já estiver ativo, nenhuma alteração é feita.")
+    @APIResponse(responseCode = "204", description = "Serviço reativado com sucesso")
+    @APIResponse(responseCode = "404", description = "Serviço não encontrado",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = ProblemDetail.class)))
+    public Response reativar(@PathParam("id") UUID id) {
+        servicoServicePort.reactivate(id);
         return Response.noContent().build();
     }
 }

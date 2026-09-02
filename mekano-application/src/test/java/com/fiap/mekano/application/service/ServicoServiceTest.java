@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -125,6 +126,25 @@ class ServicoServiceTest {
     }
 
     @Test
+    @DisplayName("deve atualizar serviço inativo sem tratá-lo como inexistente")
+    void deveAtualizarServicoInativo() {
+        UUID id = UUID.randomUUID();
+        Servico existingInativo = Servico.reconstitute(
+                id, "Troca de óleo", "desc", new BigDecimal("89.90"), LocalDateTime.now(), false);
+        var command = new UpdateServicoCommand("Troca de óleo sintético", "premium", new BigDecimal("129.90"));
+
+        when(servicoRepository.findById(id)).thenReturn(Optional.of(existingInativo));
+        when(servicoRepository.existsByNomeAndIdNot("Troca de óleo sintético", id)).thenReturn(false);
+        when(servicoRepository.save(any(Servico.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Servico result = servicoService.update(id, command);
+
+        assertEquals("Troca de óleo sintético", result.getNome());
+        assertEquals(new BigDecimal("129.90"), result.getValor());
+        verify(servicoRepository, times(1)).save(any(Servico.class));
+    }
+
+    @Test
     @DisplayName("deve buscar serviço por id")
     void deveBuscarServicoPorId() {
         UUID id = UUID.randomUUID();
@@ -155,5 +175,30 @@ class ServicoServiceTest {
         servicoService.delete(id);
 
         verify(servicoRepository, times(1)).markAsDeleted(id);
+    }
+
+    @Test
+    @DisplayName("deve reativar serviço")
+    void deveReativarServico() {
+        UUID id = UUID.randomUUID();
+
+        servicoService.reactivate(id);
+
+        verify(servicoRepository, times(1)).reactivate(id);
+    }
+
+    @Test
+    @DisplayName("findAll/countAll devem repassar filtro isActive")
+    void findAll_repassaFiltroIsActive() {
+        when(servicoRepository.findAll(0, 10, "nome,asc", true)).thenReturn(java.util.List.of());
+        when(servicoRepository.countAll(true)).thenReturn(3L);
+
+        var resultado = servicoService.findAll(0, 10, "nome,asc", true);
+        long total = servicoService.countAll(true);
+
+        assertNotNull(resultado);
+        assertEquals(3L, total);
+        verify(servicoRepository, times(1)).findAll(0, 10, "nome,asc", true);
+        verify(servicoRepository, times(1)).countAll(true);
     }
 }

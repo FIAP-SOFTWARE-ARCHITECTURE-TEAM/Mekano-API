@@ -11,11 +11,14 @@ com.fiap.mekano.rest
 │   ├── MekanoApiApplication.java         — @OpenAPIDefinition, extends Application (bootstrap)
 │   ├── UserResource.java                 — @Path("/users") @RequestScoped @RolesAllowed("user")
 │   ├── VeiculoResource.java              — @Path("/veiculos") @RequestScoped @RolesAllowed({"admin","atendente"})
- │   ├── ServicoResource.java              — @Path("/servicos") @RequestScoped @RolesAllowed("admin")
+│   ├── ServicoResource.java              — @Path("/servicos") @RequestScoped @RolesAllowed("admin")
 │   ├── PecaResource.java                 — @Path("/pecas") @RequestScoped @RolesAllowed("admin")
-│   ├── RequisicaoCompraResource.java      — @Path("/requisicoes-compra") @RequestScoped @RolesAllowed("admin")
-│   ├── NfEntradaResource.java             — @Path("/nf-entrada") @RequestScoped @RolesAllowed("admin")
+│   ├── RequisicaoCompraResource.java     — @Path("/requisicoes-compra") @RequestScoped @RolesAllowed({"admin","financeiro"})
+│   ├── NfEntradaResource.java            — @Path("/nf-entrada") @RequestScoped @RolesAllowed("admin")
 │   ├── AlertaResource.java               — @Path("/alertas") @RequestScoped @RolesAllowed({"admin","atendente"})
+│   ├── OrdemDeServicoResource.java       — @Path("/os") @RequestScoped @RolesAllowed({"admin","atendente","mecanico"})
+│   ├── PagamentoResource.java            — @Path("/pagamentos") @RequestScoped @RolesAllowed({"admin","financeiro"})
+│   ├── OrcamentoResource.java            — @Path("/orcamentos") @RequestScoped @RolesAllowed({"admin","cliente"})
 │   ├── dto/
 │   │   ├── CreateUserRequest.java        — Input Lombok: @NotBlank name, @Email email, @Size(min=6) password
 │   │   ├── UserResponse.java             — Output record
@@ -41,7 +44,14 @@ com.fiap.mekano.rest
 │   │   ├── CreateNfEntradaRequest.java   — Input Lombok: @NotBlank numero, serie, cnpjFornecedor, nomeFornecedor, chaveAcesso + @DecimalMin campos NF-e + @NotNull pecaId, requisicaoCompraId, quantidade
 │   │   ├── NfEntradaResponse.java        — Output record: full NF-e fields + id, createdAt
 │   │   ├── NfEntradaPageResponse.java    — Output record (paginated)
-│   │   └── AlertaResponse.java           — Output record: pecaId, codigo, descricao, saldoAtual, estoqueMinimo
+│   │   ├── AlertaResponse.java           — Output record: pecaId, codigo, descricao, saldoAtual, estoqueMinimo
+│   │   ├── CreateOrdemDeServicoRequest.java — Input Lombok: @NotNull clienteId, veiculoId, @NotBlank descricaoProblema, List<CreateItemOsRequest> itens
+│   │   ├── CreateItemOsRequest.java      — Input Lombok: @NotNull referenciaUuid, @NotBlank tipo ("PECA"|"SERVICO"), quantidade
+│   │   ├── OrdemDeServicoResponse.java   — Output record: id, clienteId, veiculoId, descricaoProblema, status, ..., List<ItemOsResponse> itens
+│   │   ├── ItemOsResponse.java           — Output record: id, referenciaUuid, tipo, descricao, quantidade
+│   │   ├── OrdemDeServicoDetailResponse.java — Output record: full OS + itens + itensOrcados
+│   │   ├── OrdemDeServicoPageResponse.java — Output record (paginated)
+│   │   └── ... (other DTOs)
 │   ├── mapper/
 │   │   ├── UserDtoMapper.java            — @Mapper(componentModel = "cdi")
 │   │   ├── VeiculoDtoMapper.java         — @Mapper(componentModel = "cdi")
@@ -70,6 +80,9 @@ com.fiap.mekano.rest
 | RequisicaoCompraResource | ✓ EXISTS — DTOs, mapper, resource, tests |
 | NfEntradaResource | ✓ EXISTS — DTOs, mapper, resource, tests |
 | AlertaResource | ✓ EXISTS — DTO, resource, tests |
+| OrdemDeServicoResource | ✓ EXISTS — full CRUD + lifecycle transitions (diagnostico, execucao, pagamento, entrega) |
+| PagamentoResource | ✓ EXISTS — confirmacao de pagamento |
+| OrcamentoResource | ✓ EXISTS — aprovacao/reprovacao |
 | Cliente DTOs + Mapper | ✓ EXISTS — but NO ClienteResource (no controller yet) |
 | ApiExceptionMapper | ✓ EXISTS |
 | ProblemDetail | ✓ EXISTS |
@@ -106,6 +119,9 @@ com.fiap.mekano.rest
 | RequisicaoCompraResource | admin | POST, GET (list+byId), PUT enviar/cancelar/receber |
 | NfEntradaResource | admin | POST, GET (list+byId) |
 | AlertaResource | admin, atendente | GET (list) |
+| OrdemDeServicoResource | admin, atendente, mecanico | POST, PUT, GET (list+byId+detalhamento), POST iniciar/finalizar diagnostico, POST iniciar/finalizar execucao, POST cancelar, POST entregar, POST confirmar pagamento |
+| PagamentoResource | admin, financeiro | POST confirmar |
+| OrcamentoResource | admin, cliente | POST aprovar/reprovar |
 | ClienteResource | NOT YET IMPLEMENTED | DTOs + mapper exist, no controller |
 
 ## Exception Handling
@@ -138,7 +154,10 @@ mekano-domain, mekano-application, mekano-infrastructure, quarkus-rest-jackson, 
 ## Testing
 - `@QuarkusTest` + REST Assured
 - `@TestSecurity(user = "X", roles = {"Y"})` for JWT bypass
+  - ⚠ `user`/`roles` values MUST be compile-time constants (e.g. literal strings, NOT `UUID.randomUUID().toString()`)
+  - ⚠ `@TestSecurity` populates `SecurityIdentity` (principal name = `user`), NOT the `JsonWebToken` bean — resolve the principal via `SecurityIdentity` (see `AuditoriaContext`)
 - `@TestMethodOrder(MethodOrderer.OrderAnnotation.class)` + `@Order(N)` for sequential tests
 - `@InjectMock` for mocking repository deps (Quarkus Mockito)
 - `@TestTransaction` for automatic rollback
-- 11 test files: UserResourceTest, UserSoftDeleteTest, VeiculoResourceTest, VeiculoFaultToleranceTest, ServicoResourceTest, FaultToleranceTest, ObservabilityEndpointsTest, PecaResourceTest, RequisicaoCompraResourceTest, NfEntradaResourceTest, AlertaResourceTest
+- 20 test files: AdminUserResourceSecurityTest, AdminUserResourceTest, AlertaResourceTest, AuditoriaAuditFieldsTest, ClasspathDiagnosticTest, ClienteResourceTest, FaultToleranceTest, NfEntradaResourceTest, OrcamentoResourceTest, OrdemDeServicoResourceTest, PagamentoResourceTest, PecaResourceTest, RequisicaoCompraResourceTest, ServicoResourceTest, VeiculoFaultToleranceTest, VeiculoGetResourceTest, VeiculoResourceTest, WebhookEvolutionResourceTest, ObservabilityEndpointsTest (observability package), OsAuditResourceTest
+- `AuditoriaAuditFieldsTest` (E2E do auto-fill) usa beans REAIS (service + repo, SEM `@InjectMock`) + `@TestTransaction`, com POST/PUT de `/pecas` e leitura do `createdBy`/`updatedBy` persistido

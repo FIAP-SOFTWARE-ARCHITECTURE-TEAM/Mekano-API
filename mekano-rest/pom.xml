@@ -101,6 +101,16 @@
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct</artifactId>
         </dependency>
+        <!-- mapstruct-processor como provided: necessário para o Quarkus descobrir
+             o processador de anotação quando quarkus-maven-plugin tem extensions=true
+             (o annotationProcessorPaths do maven-compiler-plugin NÃO é honrado pelo
+             compilador interno do Quarkus). -->
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct-processor</artifactId>
+            <version>${mapstruct.version}</version>
+            <scope>provided</scope>
+        </dependency>
 
         <!-- Lombok — geração de getters/setters para CreateUserRequest -->
         <dependency>
@@ -121,6 +131,12 @@
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Quarkus JaCoCo — coverage para @QuarkusTest -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jacoco</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -150,7 +166,8 @@
 
     <build>
         <plugins>
-            <!-- ÚNICO módulo com quarkus-maven-plugin (MOD-06, Gotcha 1) -->
+            <!-- ÚNICO módulo com quarkus-maven-plugin (MOD-06, Gotcha 1).
+                 extensions=true já vincula automaticamente o goal build à fase compile. -->
             <plugin>
                 <groupId>${quarkus.platform.group-id}</groupId>
                 <artifactId>quarkus-maven-plugin</artifactId>
@@ -159,13 +176,6 @@
                 <configuration>
                     <skip>false</skip>
                 </configuration>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>build</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
             <!-- Jandex explícito conforme MOD-07 -->
             <plugin>
@@ -187,6 +197,7 @@
                 <configuration>
                     <release>${maven.compiler.release}</release>
                     <parameters>true</parameters>
+                    <useIncrementalCompilation>false</useIncrementalCompilation>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
@@ -208,23 +219,69 @@
                         <arg>-Amapstruct.unmappedTargetPolicy=WARN</arg>
                     </compilerArgs>
                 </configuration>
+            </plugin>
+            <!-- JaCoCo: merge + report-aggregate + check (aggregate coverage gate) -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
                 <executions>
+                    <!-- Combina todos os .exec dos módulos dependentes em um único arquivo -->
                     <execution>
-                        <id>default-compile</id>
+                        <id>jacoco-merge</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>merge</goal>
+                        </goals>
                         <configuration>
-                            <useIncrementalCompilation>false</useIncrementalCompilation>
-                            <fork>true</fork>
-                            <meminitial>256m</meminitial>
-                            <maxmem>1024m</maxmem>
+                            <fileSets>
+                                <fileSet>
+                                    <directory>${project.basedir}/../mekano-domain/target</directory>
+                                    <includes>
+                                        <include>jacoco.exec</include>
+                                    </includes>
+                                </fileSet>
+                                <fileSet>
+                                    <directory>${project.basedir}/../mekano-application/target</directory>
+                                    <includes>
+                                        <include>jacoco.exec</include>
+                                    </includes>
+                                </fileSet>
+                                <fileSet>
+                                    <directory>${project.basedir}/../mekano-infrastructure/target</directory>
+                                    <includes>
+                                        <include>jacoco.exec</include>
+                                    </includes>
+                                </fileSet>
+                                <fileSet>
+                                    <directory>${project.build.directory}</directory>
+                                    <includes>
+                                        <include>jacoco.exec</include>
+                                    </includes>
+                                </fileSet>
+                            </fileSets>
+                            <destFile>${project.build.directory}/jacoco-merged.exec</destFile>
                         </configuration>
                     </execution>
+                    <!-- Relatório unificado HTML/XML/CSV -->
                     <execution>
-                        <id>default-testCompile</id>
+                        <id>jacoco-report-aggregate</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report-aggregate</goal>
+                        </goals>
                         <configuration>
-                            <useIncrementalCompilation>false</useIncrementalCompilation>
-                            <fork>true</fork>
-                            <meminitial>256m</meminitial>
-                            <maxmem>1024m</maxmem>
+                            <excludes>
+                                <exclude>**/*Dto.class</exclude>
+                                <exclude>**/*DTO.class</exclude>
+                                <exclude>**/*Request.class</exclude>
+                                <exclude>**/*Response.class</exclude>
+                                <exclude>**/*ExceptionMapper.class</exclude>
+                                <exclude>**/*Config.class</exclude>
+                                <exclude>**/*Resource.class</exclude>
+                                <exclude>**/*Entity.class</exclude>
+                                <exclude>**/*MapperImpl.class</exclude>
+                                <exclude>**/*PanacheRepository*.class</exclude>
+                            </excludes>
                         </configuration>
                     </execution>
                 </executions>

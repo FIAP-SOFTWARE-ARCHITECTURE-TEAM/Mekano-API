@@ -5,7 +5,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
@@ -14,27 +15,25 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "nf_entradas")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class NfEntradaEntity extends BaseEntity {
 
     @Column(name = "uuid", unique = true, nullable = false)
-    public UUID uuid = UUID.randomUUID();
+    private UUID uuid = UUID.randomUUID();
 
     @Column(name = "chave_acesso", nullable = false)
-    public String chaveAcesso;
+    private String chaveAcesso;
 
     @Column(name = "valor_total", nullable = false)
-    public BigDecimal valorTotal;
-
-    @Column(name = "peca_id", nullable = false)
-    public UUID pecaId;
+    private BigDecimal valorTotal;
 
     @Column(name = "requisicao_compra_id", nullable = false)
-    public UUID requisicaoCompraId;
+    private UUID requisicaoCompraId;
 
     @Column(name = "data_recebimento", nullable = false)
-    public LocalDateTime dataRecebimento;
+    private LocalDateTime dataRecebimento;
 }

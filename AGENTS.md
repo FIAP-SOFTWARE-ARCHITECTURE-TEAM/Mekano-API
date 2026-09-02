@@ -13,13 +13,13 @@ mekano-rest (quarkus packaging — app entrypoint)
   ├── mekano-infrastructure (compile)
   └── mekano-domain (compile, transitiva)
 
-mekano-application (jar) — 7 sub-packages (user, cliente, vehicle, servico, peca, nfentrada, requisicao)
+mekano-application (jar) — 7 sub-packages (user, cliente, vehicle, servico, peca, nfentrada, requisicao, ordemdeservico, orcamento, pagamento)
   └── mekano-domain (compile)
 
-mekano-infrastructure (jar) — 7 entities, 14 repos, 13 mappers, 11 migrations
+mekano-infrastructure (jar) — 15 entities, 15 repos, 18 mappers, 35 migrations, audit auto-fill
   └── mekano-domain (compile)
 
-mekano-domain (jar) — 12 models/enums, 6 VOs, 22 ports, 5 events
+mekano-domain (jar) — 16 models/enums, 6 VOs, 52 ports, 15 events
   — zero deps de framework (só Lombok provided)
 ```
 
@@ -41,7 +41,7 @@ mekano-domain (jar) — 12 models/enums, 6 VOs, 22 ports, 5 events
 For detailed per-module conventions, read these instead of old CLAUDE.md:
 - `mekano-domain/AGENTS.md` — entities, VOs, ports, exceptions, events
 - `mekano-application/AGENTS.md` — services (implemented vs stub), injection style, known bugs
-- `mekano-infrastructure/AGENTS.md` — JPA entities, repositories, mappers, migrations, FT/cache coverage
+- `mekano-infrastructure/AGENTS.md` — JPA entities, repositories, mappers, migrations, audit auto-fill, FT/cache coverage
 - `mekano-rest/AGENTS.md` — resources, DTOs, config files, test patterns, missing items
 
 ## Cross-Cutting Conventions (VERIFIED vs Old CLAUDE.md)
@@ -59,6 +59,7 @@ For detailed per-module conventions, read these instead of old CLAUDE.md:
 | Exception Handling | `ApiExceptionMapper` — RFC 7807 Problem Details (`application/problem+json`) |
 | `@Transactional` | In use case (NOT in resource, NOT in repository) |
 | Soft delete | `isActive` + `deletedAt` |  |  |
+| Audit auto-fill | `createdBy`/`updatedBy` filled by `AuditoriaListener` (`@EntityListeners` in `BaseEntity`); user → subject JWT, anônimo → `PUBLICO`, sem request → `SISTEMA` |
 
 ### What is FALSE (Old CLAUDE.md was WRONG)
 | Old Doc Claim | Reality |
@@ -75,8 +76,8 @@ For detailed per-module conventions, read these instead of old CLAUDE.md:
 | `publicKey.pem` in rest resources | NOT FOUND |
 
 ## Key Inconsistencies (Tech Debt — Avoid Repeating)
-1. **Naming**: `PecaRepositoryPort`/`NfEntradaRepositoryPort`/`RequisicaoCompraRepositoryPort` use PT-BR (`salvar`, `buscarPorId`) — others use EN (`save`, `findById`)
-2. **Injection**: 3 stub services use field injection (`@Inject`) — real services use constructor injection
+1. **Naming**: ~~`PecaRepositoryPort`/`NfEntradaRepositoryPort`/`RequisicaoCompraRepositoryPort` use PT-BR~~ **RESOLVED**: all 3 ports now use EN (`save`, `findById`) — remaining PT-BR names (`buscarPorDescricao`, `buscarPorChaveAcesso`, `remover`, `reativar`, `atualizar`, `listarAbaixoEstoqueMinimo`, `debitarSaldo`, `creditarSaldo`, `reservarSaldo`, `debitarSaldoReservado`, `liberarReserva`) are intentional (business operations or deferred)
+2. **Injection**: 2 stub services use field injection (`@Inject`) — real services use constructor injection
 3. **Entity style**: Newer entities use `@Data` (public fields) — older ones use `@Getter/@Setter` (private)
 4. **FT/Cache**: Only User/Veiculo/Servico repos have `@Retry`+`@Timeout`+`@CacheResult` — Cliente/Peca/RequisicaoCompra/NfEntrada do NOT
 5. **Duplicate VOs**: `Placa.java` and `PlacaVeiculo.java` overlap with different regex patterns
@@ -101,7 +102,9 @@ For detailed per-module conventions, read these instead of old CLAUDE.md:
 - D-13: Cache Caffeine inconsistente — User/Veiculo/Servico apenas
 - D-14: `@Retry`/`@Timeout` testados via integração; `@CircuitBreaker` omitido
 - D-15: Eventos de domínio como records; `EventPublisher` interface pura
-- D-16: Audit fields exclusivos de infrastructure
+- D-16: Audit fields exclusivos de infrastructure — `AuditoriaListener` (`@EntityListeners` em `BaseEntity`) preenche `createdBy` no `@PrePersist` e `updatedBy` no `@PreUpdate`; resolve via `SecurityIdentity` (subject JWT) com fallbacks `PUBLICO`/`SISTEMA`; sem backfill
+- D-17: OS ↔ Peça/Serviço é many-to-many via tabela pivô `os_itens` (não FK columns na OS). Itens adicionados na criação (atendente) e no `finalizarDiagnostico` (mecânico). Orçamento gerado automaticamente a partir de TODOS os itens da tabela pivô.
+- D-18: Requisição de Compra `criar()` valida existência da Peça via `PecaRepositoryPort.findById()` (AppException 404). `cancelar()` bloqueia quando `motivo=ORDEM_SERVICO` (AppException 409) — a requisição faz parte do fluxo de execução da OS e não pode ser cancelada livremente.
 
 ## Commands (VERIFIED)
 ```bash
@@ -137,7 +140,7 @@ docker-compose up -d
 ## Database
 - PostgreSQL 16-alpine (dev/prod), docker-compose na raiz
 - H2 in-memory `MODE=PostgreSQL` (test) — no Docker needed
-- Flyway V1-V23 in `mekano-infrastructure/src/main/resources/db/migration/`
+- Flyway V1-V35 in `mekano-infrastructure/src/main/resources/db/migration/`
 - Flyway does NOT run in tests (Hibernate `drop-and-create`)
 - H2 compatibility: no `BIGSERIAL` (use `BIGINT GENERATED BY DEFAULT AS IDENTITY`), no multi-column `ADD COLUMN`
 

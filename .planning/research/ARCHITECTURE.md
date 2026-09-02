@@ -1,948 +1,815 @@
-# Architecture Research
+# Architecture Research: Mekano v2.0 — infra-docs-quality-whatsapp
 
-**Domain:** Mechanical Workshop Management System (Ordem de Serviço, Estoque, Pagamento)
-**Researched:** 2026-06-20
-**Confidence:** HIGH (patterns verified against existing codebase + EventStorming docs)
+**Domain:** Quarkus 3.36 Clean Architecture REST API (Java 17)
+**Researched:** 2026-08-08
+**Confidence:** HIGH (verified against existing source code + Context7 docs)
 
-## Standard Architecture
+## Key Decisions (Answering Architecture Questions)
 
-### System Overview
+### Q1: Where does WhatsApp integration live?
 
+**Decision: Adapter in `mekano-infrastructure` — no new module.**
+
+Existing pattern puts ALL adapters in `mekano-infrastructure`:
+- DB repos (14 `*RepositoryImpl`)
+- Security (`BcryptPasswordHasher`)
+- Events (`CdiEventPublisher`)
+- Cache config
+
+A `mekano-notification` module would only be justified with multiple notification channels (SMS, email, push), complex routing, or independent deployability. For a single WhatsApp channel, it's overkill and breaks the existing one-layer-per-module philosophy.
+
+**Structure:**
 ```
-┌────────────────────────────────────────────────────────────────────────────┐
-│                         mekano-rest  (Quarkus Adapter)                      │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐        │
-│  │User/     │ │OS        │ │Estoque   │ │Pagamento │ │Auth      │        │
-│  │Resources │ │Resources │ │Resources │ │Resources │ │Resources │        │
-│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘        │
-│       │            │            │            │            │              │
-├───────┴────────────┴────────────┴────────────┴────────────┴──────────────┤
-│                     mekano-application  (Service Layer)                   │
-│  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐                │
-│  │User       │ │OS Use     │ │Estoque    │ │Pagamento  │                │
-│  │Services  │ │Cases      │ │Services  │ │Services  │                │
-│  └─────┬─────┘ └─────┬─────┘ └─────┬─────┘ └─────┬─────┘                │
-│        │             │             │             │                      │
-│        │     OS → Estoque         │             │                      │
-│        │     OS → Pagamento       │             │                      │
-│        │     Pagamento → OS       │             │                      │
-│        └─────────┬────────────────┴─────────────┴──────────┘              │
-│                  │ Domain Events (CDI Event Bus)                          │
-├──────────────────┴───────────────────────────────────────────────────────┤
-│                         mekano-infrastructure                              │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐      │
-│  │User JPA  │ │OS JPA    │ │Estoque   │ │Pagamento  │ │CDI Event │      │
-│  │Entities  │ │Entities  │ │JPA       │ │JPA        │ │Publisher │      │
-│  │          │ │          │ │Entities  │ │Entities   │ │          │      │
-│  ├──────────┤ ├──────────┤ ├──────────┤ ├──────────┤ ├──────────┤      │
-│  │User Repos│ │OS Repos  │ │Estoque   │ │Pagamento  │ │BCrypt    │      │
-│  │(Panache) │ │(Panache) │ │Repos     │ │Repos      │ │Hasher    │      │
-│  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘      │
-├──────────────────────────────────────────────────────────────────────────┤
-│                          mekano-domain  (Pure Business Logic)              │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐      │
-│  │User      │ │OS        │ │Estoque   │ │Pagamento  │ │Domain    │      │
-│  │Model     │ │Model     │ │Model     │ │Model      │ │Events    │      │
-│  │  + VOs   │ │  + VOs   │ │  + VOs   │ │  + VOs    │ │          │      │
-│  ├──────────┤ ├──────────┤ ├──────────┤ ├──────────┤ ├──────────┤      │
-│  │Input/    │ │Input/    │ │Input/    │ │Input/    │ │Ports     │      │
-│  │Output    │ │Output    │ │Output    │ │Output    │ │(in/out)  │      │
-│  │Ports     │ │Ports     │ │Ports     │ │Ports     │ │          │      │
-│  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘      │
-└──────────────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│                      PostgreSQL 16 (Single Database)                       │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐   │
-│  │users,        │ │clientes,     │ │itens_estoque,│ │ordens_       │   │
-│  │refresh_tokens│ │veiculos,     │ │reservas_     │ │pagamento,    │   │
-│  │              │ │ordens_servico,│ │estoque,      │ │cobrancas,    │   │
-│  │              │ │itens_os,     │ │requisicoes_  │ │pagamentos,   │   │
-│  │              │ │orcamentos    │ │compra,       │ │entregas      │   │
-│  │              │ │              │ │notas_fiscais │ │              │   │
-│  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘   │
-└──────────────────────────────────────────────────────────────────────────┘
+mekano-domain/port/out/
+  ├── NotificationOutputPort.java         ← NEW: pure interface
+  │   methods: sendOrcamentoApproved(), sendOrcamentoRejected(), sendOSCompleted()
+  ├── TelefoneClienteQueryPort.java       ← OPTIONAL: lookup customer WhatsApp number
+
+mekano-infrastructure/notification/
+  ├── whatsapp/
+  │   ├── TwilioWhatsAppClient.java       ← NEW: Quarkus REST Client interface
+  │   ├── TwilioWhatsAppAdapter.java      ← NEW: implements NotificationOutputPort
+  │   ├── TwilioWhatsAppConfig.java       ← NEW: @ConfigMapping for tokens/URLs
+  │   └── dto/
+  │       ├── TwilioMessageRequest.java   ← NEW: DTO for request body
+  │       └── TwilioMessageResponse.java  ← NEW: DTO for response body
+
+mekano-application/service/
+  ├── orcamento/OrcamentoService.java     ← MODIFIED: injects NotificationOutputPort
+  │                                         calls port after approve/reject business logic
+  └── ordemservico/OSService.java         ← MODIFIED: calls port after OS finalized
 ```
 
-### Bounded Context Map
+**Why infrastructure and not application?** The domain port is in domain/. The Quarkus REST Client (`io.quarkus.rest.client.reactive.QuarkusRestClientBuilder`) is a framework detail — it belongs in infrastructure per Clean Architecture rules. The application layer just calls the port interface.
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                      Monolith Boundary                               │
-│                                                                      │
-│  ┌─────────────────────┐    Domain Events (CDI in-process)          │
-│  │                     │────────────────────────────────┐            │
-│  │  Ordem de Serviço   │                                │            │
-│  │                     │  OrcamentoAprovadoEvent ────────┤            │
-│  │  AR: OrdemDeServico │  OSFinalizadaEvent ────────────┤            │
-│  │  AR: Cliente        │  PagamentoConfirmadoEvent ◄────┤            │
-│  │  AR: Veiculo        │                                │            │
-│  │  AR: Servico (cat.) │◄───────────────────────────────┘            │
-│  └──────────┬──────────┘                                            │
-│             │                        ┌─────────────────────┐        │
-│             │────────────┐           │  Gestão de Estoque   │        │
-│             │            │           │                     │        │
-│             │            └──────────►│  AR: Estoque        │        │
-│             │                        │  AR: RequisicaoDe-  │        │
-│             │                        │      Compra         │        │
-│             │   EstoqueReservadoEvent│                     │        │
-│             │◄───────────────────────│  AR: NotaFiscal     │        │
-│             │                        └──────────┬──────────┘        │
-│             │                                   │                   │
-│             │                                   │                   │
-│             │            ┌─────────────────────┐│                   │
-│             │            │  Ordem de Pagamento  ││                   │
-│             │───────────►│                     ││                   │
-│             │            │  AR: OrdemDePagamento││                   │
-│             │◄───────────│                     ││                   │
-│             │            │  AR: EntregaVeiculo  ││                   │
-│             │            └─────────────────────┘│                   │
-│  ┌─────────────────────┐                        │                   │
-│  │  User & Auth (exist.)│                       │                   │
-│  │                     │                       │                   │
-│  │  AR: User           │                       │                   │
-│  └─────────────────────┘                       │                   │
-│                                                │                   │
-│  ┌─────────────────────┐                       │                   │
-│  │  Shared Kernel      │                       │                   │
-│  │  (Hybrid ID,         │                       │                   │
-│  │   BaseEntity,       │                       │                   │
-│  │   EventPublisher,   │                       │                   │
-│  │   ApiException)     │◄──────────────────────┘                   │
-│  └─────────────────────┘                                           │
-└─────────────────────────────────────────────────────────────────────┘
-```
+### Q2: How to configure WhatsApp API tokens?
 
-**Key architectural decision**: Bounded contexts communicate via **domain events** only — no direct Service calls across contexts. This preserves autonomy and allows future extraction. Within a monolith, the CDI event bus (`jakarta.enterprise.event.Event.fire()`) provides in-process, synchronous, in-transaction event delivery. For eventual consistency, event listeners that fail do not roll back the publisher's transaction.
+**Decision: 3-layer strategy — @ConfigMapping + K8s Secret + env fallback.**
 
-### Component Responsibilities
-
-| Component | Responsibility | Typical Implementation |
-|-----------|----------------|------------------------|
-| `OrdemDeServico` (AR) | OS lifecycle state machine, item list, orçamento | Domain entity with `@Builder(PRIVATE)`, `create()`/`reconstitute()` factories |
-| `Cliente` (AR) | Client registration, CPF/CNPJ validation, uniqueness | Domain entity, own aggregate |
-| `Veiculo` (AR) | Vehicle registration, plate uniqueness, link to client | Domain entity, own aggregate |
-| `Orcamento` (entity) | Budget generation, approval workflow, SLA expiry | Entity inside OS aggregate |
-| `ItemOS` (entity) | Services/parts included in OS | Entity inside OS aggregate |
-| `Estoque` (AR) | Inventory balance, reservation, minimum stock | Domain entity |
-| `ItemEstoque` (entity) | Individual item with quantity, reserve flag, min level | Entity inside Estoque aggregate |
-| `ReservaEstoque` (entity) | Part reservation linked to OS | Entity inside Estoque aggregate |
-| `RequisicaoDeCompra` (AR) | Purchase requisition when stock insufficient | Separate aggregate root |
-| `NotaFiscal` (AR) | NF entry registration, stock update | Separate aggregate root |
-| `OrdemDePagamento` (AR) | Payment tracking, cobrança emission, delivery release | Domain entity |
-| `Cobranca` (entity) | Invoice details, external reference | Entity inside Pagamento aggregate |
-| `Pagamento` (entity) | Payment confirmation, method, timestamp | Entity inside Pagamento aggregate |
-| `EntregaVeiculo` (entity) | Vehicle delivery record | Entity inside Pagamento aggregate |
-| `Servico` (AR) | Service catalog (type, description, default value) | Standalone aggregate |
-| `CdiEventPublisher` | Dispatches domain events via CDI Event bus | `jakarta.enterprise.event.Event<Object>.fire()` |
-| `EventConsumer` | Listens for domain events, triggers cross-context reactions | CDI `@Observes` methods in Services |
-
-## Recommended Package Structure (Within Each Module)
-
-The existing 4-module structure is preserved. New bounded contexts follow the same sub-package conventions as the existing User/Auth context.
-
-```
-mekano-domain/src/main/java/com/fiap/mekano/domain/
-├── model/                     # Domain entities (all contexts)
-│   ├── user/                  # Existing User.java
-│   ├── ordem_servico/         # NEW: OrdemDeServico.java, Cliente.java, Veiculo.java, Orcamento.java, ItemOS.java, Servico.java
-│   ├── estoque/               # NEW: Estoque.java, ItemEstoque.java, ReservaEstoque.java, RequisicaoDeCompra.java, NotaFiscal.java
-│   └── pagamento/             # NEW: OrdemDePagamento.java, Cobranca.java, Pagamento.java, EntregaVeiculo.java
-├── valueobject/               # Value objects (all contexts)
-│   ├── Email.java (existing)
-│   ├── CpfCnpj.java           # Validated CPF/CNPJ
-│   ├── Placa.java             # Validated license plate
-│   └── ... per context
-├── port/
-│   ├── in/                    # Input ports grouped by context
-│   │   ├── user/ (existing)
-│   │   ├── ordem_servico/     # NEW
-│   │   ├── estoque/           # NEW
-│   │   └── pagamento/         # NEW
-│   └── out/                   # Output ports grouped by context
-│       ├── user/ (existing)
-│       ├── ordem_servico/     # NEW
-│       ├── estoque/           # NEW
-│       └── pagamento/         # NEW
-├── event/                     # Domain events (all contexts)
-│   ├── user/ (existing)
-│   ├── ordem_servico/         # NEW
-│   ├── estoque/               # NEW
-│   └── pagamento/             # NEW
-└── exception/                 # Exceptions (all contexts)
-
-mekano-application/src/main/java/com/fiap/mekano/application/
-└── usecase/
-    ├── user/ (existing)
-    ├── ordem_servico/          # NEW
-    ├── estoque/                # NEW
-    └── pagamento/              # NEW
-
-mekano-infrastructure/src/main/java/com/fiap/mekano/infrastructure/
-├── entity/
-│   ├── user/ (existing)
-│   ├── ordem_servico/         # NEW
-│   ├── estoque/               # NEW
-│   └── pagamento/             # NEW
-├── repository/
-│   ├── user/ (existing)
-│   ├── ordem_servico/         # NEW
-│   ├── estoque/               # NEW
-│   └── pagamento/             # NEW
-├── mapper/
-│   ├── user/ (existing)
-│   ├── ordem_servico/         # NEW: JPA ↔ Domain entity mappers
-│   ├── estoque/               # NEW
-│   └── pagamento/             # NEW
-├── event/ (existing — CdiEventPublisher shared)
-├── security/ (existing — shared)
-└── service/ (existing — shared)
-
-mekano-rest/src/main/java/com/fiap/mekano/rest/
-└── api/
-    ├── user/ (existing)
-    ├── ordem_servico/          # NEW: Resources, DTOs, mappers
-    ├── estoque/                # NEW
-    └── pagamento/              # NEW
-```
-
-### Structure Rationale
-
-- **Group by bounded context within each layer**: Keeps code organized by domain concept, not by technical role. Prevents cross-contamination between contexts. A developer working on OS only touches `order_servico/` packages across all layers.
-- **Shared infrastructure layer**: `CdiEventPublisher`, `BaseEntity`, `ApiExceptionMapper`, security utils remain shared — they are technical concerns, not domain concerns.
-- **Separate domain event packages per context**: Events are namespaced by context to prevent naming collisions and make event flow explicit.
-
-## Architectural Patterns
-
-### Pattern 1: State Machine for OrdemDeServico Lifecycle
-
-**What:** A strict state machine controlling the lifecycle of `OrdemDeServico`. Transitions are explicit methods on the aggregate root — not setters. Each method validates current state before transitioning.
-
-**When to use:** Any entity with a well-defined lifecycle and business rules per transition. Essential for OS workflow where invalid transitions (e.g., jumping directly to ENTREGUE from RECEBIDA) must be impossible at the domain level.
-
-**Trade-offs:**
-- ++ Compile-time safety for transitions — impossible to reach invalid states
-- ++ Business rules are co-located with state (each transition method has its own validation)
-- -- Requires more code than a simple setStatus() approach
-- -- Transitions get complex when external validation is needed (e.g., "can't finalize without orçamento aprovado")
-
-**State Diagram:**
-
-```
-                      ┌──────────┐
-                      │ RECEBIDA │
-                      └────┬─────┘
-                           │ iniciarDiagnostico()
-                           ▼
-                   ┌───────────────┐
-               ┌──│ EM_DIAGNOSTICO │
-               │  └───────┬───────┘
-               │          │ finalizarDiagnostico()
-               │          ▼
-               │  ┌──────────────────────┐
-               │  │ AGUARDANDO_APROVACAO │
-               │  └──┬───────────────┬───┘
-               │     │               │
-               │     │ aprovar()     │ reprovar() / expirar SLA()
-               │     ▼               ▼
-               │  ┌─────────────┐ ┌───────────┐
-               │  │ EM_EXECUCAO │ │ CANCELADA │◄──── (any state can cancel)
-               │  └──────┬──────┘ └───────────┘
-               │         │ finalizarExecucao()
-               │         ▼
-               │  ┌─────────────┐
-               │  │ FINALIZADA  │
-               │  └──────┬──────┘
-               │         │ entregar()
-               │         ▼
-               │  ┌───────────┐
-               └──│ ENTREGUE  │
-                  └───────────┘
-```
-
-**Example:**
-
+Layer 1 — Type-safe @ConfigMapping in infrastructure (already proven pattern):
 ```java
-// Domain entity — transitions are EXPLICIT methods, NOT setters
-public class OrdemDeServico {
-    private StatusOS status;
-    private Orcamento orcamento;
-    private List<ItemOS> itens;
-
-    public void iniciarDiagnostico() {
-        if (status != StatusOS.RECEBIDA) {
-            throw new DomainException("Só é possível iniciar diagnóstico de OS Recebida");
-        }
-        this.status = StatusOS.EM_DIAGNOSTICO;
-    }
-
-    public void incluirServicosInsumos(List<ItemOS> novosItens) {
-        if (status != StatusOS.EM_DIAGNOSTICO) {
-            throw new DomainException("Só é possível incluir itens durante o diagnóstico");
-        }
-        this.itens.addAll(novosItens);
-    }
-
-    public Orcamento finalizarDiagnostico(PoliticaSLA sla) {
-        if (status != StatusOS.EM_DIAGNOSTICO) {
-            throw new DomainException("Só é possível finalizar diagnóstico em andamento");
-        }
-        this.orcamento = Orcamento.gerar(this.itens, sla);
-        this.status = StatusOS.AGUARDANDO_APROVACAO;
-        return this.orcamento;
-    }
-
-    public void aprovarOrcamento() {
-        if (status != StatusOS.AGUARDANDO_APROVACAO) {
-            throw new DomainException("Só é possível aprovar orçamento pendente");
-        }
-        if (orcamento.estaExpirado()) {
-            this.status = StatusOS.CANCELADA;
-            throw new BusinessException("Orçamento expirado — OS cancelada");
-        }
-        this.orcamento.aprovar();
-        this.status = StatusOS.EM_EXECUCAO;
-    }
-
-    public void reprovarOrcamento() {
-        if (status != StatusOS.AGUARDANDO_APROVACAO) {
-            throw new DomainException("Só é possível reprovar orçamento pendente");
-        }
-        this.orcamento.reprovar();
-        this.status = StatusOS.CANCELADA;
-    }
-
-    public void iniciarExecucao() {
-        if (status != StatusOS.EM_EXECUCAO) {
-            throw new DomainException("Só é possível iniciar execução de OS aprovada");
-        }
-        // Estoque já deve ter sido reservado — verificação está no Service
-    }
-
-    public void finalizarExecucao() {
-        if (status != StatusOS.EM_EXECUCAO) {
-            throw new DomainException("Só é possível finalizar execução em andamento");
-        }
-        this.status = StatusOS.FINALIZADA;
-    }
-
-    public void entregar() {
-        if (status != StatusOS.FINALIZADA) {
-            throw new DomainException("Só é possível entregar OS finalizada");
-        }
-        this.status = StatusOS.ENTREGUE;
-    }
-
-    public void cancelar() {
-        if (status == StatusOS.CANCELADA || status == StatusOS.ENTREGUE) {
-            throw new DomainException("OS já cancelada ou entregue não pode ser cancelada");
-        }
-        this.status = StatusOS.CANCELADA;
-    }
-
-    public void expirarSLA() {
-        if (status == StatusOS.AGUARDANDO_APROVACAO && orcamento.estaExpirado()) {
-            this.status = StatusOS.CANCELADA;
-        }
-    }
+@ConfigMapping(prefix = "mekano.whatsapp")
+public interface TwilioWhatsAppConfig {
+    String accountSid();
+    String authToken();
+    String fromNumber();
+    String apiBaseUrl();  // dev override: simulated endpoint
+    
+    @WithDefault("https://api.twilio.com/2010-04-01")
+    String baseUrl();
 }
 ```
 
-**Key validation rules per transition:**
-
-| Transition | From | To | Guard Condition |
-|------------|------|----|-----------------|
-| `iniciarDiagnostico()` | RECEBIDA | EM_DIAGNOSTICO | Status must be RECEBIDA |
-| `finalizarDiagnostico()` | EM_DIAGNOSTICO | AGUARDANDO_APROVACAO | At least 1 item must exist |
-| `aprovarOrcamento()` | AGUARDANDO_APROVACAO | EM_EXECUCAO | Orçamento not expired |
-| `reprovarOrcamento()` | AGUARDANDO_APROVACAO | CANCELADA | None |
-| `expirarSLA()` | AGUARDANDO_APROVACAO | CANCELADA | Orçamento expired |
-| `iniciarExecucao()` | EM_EXECUCAO | EM_EXECUCAO | (approval already verified) |
-| `finalizarExecucao()` | EM_EXECUCAO | FINALIZADA | None |
-| `entregar()` | FINALIZADA | ENTREGUE | Pagamento confirmado (checked in Service) |
-| `cancelar()` | Any except CANCELADA/ENTREGUE | CANCELADA | Not already cancelled/delivered |
-
-### Pattern 2: Domain Events for Inter-Context Communication
-
-**What:** Bounded contexts communicate exclusively via domain events. When an aggregate executes a state transition that has cross-context effects, it publishes a domain event. Other contexts listen via CDI `@Observes` and react. The event publisher (`CdiEventPublisher`) uses `jakarta.enterprise.event.Event<Object>.fire()` — synchronous, in-process, transactional.
-
-**When to use:** Any cross-context action within the monolith. Preserves bounded context autonomy — the OS context never directly calls Estoque Services.
-
-**Trade-offs:**
-- ++ Contexts remain decoupled — could extract to microservices later
-- ++ Events are recorded in domain layer (pure Java records) — no framework leak
-- ++ Transactional by default — publisher and listener share the same transaction
-- -- Synchronous — listener failure rolls back publisher's transaction (mitigated by error handling)
-- -- In-process only — events lost if JVM crashes before listener processes (acceptable for monolith MVP)
-
-**Event Flow Map:**
-
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│                       Domain Event Flow                              │
-│                                                                      │
-│  OS Context:                         Estoque Context:                │
-│  ┌─────────────────────┐            ┌─────────────────────┐         │
-│  │ OrcamentoAprovado   │───────────►│ @Observes +Reservar │         │
-│  │ (aprovacao OS)      │            │ peças p/ OS         │         │
-│  └─────────────────────┘            └─────────┬───────────┘         │
-│                                               │                      │
-│                        ┌──────────────────────┐                     │
-│                        │ EstoqueReservadoEvent │──── (info only)     │
-│                        │ (ou)                 │                     │
-│                        │ ReqCompraNecessaria   │                     │
-│                        └──────────────────────┘                     │
-│                                                                      │
-│  OS Context:                          Pagamento Context:            │
-│  ┌─────────────────────┐            ┌─────────────────────┐         │
-│  │ OSFinalizadaEvent    │───────────►│ @Observes +Emitir    │        │
-│  │ (finalizacao exec)   │            │ Cobranca            │         │
-│  └─────────────────────┘            └─────────┬───────────┘         │
-│                                               │                      │
-│                        ┌──────────────────────┐                     │
-│                        │ CobrancaEmitidaEvent  │──── (info only)    │
-│                        └──────────────────────┘                     │
-│                                                                      │
-│  Pagamento Context:                        OS Context:              │
-│  ┌─────────────────────┐            ┌─────────────────────┐         │
-│  │ PagamentoConfirmado │───────────►│ @Observes +Liberar   │        │
-│  │ (confirmacao pagto) │            │ Entrega (entregar())│         │
-│  └─────────────────────┘            └─────────────────────┘         │
-│                                                                      │
-│  Pagamento Context:                        OS Context:              │
-│  ┌─────────────────────┐            ┌─────────────────────┐         │
-│  │ EntregaRealizadaEvent│──────────►│ @Observes +Atualizar │        │
-│  │ (veiculo entregue)   │           │ OS para ENTREGUE     │        │
-│  └─────────────────────┘            └─────────────────────┘         │
-└──────────────────────────────────────────────────────────────────────┘
+Layer 2 — Config file `whatsapp-config.yml` in mekano-rest (following existing pattern):
+```yaml
+# whatsapp-config.yml
+mekano:
+  whatsapp:
+    account-sid: ${TWILIO_ACCOUNT_SID:}
+    auth-token: ${TWILIO_AUTH_TOKEN:}
+    from-number: ${TWILIO_FROM_NUMBER:whatsapp:+14155238886}
+    base-url: ${TWILIO_BASE_URL:https://api.twilio.com/2010-04-01}
 ```
 
-**Example:**
-
-```java
-// === DOMAIN LAYER ===
-
-// Event record in mekano-domain/src/main/java/.../domain/event/ordem_servico/
-public record OrcamentoAprovadoEvent(
-    UUID osId,
-    UUID clienteId,
-    UUID veiculoId,
-    List<ItemOS> itensNecessarios,
-    LocalDateTime ocorreuEm
-) {
-    public static OrcamentoAprovadoEvent of(OrdemDeServico os) {
-        return new OrcamentoAprovadoEvent(
-            os.getId(), os.getClienteId(), os.getVeiculoId(),
-            os.getItens(), LocalDateTime.now()
-        );
-    }
-}
-
-// Event record in mekano-domain/src/main/java/.../domain/event/ordem_servico/
-public record OSFinalizadaEvent(
-    UUID osId,
-    BigDecimal valorTotal,
-    LocalDateTime ocorreuEm
-) {
-    public static OSFinalizadaEvent of(OrdemDeServico os) {
-        return new OSFinalizadaEvent(
-            os.getId(), os.getOrcamento().getValorTotal(), LocalDateTime.now()
-        );
-    }
-}
-
-// Event record in mekano-domain/src/main/java/.../domain/event/pagamento/
-public record PagamentoConfirmadoEvent(
-    UUID ordemPagamentoId,
-    UUID osId,
-    LocalDateTime ocorreuEm
-) {
-    public static PagamentoConfirmadoEvent of(OrdemDePagamento op) {
-        return new PagamentoConfirmadoEvent(
-            op.getId(), op.getOsId(), LocalDateTime.now()
-        );
-    }
-}
-
-// === APPLICATION LAYER ===
-
-// OS Service — publishes event after state transition
-@ApplicationScoped
-public class AprovarOrcamentoUseCase implements AprovarOrcamentoInputPort {
-
-    private final OrdemDeServicoRepositoryPort osRepository;
-    private final EventPublisher eventPublisher;
-
-    @Override
-    @Transactional
-    public OrdemDeServico execute(AprovarOrcamentoCommand command) {
-        OrdemDeServico os = osRepository.findById(command.osId())
-                .orElseThrow(() -> new AppException(404, "OS não encontrada"));
-
-        os.aprovarOrcamento(); // domain state machine — may throw BusinessException
-        osRepository.save(os);
-
-        // Publish event — Estoque context listens to reserve parts
-        eventPublisher.publish(OrcamentoAprovadoEvent.of(os));
-
-        return os;
-    }
-}
-
-// Estoque Service — listens for OrcamentoAprovadoEvent
-@ApplicationScoped
-public class ReservarEstoqueUseCase {
-
-    private final EstoqueRepositoryPort estoqueRepository;
-    private final RequisicaoCompraRepositoryPort requisicaoRepository;
-    private final EventPublisher eventPublisher;
-
-    public void onOrcamentoAprovado(@Observes OrcamentoAprovadoEvent event) {
-        // This runs in the same transaction as AprovarOrcamentoUseCase
-        // If it throws, the approval rolls back — this is DESIRED behavior
-        // because you can't approve an OS without parts available.
-
-        for (ItemOS item : event.itensNecessarios()) {
-            if (item.getTipo() == TipoItem.PECA_INSUMO) {
-                Estoque estoque = estoqueRepository.findByItemId(item.getItemId());
-                if (estoque.temDisponibilidade(item.getQuantidade())) {
-                    estoque.reservar(event.osId(), item.getItemId(), item.getQuantidade());
-                } else {
-                    // Create purchase requisition for insufficient stock
-                    requisicaoRepository.save(
-                        RequisicaoDeCompra.criar(event.osId(), item, MotivoRequisicao.VINCULADO_OS)
-                    );
-                }
-            }
-        }
-        estoqueRepository.flush();
-    }
-}
+Layer 3 — K8s Secret + env mapping:
+```yaml
+# k8s/secret-whatsapp.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mekano-whatsapp
+type: Opaque
+stringData:
+  TWILIO_ACCOUNT_SID: "ACxxx"
+  TWILIO_AUTH_TOKEN: "xxx"
+  TWILIO_FROM_NUMBER: "whatsapp:+14155238886"
+```
+```yaml
+# k8s/deployment.yaml (env section)
+env:
+  - name: TWILIO_ACCOUNT_SID
+    valueFrom:
+      secretKeyRef:
+        name: mekano-whatsapp
+        key: TWILIO_ACCOUNT_SID
 ```
 
-### Pattern 3: Aggregate Design with Identity Boundaries
+**Reference URL:** https://github.com/quarkusio/quarkus/blob/main/docs/src/main/asciidoc/kubernetes-config.adoc (verified via Context7)
 
-**What:** Each bounded context has its own aggregate roots with clear identity boundaries. Cross-aggregate references use UUIDs, not object references. Each aggregate root is responsible for its own consistency boundary.
+**Dev profile:** In `%dev`, tokens can be empty → adapter falls back to simulated/mock responses. No real WhatsApp call needed for local development.
 
-**When to use:** Any domain modeled with DDD. Essential to prevent anemic domain models and god aggregates.
+### Q3: How to maintain Clean Architecture boundaries with external service calls?
 
-**Trade-offs:**
-- ++ Clear consistency boundaries — no cross-aggregate transaction spanning
-- ++ UUID references prevent accidental navigation across contexts
-- -- Requires more repository calls to fetch related data
-- -- Some queries need joining across aggregates (acceptable in monolith with SQL)
+**Decision: Port/Adapter + CDI events for async boundary + @Retry/@CircuitBreaker on adapter.**
 
-**Aggregate Boundaries:**
+The existing architecture already solves this for database (repository ports) and events (EventPublisher port). External HTTP is just another output port.
 
-| Aggregate Root | Owned Entities | UUID References To |
-|----------------|----------------|-------------------|
-| `Cliente` | None | `User.createdBy` (audit) |
-| `Veiculo` | None | `Cliente.id` |
-| `OrdemDeServico` | `Orcamento`, `ItemOS` | `Cliente.id`, `Veiculo.id` |
-| `Servico` (catalog) | None | — |
-| `Estoque` | `ItemEstoque`, `ReservaEstoque` | `OrdemDeServico.id` (in Reserva) |
-| `RequisicaoDeCompra` | `ItemRequisicao` | `OrdemDeServico.id`, `ItemEstoque.id` |
-| `NotaFiscal` | `ItemNotaFiscal` | `RequisicaoDeCompra.id`, `ItemEstoque.id` |
-| `OrdemDePagamento` | `Cobranca`, `Pagamento`, `EntregaVeiculo` | `OrdemDeServico.id` |
-| `User` | None | — (auth context) |
-
-**Why Cliente and Veiculo are separate aggregates** (not inside OrdemDeServico):
-- They have their own lifecycle independent of any single OS
-- A client can have multiple OS over time
-- A vehicle can return for multiple services
-- They must be referenceable without loading the full OS aggregate
-
-**Why ReservaEstoque is inside Estoque aggregate** (not standalone):
-- Reservation consistency with stock balance is critical — cannot reserve more than available
-- Each reservation modifies `ItemEstoque.reservado` flag
-- A separate Reserva aggregate would allow inconsistent reservations
-
-### Pattern 4: Service as Eventual Consistency Coordinator
-
-**What:** Services in the application layer act as coordinators for eventual consistency between contexts. When a Service in context A completes its primary operation, it publishes a domain event. Services in context B listen for that event and perform their own operations.
-
-**When to use:** Cross-context flows where business rules span multiple aggregates/contexts.
-
-**Trade-offs:**
-- ++ Decoupled contexts — each Service only knows about its own domain
-- ++ Clear transaction boundaries — each Service has its own `@Transactional`
-- -- Synchronous within monolith — listener failure affects publisher (acceptable)
-- -- Two-phase operations impossible without distributed tx (not needed for MVP)
-
-**Critical Flow: Orcamento Aprovado → Estoque Reservation**
-
+**Pattern:**
 ```
-AprovarOrcamentoUseCase (OS context)
-┌──────────────────────────────────────────────┐
-│ @Transactional                               │
-│ 1. Buscar OS (uuid)                          │
-│ 2. Validar status AGUARDANDO_APROVACAO       │
-│ 3. os.aprovarOrcamento()                     │
-│ 4. osRepository.save(os)                     │
-│ 5. eventPublisher.publish(                   │
-│      OrcamentoAprovadoEvent(...))            │
-│    ┌──────────────────────────────────────┐  │
-│    │ CDI Event Bus (same thread, same tx)  │──┤──→ ReservarEstoqueUseCase.@Observes()
-│    └──────────────────────────────────────┘  │       if fails → rollback
-└──────────────────────────────────────────────┘
+Domain port (pure interface)
+    ↕ implements
+Infrastructure adapter (Quarkus REST Client + FT annotations)
+    ↕ HTTP
+Twilio WhatsApp API
 ```
 
-**Critical Flow: OS Finalizada → Emitir Cobrança**
+**Key boundary rules:**
 
-```
-FinalizarExecucaoUseCase (OS context)
-┌──────────────────────────────────────────────┐
-│ @Transactional                               │
-│ 1. Buscar OS                                 │
-│ 2. os.finalizarExecucao()                    │
-│ 3. osRepository.save(os)                     │
-│ 4. eventPublisher.publish(                   │
-│      OSFinalizadaEvent(...))                 │
-│    ┌──────────────────────────────────────┐  │
-│    │ CDI Event Bus                         │──┤──→ EmitirCobrancaUseCase.@Observes()
-│    └──────────────────────────────────────┘  │       creates OrdemDePagamento
-└──────────────────────────────────────────────┘
-```
+1. **Domain port uses ONLY domain types.** `NotificationOutputPort` receives `Telefone` (value object), `String message`, or domain entities like `Orcamento`, `OrdemServico`. No HTTP, no JSON, no Twilio types.
 
-**Critical Flow: Pagamento Confirmado → Entrega Veículo**
+2. **Application layer calls the port, but does NOT manage the HTTP call.** The use case approves the budget, publishes the event, and calls `notificationOutputPort.sendOrcamentoApproved(...)`. If Twilio is down, the use case still succeeds — the business transaction is committed before the notification attempt.
 
-```
-RegistrarPagamentoUseCase (Pagamento context)
-┌──────────────────────────────────────────────┐
-│ @Transactional                               │
-│ 1. Buscar OrdemDePagamento                   │
-│ 2. op.registrarPagamento(metodo, ref)        │
-│ 3. opRepository.save(op)                     │
-│ 4. eventPublisher.publish(                   │
-│      PagamentoConfirmadoEvent(...))          │
-│    ┌──────────────────────────────────────┐  │
-│    │ CDI Event Bus                         │──┤──→ LiberarEntregaUseCase.@Observes()
-│    └──────────────────────────────────────┘  │       calls os.entregar()
-│                                              │       calls op.registrarEntrega()
-└──────────────────────────────────────────────┘
-```
+3. **@Transactional on the use case, NOT on the notification.** External calls MUST NOT be inside a database transaction. Pattern:
+   ```java
+   @Transactional
+   public OrcamentoResponse aprovarOrcamento(UUID osUuid) {
+       Orcamento orcamento = orcamentoDomainService.aprovar(os);
+       repositoryPort.save(orcamento);
+       // Notification is best-effort — outside @Transactional scope
+       // Or fire an async CDI event
+       eventPublisher.publish(new OrcamentoAprovadoEvent(osUuid));
+       return mapToResponse(orcamento);
+   }
+   ```
 
-## Data Flow
+4. **CDI event observer handles the actual HTTP call** — async decoupling:
+   ```java
+   // In infrastructure — pure observer, no @Transactional
+   public class OrcamentoNotificationObserver {
+       @Inject NotificationOutputPort notification;
+       
+       void onOrcamentoAprovado(@Observes OrcamentoAprovadoEvent event) {
+           notification.sendOrcamentoApproved(event.clienteTelefone(), event);
+       }
+   }
+   ```
 
-### Complete OS Lifecycle Data Flow
+5. **Fault tolerance on the adapter** (not in application):
+   ```java
+   @ApplicationScoped
+   public class TwilioWhatsAppAdapter implements NotificationOutputPort {
+       @Retry(maxRetries = 2, delay = 500,
+              retryOn = {TimeoutException.class, WebApplicationException.class},
+              abortOn = {IllegalArgumentException.class})
+       @CircuitBreaker(requestVolumeThreshold = 5, failureRatio = 0.5, delay = 10000)
+       @Timeout(3000)  // 3s max for external call
+       public void sendOrcamentoApproved(Telefone to, Orcamento orcamento) {
+           // HTTP call via Quarkus REST Client
+       }
+   }
+   ```
 
-```
-CLIENTE / ATENDENTE         SISTEMA                    MECÂNICO
-       │                       │                          │
-       │ 1. Cadastra Cliente   │                          │
-       │─────── RF01 ─────────►│                          │
-       │                       │                          │
-       │ 2. Cadastra Veículo   │                          │
-       │─────── RF02 ─────────►│                          │
-       │                       │                          │
-       │ 3. Cria OS (Recebida) │                          │
-       │─────── RF04 ─────────►│                          │
-       │                       │                          │
-       │                       │                          │ 4. Inicia Diagnóstico
-       │                       │                          │────── RF05 ────►
-       │                       │                          │
-       │                       │                          │ 5. Inclui serviços/peças
-       │                       │                          │────── RF05 ────►
-       │                       │                          │
-       │                       │ 6. Gera Orçamento        │
-       │                       │◄──── RF06 ──────────────│
-       │                       │                          │
-       │ 7. Orçamento enviado  │                          │
-       │◄─────────── RF06 ─────│                          │
-       │                       │                          │
-       │ 8. Aprova/Reprova     │                          │
-       │─────── RF07 ─────────►│                          │
-       │                       │                          │
-       │ [Se Aprovado]         │                          │
-       │                       │ 9. OrcamentoAprovadoEvent│
-       │                       │──► Estoque: reservar     │
-       │                       │    peças                 │
-       │                       │                          │
-       │                       │                          │ 10. Inicia Execução
-       │                       │                          │────── RF08 ────►
-       │                       │                          │
-       │                       │                          │ 11. Finaliza Execução
-       │                       │                          │────── RF08 ────►
-       │                       │                          │
-       │                       │ 12. OSFinalizadaEvent    │
-       │                       │──► Pagamento: emitir     │
-       │                       │    cobrança              │
-       │                       │                          │
-       │ 13. Cliente paga      │                          │
-       │──(serviço bancário)──►│                          │
-       │                       │                          │
-       │                       │ 14. PagamentoConfirmado  │
-       │                       │──► OS: liberar entrega   │
-       │                       │                          │
-       │                       │ 15. Entrega registrada   │
-       │◄───────────────────────────────────────── RF19 ──│
-       │                       │                          │
-```
+6. **Never expose the REST Client interface outside infrastructure.** The Quarkus REST Client `@RegisterRestClient` interface is package-private or scoped to the notification package.
 
-### Database Schema Relationship
+**Reference URL:** https://github.com/quarkusio/quarkus/blob/main/extensions/smallrye-fault-tolerance/deployment/src/main/resources/META-INF/quarkus-skill.md (verified via Context7)
 
-```
-┌───────────────────┐     ┌──────────────────┐     ┌──────────────────────┐
-│     CLIENTES      │     │  ORDENS_SERVICO  │     │   ITENS_OS           │
-├───────────────────┤     ├──────────────────┤     ├──────────────────────┤
-│ id (BIGSERIAL PK) │     │ id (BIGSERIAL PK)│     │ id (BIGSERIAL PK)    │
-│ uuid (UNIQUE)     │◄───►│ uuid (UNIQUE)    │     │ uuid (UNIQUE)        │
-│ nome              │     │ numero (UNIQUE)  │     │ ordem_servico_id FK  │
-│ cpf_cnpj (UNIQUE) │     │ cliente_uuid FK  │     │ tipo (SERVICO/PECA)  │
-│ email             │     │ veiculo_uuid FK  │     │ descricao            │
-│ telefone          │     │ status (VARCHAR) │     │ quantidade           │
-│ created_at        │     │ data_criacao     │     │ valor_unitario       │
-│ updated_at        │     │ data_entrada     │     │ created_at           │
-│ is_active         │     │ created_at       │     └──────────────────────┘
-│ deleted_at        │     │ updated_at       │
-└───────────────────┘     │ is_active        │     ┌──────────────────────┐
-                          │ deleted_at       │     │   ORCAMENTOS         │
-┌───────────────────┐     ├──────────────────┤     ├──────────────────────┤
-│    VEICULOS       │     │ cliente_uuid     │     │ id (BIGSERIAL PK)    │
-├───────────────────┤     │ veiculo_uuid     │     │ uuid (UNIQUE)        │
-│ id (BIGSERIAL PK) │────►│                  │     │ ordem_servico_id FK  │
-│ uuid (UNIQUE)     │     └──────────────────┘     │ valor_total          │
-│ placa (UNIQUE)    │                              │ data_geracao         │
-│ marca             │         │                    │ data_envio           │
-│ modelo            │         │                    │ data_expiracao       │
-│ ano               │         ▼                    │ status (VARCHAR)     │
-│ cliente_uuid FK ──┘                              │ created_at           │
-│ created_at        │     ┌──────────────────┐     │ updated_at           │
-│ updated_at        │     │ ITENS_ESTOQUE    │     └──────────────────────┘
-│ is_active         │     ├──────────────────┤
-│ deleted_at        │     │ id (BIGSERIAL PK)│
-└───────────────────┘     │ uuid (UNIQUE)    │
-                          │ codigo (UNIQUE)  │
-┌───────────────────┐     │ descricao        │
-│   SERVICOS (cat.) │     │ unidade          │
-├───────────────────┤     │ saldo_atual      │
-│ id (BIGSERIAL PK) │     │ estoque_minimo   │
-│ uuid (UNIQUE)     │     │ valor_unitario   │
-│ nome              │     │ reservado        │
-│ descricao         │     │ created_at       │
-│ valor_unitario    │     │ updated_at       │
-│ created_at        │     │ is_active        │
-│ updated_at        │     └──────────────────┘
-│ is_active         │              │
-└───────────────────┘              │ 1
-                                   │ N
-                          ┌──────────────────┐     ┌──────────────────────┐
-                          │ RESERVAS_ESTOQUE │     │  REQUISICOES_COMPRA  │
-                          ├──────────────────┤     ├──────────────────────┤
-                          │ id (BIGSERIAL PK)│     │ id (BIGSERIAL PK)    │
-                          │ uuid (UNIQUE)    │     │ uuid (UNIQUE)        │
-                          │ os_uuid FK       │     │ os_uuid FK (nullable)│
-                          │ status (VARCHAR) │     │ status (VARCHAR)     │
-                          │ data_reserva     │     │ data_criacao         │
-                          │ created_at       │     │ created_at           │
-                          └──────────────────┘     │ updated_at           │
-                                   │               └──────────────────────┘
-                                   │ 1                        │
-                                   │ N                        │ 1
-                          ┌──────────────────┐     ┌──────────────────────┐
-                          │ITENS_RESERVADOS  │     │   NOTAS_FISCAIS      │
-                          ├──────────────────┤     ├──────────────────────┤
-                          │ reserva_id FK    │     │ id (BIGSERIAL PK)    │
-                          │ item_estoque_uuid│     │ uuid (UNIQUE)        │
-                          │ quantidade       │     │ numero (UNIQUE)      │
-                          │ valor_unitario   │     │ fornecedor           │
-                          └──────────────────┘     │ requisicao_id FK     │
-                                                   │ data_cadastro        │
-┌───────────────────┐                              │ created_at           │
-│ ORDENS_PAGAMENTO  │                              └──────────────────────┘
-├───────────────────┤
-│ id (BIGSERIAL PK) │     ┌──────────────────┐
-│ uuid (UNIQUE)     │     │    PAGAMENTOS    │
-│ os_uuid FK        │     ├──────────────────┤
-│ valor_total       │     │ id (BIGSERIAL PK)│
-│ status (VARCHAR)  │     │ uuid (UNIQUE)    │
-│ data_criacao      │     │ ordem_pagto_uuid │
-│ created_at        │     │ valor            │
-│ updated_at        │     │ data_pagamento   │
-└──────┬───────────┘     │ data_confirmacao │
-       │                  │ metodo (VARCHAR) │
-       │ 1                │ ref_servico_banc │
-       │                  │ status (VARCHAR) │
-       ▼                  └──────────────────┘
-┌───────────────────┐
-│    COBRANCAS      │     ┌──────────────────┐
-├───────────────────┤     │ ENTREGAS_VEICULO │
-│ id (BIGSERIAL PK) │     ├──────────────────┤
-│ uuid (UNIQUE)     │     │ id (BIGSERIAL PK)│
-│ ordem_pagto_uuid  │     │ uuid (UNIQUE)    │
-│ valor             │     │ ordem_pagto_uuid │
-│ data_emissao      │     │ os_uuid          │
-│ metodo (VARCHAR)  │     │ data_entrega     │
-│ ref_externa       │     │ responsavel      │
-│ created_at        │     │ cliente_recebedor│
-└───────────────────┘     │ created_at       │
-                          └──────────────────┘
-```
+### Q4: Build order for phases — documentation early or late?
 
-**Schema Design Decisions:**
+**Decision: Documentation is continuous — start outlines early, finalize last.**
 
-- **UUIDs for cross-aggregate references**: Foreign keys use `UUID` (the public UUID of the referenced aggregate), not `BIGSERIAL`. This prevents enumeration attacks and makes aggregate boundaries explicit at the schema level.
-- **Status as VARCHAR with CHECK constraint**: Not an enum type — simpler Flyway migrations, easier to evolve. Application enforces valid values.
-- **No ON DELETE CASCADE across aggregates**: Aggregates are independent — client deletion should not cascade-delete OS records. Soft delete everywhere.
-- **`os_uuid FK` in multiple tables**: Pagamento, Reserva, Requisição all reference OS by UUID. No single FK path — each context owns its reference.
+For academic deliverables (video, Miro, README), the **documented system must match the final state**. Writing doc first means rewriting it 3 times. But starting doc last means running out of time.
 
-## Scaling Considerations
+**Optimal phase order for 10 days, 5 devs:**
 
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| **0-10 workshops** (MVP target) | Monolith with current Clean Architecture. Single PostgreSQL. DevServices for tests. No changes needed. |
-| **10-100 workshops / 10K OS/mo** | Read replicas for public status queries. Caffeine cache expansion. Connection pooling tuning. |
-| **100+ workshops / 100K OS/mo** | Extract Estoque context into separate service (it has the most distinct scaling profile). Introduce message broker (RabbitMQ/Kafka) for reliable event delivery between services. |
+| Phase | Days | People | Scope | Parallel? |
+|-------|------|--------|-------|-----------|
+| A — Infra Foundation | 1-2 | 2-3 | Docker review, K8s manifests, Terraform, CI/CD CD update | Yes — K8s + Terraform + CI parallel |
+| B — WhatsApp | 2-4 | 1-2 | Port, adapter, config, tests, @Retry/@CircuitBreaker | With Phase A (different concern) |
+| C — Quality | 3-6 | 2-3 | Fix bugs (ClienteService, NfEntradaRepo), stub→real services, FT/cache gaps, Clean Code | With Phase B toward end |
+| D — API Improvements | 5-7 | 1 | OS priority ordering endpoint, endpoint verification | With Phase C |
+| E — Docs & Video | 7-9 | 2-3 | README, sequence diagrams, CI/CD Mermaid, Swagger, Miro, video | With Phase D |
 
-### Scaling Priorities
+**JaCoCo 80% is a CI GATE, not a phase.** Already configured in root POM. Tests are written continuously with each phase. The gate fails builds under 80% LINE coverage.
 
-1. **First bottleneck — Public OS status queries (RF09):** These are read-only, unauthenticated, and likely high-frequency (clients polling). Mitigation: Cache with short TTL + dedicated read endpoint that bypasses Service layer (same as existing D-06 pattern). Consider read replica if load grows.
+**Doc strategy (parallel tracks):**
+- Day 1-2: README skeleton with architecture overview, ADRs
+- Day 3-6: Update README as WhatsApp/infra stabilize
+- Day 7-9: Finalize ALL docs (sequence diagrams, Mermaid CI/CD, Swagger, Miro, video)
 
-2. **Second bottleneck — Eventual consistency failures in monolith:** If CDI event listeners fail repeatedly, the publisher's transaction rolls back. Mitigation: `@Observes(notifyObserver = Reception.IF_EXISTS)` for non-critical events. For critical events, consider `@ObservesAsync` + retry table (outbox pattern).
-
-3. **Third bottleneck — Estoque reservation concurrency:** Multiple OS approving simultaneously could race on stock reservation. Mitigation: `@Lock(LockType.PESSIMISTIC_WRITE)` on `ItemEstoque` rows during reservation. Acceptable because Estoque is the most write-contended aggregate.
-
-## Anti-Patterns
-
-### Anti-Pattern 1: God Aggregate — Putting Cliente + Veiculo inside OrdemDeServico
-
-**What people do:** Nesting `Cliente` and `Veiculo` inside `OrdemDeServico` as embedded entities because "an OS always has a client and vehicle."
-
-**Why it's wrong:** Creates a massive aggregate that must be loaded in full for every OS operation. Cliente and Veiculo have independent lifecycles — a client exists before the first OS and persists after the last. Embedding them clutters the OS aggregate and forces cascade persistence concerns.
-
-**Do this instead:** Reference Cliente and Veiculo by UUID from OrdemDeServico. Load them separately when needed. Accept the extra repository call — it's negligible compared to the design clarity.
-
-### Anti-Pattern 2: Direct Service Call Across Contexts
-
-**What people do:** `AprovarOrcamentoUseCase` directly calling `estoqueUseCase.reservarPecas()` because "we're in a monolith anyway."
-
-**Why it's wrong:** Creates an implicit dependency between bounded contexts. Every time the OS approval flow changes, you must verify Estoque's Service interface hasn't broken. Makes future extraction impossible — you'd have to untangle all the cross-context calls.
-
-**Do this instead:** Always use domain events for cross-context communication, even within the monolith. The `CdiEventPublisher` + `@Observes` pattern adds negligible overhead and preserves future flexibility.
-
-### Anti-Pattern 3: Business Rules in Infrastructure (JPA entity as domain entity)
-
-**What people do:** Using `PanacheEntity` directly as the domain entity — annotating with `@Entity`, `@Column`, etc., and mixing JPA loading logic with business methods.
-
-**Why it's wrong:** The existing project explicitly avoids this (User.java is pure POJO, UserEntity.java is JPA). Business rules in JPA entities make testing harder (need DB), couple domain logic to Hibernate, and prevent changing persistence technology.
-
-**Do this instead:** Maintain the existing two-class pattern — domain entity (`OrdemDeServico.java`) with business methods and factory methods, JPA entity (`OrdemDeServicoEntity.java` that extends `BaseEntity`) with MapStruct mapping between them.
-
-### Anti-Pattern 4: Transaction Across Multiple Services
-
-**What people do:** Starting a transaction in the OS Service and trying to extend it into the Estoque event listener to get "atomic" reservation.
-
-**Why it's wrong:** The CDI `@Observes` listener runs in the same transaction as the publisher by default. While this provides atomicity, it means a reservation failure rolls back the OS approval — which IS desired for the approval case. But extending this pattern to all cross-context operations creates a distributed transaction nightmare.
-
-**Do this instead:** Accept that some cross-context operations are eventually consistent. For example, when Pagamento confirms, the OS transition to ENTREGUE should succeed even if the pagamento status update fails — these are separate concerns. Use `@Observes(during = TransactionPhase.AFTER_SUCCESS)` for operations that should only run after the publisher's transaction commits.
-
-## Integration Points
-
-### Internal Boundaries (Bounded Context Communication)
-
-| Boundary | Communication Mechanism | Data | Transactional? |
-|----------|------------------------|------|----------------|
-| OS → Estoque | `OrcamentoAprovadoEvent` via CDI | OS UUID, item list, quantities | Same tx (desired: stock reservation must succeed or approval rolls back) |
-| OS → Pagamento | `OSFinalizadaEvent` via CDI | OS UUID, valor total | Same tx (desired: cobrança must be emitted) |
-| Pagamento → OS | `PagamentoConfirmadoEvent` via CDI | Pagamento UUID, OS UUID | Same tx (desired: delivery release atomic with payment confirmation) |
-| Estoque → OS | `EstoqueReservadoEvent` via CDI (info) | OS UUID, reservation status | After success (non-critical — OS doesn't need to wait) |
-
-### External Services
-
-| Service | Integration Pattern | Notes |
-|---------|---------------------|-------|
-| Banco (serviço externo simulado) | Interface no domain (`ServicoBancarioPort`), impl in infrastructure | Simulated for MVP — returns success/failure deterministically. Real impl would use HTTP client with circuit breaker |
-| Email (envio de orçamento) | Interface no domain (`NotificadorPort`), impl in infrastructure | Simulated for MVP — just logs. Real impl would use SMTP or transactional email service |
-
-### User/Auth Context Integration
-
-The existing User/Auth context has no domain events that the new contexts need to consume. However, the new contexts should use `BaseEntity` (audit fields: `createdBy`, `updatedBy`) to record which authenticated user performed each operation.
-
-**Audit pattern for new contexts:**
-```java
-// In each Service, inject the current user's identity
-@ApplicationScoped
-public class CriarOSUseCase implements CriarOSInputPort {
-    // inject JWT claims to get current user UUID
-    @Inject @Claim("sub")
-    String currentUserId;
-
-    @Override
-    @Transactional
-    public OrdemDeServico execute(CriarOSCommand command) {
-        // ... business logic ...
-        OrdemDeServico os = OrdemDeServico.create(command);
-        osRepository.save(os, UUID.fromString(currentUserId));
-        return os;
-    }
-}
-```
-
-## Build Order (Phase Recommendations)
-
-### Recommended Implementation Order
-
-```
-Phase 1: OS Core (Cliente, Veiculo, Servico, OS lifecycle)
-  ├── Depends on: User/Auth context (existing)
-  ├── Builds: Cliente CRUD, Veiculo CRUD, Servico catalog
-  ├── Builds: OS creation, diagnóstico, orçamento (state machine)
-  ├── Builds: OS approval/reproval, SLA expiry
-  ├── Builds: OS finalization, delivery
-  └── Tests: State machine transitions, complete OS lifecycle
-
-Phase 2: Estoque (inventory management)
-  ├── Depends on: Phase 1 (needs OrcamentoAprovadoEvent)
-  ├── Builds: ItemEstoque CRUD, minimum stock calculation
-  ├── Builds: Reservation on OS approval (listens to event)
-  ├── Builds: Purchase requisition generation
-  ├── Builds: NF registration, stock update
-  ├── Builds: Stock withdrawal on OS execution start
-  └── Tests: Reservation flow, requisition flow, NF entry
-
-Phase 3: Pagamento (payment processing)
-  ├── Depends on: Phase 1 (needs OSFinalizadaEvent)
-  ├── Builds: OrdemDePagamento creation (listens to event)
-  ├── Builds: Cobranca emission
-  ├── Builds: Pagamento registration + bank service simulation
-  ├── Builds: Delivery release (listens to event → OS.entregar())
-  └── Tests: Complete payment flow, bank integration simulation
-```
-
-### Dependency Graph
-```
-User/Auth (exists) → Phase 1 (OS Core) → Phase 2 (Estoque)
-                                       → Phase 3 (Pagamento)
-```
-
-Phase 2 and 3 are independent of each other and can be built in parallel by different team members.
-
-### Existing Codebase Evolution
-
-The existing `mekano-domain/src/main/java/com/fiap/mekano/domain/model/User.java` pattern (POJO with `create()`/`reconstitute()` factories, `@Builder(PRIVATE)`) must be replicated for every new entity. The `BaseEntity` + `PanacheEntityBase` pattern in infrastructure provides the JPA mapping foundation.
-
-**What to reuse as-is:**
-- `CdiEventPublisher` — no changes needed, works for any domain event
-- `EventPublisher` interface — no changes needed
-- `BaseEntity` — new JPA entities extend this
-- `ApiExceptionMapper` — no changes needed
-- `UserResource` (existing auth endpoints) — keep for admin management, but new contexts need separate resources
-
-**What to refactor before expansion (low priority):**
-- Package structure: Consider moving context-specific files into sub-packages within each module. Currently everything is flat in `model/`, `port/`, etc. Not blocking — can be done incrementally as each context is added.
-- No other refactoring needed — the existing patterns are well-suited for expansion.
-
-## Sources
-
-- **Existing codebase**: `mekano-domain/`, `mekano-application/`, `mekano-infrastructure/`, `mekano-rest/` — patterns verified against compiled code
-- **EventStorming documentation**: `docs/EventStorming_Mermaid.md` — aggregate definitions, domain events, state machine
-- **Project requirements**: `docs/MEKANO_DOCUMENTATION.md` — functional requirements for all three contexts
-- **Current architecture analysis**: `.planning/codebase/ARCHITECTURE.md` — layer responsibilities, data flow patterns
-- **Codebase structure**: `.planning/codebase/STRUCTURE.md` — package conventions, where to add new code
-- **Domain layer conventions**: `CLAUDE.md` in each module — detailed conventions for domain, application, infrastructure patterns
+**Why not doc-first?** Documenting WhatsApp before it's built means documenting the interface, not the implementation. The README's value is describing what actually runs. Doc-first works for API contracts (Swagger) but not for architecture descriptions and deployment instructions.
 
 ---
 
-*Architecture research for: Mechanical Workshop Management System (Ordem de Serviço, Estoque, Pagamento)*
-*Researched: 2026-06-20*
+## System Overview
+
+### Current Architecture (v1.0 — Verified)
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                         mekano-rest (quarkus)                        │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌───────────────────┐   │
+│  │Resources  │  │ DTOs     │  │DtoMapper │  │ApiExceptionMapper │   │
+│  │(8)        │  │(in/out)  │  │(MapStruct│  │RFC 7807          │   │
+│  └─────┬─────┘  └──────────┘  └──────────┘  └───────────────────┘   │
+│        │ injects ports                                                │
+├────────┴──────────────────────────────────────────────────────────────┤
+│                     mekano-application (jar)                          │
+│  ┌───────────────┐  ┌────────────────┐  ┌────────────────────────┐  │
+│  │ UserService   │  │ VeiculoService │  │ ClienteService (bug)   │  │
+│  │ ✓ implemented │  │ ✓ implemented  │  │ ServicoService ✓      │  │
+│  ├───────────────┤  ├────────────────┤  ├────────────────────────┤  │
+│  │ PecaService   │  │ NfEntradaSvc   │  │ RequisicaoCompraSvc    │  │
+│  │ ✗ stub        │  │ ✗ stub         │  │ ✗ stub                 │  │
+│  └───────┬───────┘  └───────┬────────┘  └────────┬───────────────┘  │
+│          │ @Transactional    │                     │                  │
+│          │ calls ports       │                     │                  │
+├──────────┴──────────────────┴─────────────────────┴──────────────────┤
+│                   mekano-infrastructure (jar)                        │
+│  ┌──────────────┐  ┌────────────────┐  ┌────────────────────────┐  │
+│  │ Repositories │  │ Entity/Domain  │  │ Security (BcryptPW)    │  │
+│  │ (14)         │  │ Mappers (7+5)  │  │ Event (CDI)           │  │
+│  └──────┬───────┘  └────────────────┘  └────────────────────────┘  │
+│         │ Panache + PostgreSQL                                       │
+├─────────┴────────────────────────────────────────────────────────────┤
+│                        mekano-domain (jar)                           │
+│  ┌────────┐  ┌──────────┐  ┌───────┐  ┌────────┐  ┌─────────────┐  │
+│  │ Models │  │ Value    │  │ Ports │  │Events  │  │ AppException │  │
+│  │ (12)   │  │ Objects  │  │in/out │  │ (5)    │  │ + Messages   │  │
+│  │        │  │ (6)      │  │ (22)  │  │        │  │              │  │
+│  └────────┘  └──────────┘  └───────┘  └────────┘  └─────────────┘  │
+│  ZERO framework deps — pure Java SE + Lombok(provided)              │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+### WhatsApp Integration Architecture (v2.0 Addition)
+
+```
+┌───────────────────────────────────────────────────────────────────┐
+│                        mekano-domain                              │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │ NotificationOutputPort (interface)                          │ │
+│  │ ├── sendOrcamentoApproved(Telefone, Orcamento)              │ │
+│  │ ├── sendOrcamentoRejected(Telefone, Orcamento)              │ │
+│  │ ├── sendOSCompleted(Telefone, UUID osUuid)                  │ │
+│  │ └── ⚠️ Pure Java — no framework annotations                 │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │ EventPublisher<T> (existing)                                │ │
+│  │ └── publish(OrcamentoAprovadoEvent|OrcamentoRecusadoEvent   │ │
+│  │                  |OSFinalizadaEvent)                        │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+└───────────────────────────────────────────────────────────────────┘
+                              ↕ implements               ↕ observes
+┌───────────────────────────────────────────────────────────────────┐
+│                     mekano-infrastructure                          │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │ notification.whatsapp                                       │ │
+│  │  ┌──────────────────────────┐  ┌────────────────────────┐  │ │
+│  │  │ TwilioWhatsAppAdapter    │  │OrcamentoNotification   │  │ │
+│  │  │ └→ implements Notification│  │Observer                │  │ │
+│  │  │   OutputPort             │  │ └→ @Observes events    │  │ │
+│  │  │ └→ @Retry, @CircuitBkr   │  │ └→ calls adapter      │  │ │
+│  │  │ └→ @Timeout(3000)       │  │                        │  │ │
+│  │  └──────────┬───────────────┘  └────────────────────────┘  │ │
+│  │             │ uses                                           │ │
+│  │  ┌──────────▼───────────────┐                               │ │
+│  │  │ TwilioWhatsAppClient     │ ← Quarkus REST Client         │ │
+│  │  │ └→ @RegisterRestClient   │    (HTTP to Twilio API)       │ │
+│  │  └──────────────────────────┘                               │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+└───────────────────────────────────────────────────────────────────┘
+                              ↓ HTTP POST (Basic Auth)
+┌───────────────────────────────────────────────────────────────────┐
+│                Twilio WhatsApp API                                 │
+│  POST /2010-04-01/Accounts/{sid}/Messages.json                   │
+│  Content-Type: application/x-www-form-urlencoded                  │
+│  Body: To, From, ContentSid, ContentVariables                     │
+└───────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Infrastructure & Deployment Architecture
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                       Kubernetes Cluster                         │
+│                                                                  │
+│  ┌────────────┐  ┌──────────────┐  ┌─────────────────────────┐  │
+│  │ Namespace: │  │ ConfigMap    │  │ Secret                  │  │
+│  │ mekano     │  │ mekano-config│  │ mekano-whatsapp         │  │
+│  │            │  │ (profile,    │  │ mekano-jwt-keys         │  │
+│  │            │  │  logging)    │  │ mekano-db               │  │
+│  └────────────┘  └──────────────┘  └─────────────────────────┘  │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ Deployment: mekano-api (replicas: 2, HPA: 2-10)         │   │
+│  │ ┌────────────┐  ┌────────────┐  ┌────────────────────┐  │   │
+│  │ │ Container  │  │ Liveness   │  │ Resource:          │  │   │
+│  │ │ mekano:1.0 │  │ /q/health/ │  │ 512Mi-1Gi, 500m-  │  │   │
+│  │ │            │  │ live       │  │ 2000m CPU         │  │   │
+│  │ └────────────┘  └────────────┘  └────────────────────┘  │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                      │ Service :8080                             │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ Service: mekano-api (ClusterIP :8080)                     │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                      │ Ingress                                    │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ Ingress: mekano-api.mekano.local → Service :8080          │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ PostgreSQL (managed outside K8s via Terraform, or in-     │   │
+│  │ cluster StatefulSet)                                      │   │
+│  └──────────────────────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────┐
+│                  Terraform (provisioning layer)                   │
+│                                                                  │
+│  modules/                                                        │
+│  ├── cluster/        ← EKS or GKE cluster definition             │
+│  ├── database/       ← PostgreSQL RDS or CloudSQL                │
+│  └── networking/     ← VPC, subnets, security groups             │
+│                                                                  │
+│  environments/                                                   │
+│  ├── dev/            ← smaller cluster, dev DB                   │
+│  └── prod/           ← HA cluster, multi-AZ DB                   │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Component Responsibilities
+
+| Component | Layer | Responsibility | Implementation |
+|-----------|-------|----------------|----------------|
+| Domain entities | domain/core | Business rules, lifecycles, invariants | POJO, `@Builder(Access.PRIVATE)`, factory methods |
+| Value Objects | domain/VO | Immutable typed values, format validation | `@EqualsAndHashCode`, constructor validates |
+| Input Ports | domain/port/in | Service use case contracts | Pure Java interfaces |
+| Output Ports | domain/port/out | Adapter contracts (DB, notification, events) | Pure Java interfaces |
+| Domain Events | domain/event | Business event records | Immutable Java records |
+| Use Cases | application/service | Transactional orchestration, domain logic | `@ApplicationScoped`, `@Transactional` |
+| JPA Entities | infrastructure/entity | ORM mapping to tables | Extends `PanacheEntityBase`, hybrid ID |
+| Repositories | infrastructure/repository | DB access via Port interface | Two-class: PanacheRepo + Impl |
+| Mappers | infrastructure/mapper | Entity ↔ Domain mapping | Manual CDI (mostly) |
+| Security | infrastructure/security | Password hashing | BcryptPasswordHasher |
+| Events | infrastructure/event | CDI event publishing | CdiEventPublisher |
+| **WhatsApp** | infrastructure/notification | External HTTP notification | Quarkus REST Client + FT |
+| Resources | rest/api | HTTP endpoints, validation, auth | `@RequestScoped`, `@RolesAllowed` |
+| DTOs | rest/dto | Request/response mapping | Input: Lombok, Output: records |
+| Exception | rest/exception | Error response formatting | RFC 7807 `application/problem+json` |
+
+---
+
+## Recommended Project Structure (v2.0 Additions)
+
+```
+mekano/
+├── pom.xml                            ← MODIFIED: add mekano-rest-client? No — keep in infra
+│
+├── mekano-domain/
+│   └── src/main/java/.../domain/
+│       └── port/out/
+│           └── NotificationOutputPort.java   ← NEW
+│
+├── mekano-application/
+│   └── src/main/java/.../application/
+│       ├── service/orcamento/
+│       │   └── OrcamentoService.java         ← MODIFIED: inject NotificationOutputPort
+│       ├── service/ordemservico/
+│       │   └── OrdemServicoService.java      ← NEW: OS finalization notification
+│       └── (existing services remain)
+│
+├── mekano-infrastructure/
+│   └── src/main/java/.../infrastructure/
+│       ├── notification/
+│       │   └── whatsapp/
+│       │       ├── TwilioWhatsAppConfig.java     ← NEW: @ConfigMapping
+│       │       ├── TwilioWhatsAppClient.java     ← NEW: REST Client interface
+│       │       ├── TwilioWhatsAppAdapter.java    ← NEW: port implementation
+│       │       ├── dto/
+│       │       │   ├── TwilioMessageRequest.java ← NEW
+│       │       │   └── TwilioMessageResponse.java ← NEW
+│       │       └── observer/
+│       │           └── WhatsAppNotificationObserver.java ← NEW: CDI event listener
+│       └── (existing packages remain)
+│
+├── mekano-rest/
+│   └── src/main/resources/
+│       └── whatsapp-config.yml                  ← NEW: config (referenced in app.properties)
+│
+├── k8s/                                         ← NEW directory
+│   ├── deployment.yml
+│   ├── service.yml
+│   ├── hpa.yml
+│   ├── configmap.yml
+│   ├── secret-database.yml
+│   ├── secret-whatsapp.yml                      ← NEW
+│   └── ingress.yml
+│
+├── terraform/                                   ← NEW directory
+│   ├── main.tf
+│   ├── variables.tf
+│   ├── outputs.tf
+│   └── modules/
+│       ├── cluster/
+│       ├── database/
+│       └── networking/
+│
+└── .github/workflows/
+    └── ci.yml                                   ← MODIFIED: add CD + JaCoCo gate
+```
+
+---
+
+## Data Flow
+
+### WhatsApp Notification Flow (Approved Budget)
+
+```
+1. POST /api/v1/ordens-servico/{uuid}/aprovar-orcamento
+    ↓
+2. UserResource.aprovarOrcamento(uuid)
+    ↓ @RolesAllowed("atendente")
+3. OrcamentoService.aprovarOrcamento(uuid)
+    ↓ @Transactional
+    ├── 3a. Find OS → validate state → approve budget
+    ├── 3b. Orcamento.aprovar() (domain logic, timestamp set)
+    ├── 3c. repositoryPort.save(orcamento)
+    ├── 3d. eventPublisher.publish(new OrcamentoAprovadoEvent(...))
+    └── 3e. Return response ← TRANSACTION COMMITTED HERE
+    ↓
+4. (async in same request or fire-and-forget)
+   WhatsAppNotificationObserver.onOrcamentoAprovado(event)
+    ↓ @Observes(during = TransactionPhase.AFTER_SUCCESS)
+5. TwilioWhatsAppAdapter.sendOrcamentoApproved(telefone, orcamento)
+    ↓ @Retry(maxRetries=2) @CircuitBreaker @Timeout(3000)
+6. TwilioWhatsAppClient.sendMessage(url, auth, formBody)
+    ↓ HTTP POST
+7. Twilio API /2010-04-01/Accounts/{sid}/Messages.json
+    ↓ 200 OK
+8. Return success (logged, but no rollback on failure)
+```
+
+### OS Finalized Flow
+
+```
+1. PUT /api/v1/ordens-servico/{uuid}/finalizar
+    ↓
+2. UserResource.finalizarOS(uuid)
+    ↓ @RolesAllowed("admin")
+3. OrdemServicoService.finalizar(uuid)
+    ↓ @Transactional
+    ├── 3a. Validate OS state → mark finalized
+    ├── 3b. Save OS + calculate charges
+    ├── 3c. eventPublisher.publish(new OSFinalizadaEvent(clienteTelefone, osUuid))
+    └── 3d. Return response
+    ↓
+4. WhatsAppNotificationObserver.onOSFinalizada(event)
+    ↓ @Observes
+5. TwilioWhatsAppAdapter.sendOSCompleted(telefone, osId)
+    ↓ HTTP POST with template variables
+6. Twilio API
+```
+
+---
+
+## Architectural Patterns
+
+### Pattern 1: Port/Adapter (Hexagonal)
+
+**What:** Domain defines pure interfaces (ports). Infrastructure implements them (adapters). Domain has zero knowledge of the implementation technology.
+
+**When to use:** Every external system boundary — always.
+
+**Already in use for:** DB repositories, password hashing, event publishing.
+**Now adding:** WhatsApp notification.
+
+**Trade-offs:**
+- + Domain stays pure, testable without infrastructure
+- + Switch Twilio for another provider by swapping adapter
+- - One extra indirection layer per boundary
+
+**Example (new for WhatsApp):**
+```java
+// mekano-domain/port/out/ — pure Java, no framework
+public interface NotificationOutputPort {
+    void sendOrcamentoApproved(Telefone to, Orcamento orcamento);
+    void sendOrcamentoRejected(Telefone to, Orcamento orcamento, String motivo);
+    void sendOSCompleted(Telefone to, UUID osUuid);
+}
+```
+
+```java
+// mekano-infrastructure/notification/whatsapp/ — framework-aware
+@ApplicationScoped
+public class TwilioWhatsAppAdapter implements NotificationOutputPort {
+    private final TwilioWhatsAppClient client;
+    private final TwilioWhatsAppConfig config;
+    
+    @Inject
+    public TwilioWhatsAppAdapter(TwilioWhatsAppClient client, TwilioWhatsAppConfig config) {
+        this.client = client;
+        this.config = config;
+    }
+    
+    @Override
+    @Retry(maxRetries = 2, delay = 500, retryOn = WebApplicationException.class)
+    @Timeout(3000)
+    public void sendOrcamentoApproved(Telefone to, Orcamento orcamento) {
+        client.sendMessage(
+            config.accountSid(),
+            config.fromNumber(),
+            "whatsapp:+" + to.getValue(),
+            config.approvedTemplateSid(),
+            "{\"1\": \"" + orcamento.getValorTotal() + "\"}"
+        );
+    }
+}
+```
+
+### Pattern 2: CDI Event-Driven Notification (Async Boundary)
+
+**What:** Business events (`OrcamentoAprovadoEvent`, `OSFinalizadaEvent`) are published synchronously inside `@Transactional`. Observers listen after transaction commit (`TransactionPhase.AFTER_SUCCESS`). External HTTP calls happen outside the transaction.
+
+**When to use:** Every time a use case needs to trigger side effects (notifications, email, webhooks) that should not roll back the main transaction.
+
+**Already in use for:** `ClienteCriadoEvent`, `OrcamentoAprovadoEvent` (existing event infrastructure via `CdiEventPublisher`).
+
+**Trade-offs:**
+- + Transaction is never held open by slow HTTP calls
+- + If Twilio is down, the business operation still succeeds
+- + Same JVM — no message broker needed for this scale
+- - If the JVM crashes between commit and observer execution, the notification is lost (acceptable for notifications — the business transaction is safe)
+- - Observers run in the same HTTP request thread unless explicitly made async (`@Asynchronous`)
+
+**Example:**
+```java
+// Use case publishes event
+@Transactional
+public OrcamentoResponse aprovarOrcamento(UUID osUuid) {
+    // ... business logic ...
+    eventPublisher.publish(new OrcamentoAprovadoEvent(osUuid, clienteTelefone, orcamento));
+    return response;
+}
+
+// Observer in infrastructure — fires after transaction commits
+@ApplicationScoped
+public class WhatsAppNotificationObserver {
+    @Inject NotificationOutputPort notification;
+    
+    void onAprovado(@Observes(during = TransactionPhase.AFTER_SUCCESS) OrcamentoAprovadoEvent event) {
+        notification.sendOrcamentoApproved(event.clienteTelefone(), event.orcamento());
+    }
+}
+```
+
+### Pattern 3: Segregated Configuration Files
+
+**What:** Instead of one monolithic `application.properties`, each concern has its own YAML file, all referenced via `quarkus.config.locations`.
+
+**Already in use:** `datasource-config.yml`, `api-config.yml`, `openapi-config.yml`, `logging-config.yml`, `auth-config.yml`, `cache-config.yml`.
+**Now adding:** `whatsapp-config.yml`.
+
+**Trade-offs:**
+- + Team can work on different config files without merge conflicts
+- + Easy to find/review specific config
+- + Profile-specific overrides stay in the same file
+- - Must remember to add new files to the `quarkus.config.locations` list
+
+### Pattern 4: @ConfigMapping for Type-Safe Config
+
+**What:** `@ConfigMapping(prefix = "mekano.whatsapp")` on an interface provides type-safe, injectable configuration with automatic validation.
+
+**When to use:** Any non-trivial configuration group (more than 2 related properties).
+
+**Trade-offs:**
+- + Compile-time validation instead of runtime String lookup
+- + Automatically supports `@WithDefault`, `@WithConverter`, nesting
+- + Testable — can provide alternate mock implementations
+- - One extra file per config group
+
+---
+
+## Anti-Patterns
+
+### Anti-Pattern 1: Notification inside @Transactional
+
+**What people do:** Call an HTTP API inside a `@Transactional` method, then wonder why the database connection pool is exhausted.
+
+```java
+// WRONG — HTTP call inside transaction
+@Transactional
+public void aprovarOrcamento(UUID osUuid) {
+    // ... save to DB ...
+    httpClient.sendMessage(...);  // Transaction held open during HTTP call
+}
+```
+
+**Why it's wrong:**
+- Database connection held during network latency (potentially seconds)
+- If Twilio times out (e.g., 30s), the transaction stays open
+- Connection pool exhaustion under load
+- @Retry on the HTTP call compounds the problem
+
+**Do this instead:** Publish a CDI event and let the observer handle the HTTP call. Or call the notification port AFTER (outside) the `@Transactional` method returns — but CDI events with `AFTER_SUCCESS` are the cleanest approach in this codebase.
+
+### Anti-Pattern 2: Leaking HTTP Framework into Domain
+
+**What people do:** Import `jakarta.ws.rs.*` or `io.quarkus.rest.client.reactive.*` in the domain module or the port interface.
+
+```java
+// WRONG — domain port importing HTTP annotations
+public interface NotificationOutputPort {
+    void send(@org.jboss.resteasy.reactive.RestQuery String to);  // HTTP in domain!
+}
+```
+
+**Why it's wrong:** The domain module's constraint is ZERO framework dependencies (verified in source). Any framework import makes the domain untestable without the framework, breaks the dependency rule, and couples business logic to transport concerns.
+
+**Do this instead:** The port uses only domain types (Telefone, String, UUID). The Quarkus REST Client interface lives entirely in infrastructure, never exposed outside.
+
+### Anti-Pattern 3: Synchronous Notification in REST Request Thread
+
+**What people do:** Wait for the WhatsApp HTTP response before returning the HTTP response to the user. The API call takes 2-3 seconds for the user to see "200 OK".
+
+```java
+// WRONG — blocking the HTTP response
+@POST
+public Response aprovarOrcamento(UUID osUuid) {
+    useCase.aprovar(osUuid);          // 10ms
+    whatsAppAdapter.send(...);        // 2000ms — user waits!
+    return Response.ok().build();     // 2010ms total
+}
+```
+
+**Why it's wrong:** Degrades API response time from ~50ms to ~2500ms. User experience suffers. Under load, HTTP request threads block waiting for Twilio.
+
+**Do this instead:** Fire-and-forget via CDI events (existing pattern). The HTTP response returns immediately after the business transaction commits. The notification happens in the same thread but after the response is committed, or use `@Asynchronous` if available. At minimum, log failures and let an external process retry.
+
+### Anti-Pattern 4: Separate Notification Module Overkill
+
+**What people do:** Create `mekano-notification` as a new Maven module because "WhatsApp is a different concern."
+
+**Why it's wrong for this project:**
+- Single channel (WhatsApp only) → no routing logic
+- Small surface area (~3 interfaces, ~5 classes, ~200 lines)
+- Every new module adds: pom.xml, jandex plugin, CI build time, inter-module dependency management
+- The existing `mekano-infrastructure` already contains all adapters (security, events, DB)
+- The project already has 4 modules — adding a 5th for 200 lines is premature
+
+**Do this instead:** Keep WhatsApp in `mekano-infrastructure/notification/whatsapp/`. If a second channel (e.g., email, SMS) is added later, extract notification into its own module at that point.
+
+---
+
+## Scaling Considerations
+
+| Concern | Current (1 office, <100 users) | With HPA (target: CPU 70%) |
+|---------|-------------------------------|---------------------------|
+| API throughput | ~100 req/s (single instance) | Auto-scale 2-10 pods |
+| DB connections | Single PostgreSQL, pool=20 | Same DB, higher pool per pod → tune max_connections |
+| WhatsApp API | 1 msg/sec (Twilio free tier) | Same adapter, no rate limit logic needed yet |
+| Cache | Caffeine local (per pod) | Stale data as pods scale up — acceptable for 60s TTL |
+| CI build time | ~3-5 min (4 modules) | Same — JaCoCo + OWASP add ~1-2 min |
+| CD to K8s | Not configured | GitHub Actions → Docker build → push to registry → kubectl apply |
+
+### Scaling Priorities
+
+1. **First bottleneck:** DB connection pool under HPA. With 10 pods × pool=20 = 200 connections. PostgreSQL default is 100. **Mitigation:** Set `quarkus.datasource.jdbc.max-size=10` in prod profile, monitor connections.
+
+2. **Second bottleneck:** Local Caffeine cache = cache miss on every pod. **Mitigation:** Acceptable for 60s TTL. Redis-backed cache only if needed.
+
+3. **Third bottleneck:** No rate limiting on Twilio calls. **Mitigation:** Already avoided by design — not critical. Add `@Bulkhead` to adapter if needed.
+
+---
+
+## Integration Points
+
+### External Services
+
+| Service | Integration Pattern | Authentication | Gotchas |
+|---------|---------------------|---------------|---------|
+| Twilio WhatsApp API | REST Client (QuarkusRestClientBuilder) | Basic Auth (AccountSID:AuthToken) Base64 | POST with form-encoded body, not JSON! |
+| PostgreSQL (dev) | Panache + JDBC | user/password via env vars | Already established |
+| PostgreSQL (prod) | Same + HikariCP pool | via K8s Secret | Tune pool max-size for HPA scale |
+| Docker registry | GitHub Container Registry or Docker Hub | GitHub token | Build in CI, push, deploy |
+
+### Internal Boundaries
+
+| Boundary | Communication | Notes |
+|----------|---------------|-------|
+| Resource → Use Case | Direct method call (CDI injection) | `@RequestScoped` resource injects `@ApplicationScoped` service |
+| Use Case → Repository Port | Direct method call (CDI injection) | Always through domain port interface |
+| Use Case → Notification Port | Direct or via EventPublisher | Use CDI events for async notification |
+| Use Case → Domain Entity | Static factory methods | `create()` or `reconstitute()`, never `new` |
+| Infrastructure Adapter → External API | Quarkus REST Client | `@RegisterRestClient` or `QuarkusRestClientBuilder` |
+| Infrastructure → Domain | Entity↔Domain mappers (manual CDI) | No MapStruct for entity mappers (existing convention) |
+
+### Existing Event Flow (WhatsApp-relevant)
+
+| Event | Publisher | Observer (to add) |
+|-------|-----------|-------------------|
+| `OrcamentoAprovadoEvent` | OrcamentoService (existing) | WhatsAppNotificationObserver.onAprovado ← NEW |
+| `OrcamentoRecusadoEvent` | OrcamentoService (existing) | WhatsAppNotificationObserver.onRecusado ← NEW |
+| `OSFinalizadaEvent` | OrdemServicoService (new) | WhatsAppNotificationObserver.onFinalizada ← NEW |
+
+---
+
+## JaCoCo Coverage Gate
+
+Already configured in root `pom.xml` with LINE coverage minimum 0.80 (80%). The current exclusions cover DTOs, entities, resources, exception mappers, and config classes:
+
+```xml
+<excludes>
+    <exclude>**/*Dto.class</exclude>
+    <exclude>**/*DTO.class</exclude>
+    <exclude>**/*Request.class</exclude>
+    <exclude>**/*Response.class</exclude>
+    <exclude>**/*ExceptionMapper.class</exclude>
+    <exclude>**/*Config.class</exclude>
+    <exclude>**/*Resource.class</exclude>
+    <exclude>**/*Entity.class</exclude>
+</excludes>
+```
+
+**Note:** The `**/*Config.class` exclusion will cover `TwilioWhatsAppConfig` automatically — no change needed.
+
+**Recommendation for v2.0:** Add exclusion for auto-generated REST Client implementations (Quarkus generates them):
+```xml
+<exclude>**/*_ClientProxy.class</exclude>
+<exclude>**/*$RestClient*class</exclude>
+```
+
+---
+
+## Dependencies to Add
+
+### mekano-infrastructure
+
+```xml
+<!-- Quarkus REST Client — for Twilio HTTP calls -->
+<dependency>
+    <groupId>io.quarkus</groupId>
+    <artifactId>quarkus-rest-client-reactive</artifactId>
+</dependency>
+<!-- Or, if using the non-reactive variant: -->
+<dependency>
+    <groupId>io.quarkus</groupId>
+    <artifactId>quarkus-rest-client</artifactId>
+</dependency>
+```
+
+**Note on which variant:** The project uses `quarkus-rest-jackson` (reactive REST server). For consistency, use `quarkus-rest-client-reactive`. Both are RESTEasy Reactive under the hood, same programming model. The `@RegisterRestClient` interface is identical.
+
+### mekano-rest (test scope)
+
+```java
+<!-- WireMock for testing WhatsApp HTTP calls -->
+<dependency>
+    <groupId>io.quarkus</groupId>
+    <artifactId>quarkus-wiremock</artifactId>
+    <scope>test</scope>
+</dependency>
+```
+
+**Alternative:** Test the adapter by injecting a mock `TwilioWhatsAppClient` (the REST Client proxy). Since Quarkus generates the client implementation, `@InjectMock` with `@RestClient` works:
+```java
+@InjectMock
+@RestClient
+TwilioWhatsAppClient mockClient;
+```
+
+---
+
+## Configuration Files to Add
+
+### `whatsapp-config.yml` (in mekano-rest/src/main/resources/)
+
+```yaml
+# WhatsApp integration configuration
+mekano:
+  whatsapp:
+    account-sid: ${TWILIO_ACCOUNT_SID:}
+    auth-token: ${TWILIO_AUTH_TOKEN:}
+    from-number: ${TWILIO_FROM_NUMBER:whatsapp:+14155238886}
+    base-url: ${TWILIO_BASE_URL:https://api.twilio.com/2010-04-01}
+    approved-template-sid: ${TWILIO_APPROVED_TPL:}
+    rejected-template-sid: ${TWILIO_REJECTED_TPL:}
+    os-completed-template-sid: ${TWILIO_COMPLETED_TPL:}
+```
+
+### Updated `application.properties`
+
+Add to `quarkus.config.locations`:
+```properties
+quarkus.config.locations=...,whatsapp-config.yml
+```
+
+---
+
+## Sources
+
+- **Existing source code:** Verified module structure, dependency graph, patterns, conventions — HIGH confidence
+- **Context7 Quarkus REST Client docs:** `/quarkusio/quarkus` — verified programmatic client builder, `@RegisterRestClient`, timeout/config patterns — HIGH confidence
+- **Context7 Quarkus FT docs:** `/quarkusio/quarkus` — `@Retry`, `@CircuitBreaker`, `@Timeout` annotations — HIGH confidence
+- **Context7 JaCoCo docs:** `/websites/jacoco_jacoco_trunk_doc` — `jacoco:check` goal, rules configuration, ratio limits — HIGH confidence
+- **Context7 Twilio API docs:** `/llmstxt/twilio_llms_txt` — WhatsApp message POST endpoint, form-encoded body, Basic Auth — HIGH confidence
+- **Context7 Quarkus K8s Config docs:** `/quarkusio/quarkus` — `quarkus.kubernetes.env.secrets`, secret env mapping — HIGH confidence
+- **Context7 Quarkus @ConfigMapping docs:** `/quarkusio/quarkus` — type-safe configuration interface pattern — HIGH confidence
+
+---
+
+*Architecture research for: Mekano v2.0 — infra-docs-quality-whatsapp*
+*Researched: 2026-08-08*

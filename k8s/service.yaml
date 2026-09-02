@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mekano
+  namespace: mekano-system
+  labels:
+    app: mekano
+spec:
+  type: ClusterIP
+  selector:
+    app: mekano
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
