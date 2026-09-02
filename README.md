@@ -306,10 +306,6 @@ O projeto utiliza **JaCoCo** com gate de 80% de cobertura LINE. O relatorio agre
   - Memory: 70%;
   - CPU: 80%;
 
-### Simulação de Carga
-
-> Testes e Configurações
-
 ## Troubleshooting
 
 | Problema | solução |
