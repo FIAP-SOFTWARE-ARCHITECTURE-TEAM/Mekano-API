@@ -317,6 +317,7 @@ O projeto utiliza **JaCoCo** com gate de 80% de cobertura LINE. O relatorio agre
 | Migration falhou | Verificar logs: `docker compose logs mekano` ou executar `make migrate-status` |
 | Swagger nao carrega | Verificar se a aplicação esta saudavel: `curl http://localhost:8080/q/health/live` |
 
-## Video Demonstrativo
+## Documentação EventStorming e Video Demonstrativo
 
 > **A inserir:** link do video demonstrativo (duração maxima de 15 minutos).
+> [Link do Miro](https://miro.com/app/board/uXjVHD4vUnU=/)
