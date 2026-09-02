@@ -2,35 +2,34 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
-      - develop
-      - feature/ci-cd-terraform
-
+    branches: [ main, develop ]
   pull_request:
-    branches:
-      - main
-      - develop
+    branches: [ main, develop ]
 
 jobs:
   build:
-    name: Build and tests
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      # 1. Baixa o código do repositório para o runner do GitHub Actions
+      - uses: actions/checkout@v4
 
       # 2. Instala o JDK 17 (necessário para compilar a aplicação Quarkus)
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
-          distribution: temurin
-          cache: maven
+          distribution: 'temurin'
+          cache: 'maven'
 
-      - name: Configure Maven Wrapper permission
-        run: chmod +x mvnw
+      # 3. Cacheia as dependências do Maven (~/.m2) entre execuções,
+      #    acelerando builds futuros ao evitar re-download de tudo
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
 
       # 4. Compila o projeto e executa os testes unitários/integração do Maven.
       #    Graças ao -am, os módulos domain/application/infrastructure também
@@ -38,4 +37,58 @@ jobs:
       #    Esse passo também gera o target/quarkus-app usado pelo Dockerfile.jvm
       #    no próximo passo.
       - name: Build and test
-        run: ./mvnw -B -ntp verify -pl mekano-rest -am
+        run: mvn -B -ntp verify -pl mekano-rest -am
+
+      # 5. Instala o Node.js, necessário para rodar o Newman via npm
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 6. Instala o Newman globalmente (CLI que executa collections do Postman)
+      - name: Install Newman
+        run: npm install -g newman
+
+      # 7. Sobe SOMENTE os serviços necessários para os testes funcionais:
+      #    - postgres: banco de dados real, exigido pela aplicação
+      #    - keygen: gera o par de chaves JWT antes da aplicação subir
+      #    - mekano: a API em si (build a partir do Dockerfile.jvm, usando o
+      #      jar já compilado no passo 4)
+      #    O Evolution API e suas dependências (redis, postgres próprio) NÃO
+      #    são subidos aqui, pois não são exigidos pelos testes da collection.
+      #    --wait faz o Docker Compose aguardar os healthchecks definidos no
+      #    docker-compose.yml (postgres saudável, keygen concluído, mekano
+      #    respondendo em /q/health/live) antes de seguir para o próximo passo.
+      - name: Start application stack (docker compose)
+        run: docker compose up -d --build --wait postgres keygen mekano
+
+      # 8. Executa a collection do Postman via Newman contra a API já no ar.
+      #    Como o JSON já contém as variáveis necessárias, não é preciso
+      #    passar --environment separadamente.
+      - name: Run functional tests with Newman
+        run: |
+          newman run newman/Mekano_API_V2.0.postman_collection.json \
+            --reporters cli,junit \
+            --reporter-junit-export newman/report.xml
+
+      # 9. Publica o relatório do Newman como artefato do workflow,
+      #    permitindo consultar o resultado detalhado dos testes funcionais
+      #    mesmo depois que o job terminar.
+      - name: Upload Newman report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: newman-report
+          path: newman/report.xml
+
+      # 10. Mostra os logs da aplicação em caso de falha, para facilitar o
+      #     diagnóstico direto no output do GitHub Actions.
+      - name: Show application logs on failure
+        if: failure()
+        run: docker compose logs mekano
+
+      # 11. Derruba os containers e remove os volumes, garantindo um ambiente
+      #     limpo para a próxima execução (sempre roda, mesmo se algo falhar).
+      - name: Stop application stack
+        if: always()
+        run: docker compose down -v
