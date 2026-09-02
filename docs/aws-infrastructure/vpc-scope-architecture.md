@@ -13,8 +13,7 @@ graph TB
     classDef aws_network fill:#232f3e,color:#ff9900,stroke:#ff9900,stroke-width:2px
     classDef aws_compute fill:#232f3e,color:#3b82f6,stroke:#3b82f6,stroke-width:2px
     classDef aws_database fill:#232f3e,color:#10b981,stroke:#10b981,stroke-width:2px
-    classDef aws_cache fill:#232f3e,color:#ef4444,stroke:#ef4444,stroke-width:2px
-    classDef external fill:#1a1a2e,color:#a855f7,stroke:#a855f7,stroke-width:2px
+    classDef external fill:#232f3e,color:#a855f7,stroke:#a855f7,stroke-width:2px
     classDef k8s fill:#326ce5,color:#fff,stroke:#326ce5,stroke-width:2px
     classDef public_subnet fill:#232f3e,color:#60a5fa,stroke:#3b82f6,stroke-width:2px
     classDef private_subnet fill:#232f3e,color:#34d399,stroke:#10b981,stroke-width:2px
@@ -62,9 +61,7 @@ graph TB
             SUB_DA["DB Subnet A<br/><b>10.0.100.0/24</b><br/>AZ-a"]
             SUB_DB["DB Subnet B<br/><b>10.0.200.0/24</b><br/>AZ-b"]
 
-            RDS_MEK["🗄️ RDS PostgreSQL<br/>Mekano<br/><b>db.r6g.large</b><br/>Multi-AZ"]
-            RDS_EVO["🗄️ RDS PostgreSQL<br/>Evolution<br/><b>db.t4g.medium</b><br/>Single-AZ"]
-            REDIS["⚡ ElastiCache<br/>Redis<br/><b>cache.t4g.micro</b>"]
+            RDS["🗄️ RDS PostgreSQL<br/>Shared (Mekano + Evolution)<br/><b>db.t4g.micro</b><br/>Single-AZ"]
         end
     end
 
@@ -75,9 +72,8 @@ graph TB
     ALB --> INGRESS
     INGRESS --> MEKANO_PODS
     INGRESS --> EVOLUTION_PODS
-    MEKANO_PODS --> RDS_MEK
-    EVOLUTION_PODS --> RDS_EVO
-    EVOLUTION_PODS --> REDIS
+    MEKANO_PODS -->|"db: mekano"| RDS
+    EVOLUTION_PODS -->|"db: evolution"| RDS
     PRIVATE -.->|"saída via NAT"| NAT
     NAT --> IGW
 
@@ -88,8 +84,7 @@ graph TB
     class SUB_DA,SUB_DB db_subnet
     class ALB,INGRESS aws_compute
     class PM1,PM2,PE1,PE2 k8s
-    class RDS_MEK,RDS_EVO aws_database
-    class REDIS aws_cache
+    class RDS aws_database
 ```
 
 ---
@@ -105,8 +100,7 @@ sequenceDiagram
     participant NGX as 🔀 NGINX
     participant API as 🟦 Mekano API
     participant EVO as 🟩 Evolution API
-    participant DB as 🗄️ RDS
-    participant RED as ⚡ Redis
+    participant DB as 🗄️ RDS<br/>(shared)
 
     rect rgb(35, 47, 62)
         Note over NET, NGX: 🔵 Tráfego de Entrada (Inbound)
@@ -118,16 +112,15 @@ sequenceDiagram
     end
 
     rect rgb(20, 40, 35)
-        Note over API, RED: 🟢 Tráfego Interno (Private — Database Subnets)
-        API->>DB: Query/Update (port 5432)
+        Note over API, DB: 🟢 Tráfego Interno (Private — Database Subnets)
+        API->>DB: Query/Update (port 5432) — db: mekano
         DB-->>API: Result
-        EVO->>DB: Query (port 5432)
-        EVO->>RED: Cache read/write (port 6379)
-        RED-->>EVO: Result
+        EVO->>DB: Query (port 5432) — db: evolution
+        DB-->>EVO: Result
     end
 
     rect rgb(45, 35, 20)
-        Note over NET, RED: 🟠 Tráfego de Saída (Outbound via NAT Gateway)
+        Note over NET, DB: 🟠 Tráfego de Saída (Outbound via NAT Gateway)
         API->>NGX: Response
         NGX->>ALB: Forward
         ALB->>IGW: HTTPS response
@@ -153,31 +146,19 @@ graph LR
 
     subgraph SG_EKS["🔒 SG-EKS"]
         SG_EKS_IN["Entrada: SG-ALB<br/>:8080, :5033"]
-        SG_EKS_OUT["Saída: SG-RDS<br/>:5432<br/>SG-ElastiCache<br/>:6379"]
+        SG_EKS_OUT["Saída: SG-RDS<br/>:5432"]
     end
 
-    subgraph SG_RDS["🔒 SG-RDS-Mekano"]
+    subgraph SG_RDS["🔒 SG-RDS (Shared)"]
         SG_RDS_IN["Entrada: SG-EKS<br/>:5432"]
-    end
-
-    subgraph SG_RDS_EVO["🔒 SG-RDS-Evolution"]
-        SG_RDS_EVO_IN["Entrada: SG-EKS<br/>:5432"]
-    end
-
-    subgraph SG_CACHE["🔒 SG-ElastiCache"]
-        SG_CACHE_IN["Entrada: SG-EKS<br/>:6379"]
     end
 
     SG_ALB_OUT --> SG_EKS_IN
     SG_EKS_OUT --> SG_RDS_IN
-    SG_EKS_OUT --> SG_RDS_EVO_IN
-    SG_EKS_OUT --> SG_CACHE_IN
 
     class SG_ALB_IN,SG_ALB_OUT sg_alb
     class SG_EKS_IN,SG_EKS_OUT sg_eks
     class SG_RDS_IN sg_db
-    class SG_RDS_EVO_IN sg_db
-    class SG_CACHE_IN sg_cache
 ```
 
 ---
@@ -187,10 +168,8 @@ graph LR
 | Security Group | Regras de Entrada | Regras de Saída |
 |----------------|-------------------|-----------------|
 | **SG-ALB** | `0.0.0.0/0` :443, :80 | SG-EKS :8080, :5033 |
-| **SG-EKS** | SG-ALB :8080, :5033 | SG-RDS-Mekano :5432, SG-RDS-Evolution :5432, SG-ElastiCache :6379 |
-| **SG-RDS-Mekano** | SG-EKS :5432 | — |
-| **SG-RDS-Evolution** | SG-EKS :5432 | — |
-| **SG-ElastiCache** | SG-EKS :6379 | — |
+| **SG-EKS** | SG-ALB :8080, :5033 | SG-RDS :5432 |
+| **SG-RDS (Shared)** | SG-EKS :5432 | — |
 
 ---
 
@@ -215,8 +194,8 @@ graph LR
 | Public B | `10.0.2.0/24` | AZ-b | ALB (redundância) |
 | Private A | `10.0.10.0/24` | AZ-a | EKS Workers, pods |
 | Private B | `10.0.20.0/24` | AZ-b | EKS Workers, pods |
-| DB A | `10.0.100.0/24` | AZ-a | RDS, ElastiCache |
-| DB B | `10.0.200.0/24` | AZ-b | RDS (Multi-AZ failover) |
+| DB A | `10.0.100.0/24` | AZ-a | RDS |
+| DB B | `10.0.200.0/24` | AZ-b | RDS |
 
 ---
 
@@ -225,9 +204,9 @@ graph LR
 | Decisão | Justificativa |
 |---------|---------------|
 | **3 tiers de subnets** | Isolamento de segurança — público (ALB), privado (EKS), banco (RDS) |
-| **Multi-AZ** | Alta disponibilidade — failover automático RDS, pods distribuídos |
+| **RDS Single-AZ (Shared)** | Custo-eficiência — Evolution e Mekano compartilham a mesma instância RDS, databases separados |
 | **NAT Gateway em Public Subnet** | Custo — um NAT por VPC; pods privados saem pela internet |
 | **SGs mínimos** | Princípio de menor privilégio — cada SG só expõe portas necessárias |
 | **DB Subnets sem rota para internet** | Segurança — bancos não acessíveis externamente |
 | **CIDR /16** | 65.536 IPs disponíveis — espaço para crescimento |
-| **ElastiCache em DB Subnets** | Performance — latência mínima entre pods e cache |
+| **Cache Local (não Redis)** | Evolution API usa cache local — sem ElastiCache Redis |
