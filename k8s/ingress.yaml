@@ -8,6 +8,7 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "10m"
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
 
 spec:
   ingressClassName: nginx
@@ -15,11 +16,20 @@ spec:
   rules:
     - http:
         paths:
-          - path: /
-            pathType: Prefix
+          - path: /($)(.*)
+            pathType: ImplementationSpecific
 
             backend:
               service:
                 name: mekano
                 port:
                   number: 8080
+
+          - path: /evolution(/|$)(.*)
+            pathType: ImplementationSpecific
+
+            backend:
+              service:
+                name: evolution-api
+                port:
+                  number: 5033

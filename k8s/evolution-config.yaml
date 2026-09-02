@@ -4,7 +4,7 @@ metadata:
   name: evolution-config
   namespace: mekano-system
 data:
-  SERVER_URL: "http://evolution-api:5033"
+  SERVER_URL: "http://aaa4e3808aeee403b8da43e46d7e517a-1862017952.us-east-1.elb.amazonaws.com/evolution"
   SERVER_PORT: "5033"
   DATABASE_PROVIDER: "postgresql"
   DATABASE_SAVE_DATA_INSTANCE: "true"
