@@ -56,6 +56,72 @@ A versão 2.0 do projeto evolui a solução MVP da Fase 1 incorporando:
 | WhatsApp | Evolution API |
 | Resiliencia | SmallRye Fault Tolerance |
 
+## Como Executar o Projeto
+
+### Execução Localhost
+
+- [locahost](docs/project-execution/locahost.md)
+
+### Execução Produção (subindo infraestrutura AWS)
+
+- [produção](docs/project-execution/production.md)
+
+### Credenciais Iniciais
+
+A migration V32 cria um usuario admin inicial:
+
+| Campo | Valor |
+| ------- | ------- |
+| E-mail | `admin@mekano.com.br` |
+| Senha | `Mekano@2024` |
+| Role | `admin` |
+
+### SOBRE A API REST
+
+#### Prefixo
+
+Todos os endpoints estao sob o prefixo `/api/v1`.
+
+#### Endpoints Principais
+
+| Recurso | Metodo | Path | Roles |
+| --------- | -------- | ------ | ------- |
+| Login | POST | `/api/v1/auth/login` | Publico |
+| Refresh Token | POST | `/api/v1/auth/refresh` | Publico |
+| Logout | POST | `/api/v1/auth/logout` | Publico |
+| Listar OS | GET | `/api/v1/os` | admin, atendente |
+| Criar OS | POST | `/api/v1/os` | admin, atendente |
+| Status OS | GET | `/api/v1/os/{uuid}/status` | Publico |
+| Iniciar Diagnostico | PUT | `/api/v1/os/{uuid}/iniciar-diagnostico` | mecanico, admin |
+| Finalizar Diagnostico | PUT | `/api/v1/os/{uuid}/finalizar-diagnostico` | mecanico, admin |
+| Aprovar Orcamento | PUT | `/api/v1/orcamentos/{uuid}/aprovar` | Publico |
+| Reprovar Orcamento | PUT | `/api/v1/orcamentos/{uuid}/reprovar` | Publico |
+| Iniciar Execução | PUT | `/api/v1/os/{uuid}/iniciar-execucao` | mecanico, admin |
+| Finalizar Execução | PUT | `/api/v1/os/{uuid}/finalizar-execucao` | mecanico, admin |
+| Confirmar Pagamento | PUT | `/api/v1/os/{uuid}/confirmar-pagamento` | financeiro |
+| Entregar | PUT | `/api/v1/os/{uuid}/entregar` | admin, atendente |
+| Cancelar OS | PUT | `/api/v1/os/{uuid}/cancelar` | admin |
+| Listar Clientes | GET | `/api/v1/clientes` | admin, atendente |
+| CRUD Veiculos | * | `/api/v1/veiculos` | admin, atendente |
+| CRUD Servicos | * | `/api/v1/servicos` | admin |
+| Listar Pecas | * | `/api/v1/pecas` | admin |
+| Requisicoes de Compra | * | `/api/v1/requisicoes-compra` | admin |
+| NF de Entrada | * | `/api/v1/nf-entrada` | admin |
+| Alertas Estoque | GET | `/api/v1/alertas` | admin, atendente |
+| Audit OS | GET | `/api/v1/os/{uuid}/audit` | admin, atendente, mecanico, financeiro |
+
+#### Postman Collection
+
+A collection completa da API esta disponivel em:
+
+> **[newman/Mekano_API_V2.0.postman_collection.json](newman/Mekano_API_V2.0.postman_collection.json)**
+
+Para utilizar:
+
+1. Importar o arquivo no Postman
+2. Fazer login via `POST /api/v1/auth/login` para obter o token JWT
+3. Utilizar o token nas requisicoes autenticadas
+
 ## Arquitetura
 
 ### Visão Geral
@@ -164,156 +230,19 @@ Diagramas detalhados do fluxo estao disponiveis em:
 - [Consulta publica de status](docs/sequence-diagrams/consulta-publica-status.md)
 - [Fluxo Requisição de Compra - Estoque Mínimo](/docs/sequence-diagrams/requisicao-compra-estoque-minimo.md)
 
-### Diagrama de Arquitetura AWS
+## Diagrama de Arquitetura AWS
 
-#### Diagrama geral
+### Diagrama geral
 
 - [Fluxo completo do o cliente até os serviços externos.](docs/aws-infrastructure/global-scope-architecture.md)
 
-#### Diagrama de arquitetura da VPC
+### Diagrama de arquitetura da VPC
 
 - [Layout de subnets, componentes de rede e fluxo de tráfego.](docs/aws-infrastructure/vpc-scope-architecture.md)
 
-## Quick Start
+## Deploy (Infrasestrutura AWS, Terraform e K8s)
 
-### Pre-requisitos
-
-- **Java 17** (configurado via `JAVA_HOME`)
-- **Docker Desktop** ou **Rancher Desktop** instalado e em execução
-
-### Execução com Docker Compose
-
-```bash
-# 1. Build e subir todos os servicos (postgres, keygen, app)
-docker compose up -d --build
-
-# 2. A aplicação estara disponivel em:
-#    API:        http://localhost:8080
-#    Swagger UI: http://localhost:8080/q/swagger-ui
-#    Health:     http://localhost:8080/q/health/live
-```
-
-> O `Dockerfile.jvm` e multi-stage: compila o JAR internamente (sem precisar de Maven instalado na maquina host) e depois gera a imagem runtime. O servico `keygen` gera o par de chaves Ed25519 na primeira execução.
-
-### Verificação da Aplicação
-
-```bash
-# Verificar status dos containers
-docker compose ps
-
-# Verificar saude da API
-curl http://localhost:8080/q/health/live
-
-# Verificar logs
-docker compose logs -f mekano
-```
-
-### Parar o Ambiente
-
-```bash
-docker compose down
-
-# Para remover volumes (banco de dados)
-docker compose down -v
-```
-
-### Execução Local (sem Docker)
-
-```bash
-# 1. Subir apenas o banco
-docker compose up -d postgres
-
-# 2. Gerar chaves JWT (necessario apenas uma vez)
-./mekano-rest/keygen.sh
-
-# 3. Iniciar o Quarkus em modo dev
-./mvnw quarkus:dev
-```
-
-### Credenciais Iniciais
-
-A migration V32 cria um usuario admin inicial:
-
-| Campo | Valor |
-| ------- | ------- |
-| E-mail | `admin@mekano.com.br` |
-| Senha | `Mekano@2024` |
-| Role | `admin` |
-
-## API
-
-### Prefixo
-
-Todos os endpoints estao sob o prefixo `/api/v1`.
-
-### Endpoints Principais
-
-| Recurso | Metodo | Path | Roles |
-| --------- | -------- | ------ | ------- |
-| Login | POST | `/api/v1/auth/login` | Publico |
-| Refresh Token | POST | `/api/v1/auth/refresh` | Publico |
-| Logout | POST | `/api/v1/auth/logout` | Publico |
-| Listar OS | GET | `/api/v1/os` | admin, atendente |
-| Criar OS | POST | `/api/v1/os` | admin, atendente |
-| Status OS | GET | `/api/v1/os/{uuid}/status` | Publico |
-| Iniciar Diagnostico | PUT | `/api/v1/os/{uuid}/iniciar-diagnostico` | mecanico, admin |
-| Finalizar Diagnostico | PUT | `/api/v1/os/{uuid}/finalizar-diagnostico` | mecanico, admin |
-| Aprovar Orcamento | PUT | `/api/v1/orcamentos/{uuid}/aprovar` | Publico |
-| Reprovar Orcamento | PUT | `/api/v1/orcamentos/{uuid}/reprovar` | Publico |
-| Iniciar Execução | PUT | `/api/v1/os/{uuid}/iniciar-execucao` | mecanico, admin |
-| Finalizar Execução | PUT | `/api/v1/os/{uuid}/finalizar-execucao` | mecanico, admin |
-| Confirmar Pagamento | PUT | `/api/v1/os/{uuid}/confirmar-pagamento` | financeiro |
-| Entregar | PUT | `/api/v1/os/{uuid}/entregar` | admin, atendente |
-| Cancelar OS | PUT | `/api/v1/os/{uuid}/cancelar` | admin |
-| Listar Clientes | GET | `/api/v1/clientes` | admin, atendente |
-| CRUD Veiculos | * | `/api/v1/veiculos` | admin, atendente |
-| CRUD Servicos | * | `/api/v1/servicos` | admin |
-| Listar Pecas | * | `/api/v1/pecas` | admin |
-| Requisicoes de Compra | * | `/api/v1/requisicoes-compra` | admin |
-| NF de Entrada | * | `/api/v1/nf-entrada` | admin |
-| Alertas Estoque | GET | `/api/v1/alertas` | admin, atendente |
-| Audit OS | GET | `/api/v1/os/{uuid}/audit` | admin, atendente, mecanico, financeiro |
-
-### Swagger / OpenAPI
-
-O Swagger UI esta disponivel em:
-
-```
-http://localhost:8080/q/swagger-ui
-```
-
-A documentação OpenAPI completa esta em:
-
-```
-http://localhost:8080/q/openapi
-```
-
-### Postman Collection
-
-A collection completa da API esta disponivel em:
-
-> **[newman/Mekano_API_V2.0.postman_collection.json](newman/Mekano_API_V2.0.postman_collection.json)**
-
-Para utilizar:
-
-1. Importar o arquivo no Postman
-2. Fazer login via `POST /api/v1/auth/login` para obter o token JWT
-3. Utilizar o token nas requisicoes autenticadas
-
-## Deploy
-
-### Kubernetes
-
-> **A inserir:** instrucoes de deploy em Kubernetes com manifests (Deployment, Service, ConfigMap, Secret, HPA, Ingress).
-
-### Terraform
-
-> **A inserir:** documentação dos recursos provisionados via Terraform (cluster EKS, banco RDS, backend S3).
-
-### Fluxo de Deploy
-
-> **A inserir:** diagrama do fluxo de CI/CD e deploy contendo:
-> Codigo -> Build -> Testes -> Imagem Docker -> Registry -> Deploy Kubernetes -> Pods -> HPA.
+[Documentação INFRA](./README-INFRA.md)
 
 ## Testes
 
@@ -369,11 +298,17 @@ O projeto utiliza **JaCoCo** com gate de 80% de cobertura LINE. O relatorio agre
 
 ### HPA
 
-> **A inserir:** configuração do Horizontal Pod Autoscaler com metricas de CPU/memoria e politicas de escalabilidade.
+> Configuração do Horizontal Pod Autoscaler com metricas de CPU/memoria e politicas de escalabilidade
+
+- Quantidade mínima de PODs: 2;
+- Quantidade máxima de PODs: 10;
+- Triggers:
+  - Memory: 70%;
+  - CPU: 80%;
 
 ### Simulação de Carga
 
-> **A inserir:** ferramenta e comandos para simulação de carga (JMeter, k6 ou equivalente).
+> Testes e Configurações
 
 ## Troubleshooting
 
@@ -389,10 +324,3 @@ O projeto utiliza **JaCoCo** com gate de 80% de cobertura LINE. O relatorio agre
 ## Video Demonstrativo
 
 > **A inserir:** link do video demonstrativo (duração maxima de 15 minutos).
-
-Segmentos previstos:
-
-1. **Fluxo da Ordem de Servico** — demonstração completa do ciclo: criar, diagnosticar, orcamento, aprovação, execução, finalização, pagamento e entrega
-2. **API** — Swagger, endpoints principais, execução de requests via Postman
-3. **Infraestrutura** — Docker Compose, containers, health checks, escalabilidade
-4. **Testes** — testes automatizados, pipeline CI, cobertura

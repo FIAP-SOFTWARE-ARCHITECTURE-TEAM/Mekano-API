@@ -1,7 +1,7 @@
 name: CI-CD
 on:
   push:
-    branches: [main, feature/ci-cd-terraform]
+    branches: [main, develop]
   pull_request:
     branches: [main, develop]
 permissions:
@@ -24,7 +24,7 @@ jobs:
   #   destroy -> destroy the main Terraform stack
   infra-action:
     name: Resolve infrastructure action
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/ci-cd-terraform')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     runs-on: ubuntu-latest
     outputs:
       action: ${{ steps.action.outputs.action }}
@@ -65,7 +65,7 @@ jobs:
         run: ./mvnw -B -ntp verify -pl mekano-rest -am
   docker:
     name: Build and publish image
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/ci-cd-terraform') && needs.infra-action.outputs.action == 'apply'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && needs.infra-action.outputs.action == 'apply'
     needs: [build-test, infra-action]
     runs-on: ubuntu-latest
     outputs:
@@ -102,7 +102,7 @@ jobs:
   # Terraform backend already exists. Validate S3 + DynamoDB before running the main Terraform stack.
   bootstrap-backend:
     name: Verify Terraform backend (S3 + DynamoDB)
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/ci-cd-terraform')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     runs-on: ubuntu-latest
     outputs:
       state_bucket: ${{ steps.outputs.outputs.state_bucket }}
@@ -140,7 +140,7 @@ jobs:
           echo "lock_table=mekano-terraform-locks" >> "$GITHUB_OUTPUT"
   infrastructure:
     name: Terraform EKS and RDS (plan)
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/ci-cd-terraform')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     needs: [bootstrap-backend, infra-action]
     runs-on: ubuntu-latest
     env:
@@ -222,7 +222,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     # Apply requires successful build/tests. Destroy is allowed even if application tests fail.
-    if: always() && github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/ci-cd-terraform') && needs.infrastructure.result == 'success' && needs.infra-action.result == 'success' && (needs.infra-action.outputs.action == 'destroy' || needs.build-test.result == 'success')
+    if: always() && github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && needs.infrastructure.result == 'success' && needs.infra-action.result == 'success' && (needs.infra-action.outputs.action == 'destroy' || needs.build-test.result == 'success')
     outputs:
       cluster_name: ${{ steps.tfout.outputs.cluster_name }}
       db_endpoint: ${{ steps.tfout.outputs.db_endpoint }}
@@ -329,7 +329,7 @@ jobs:
           echo "db_endpoint=$(terraform output -raw db_endpoint)" >> "$GITHUB_OUTPUT"
   deploy:
     name: Deploy to EKS
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/ci-cd-terraform') && needs.infra-action.outputs.action == 'apply'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && needs.infra-action.outputs.action == 'apply'
     needs: [docker, infra-apply, infra-action]
     runs-on: ubuntu-latest
     env:

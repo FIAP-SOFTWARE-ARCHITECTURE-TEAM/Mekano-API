@@ -13,7 +13,6 @@ graph TB
     classDef aws_network fill:#232f3e,color:#ff9900,stroke:#ff9900,stroke-width:2px
     classDef aws_compute fill:#232f3e,color:#3b82f6,stroke:#3b82f6,stroke-width:2px
     classDef aws_database fill:#232f3e,color:#10b981,stroke:#10b981,stroke-width:2px
-    classDef aws_cache fill:#232f3e,color:#ef4444,stroke:#ef4444,stroke-width:2px
     classDef external fill:#1a1a2e,color:#a855f7,stroke:#a855f7,stroke-width:2px
     classDef k8s fill:#326ce5,color:#fff,stroke:#326ce5,stroke-width:2px
 
@@ -51,12 +50,10 @@ graph TB
             NAT["🔒 NAT<br/>Gateway"]
         end
 
-        subgraph DATABASE["Database Subnets"]
-            direction LR
-            RDS_MEK["🗄️ RDS PostgreSQL<br/>Mekano<br/><b>db.r6g.large</b><br/>Multi-AZ"]
-            RDS_EVO["🗄️ RDS PostgreSQL<br/>Evolution<br/><b>db.t4g.medium</b><br/>Single-AZ"]
-            REDIS["⚡ ElastiCache<br/>Redis<br/><b>cache.t4g.micro</b>"]
-        end
+    subgraph DATABASE["Database Subnets"]
+        direction LR
+        RDS["🗄️ RDS PostgreSQL<br/>Shared (Mekano + Evolution)<br/><b>db.t4g.micro</b><br/>Single-AZ"]
+    end
     end
 
     CLIENT -->|"API REST<br/>(todas funcionalidades)"| IGW
@@ -70,20 +67,17 @@ graph TB
     SVC_MEK --> POD_M2
     SVC_EVO --> POD_E1
     SVC_EVO --> POD_E2
-    POD_M1 --> RDS_MEK
-    POD_M2 --> RDS_MEK
-    POD_E1 --> RDS_EVO
-    POD_E2 --> RDS_EVO
-    POD_E1 --> REDIS
-    POD_E2 --> REDIS
+    POD_M1 -->|"db: mekano"| RDS
+    POD_M2 -->|"db: mekano"| RDS
+    POD_E1 -->|"db: evolution"| RDS
+    POD_E2 -->|"db: evolution"| RDS
 
     class CLIENT,MOBILE external
     class EXT_API aws_network
     class IGW aws_network
     class ALB aws_compute
     class INGRESS,SVC_MEK,SVC_EVO,POD_M1,POD_M2,POD_E1,POD_E2 k8s
-    class RDS_MEK,RDS_EVO aws_database
-    class REDIS aws_cache
+    class RDS aws_database
     class NAT aws_network
 ```
 
@@ -103,7 +97,7 @@ sequenceDiagram
     participant EVO as 🟩 Evolution API
     participant MW as 🔀 Webhook Resource
     participant API as 🟦 Mekano API
-    participant DB as 🗄️ RDS PostgreSQL
+    participant DB as 🗄️ RDS PostgreSQL<br/>(shared: mekano + evolution)
 
     rect rgb(30, 41, 59)
         Note over C, DB: Fluxo de Mensagem Recebida
@@ -143,7 +137,7 @@ sequenceDiagram
     participant ALB as ⚖️ ALB
     participant NGX as 🔀 NGINX
     participant API as 🟦 Mekano API
-    participant DB as 🗄️ RDS PostgreSQL
+    participant DB as 🗄️ RDS PostgreSQL<br/>(db: mekano)
 
     rect rgb(30, 41, 59)
         Note over U, DB: Requisição HTTP (GET/POST/PUT/DELETE)
@@ -169,9 +163,7 @@ sequenceDiagram
 | **NGINX Ingress Controller** | K8s Ingress | Roteamento L7, TLS termination, rate limiting |
 | **Mekano API (Pods)** | K8s Deployment | API REST Quarkus — gestão de oficina mecânica |
 | **Evolution API (Pods)** | K8s Deployment | Gateway WhatsApp — mensagens e webhooks |
-| **RDS PostgreSQL Mekano** | AWS Database | Banco principal — clientes, OS, peças, estoque |
-| **RDS PostgreSQL Evolution** | AWS Database | Banco Evolution API — instâncias WhatsApp |
-| **ElastiCache Redis** | AWS Cache | Cache Evolution API — sessões e mensagens |
+| **RDS PostgreSQL (Shared)** | AWS Database | Banco compartilhado — Mekano (db: mekano) + Evolution (db: evolution) |
 | **NAT Gateway** | AWS Network | Saída de rede para pods em subnets privadas |
 | **WhatsApp Cloud API** | External | API oficial Meta para mensagens WhatsApp |
 
@@ -182,9 +174,8 @@ sequenceDiagram
 | Decisão | Justificativa |
 |---------|---------------|
 | **EKS (não ECS)** | Flexibilidade de scaling, suporte a NGINX Ingress, Helm charts |
-| **RDS Multi-AZ (Mekano)** | Alta disponibilidade para banco principal |
-| **RDS Single-AZ (Evolution)** | Custo-eficiência — dados de sessão, não-críticos |
-| **ElastiCache (não RDS)** | Performance para cache de sessões WhatsApp |
+| **RDS Single-AZ (Shared)** | Custo-eficiência — Evolution e Mekano compartilham a mesma instância RDS, databases separados |
+| **Cache Local (não Redis)** | Evolution API usa cache local — reduz custo Eliminando ElastiCache Redis |
 | **NGINX Ingress** | Rate limiting, TLS, roteamento por path |
 | **Subnets de DB isoladas** | Segurança — acesso apenas via security groups internos |
 | **NAT Gateway em Private Subnet** | Pods privados acessam internet (updates, webhooks externos) |
