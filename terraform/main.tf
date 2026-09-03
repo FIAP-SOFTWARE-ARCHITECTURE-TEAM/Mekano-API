@@ -202,6 +202,20 @@ module "eks" {
 
 }
 
+# Allow metrics-server traffic from control plane to worker nodes
+# Port 10251 is used by metrics-server API endpoint
+resource "aws_security_group_rule" "metrics_server_ingress" {
+
+  type                     = "ingress"
+  from_port                = 10251
+  to_port                  = 10251
+  protocol                 = "tcp"
+  source_security_group_id = module.eks.cluster_security_group_id
+  security_group_id        = module.eks.node_security_group_id
+  description              = "Allow metrics-server API queries from control plane"
+
+}
+
 # ============================================================
 
 # EBS CSI Driver

@@ -319,5 +319,6 @@ O projeto utiliza **JaCoCo** com gate de 80% de cobertura LINE. O relatorio agre
 
 ## Documentação EventStorming e Video Demonstrativo
 
-> **A inserir:** link do video demonstrativo (duração maxima de 15 minutos).
+> [Link do Vídeo](https://www.youtube.com/watch?v=D7l2XHGrpuY)
 > [Link do Miro](https://miro.com/app/board/uXjVHD4vUnU=/)
+> [Swagger de Produção na AWS](http://aaa4e3808aeee403b8da43e46d7e517a-1862017952.us-east-1.elb.amazonaws.com/q/swagger-ui)
