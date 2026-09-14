@@ -95,6 +95,12 @@ public class OrdemDeServicoEntity extends BaseEntity {
     @Column(name = "recebido_por")
     private String recebidoPor;
 
+    @Column(name = "data_inicio_diagnostico")
+    private LocalDateTime dataInicioDiagnostico;
+
+    @Column(name = "data_cancelamento")
+    private LocalDateTime dataCancelamento;
+
     @PrePersist
     protected void onCreate() {
         if (statusPagamento == null) {

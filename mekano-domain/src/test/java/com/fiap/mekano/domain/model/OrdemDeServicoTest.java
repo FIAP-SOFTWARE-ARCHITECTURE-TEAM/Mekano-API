@@ -240,7 +240,8 @@ class OrdemDeServicoTest {
                 StatusOS.EM_EXECUCAO, null, null, null,
                 null, null, null, null, null, null, null,
                 null, null, null, null, null,
-                null, null, null, createdAt, 3L
+                null, null, null, null, null,
+                createdAt, 3L
         );
 
         assertEquals(id, os.getId());

@@ -13,11 +13,14 @@ import com.fiap.mekano.domain.port.in.AprovarOrcamentoCommand;
 import com.fiap.mekano.domain.port.in.OrcamentoServicePort;
 import com.fiap.mekano.domain.port.in.ReprovarOrcamentoCommand;
 import com.fiap.mekano.domain.port.out.EventPublisher;
+import com.fiap.mekano.domain.port.out.OSMetricsPort;
 import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -29,15 +32,18 @@ public class OrcamentoService implements OrcamentoServicePort {
     private final OrdemDeServicoRepositoryPort ordemDeServicoRepository;
     private final EventPublisher eventPublisher;
     private final OsAuditEventPublisher osAuditEventPublisher;
+    private final OSMetricsPort osMetrics;
 
     public OrcamentoService(OrcamentoRepositoryPort orcamentoRepository,
                             OrdemDeServicoRepositoryPort ordemDeServicoRepository,
                             EventPublisher eventPublisher,
-                            OsAuditEventPublisher osAuditEventPublisher) {
+                            OsAuditEventPublisher osAuditEventPublisher,
+                            OSMetricsPort osMetrics) {
         this.orcamentoRepository = orcamentoRepository;
         this.ordemDeServicoRepository = ordemDeServicoRepository;
         this.eventPublisher = eventPublisher;
         this.osAuditEventPublisher = osAuditEventPublisher;
+        this.osMetrics = osMetrics;
     }
 
     @Override
@@ -53,6 +59,9 @@ public class OrcamentoService implements OrcamentoServicePort {
                     .orElseThrow(() -> new AppException(404, Messages.get("os.not.found", orcamento.getOrdemServicoUuid())));
             os.aprovarOrcamento(orcamento.getId());
             ordemDeServicoRepository.save(os);
+            osMetrics.registrarTransicaoStatus(
+                    com.fiap.mekano.domain.model.StatusOS.AGUARDANDO_APROVACAO,
+                    com.fiap.mekano.domain.model.StatusOS.AGUARDANDO_EXECUCAO);
         }
 
         Orcamento saved = orcamentoRepository.save(orcamento);
@@ -88,6 +97,10 @@ public class OrcamentoService implements OrcamentoServicePort {
                     .orElseThrow(() -> new AppException(404, Messages.get("os.not.found", orcamento.getOrdemServicoUuid())));
             os.reprovarOrcamento(command.motivo());
             ordemDeServicoRepository.save(os);
+            osMetrics.registrarTransicaoStatus(
+                    com.fiap.mekano.domain.model.StatusOS.AGUARDANDO_APROVACAO,
+                    com.fiap.mekano.domain.model.StatusOS.CANCELADA);
+            osMetrics.registrarTempoFase("TOTAL", Duration.between(os.getCreatedAt(), LocalDateTime.now()));
         }
 
         Orcamento saved = orcamentoRepository.save(orcamento);

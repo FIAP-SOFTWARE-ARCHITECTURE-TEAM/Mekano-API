@@ -266,6 +266,8 @@ class OrdemDeServicoCicloCobrancaPagamentoEntregaTest {
                 "PIX-999",
                 entregueEm,
                 "Maria Cliente",
+                null,
+                null,
                 createdAt,
                 20L
         );

@@ -62,6 +62,8 @@ public class OrdemDeServico {
     private String referenciaPagamento;
     private LocalDateTime entregueEm;
     private String recebidoPor;
+    private LocalDateTime dataInicioDiagnostico;
+    private LocalDateTime dataCancelamento;
     private final LocalDateTime createdAt;
     private final Long version;
 
@@ -144,6 +146,8 @@ public class OrdemDeServico {
                                               String referenciaPagamento,
                                               LocalDateTime entregueEm,
                                               String recebidoPor,
+                                              LocalDateTime dataInicioDiagnostico,
+                                              LocalDateTime dataCancelamento,
                                               LocalDateTime createdAt, Long version) {
         return OrdemDeServico.builder()
                 .id(id)
@@ -169,6 +173,8 @@ public class OrdemDeServico {
                 .referenciaPagamento(referenciaPagamento)
                 .entregueEm(entregueEm)
                 .recebidoPor(recebidoPor)
+                .dataInicioDiagnostico(dataInicioDiagnostico)
+                .dataCancelamento(dataCancelamento)
                 .createdAt(createdAt)
                 .version(version)
                 .build();
@@ -205,6 +211,7 @@ public class OrdemDeServico {
      */
     public void iniciarDiagnostico() {
         transicionar(StatusOS.EM_DIAGNOSTICO);
+        this.dataInicioDiagnostico = LocalDateTime.now();
     }
 
     /**
@@ -250,6 +257,7 @@ public class OrdemDeServico {
 
         transicionar(StatusOS.CANCELADA);
         this.motivoCancelamento = motivo.strip();
+        this.dataCancelamento = LocalDateTime.now();
         cancelarPagamentoEEntrega();
     }
 
@@ -263,6 +271,7 @@ public class OrdemDeServico {
 
         transicionar(StatusOS.CANCELADA);
         this.motivoCancelamento = motivo.strip();
+        this.dataCancelamento = LocalDateTime.now();
         cancelarPagamentoEEntrega();
     }
 
@@ -272,6 +281,7 @@ public class OrdemDeServico {
     public void cancelarPorSLA() {
         transicionar(StatusOS.CANCELADA);
         this.motivoCancelamento = "SLA expirado";
+        this.dataCancelamento = LocalDateTime.now();
         cancelarPagamentoEEntrega();
     }
 

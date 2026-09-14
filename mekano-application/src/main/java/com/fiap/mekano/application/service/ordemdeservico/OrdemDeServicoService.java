@@ -1,5 +1,6 @@
 package com.fiap.mekano.application.service.ordemdeservico;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -27,6 +28,7 @@ import com.fiap.mekano.domain.port.in.OrdemDeServicoServicePort;
 import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;
 import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.ItemOsRepositoryPort;
+import com.fiap.mekano.domain.port.out.OSMetricsPort;
 import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
 import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
@@ -52,6 +54,7 @@ private final OrdemDeServicoRepositoryPort repository;
     private final ClienteRepositoryPort clienteRepository;
     private final VeiculoRepositoryPort veiculoRepository;
     private final ItemOsRepositoryPort itemOsRepository;
+    private final OSMetricsPort osMetrics;
 
     public OrdemDeServicoService(OrdemDeServicoRepositoryPort repository, EventPublisher eventPublisher,
                                   PecaRepositoryPort pecaRepository, ServicoRepositoryPort servicoRepository,
@@ -59,7 +62,8 @@ private final OrdemDeServicoRepositoryPort repository;
                                   OsAuditEventPublisher osAuditEventPublisher,
                                   ClienteRepositoryPort clienteRepository,
                                   VeiculoRepositoryPort veiculoRepository,
-                                  ItemOsRepositoryPort itemOsRepository) {
+                                  ItemOsRepositoryPort itemOsRepository,
+                                  OSMetricsPort osMetrics) {
         this.repository = repository;
         this.eventPublisher = eventPublisher;
         this.pecaRepository = pecaRepository;
@@ -69,6 +73,7 @@ private final OrdemDeServicoRepositoryPort repository;
         this.clienteRepository = clienteRepository;
         this.veiculoRepository = veiculoRepository;
         this.itemOsRepository = itemOsRepository;
+        this.osMetrics = osMetrics;
     }
 
     @Override
@@ -103,6 +108,8 @@ private final OrdemDeServicoRepositoryPort repository;
         eventPublisher.publish(OrdemDeServicoCriadaEvent.of(saved));
         osAuditEventPublisher.publish(saved.getId(), OsAuditAction.CRIAR, null,
                 OsAuditAction.CRIAR.getObservacaoDefault(), Map.of());
+        osMetrics.registrarCriacaoOS();
+        osMetrics.registrarTransicaoStatus(null, saved.getStatus());
         return saved;
     }
 
@@ -158,8 +165,17 @@ private final OrdemDeServicoRepositoryPort repository;
     @Transactional
     public OrdemDeServico iniciarDiagnostico(UUID id) {
         OrdemDeServico os = findById(id);
-        os.iniciarDiagnostico();
+        try {
+            os.iniciarDiagnostico();
+        } catch (AppException e) {
+            if (e.getStatus() == 422) {
+                osMetrics.registrarFalhaTransicao(os.getStatus(), com.fiap.mekano.domain.model.StatusOS.EM_DIAGNOSTICO);
+            }
+            throw e;
+        }
         OrdemDeServico saved = repository.save(os);
+        osMetrics.registrarTransicaoStatus(com.fiap.mekano.domain.model.StatusOS.RECEBIDA, saved.getStatus());
+        osMetrics.registrarTempoFase("TOTAL", Duration.between(saved.getCreatedAt(), LocalDateTime.now()));
         osAuditEventPublisher.publish(saved.getId(), OsAuditAction.DIAGNOSTICAR, null,
                 OsAuditAction.DIAGNOSTICAR.getObservacaoDefault(), Map.of());
         return saved;
@@ -206,6 +222,13 @@ private final OrdemDeServicoRepositoryPort repository;
 
         os.finalizarDiagnostico();
         repository.save(os);
+        osMetrics.registrarTransicaoStatus(
+                com.fiap.mekano.domain.model.StatusOS.EM_DIAGNOSTICO,
+                com.fiap.mekano.domain.model.StatusOS.AGUARDANDO_APROVACAO);
+        if (os.getDataInicioDiagnostico() != null) {
+            osMetrics.registrarTempoFase("DIAGNOSTICO", Duration.between(os.getDataInicioDiagnostico(), LocalDateTime.now()));
+        }
+        osMetrics.registrarTempoFase("TOTAL", Duration.between(os.getCreatedAt(), LocalDateTime.now()));
         eventPublisher.publish(DiagnosticoFinalizadoEvent.of(os.getId(), command.descricao(), itensOrcamento));
         osAuditEventPublisher.publish(os.getId(), OsAuditAction.ORCAR, null,
                 OsAuditAction.ORCAR.getObservacaoDefault(), Map.of("itens", itensOrcamento.size()));
@@ -249,8 +272,18 @@ private final OrdemDeServicoRepositoryPort repository;
                 }
             });
         }
-        os.cancelar(motivo);
+        var statusAnterior = os.getStatus();
+        try {
+            os.cancelar(motivo);
+        } catch (AppException e) {
+            if (e.getStatus() == 422) {
+                osMetrics.registrarFalhaTransicao(statusAnterior, com.fiap.mekano.domain.model.StatusOS.CANCELADA);
+            }
+            throw e;
+        }
         OrdemDeServico saved = repository.save(os);
+        osMetrics.registrarTransicaoStatus(statusAnterior, saved.getStatus());
+        osMetrics.registrarTempoFase("TOTAL", Duration.between(saved.getCreatedAt(), LocalDateTime.now()));
         osAuditEventPublisher.publish(saved.getId(), OsAuditAction.CANCELAR, null, motivo, Map.of());
         eventPublisher.publish(OSCanceladaEvent.of(saved.getId(), motivo));
         return saved;
@@ -260,8 +293,11 @@ private final OrdemDeServicoRepositoryPort repository;
     @Transactional
     public OrdemDeServico entregar(UUID id, String recebidoPor) {
         OrdemDeServico os = findById(id);
+        var statusAnterior = os.getStatus();
         var event = os.entregar(recebidoPor);
         OrdemDeServico saved = repository.save(os);
+        osMetrics.registrarTransicaoStatus(statusAnterior, saved.getStatus());
+        osMetrics.registrarTempoFase("TOTAL", Duration.between(saved.getCreatedAt(), LocalDateTime.now()));
         eventPublisher.publish(event);
         osAuditEventPublisher.publish(saved.getId(), OsAuditAction.ENTREGAR, null, recebidoPor, Map.of());
         return saved;
@@ -272,6 +308,7 @@ private final OrdemDeServicoRepositoryPort repository;
     public OrdemDeServico iniciarExecucao(UUID id, UUID mecanicoUuid, String observacao) {
         OrdemDeServico os = findById(id);
         if (os.getStatus() != com.fiap.mekano.domain.model.StatusOS.AGUARDANDO_EXECUCAO) {
+            osMetrics.registrarFalhaTransicao(os.getStatus(), com.fiap.mekano.domain.model.StatusOS.EM_EXECUCAO);
             throw new AppException(400, Messages.get("os.execucao.status.invalido.iniciar", os.getStatus()));
         }
 
@@ -296,6 +333,9 @@ private final OrdemDeServicoRepositoryPort repository;
 
         os.iniciarExecucao(mecanicoUuid, observacao);
         OrdemDeServico saved = repository.save(os);
+        osMetrics.registrarTransicaoStatus(
+                com.fiap.mekano.domain.model.StatusOS.AGUARDANDO_EXECUCAO,
+                saved.getStatus());
         osAuditEventPublisher.publish(saved.getId(), OsAuditAction.EXECUTAR, null,
                 OsAuditAction.EXECUTAR.getObservacaoDefault(),
                 Map.of("mecanico", mecanicoUuid.toString()));
@@ -307,10 +347,19 @@ private final OrdemDeServicoRepositoryPort repository;
     public OrdemDeServico finalizarExecucao(UUID id, String observacao) {
         OrdemDeServico os = findById(id);
         if (os.getStatus() != com.fiap.mekano.domain.model.StatusOS.EM_EXECUCAO) {
+            osMetrics.registrarFalhaTransicao(os.getStatus(), com.fiap.mekano.domain.model.StatusOS.FINALIZADA);
             throw new AppException(400, Messages.get("os.execucao.status.invalido.finalizar", os.getStatus()));
         }
         os.finalizarExecucao(observacao);
         OrdemDeServico saved = repository.save(os);
+        osMetrics.registrarTransicaoStatus(
+                com.fiap.mekano.domain.model.StatusOS.EM_EXECUCAO,
+                saved.getStatus());
+        if (saved.getExecucaoIniciadaEm() != null && saved.getExecucaoFinalizadaEm() != null) {
+            osMetrics.registrarTempoFase("EXECUCAO",
+                    Duration.between(saved.getExecucaoIniciadaEm(), saved.getExecucaoFinalizadaEm()));
+        }
+        osMetrics.registrarTempoFase("TOTAL", Duration.between(saved.getCreatedAt(), LocalDateTime.now()));
         eventPublisher.publish(OSFinalizadaEvent.of(saved.getId()));
         osAuditEventPublisher.publish(saved.getId(), OsAuditAction.FINALIZAR, null,
                 OsAuditAction.FINALIZAR.getObservacaoDefault(), Map.of());

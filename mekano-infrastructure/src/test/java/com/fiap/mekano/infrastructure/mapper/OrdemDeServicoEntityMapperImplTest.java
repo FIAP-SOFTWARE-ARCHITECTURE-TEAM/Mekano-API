@@ -59,6 +59,8 @@ class OrdemDeServicoEntityMapperImplTest {
                 "PIX-123",
                 entregueEm,
                 "João Cliente",
+                null,
+                null,
                 createdAt,
                 7L
         );

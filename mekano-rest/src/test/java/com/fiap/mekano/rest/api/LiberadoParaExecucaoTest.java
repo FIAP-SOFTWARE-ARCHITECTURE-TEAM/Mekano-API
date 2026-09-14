@@ -68,7 +68,7 @@ class LiberadoParaExecucaoTest {
                 null, null, null, null, null,
                 null, null, null, null, null,
                 null, null, null, null, null,
-                LocalDateTime.now(), null);
+                null, null, LocalDateTime.now(), null);
     }
 
     private Orcamento buildOrcamentoAprovado() {
