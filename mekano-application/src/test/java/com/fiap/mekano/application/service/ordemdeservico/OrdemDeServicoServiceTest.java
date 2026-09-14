@@ -19,6 +19,7 @@ import com.fiap.mekano.domain.port.in.FinalizarDiagnosticoCommand;
 import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;
 import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.ItemOsRepositoryPort;
+import com.fiap.mekano.domain.port.out.OSMetricsPort;
 import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
 import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
@@ -79,6 +80,9 @@ class OrdemDeServicoServiceTest {
 
     @Mock
     ItemOsRepositoryPort itemOsRepository;
+
+    @Mock
+    OSMetricsPort osMetrics;
 
     @InjectMocks
     OrdemDeServicoService service;

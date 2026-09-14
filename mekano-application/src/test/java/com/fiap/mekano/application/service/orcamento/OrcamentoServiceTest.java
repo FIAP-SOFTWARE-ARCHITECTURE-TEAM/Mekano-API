@@ -12,6 +12,7 @@ import com.fiap.mekano.domain.os.OsAuditAction;
 import com.fiap.mekano.domain.port.in.AprovarOrcamentoCommand;
 import com.fiap.mekano.domain.port.in.ReprovarOrcamentoCommand;
 import com.fiap.mekano.domain.port.out.EventPublisher;
+import com.fiap.mekano.domain.port.out.OSMetricsPort;
 import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
 import org.junit.jupiter.api.DisplayName;
@@ -47,6 +48,9 @@ class OrcamentoServiceTest {
 
     @Mock
     OsAuditEventPublisher osAuditEventPublisher;
+
+    @Mock
+    OSMetricsPort osMetrics;
 
     @InjectMocks
     OrcamentoService orcamentoService;

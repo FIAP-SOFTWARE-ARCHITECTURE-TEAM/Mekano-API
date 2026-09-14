@@ -71,6 +71,12 @@
 			<groupId>io.quarkus</groupId>
 			<artifactId>quarkus-cache</artifactId>
 		</dependency>
+
+		<!-- Micrometer — MeterRegistry para métricas customizadas de negócio (OSMetricsPort) -->
+		<dependency>
+			<groupId>io.quarkus</groupId>
+			<artifactId>quarkus-micrometer</artifactId>
+		</dependency>
 		<!-- Config YAML — lê application.yml com quarkus.cache config -->
 		<dependency>
 			<groupId>io.quarkus</groupId>
