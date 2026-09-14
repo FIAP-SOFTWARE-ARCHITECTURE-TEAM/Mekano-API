@@ -122,6 +122,29 @@ services:
     networks:
       - mekano-net
 
+  prometheus:
+    image: prom/prometheus
+    container_name: mekano-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra_metrics_monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - mekano-net
+
+  grafana:
+    image: grafana/grafana
+    container_name: mekano-grafana
+    ports:
+      - "3000:3000"
+
+    volumes:
+      - ./infra_metrics_monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./infra_metrics_monitoring/grafana/provisioning/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+      - ./infra_metrics_monitoring/grafana/provisioning/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
+    networks:
+      - mekano-net
+
 networks:
   mekano-net:
     driver: bridge
