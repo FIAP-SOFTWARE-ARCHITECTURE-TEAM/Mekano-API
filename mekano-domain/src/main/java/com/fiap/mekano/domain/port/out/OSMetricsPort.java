@@ -5,26 +5,26 @@ import com.fiap.mekano.domain.model.StatusOS;
 import java.time.Duration;
 
 /**
- * Output port para métricas de negócio de Ordens de Serviço.
+ * Output port para metricas de negocio de Ordens de Servico.
  * Implementado na camada de infrastructure (Adapter) usando Micrometer.
  */
 public interface OSMetricsPort {
 
     /**
-     * Registra a criação de uma nova OS (counter os.criadas.total).
+     * Registra a criacao de uma nova OS (counter os.criadas.total).
      */
     void registrarCriacaoOS();
 
     /**
-     * Registra uma transição de status bem-sucedida (counter os.status.alterado).
+     * Registra uma transicao de status bem-sucedida (counter os.status.alterado).
      *
-     * @param de   status de origem (null para criação)
+     * @param de   status de origem (null para criacao)
      * @param para status de destino
      */
     void registrarTransicaoStatus(StatusOS de, StatusOS para);
 
     /**
-     * Registra uma tentativa de transição inválida (counter os.transicao.falha).
+     * Registra uma tentativa de transicao invalida (counter os.transicao.falha).
      *
      * @param statusAtual status atual da OS
      * @param tentado     status que se tentou transicionar
@@ -32,10 +32,18 @@ public interface OSMetricsPort {
     void registrarFalhaTransicao(StatusOS statusAtual, StatusOS tentado);
 
     /**
-     * Registra a duração de uma fase da OS (timer os.duracao.fase).
+     * Registra a duracao de uma fase da OS (timer os.fase.duracao).
      *
-     * @param fase    nome da fase (DIAGNÓSTICO, EXECUCAO, TOTAL)
-     * @param duracao duração medida
+     * @param fase    nome da fase (RECEBIDA, EM_DIAGNOSTICO, AGUARDANDO_APROVACAO,
+     *                AGUARDANDO_EXECUCAO, EM_EXECUCAO, FINALIZADA, ENTREGUE, TOTAL)
+     * @param duracao duracao medida
      */
     void registrarTempoFase(String fase, Duration duracao);
+
+    /**
+     * Incrementa gauge de OS por status atual (counter os.status.atual com tag status).
+     *
+     * @param status status atual da OS
+     */
+    void registrarOSPorStatus(String status);
 }

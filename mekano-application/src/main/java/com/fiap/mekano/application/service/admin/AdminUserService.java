@@ -9,7 +9,7 @@ import com.fiap.mekano.domain.port.in.CreateAdminUserCommand;
 import com.fiap.mekano.domain.port.out.PasswordHasherPort;
 import com.fiap.mekano.domain.port.out.UserRepositoryPort;
 import com.fiap.mekano.domain.port.out.UserRoleRepositoryPort;
-import com.fiap.mekano.shared.exception.AppException;
+import com.fiap.mekano.domain.exception.AppException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;

@@ -3,6 +3,7 @@ package com.fiap.mekano.application.service.orcamento;
 import com.fiap.mekano.application.service.os.OsAuditEventPublisher;
 import com.fiap.mekano.domain.event.OrcamentoAprovadoEvent;
 import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.exception.DomainException;
 import com.fiap.mekano.domain.valueobject.ItemOrcamento;
 import com.fiap.mekano.domain.model.Orcamento;
 import com.fiap.mekano.domain.model.OrdemDeServico;
@@ -136,9 +137,8 @@ class OrcamentoServiceTest {
 
         when(orcamentoRepository.findByUuid(orcamento.getId())).thenReturn(Optional.of(orcamento));
 
-        var ex = assertThrows(AppException.class,
+        var ex = assertThrows(DomainException.class,
                 () -> orcamentoService.aprovar(new AprovarOrcamentoCommand(orcamento.getId())));
-        assertEquals(422, ex.getStatus());
     }
 
     @Test
@@ -173,9 +173,8 @@ class OrcamentoServiceTest {
 
         when(orcamentoRepository.findByUuid(orcamento.getId())).thenReturn(Optional.of(orcamento));
 
-        var ex = assertThrows(AppException.class,
+        var ex = assertThrows(DomainException.class,
                 () -> orcamentoService.reprovar(new ReprovarOrcamentoCommand(orcamento.getId(), "motivo")));
-        assertEquals(422, ex.getStatus());
     }
 
     @Test

@@ -307,15 +307,6 @@
                   "// 1. Verifica o HTTP Status Code (200 OK)\npm.test(\"Status code é 200 OK\", function () {\n    pm.response.to.have.status(200);\n});\n\n// 2. Validia a presença e o formato básico dos tokens\npm.test(\"Retorna 'access_token' e 'refresh_token' válidos\", function () {\n    const responseData = pm.response.json();\n\n    // Verifica se os campos existem e são do tipo String\n    pm.expect(responseData).to.have.property(\"access_token\").that.is.a(\"string\");\n    pm.expect(responseData).to.have.property(\"refresh_token\").that.is.a(\"string\");\n\n    // Valida que os tokens não estão vazios\n    pm.expect(responseData.access_token).to.not.be.empty;\n    pm.expect(responseData.refresh_token).to.not.be.empty;\n\n    // (Opcional) Salva o access_token em uma variável de ambiente para requisições futuras\n    pm.environment.set(\"access_token\", responseData.access_token);\n});\n\nif (pm.response.code === 200) {\n    var jsonData = pm.response.json();\n    pm.collectionVariables.set('adminToken', jsonData.access_token);\n    pm.collectionVariables.set('adminRefreshToken', jsonData.refresh_token);\n    console.log('Admin token obtido com sucesso');\n}"
                 ]
               }
-            },
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
             }
           ],
           "request": {
@@ -331,7 +322,7 @@
               "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
               "options": {
                 "raw": {
-                  "language": "text"
+                  "language": "json"
                 }
               }
             },
@@ -361,62 +352,10 @@
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test(\"Status code é 201 CREATED\", function () {",
-                  "    pm.response.to.have.status(201);",
-                  "});",
-                  "",
-                  "const responseData = pm.response.json();",
-                  "",
-                  "// Expressão regular para validar UUID (v1, v3, v4, v5)",
-                  "const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
-                  "",
-                  "// Função auxiliar para validar presença e valor não nulo/vazio",
-                  "function validateField(fieldName) {",
-                  "    pm.test(`Campo '${fieldName}' - Deve existir e não ser nulo/vazio`, function () {",
-                  "        pm.expect(responseData).to.have.property(fieldName);",
-                  "        ",
-                  "        const value = responseData[fieldName];",
-                  "        pm.expect(value, `O campo '${fieldName}' não deve ser nulo`).to.not.be.null;",
-                  "        pm.expect(value, `O campo '${fieldName}' não deve ser undefined`).to.not.be.undefined;",
-                  "",
-                  "        if (typeof value === \"string\") {",
-                  "            pm.expect(value.trim(), `O campo '${fieldName}' não deve estar vazio`).to.not.be.empty;",
-                  "        }",
-                  "    });",
-                  "}",
-                  "",
-                  "// 1. Teste do ID (Presença + Formato UUID)",
-                  "validateField(\"id\");",
-                  "",
-                  "pm.test(\"Campo 'id' - Deve estar no formato UUID válido\", function () {",
-                  "    pm.expect(responseData.id).to.match(uuidRegex);",
-                  "});",
-                  "",
-                  "// 2. Testes dos demais campos isolados",
-                  "validateField(\"name\");",
-                  "validateField(\"email\");",
-                  "validateField(\"role\");",
-                  "validateField(\"senhaGerada\");",
-                  "",
-                  "if (pm.response.code === 201) {",
-                  "    var jsonData = pm.response.json();",
-                  "    pm.collectionVariables.set('atendenteUuid', jsonData.id);",
-                  "    pm.collectionVariables.set('atendenteSenha', jsonData.senhaGerada);",
-                  "    pm.collectionVariables.set('atendenteEmail', jsonData.email);",
-                  "    console.log('Atendente criado: ' + jsonData.email + ' / senha: ' + jsonData.senhaGerada);",
-                  "}"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
-            {
-              "listen": "prerequest",
-              "script": {
-                "packages": {},
-                "type": "text/javascript"
+                "exec": [
+                  "pm.test(\"Status code é 201 CREATED\", function () {\n    pm.response.to.have.status(201);\n});\n\nconst responseData = pm.response.json();\n\n// Expressão regular para validar UUID (v1, v3, v4, v5)\nconst uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;\n\n// Função auxiliar para validar presença e valor não nulo/vazio\nfunction validateField(fieldName) {\n    pm.test(`Campo '${fieldName}' - Deve existir e não ser nulo/vazio`, function () {\n        pm.expect(responseData).to.have.property(fieldName);\n        \n        const value = responseData[fieldName];\n        pm.expect(value, `O campo '${fieldName}' não deve ser nulo`).to.not.be.null;\n        pm.expect(value, `O campo '${fieldName}' não deve ser undefined`).to.not.be.undefined;\n\n        if (typeof value === \"string\") {\n            pm.expect(value.trim(), `O campo '${fieldName}' não deve estar vazio`).to.not.be.empty;\n        }\n    });\n}\n\n// 1. Teste do ID (Presença + Formato UUID)\nvalidateField(\"id\");\n\npm.test(\"Campo 'id' - Deve estar no formato UUID válido\", function () {\n    pm.expect(responseData.id).to.match(uuidRegex);\n});\n\n// 2. Testes dos demais campos isolados\nvalidateField(\"name\");\nvalidateField(\"email\");\nvalidateField(\"role\");\nvalidateField(\"senhaGerada\");\n\nif (pm.response.code === 201) {\n    var jsonData = pm.response.json();\n    pm.collectionVariables.set('atendenteUuid', jsonData.id);\n    pm.collectionVariables.set('atendenteSenha', jsonData.senhaGerada);\n    pm.collectionVariables.set('atendenteEmail', jsonData.email);\n    console.log('Atendente criado: ' + jsonData.email + ' / senha: ' + jsonData.senhaGerada);\n}"
+                ]
               }
             }
           ],
@@ -434,7 +373,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Atendente Teste {{sequencia}}\",\n  \"email\": \"atendente{{sequencia}}@mekano.com\",\n  \"role\": \"atendente\"\n}"
+              "raw": "{\n  \"name\": \"Atendente Teste {{sequencia}}\",\n  \"email\": \"atendente{{sequencia}}@mekano.com\",\n  \"role\": \"atendente\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/admin/usuarios",
@@ -1248,6 +1192,15 @@
                   "// 1. Lê o JSON da resposta (FALTAVA ESSA LINHA)\nconst responseData = pm.response.json();\n\n// 2. Valida o Status Code\npm.test(\"Status code é 201 CREATED\", function () {\n    pm.response.to.have.status(201);\n});\n\nconst uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;\n\n// Função auxiliar para validar presença e valor não nulo/vazio\nfunction validateField(fieldName) {\n    pm.test(`Campo '${fieldName}' - Deve existir e não ser nulo/vazio`, function () {\n        pm.expect(responseData).to.have.property(fieldName);\n        \n        const value = responseData[fieldName];\n        pm.expect(value, `O campo '${fieldName}' não deve ser nulo`).to.not.be.null;\n        pm.expect(value, `O campo '${fieldName}' não deve ser undefined`).to.not.be.undefined;\n\n        if (typeof value === \"string\") {\n            pm.expect(value.trim(), `O campo '${fieldName}' não deve estar vazio`).to.not.be.empty;\n        }\n    });\n}\n\n// 3. Teste do ID (Presença + Formato UUID)\nvalidateField(\"id\");\n\npm.test(\"Campo 'id' - Deve estar no formato UUID válido\", function () {\n    pm.expect(responseData.id).to.match(uuidRegex);\n});\n\nif (pm.response.code === 201) {\n    var jsonData = pm.response.json();\n    pm.collectionVariables.set('clienteUuid', jsonData.id);\n    console.log('Cliente criado: ' + jsonData.id);\n}"
                 ]
               }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function gerarCPF() {\r\n    const random = (n) => Math.floor(Math.random() * n);\r\n    const mod = (dividendo, divisor) => Math.round(dividendo - (Math.floor(dividendo / divisor) * divisor));\r\n\r\n    const n = Array.from({ length: 9 }, () => random(10));\r\n\r\n    let d1 = n.reduce((total, number, index) => total + (number * (10 - index)), 0);\r\n    d1 = 11 - mod(d1, 11);\r\n    if (d1 >= 10) d1 = 0;\r\n\r\n    let d2 = n.reduce((total, number, index) => total + (number * (11 - index)), 0) + (d1 * 2);\r\n    d2 = 11 - mod(d2, 11);\r\n    if (d2 >= 10) d2 = 0;\r\n\r\n    return `${n.join('')}${d1}${d2}`;\r\n}\r\n\r\n// Salva o CPF sem formatação (ex: 12345678901)\r\npm.collectionVariables.set(\"cpfGerado\", gerarCPF());\r\n\r\n// Se precisar formatado (ex: 123.456.789-01):\r\n// const cpf = gerarCPF();\r\n// pm.variables.set(\"cpfGeradoFormatado\", cpf.replace(/(\\d{3})(\\d{3})(\\d{3})(\\d{2})/, \"$1.$2.$3-$4\"));"
+                ]
+              }
             }
           ],
           "request": {
@@ -1264,7 +1217,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nome\": \"Cliente Valido\",\n  \"cpf\": \"24637776805\",\n  \"email\": \"cliente{{sequencia}}@email.com\",\n  \"telefone\": \"11987654321\",\n  \"logradouro\": \"Rua das Flores\",\n  \"numero\": \"123\",\n  \"bairro\": \"Centro\",\n  \"cidade\": \"São Paulo\",\n  \"uf\": \"SP\",\n  \"cep\": \"01001000\"\n}",
+              "raw": "{\n  \"nome\": \"Cliente Exato - {{sequencia}}\",\n  \"cpf\": \"{{cpfGerado}}\",\n  \"email\": \"cliente{{sequencia}}@email.com\",\n  \"telefone\": \"51992140118\",\n  \"logradouro\": \"Rua das Flores\",\n  \"numero\": \"123\",\n  \"bairro\": \"Centro\",\n  \"cidade\": \"São Paulo\",\n  \"uf\": \"SP\",\n  \"cep\": \"01001000\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1289,26 +1242,10 @@
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "// 1. Valida o HTTP Status Code (400 Bad Request)\r",
-                  "pm.test(\"Status code é 400 Bad Request\", function () {\r",
-                  "    pm.response.to.have.status(400);\r",
-                  "});\r",
-                  "\r",
-                  "// 2. Valida se o campo 'detail' contém \"CPF inválido\"\r",
-                  "pm.test(\"Mensagem em 'detail' informa que o CPF é inválido\", function () {\r",
-                  "    const responseData = pm.response.json();\r",
-                  "    \r",
-                  "    pm.expect(responseData).to.have.property(\"detail\");\r",
-                  "    pm.expect(responseData.detail).to.be.a(\"string\");\r",
-                  "    \r",
-                  "    // Verifica se a string contém o trecho \"CPF inválido\"\r",
-                  "    pm.expect(responseData.detail).to.include(\"CPF inválido\");\r",
-                  "});"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "// 1. Valida o HTTP Status Code (400 Bad Request)\r\npm.test(\"Status code é 400 Bad Request\", function () {\r\n    pm.response.to.have.status(400);\r\n});\r\n\r\n// 2. Valida se o campo 'detail' contém \"CPF inválido\"\r\npm.test(\"Mensagem em 'detail' informa que o CPF é inválido\", function () {\r\n    const responseData = pm.response.json();\r\n    \r\n    pm.expect(responseData).to.have.property(\"detail\");\r\n    pm.expect(responseData.detail).to.be.a(\"string\");\r\n    \r\n    // Verifica se a string contém o trecho \"CPF inválido\"\r\n    pm.expect(responseData.detail).to.include(\"CPF inválido\");\r\n});"
+                ]
               }
             }
           ],
@@ -1326,7 +1263,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nome\": \"Cliente Inválido\",\n  \"cpf\": \"12345678901\",\n  \"email\": \"invalido@email.com\",\n  \"telefone\": \"11999999999\",\n  \"logradouro\": \"Rua A\",\n  \"numero\": \"1\",\n  \"bairro\": \"Centro\",\n  \"cidade\": \"São Paulo\",\n  \"uf\": \"SP\",\n  \"cep\": \"01001000\"\n}"
+              "raw": "{\n  \"nome\": \"Cliente Inválido\",\n  \"cpf\": \"12345678901\",\n  \"email\": \"invalido@email.com\",\n  \"telefone\": \"11999999999\",\n  \"logradouro\": \"Rua A\",\n  \"numero\": \"1\",\n  \"bairro\": \"Centro\",\n  \"cidade\": \"São Paulo\",\n  \"uf\": \"SP\",\n  \"cep\": \"01001000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/clientes",
@@ -1346,26 +1288,10 @@
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "// 1. Valida o HTTP Status Code (409 Conflict)\r",
-                  "pm.test(\"Status code é 409 Conflict\", function () {\r",
-                  "    pm.response.to.have.status(409);\r",
-                  "});\r",
-                  "\r",
-                  "// 2. Valida se o campo 'detail' contém \"CPF Duplicado\"\r",
-                  "pm.test(\"Mensagem em 'detail' informa que o CPF é Duplicado\", function () {\r",
-                  "    const responseData = pm.response.json();\r",
-                  "    \r",
-                  "    pm.expect(responseData).to.have.property(\"detail\");\r",
-                  "    pm.expect(responseData.detail).to.be.a(\"string\");\r",
-                  "    \r",
-                  "    // Verifica se a string contém o trecho \"CPF Duplicado\"\r",
-                  "    pm.expect(responseData.detail).to.include(\"Cliente já existe com o CPF\");\r",
-                  "});"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "// 1. Valida o HTTP Status Code (409 Conflict)\r\npm.test(\"Status code é 409 Conflict\", function () {\r\n    pm.response.to.have.status(409);\r\n});\r\n\r\n// 2. Valida se o campo 'detail' contém \"CPF Duplicado\"\r\npm.test(\"Mensagem em 'detail' informa que o CPF é Duplicado\", function () {\r\n    const responseData = pm.response.json();\r\n    \r\n    pm.expect(responseData).to.have.property(\"detail\");\r\n    pm.expect(responseData.detail).to.be.a(\"string\");\r\n    \r\n    // Verifica se a string contém o trecho \"CPF Duplicado\"\r\n    pm.expect(responseData.detail).to.include(\"Cliente já existe com o CPF\");\r\n});"
+                ]
               }
             }
           ],
@@ -1383,7 +1309,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nome\": \"Cliente Cpf Duplicado\",\n  \"cpf\": \"24637776805\",\n  \"email\": \"invalido@email.com\",\n  \"telefone\": \"11999999999\",\n  \"logradouro\": \"Rua A\",\n  \"numero\": \"1\",\n  \"bairro\": \"Centro\",\n  \"cidade\": \"São Paulo\",\n  \"uf\": \"SP\",\n  \"cep\": \"01001000\"\n}"
+              "raw": "{\n  \"nome\": \"Cliente Cpf Duplicado\",\n  \"cpf\": \"{{cpfGerado}}\",\n  \"email\": \"invalido@email.com\",\n  \"telefone\": \"11999999999\",\n  \"logradouro\": \"Rua A\",\n  \"numero\": \"1\",\n  \"bairro\": \"Centro\",\n  \"cidade\": \"São Paulo\",\n  \"uf\": \"SP\",\n  \"cep\": \"01001000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/clientes",
@@ -1552,50 +1483,10 @@
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "// 1. Valida HTTP Status 200 OK\r",
-                  "pm.test(\"Status code é 200 OK\", function () {\r",
-                  "    pm.response.to.have.status(200);\r",
-                  "});\r",
-                  "\r",
-                  "// Extrai e converte os corpos da requisição e da resposta\r",
-                  "const requestBody = JSON.parse(pm.request.body.raw);\r",
-                  "const responseData = pm.response.json();\r",
-                  "\r",
-                  "// Mapeamento de equivalente entre Request (PUT) vs Response (API)\r",
-                  "const fieldMappings = [\r",
-                  "    { req: \"nome\", res: \"nome\" },\r",
-                  "    { req: \"email\", res: \"email\" },\r",
-                  "    { req: \"telefone\", res: \"telefone\" },\r",
-                  "    { req: \"logradouro\", res: \"enderecoLogradouro\" },\r",
-                  "    { req: \"numero\", res: \"enderecoNumero\" },\r",
-                  "    { req: \"bairro\", res: \"enderecoBairro\" },\r",
-                  "    { req: \"cidade\", res: \"enderecoCidade\" },\r",
-                  "    { req: \"uf\", res: \"enderecoUf\" },\r",
-                  "    { req: \"cep\", res: \"enderecoCep\" }\r",
-                  "];\r",
-                  "\r",
-                  "// Iteramos apenas pelos mapeamentos cujas chaves foram enviadas no body do PUT\r",
-                  "fieldMappings.forEach((mapping) => {\r",
-                  "    // Verifica se o campo foi enviado no body da requisição\r",
-                  "    if (requestBody.hasOwnProperty(mapping.req)) {\r",
-                  "        \r",
-                  "        pm.test(`Persistência - Campo '${mapping.res}' deve refletir o valor enviado`, function () {\r",
-                  "            const sentValue = requestBody[mapping.req];\r",
-                  "            const receivedValue = responseData[mapping.res];\r",
-                  "\r",
-                  "            pm.expect(receivedValue, `O valor retornado em '${mapping.res}' não coincide com o enviado em '${mapping.req}'`)\r",
-                  "                .to.eql(sentValue);\r",
-                  "        });\r",
-                  "\r",
-                  "    }\r",
-                  "});\r",
-                  "\r",
-                  ""
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "// 1. Valida HTTP Status 200 OK\r\npm.test(\"Status code é 200 OK\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\n// Extrai e converte os corpos da requisição e da resposta\r\nconst requestBody = JSON.parse(pm.request.body.raw);\r\nconst responseData = pm.response.json();\r\n\r\n// Mapeamento de equivalente entre Request (PUT) vs Response (API)\r\nconst fieldMappings = [\r\n    { req: \"nome\", res: \"nome\" },\r\n    { req: \"email\", res: \"email\" },\r\n    { req: \"telefone\", res: \"telefone\" },\r\n    { req: \"logradouro\", res: \"enderecoLogradouro\" },\r\n    { req: \"numero\", res: \"enderecoNumero\" },\r\n    { req: \"bairro\", res: \"enderecoBairro\" },\r\n    { req: \"cidade\", res: \"enderecoCidade\" },\r\n    { req: \"uf\", res: \"enderecoUf\" },\r\n    { req: \"cep\", res: \"enderecoCep\" }\r\n];\r\n\r\n// Iteramos apenas pelos mapeamentos cujas chaves foram enviadas no body do PUT\r\nfieldMappings.forEach((mapping) => {\r\n    // Verifica se o campo foi enviado no body da requisição\r\n    if (requestBody.hasOwnProperty(mapping.req)) {\r\n        \r\n        pm.test(`Persistência - Campo '${mapping.res}' deve refletir o valor enviado`, function () {\r\n            const sentValue = requestBody[mapping.req];\r\n            const receivedValue = responseData[mapping.res];\r\n\r\n            pm.expect(receivedValue, `O valor retornado em '${mapping.res}' não coincide com o enviado em '${mapping.req}'`)\r\n                .to.eql(sentValue);\r\n        });\r\n\r\n    }\r\n});\r\n\r\n"
+                ]
               }
             }
           ],
@@ -1613,7 +1504,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nome\": \"João Silva Atualizado\",\n  \"email\": \"joao.atualizado@email.com\",\n  \"telefone\": \"11988887777\",\n  \"logradouro\": \"Rua das Orquídeas\",\n  \"numero\": \"456\",\n  \"bairro\": \"Jardim Botânico\",\n  \"cidade\": \"Porto Alegre\",\n  \"uf\": \"RS\",\n  \"cep\": \"90030095\"\n}"
+              "raw": "{\n  \"nome\": \"Cliente Exato - {{sequencia}} Atualizado\",\n  \"email\": \"joao.atualizado@email.com\",\n  \"telefone\": \"11988887777\",\n  \"logradouro\": \"Rua das Orquídeas\",\n  \"numero\": \"456\",\n  \"bairro\": \"Jardim Botânico\",\n  \"cidade\": \"Porto Alegre\",\n  \"uf\": \"RS\",\n  \"cep\": \"90030095\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/clientes/{{clienteUuid}}",
@@ -1771,53 +1667,19 @@
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "const responseData = pm.response.json();",
-                  "const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
-                  "",
-                  "// 1. Valida HTTP Status 201 Created",
-                  "pm.test(\"Status code é 201 Created\", function () {",
-                  "    pm.response.to.have.status(201);",
-                  "});",
-                  "",
-                  "// 2. Valida se o campo 'id' existe e está no formato UUID",
-                  "pm.test(\"Campo 'id' deve existir e ser um UUID válido\", function () {",
-                  "    pm.expect(responseData).to.have.property(\"id\");",
-                  "    pm.expect(responseData.id, \"O campo 'id' não deve ser nulo/vazio\").to.be.a(\"string\").that.is.not.empty;",
-                  "    pm.expect(responseData.id).to.match(uuidRegex);",
-                  "});",
-                  "",
-                  "// 3. Valida se o campo 'clienteUuid' existe e está no formato UUID",
-                  "pm.test(\"Campo 'clienteUuid' deve existir e ser um UUID válido\", function () {",
-                  "    pm.expect(responseData).to.have.property(\"clienteUuid\");",
-                  "    pm.expect(responseData.clienteUuid, \"O campo 'clienteUuid' não deve ser nulo/vazio\").to.be.a(\"string\").that.is.not.empty;",
-                  "    pm.expect(responseData.clienteUuid).to.match(uuidRegex);",
-                  "});",
-                  "",
-                  "// 4. Valida os demais campos do cadastro do veículo",
-                  "const vehicleFields = [\"placa\", \"marca\", \"modelo\", \"ano\", \"createdAt\"];",
-                  "vehicleFields.forEach((field) => {",
-                  "    pm.test(`Campo '${field}' deve existir e ter valor válido`, function () {",
-                  "        pm.expect(responseData).to.have.property(field);",
-                  "        ",
-                  "        const value = responseData[field];",
-                  "        pm.expect(value, `O campo '${field}' não deve ser nulo`).to.not.be.null;",
-                  "        pm.expect(value, `O campo '${field}' não deve ser undefined`).to.not.be.undefined;",
-                  "",
-                  "        if (typeof value === \"string\") {",
-                  "            pm.expect(value.trim(), `O campo '${field}' não deve estar vazio`).to.not.be.empty;",
-                  "        }",
-                  "    });",
-                  "});",
-                  "",
-                  "if (pm.response.code === 201) {",
-                  "    var jsonData = pm.response.json();",
-                  "    pm.collectionVariables.set('veiculoUuid', jsonData.id);",
-                  "}"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "const responseData = pm.response.json();\nconst uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;\n\n// 1. Valida HTTP Status 201 Created\npm.test(\"Status code é 201 Created\", function () {\n    pm.response.to.have.status(201);\n});\n\n// 2. Valida se o campo 'id' existe e está no formato UUID\npm.test(\"Campo 'id' deve existir e ser um UUID válido\", function () {\n    pm.expect(responseData).to.have.property(\"id\");\n    pm.expect(responseData.id, \"O campo 'id' não deve ser nulo/vazio\").to.be.a(\"string\").that.is.not.empty;\n    pm.expect(responseData.id).to.match(uuidRegex);\n});\n\n// 3. Valida se o campo 'clienteUuid' existe e está no formato UUID\npm.test(\"Campo 'clienteUuid' deve existir e ser um UUID válido\", function () {\n    pm.expect(responseData).to.have.property(\"clienteUuid\");\n    pm.expect(responseData.clienteUuid, \"O campo 'clienteUuid' não deve ser nulo/vazio\").to.be.a(\"string\").that.is.not.empty;\n    pm.expect(responseData.clienteUuid).to.match(uuidRegex);\n});\n\n// 4. Valida os demais campos do cadastro do veículo\nconst vehicleFields = [\"placa\", \"marca\", \"modelo\", \"ano\", \"createdAt\"];\nvehicleFields.forEach((field) => {\n    pm.test(`Campo '${field}' deve existir e ter valor válido`, function () {\n        pm.expect(responseData).to.have.property(field);\n        \n        const value = responseData[field];\n        pm.expect(value, `O campo '${field}' não deve ser nulo`).to.not.be.null;\n        pm.expect(value, `O campo '${field}' não deve ser undefined`).to.not.be.undefined;\n\n        if (typeof value === \"string\") {\n            pm.expect(value.trim(), `O campo '${field}' não deve estar vazio`).to.not.be.empty;\n        }\n    });\n});\n\nif (pm.response.code === 201) {\n    var jsonData = pm.response.json();\n    pm.collectionVariables.set('veiculoUuid', jsonData.id);\n}"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "\r\n// 1. Função para gerar Placa no formato Mercosul (ex: ABC1D23)\r\nfunction gerarPlacaMercosul() {\r\n    const letras = \"ABCDEFGHIJKLMNOPQRSTUVWXYZ\";\r\n    const numeros = \"0123456789\";\r\n\r\n    const l = () => letras.charAt(Math.floor(Math.random() * letras.length));\r\n    const n = () => numeros.charAt(Math.floor(Math.random() * numeros.length));\r\n\r\n    return `${l()}${l()}${l()}${n()}${l()}${n()}${n()}`;\r\n}\r\n\r\n// 2. Lista com 10 combinações de Marcas e Modelos\r\nconst listaVeiculos = [\r\n    { marca: \"Toyota\", modelo: \"Corolla\" },\r\n    { marca: \"Honda\", modelo: \"Civic\" },\r\n    { marca: \"Volkswagen\", modelo: \"Golf\" },\r\n    { marca: \"Chevrolet\", modelo: \"Onix\" },\r\n    { marca: \"Fiat\", modelo: \"Argo\" },\r\n    { marca: \"Ford\", modelo: \"Ka\" },\r\n    { marca: \"Hyundai\", modelo: \"HB20\" },\r\n    { marca: \"Jeep\", modelo: \"Renegade\" },\r\n    { marca: \"Nissan\", modelo: \"Kicks\" },\r\n    { marca: \"Renault\", modelo: \"Kwid\" }\r\n];\r\n\r\n// 3. Seleciona um veículo aleatório da lista\r\nconst veiculoSorteado = listaVeiculos[Math.floor(Math.random() * listaVeiculos.length)];\r\n\r\n// 4. Salva os valores nas variáveis do Postman\r\npm.collectionVariables.set(\"placaGerada\", gerarPlacaMercosul());\r\npm.collectionVariables.set(\"marcaVeiculo\", veiculoSorteado.marca);\r\npm.collectionVariables.set(\"modeloVeiculo\", veiculoSorteado.modelo);\r\n"
+                ]
               }
             }
           ],
@@ -1835,7 +1697,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"clienteUuid\": \"{{clienteUuid}}\",\n  \"placa\": \"ABC1D23\",\n  \"marca\": \"Toyota\",\n  \"modelo\": \"Corolla\",\n  \"ano\": 2025\n}"
+              "raw": "{\n  \"clienteUuid\": \"{{clienteUuid}}\",\n  \"placa\": \"{{placaGerada}}\",\n  \"marca\": \"{{marcaVeiculo}}\",\n  \"modelo\": \"{{modeloVeiculo}}\",\n  \"ano\": 2026\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/veiculos",
@@ -1855,26 +1722,10 @@
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "// 1. Valida o HTTP Status Code (409 Conflict)\r",
-                  "pm.test(\"Status code é 409 Conflict\", function () {\r",
-                  "    pm.response.to.have.status(409);\r",
-                  "});\r",
-                  "\r",
-                  "// 2. Valida se o campo 'detail' contém \"Veiculo já cadastrado\"\r",
-                  "pm.test(\"Mensagem em 'detail' informa que o veiculo já foi cadastrado\", function () {\r",
-                  "    const responseData = pm.response.json();\r",
-                  "    \r",
-                  "    pm.expect(responseData).to.have.property(\"detail\");\r",
-                  "    pm.expect(responseData.detail).to.be.a(\"string\");\r",
-                  "    \r",
-                  "    // Verifica se a string contém o trecho \"Placada já cadastrada\"\r",
-                  "    pm.expect(responseData.detail).to.include(\"Veículo já cadastrado\");\r",
-                  "});"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "// 1. Valida o HTTP Status Code (409 Conflict)\r\npm.test(\"Status code é 409 Conflict\", function () {\r\n    pm.response.to.have.status(409);\r\n});\r\n\r\n// 2. Valida se o campo 'detail' contém \"Veiculo já cadastrado\"\r\npm.test(\"Mensagem em 'detail' informa que o veiculo já foi cadastrado\", function () {\r\n    const responseData = pm.response.json();\r\n    \r\n    pm.expect(responseData).to.have.property(\"detail\");\r\n    pm.expect(responseData.detail).to.be.a(\"string\");\r\n    \r\n    // Verifica se a string contém o trecho \"Placada já cadastrada\"\r\n    pm.expect(responseData.detail).to.include(\"Veículo já cadastrado\");\r\n});"
+                ]
               }
             }
           ],
@@ -1892,7 +1743,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"clienteUuid\": \"{{clienteUuid}}\",\n  \"placa\": \"ABC1D23\",\n  \"marca\": \"Toyota\",\n  \"modelo\": \"Corolla\",\n  \"ano\": 2022\n}"
+              "raw": "{\n  \"clienteUuid\": \"{{clienteUuid}}\",\n  \"placa\": \"{{placaGerada}}\",\n  \"marca\": \"{{marcaVeiculo}}\",\n  \"modelo\": \"{{modeloVeiculo}}\",\n  \"ano\": 2026\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/veiculos",
@@ -2145,29 +2001,19 @@
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test(\"Status code é 200 OK\", function () {\r",
-                  "    pm.response.to.have.status(200);\r",
-                  "});\r",
-                  "\r",
-                  "// 1. Converte o corpo da resposta em JSON\r",
-                  "const responseData = pm.response.json();\r",
-                  "\r",
-                  "// 2. Recupera a variável salva na Collection\r",
-                  "const placaSalva = pm.collectionVariables.get(\"veiculoPlaca\");\r",
-                  "\r",
-                  "// 3. Valida se a placa do Response Body é igual à placa salva na Collection\r",
-                  "pm.test(\"A placa retornada deve ser a mesma da cadastrada (Criar Veiculos)\", function () {\r",
-                  "    // Garante primeiro que a variável foi encontrada antes de comparar\r",
-                  "    pm.expect(placaSalva, \"A variável 'veiculoPlaca' não foi encontrada na Collection\").to.not.be.undefined;\r",
-                  "    \r",
-                  "    // Compara a propriedade 'placa' do JSON com o valor da variável\r",
-                  "    pm.expect(responseData.placa, \"A placa do response não corresponde ao valor salvo\").to.eql(placaSalva);\r",
-                  "});"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "pm.test(\"Status code é 200 OK\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\n// 1. Converte o corpo da resposta em JSON\r\nconst responseData = pm.response.json();\r\n\r\n// 2. Recupera a variável salva na Collection\r\nconst placaSalva = pm.collectionVariables.get(\"veiculoPlaca\");\r\n\r\n// 3. Valida se a placa do Response Body é igual à placa salva na Collection\r\npm.test(\"A placa retornada deve ser a mesma da cadastrada (Criar Veiculos)\", function () {\r\n    // Garante primeiro que a variável foi encontrada antes de comparar\r\n    pm.expect(placaSalva, \"A variável 'veiculoPlaca' não foi encontrada na Collection\").to.not.be.undefined;\r\n    \r\n    // Compara a propriedade 'placa' do JSON com o valor da variável\r\n    pm.expect(responseData.placa, \"A placa do response não corresponde ao valor salvo\").to.eql(placaSalva);\r\n});"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 2. Lista com 10 combinações de Marcas e Modelos\r\nconst listaVeiculos = [\r\n    { marca: \"Toyota\", modelo: \"Corolla\" },\r\n    { marca: \"Honda\", modelo: \"Civic\" },\r\n    { marca: \"Volkswagen\", modelo: \"Golf\" },\r\n    { marca: \"Chevrolet\", modelo: \"Onix\" },\r\n    { marca: \"Fiat\", modelo: \"Argo\" },\r\n    { marca: \"Ford\", modelo: \"Ka\" },\r\n    { marca: \"Hyundai\", modelo: \"HB20\" },\r\n    { marca: \"Jeep\", modelo: \"Renegade\" },\r\n    { marca: \"Nissan\", modelo: \"Kicks\" },\r\n    { marca: \"Renault\", modelo: \"Kwid\" }\r\n];\r\n\r\n// 3. Seleciona um veículo aleatório da lista\r\nconst veiculoSorteado = listaVeiculos[Math.floor(Math.random() * listaVeiculos.length)];\r\n\r\n// 4. Salva os valores nas variáveis do Postman\r\npm.collectionVariables.set(\"marcaVeiculo\", veiculoSorteado.marca);\r\npm.collectionVariables.set(\"modeloVeiculo\", veiculoSorteado.modelo);"
+                ]
               }
             }
           ],
@@ -2185,7 +2031,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"placa\": \"XYZ9K87\",\n  \"marca\": \"Toyota\",\n  \"modelo\": \"Corolla Cross\",\n  \"ano\": 2023\n}"
+              "raw": "{\n  \"placa\": \"{{placaGerada}}\",\n  \"marca\": \"{{marcaVeiculo}}\",\n  \"modelo\": \"{{modeloVeiculo}}\",\n  \"ano\": 2026\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/veiculos/{{veiculoUuid}}",
@@ -2299,6 +2150,15 @@
                   "const responseData = pm.response.json();\nconst uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;\n\n// 1. Valida HTTP Status 201 Created\npm.test(\"Status code é 201 Created\", function () {\n    pm.response.to.have.status(201);\n});\n\n// 2. Valida se o campo 'id' existe e está no formato UUID\npm.test(\"Campo 'id' deve existir e ser um UUID válido\", function () {\n    pm.expect(responseData).to.have.property(\"id\");\n    pm.expect(responseData.id, \"O campo 'id' não deve ser nulo/vazio\").to.be.a(\"string\").that.is.not.empty;\n    pm.expect(responseData.id).to.match(uuidRegex);\n});\n\nif (pm.response.code === 201) {\n    var jsonData = pm.response.json();\n    pm.collectionVariables.set('servicoUuid', jsonData.id);\n    console.log('Serviço criado: ' + jsonData.id + ' - ' + jsonData.nome);\n}"
                 ]
               }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Gera um identificador único usando os últimos dígitos do timestamp atual\r\nconst sufixoUnico = Date.now().toString().slice(-6);\r\n\r\n\r\npm.collectionVariables.set(\"servicoCodigo\", sufixoUnico);"
+                ]
+              }
             }
           ],
           "request": {
@@ -2315,7 +2175,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nome\": \"Troca de óleo\",\n  \"descricao\": \"Troca de óleo do motor 5W30 sintético\",\n  \"valor\": 89.90\n}",
+              "raw": "{\n  \"nome\": \"Troca de óleo - {{servicoCodigo}}\",\n  \"descricao\": \"Troca de óleo do motor {{servicoCodigo}} sintético\",\n  \"valor\": 89.90\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2361,7 +2221,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"nome\": \"Alinhamento e Balanceamento\",\n    \"descricao\": \"Alinhamento de direção a laser e balanceamento das 4 rodas\",\n    \"valor\": 120.00\n}",
+              "raw": "{\n    \"nome\": \"Alinhamento e Balanceamento - {{servicoCodigo}}\",\n    \"descricao\": \"Alinhamento de direção a laser e balanceamento das 4 rodas - {{servicoCodigo}}\",\n    \"valor\": 120.00\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2407,7 +2267,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"nome\": \"Higienização do Ar-Condicionado\",\n    \"descricao\": \"Limpeza do sistema de ar com aplicação de gass e troca do filtro de cabine\",\n    \"valor\": 150.00\n}",
+              "raw": "{\n    \"nome\": \"Higienização do Ar-Condicionado - {{servicoCodigo}}\",\n    \"descricao\": \"Limpeza do sistema de ar com aplicação de gass e troca do filtro de cabine - {{servicoCodigo}}\",\n    \"valor\": 150.00\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2432,26 +2292,10 @@
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "// 1. Valida o HTTP Status Code (409 Conflict)\r",
-                  "pm.test(\"Status code é 409 Conflict\", function () {\r",
-                  "    pm.response.to.have.status(409);\r",
-                  "});\r",
-                  "\r",
-                  "// 2. Valida se o campo 'detail' contém \"Serviço já existe com o nome:\"\r",
-                  "pm.test(\"Mensagem em 'detail' informa que o serviço já existe\", function () {\r",
-                  "    const responseData = pm.response.json();\r",
-                  "    \r",
-                  "    pm.expect(responseData).to.have.property(\"detail\");\r",
-                  "    pm.expect(responseData.detail).to.be.a(\"string\");\r",
-                  "    \r",
-                  "    // Verifica se a string contém o trecho \"Placada já cadastrada\"\r",
-                  "    pm.expect(responseData.detail).to.include(\"Serviço já existe com o nome:\");\r",
-                  "});"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "// 1. Valida o HTTP Status Code (409 Conflict)\r\npm.test(\"Status code é 409 Conflict\", function () {\r\n    pm.response.to.have.status(409);\r\n});\r\n\r\n// 2. Valida se o campo 'detail' contém \"Serviço já existe com o nome:\"\r\npm.test(\"Mensagem em 'detail' informa que o serviço já existe\", function () {\r\n    const responseData = pm.response.json();\r\n    \r\n    pm.expect(responseData).to.have.property(\"detail\");\r\n    pm.expect(responseData.detail).to.be.a(\"string\");\r\n    \r\n    // Verifica se a string contém o trecho \"Placada já cadastrada\"\r\n    pm.expect(responseData.detail).to.include(\"Serviço já existe com o nome:\");\r\n});"
+                ]
               }
             }
           ],
@@ -2469,7 +2313,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nome\": \"Troca de óleo\",\n  \"descricao\": \"Duplicado\",\n  \"valor\": 89.90\n}"
+              "raw": "{\n  \"nome\": \"Troca de óleo - {{servicoCodigo}}\",\n  \"descricao\": \"Troca de óleo do motor {{servicoCodigo}} sintético\",\n  \"valor\": 89.90\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/servicos",
@@ -2636,41 +2485,19 @@
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "// 1. Valida HTTP Status 200 OK\r",
-                  "pm.test(\"Status code é 200 OK\", function () {\r",
-                  "    pm.response.to.have.status(200);\r",
-                  "});\r",
-                  "\r",
-                  "// Extrai e converte os corpos da requisição e da resposta\r",
-                  "const requestBody = JSON.parse(pm.request.body.raw);\r",
-                  "const responseData = pm.response.json();\r",
-                  "\r",
-                  "// Mapeamento de equivalente entre Request (PUT) vs Response (API)\r",
-                  "const fieldMappings = [\r",
-                  "    { req: \"nome\", res: \"nome\" },\r",
-                  "    { req: \"descricao\", res: \"descricao\" },\r",
-                  "    { req: \"valor\", res: \"valor\" }\r",
-                  "];\r",
-                  "\r",
-                  "// Iteramos apenas pelos campos que foram de fato enviados no body da requisição\r",
-                  "fieldMappings.forEach((mapping) => {\r",
-                  "    if (requestBody.hasOwnProperty(mapping.req)) {\r",
-                  "        \r",
-                  "        pm.test(`Persistência - Campo '${mapping.res}' deve refletir o valor enviado`, function () {\r",
-                  "            const sentValue = requestBody[mapping.req];\r",
-                  "            const receivedValue = responseData[mapping.res];\r",
-                  "\r",
-                  "            pm.expect(receivedValue, `O valor retornado em '${mapping.res}' não coincide com o enviado em '${mapping.req}'`)\r",
-                  "                .to.eql(sentValue);\r",
-                  "        });\r",
-                  "\r",
-                  "    }\r",
-                  "});"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "// 1. Valida HTTP Status 200 OK\r\npm.test(\"Status code é 200 OK\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\n// Extrai e converte os corpos da requisição e da resposta\r\nconst requestBody = JSON.parse(pm.request.body.raw);\r\nconst responseData = pm.response.json();\r\n\r\n// Mapeamento de equivalente entre Request (PUT) vs Response (API)\r\nconst fieldMappings = [\r\n    { req: \"nome\", res: \"nome\" },\r\n    { req: \"descricao\", res: \"descricao\" },\r\n    { req: \"valor\", res: \"valor\" }\r\n];\r\n\r\n// Iteramos apenas pelos campos que foram de fato enviados no body da requisição\r\nfieldMappings.forEach((mapping) => {\r\n    if (requestBody.hasOwnProperty(mapping.req)) {\r\n        \r\n        pm.test(`Persistência - Campo '${mapping.res}' deve refletir o valor enviado`, function () {\r\n            const sentValue = requestBody[mapping.req];\r\n            const receivedValue = responseData[mapping.res];\r\n\r\n            pm.expect(receivedValue, `O valor retornado em '${mapping.res}' não coincide com o enviado em '${mapping.req}'`)\r\n                .to.eql(sentValue);\r\n        });\r\n\r\n    }\r\n});"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Gera um identificador único usando os últimos dígitos do timestamp atual\r\nconst sufixoUnico = Date.now().toString().slice(-6);\r\n\r\n\r\npm.collectionVariables.set(\"servicoCodigo\", sufixoUnico);"
+                ]
               }
             }
           ],
@@ -2688,7 +2515,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nome\": \"Troca de óleo orgânico\",\n  \"descricao\": \"Troca de óleo 5W35 premium\",\n  \"valor\": 129.90\n}"
+              "raw": "{\n  \"nome\": \"Troca de óleo orgânico - {{servicoCodigo}}\",\n  \"descricao\": \"Troca de óleo {{servicoCodigo}} premium\",\n  \"valor\": 129.90\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/servicos/{{servicoUuid}}",
@@ -2796,42 +2628,10 @@
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "const responseData = pm.response.json();\r",
-                  "\r",
-                  "// 1. Valida HTTP Status 400 Bad Request\r",
-                  "pm.test(\"Status code é 400 Bad Request\", function () {\r",
-                  "    pm.response.to.have.status(400);\r",
-                  "});\r",
-                  "\r",
-                  "// 2. Valida se a lista 'violations' existe e não está vazia\r",
-                  "pm.test(\"Resposta deve conter a lista 'violations'\", function () {\r",
-                  "    pm.expect(responseData).to.have.property(\"violations\");\r",
-                  "    pm.expect(responseData.violations).to.be.an(\"array\").that.is.not.empty;\r",
-                  "});\r",
-                  "\r",
-                  "// Lista de mensagens esperadas nas violações\r",
-                  "const expectedMessages = [\r",
-                  "    \"Valor unitário não pode ser negativo\",\r",
-                  "    \"Código é obrigatório\"\r",
-                  "];\r",
-                  "\r",
-                  "// 3. Validações isoladas para cada mensagem de erro\r",
-                  "if (Array.isArray(responseData.violations)) {\r",
-                  "    expectedMessages.forEach((expectedMsg) => {\r",
-                  "        pm.test(`Retorna violação com a mensagem '${expectedMsg}'`, function () {\r",
-                  "            const hasError = responseData.violations.some(\r",
-                  "                (violation) => violation.message === expectedMsg\r",
-                  "            );\r",
-                  "\r",
-                  "            pm.expect(hasError, `A mensagem '${expectedMsg}' não foi encontrada em 'violations'`).to.be.true;\r",
-                  "        });\r",
-                  "    });\r",
-                  "}"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "const responseData = pm.response.json();\r\n\r\n// 1. Valida HTTP Status 400 Bad Request\r\npm.test(\"Status code é 400 Bad Request\", function () {\r\n    pm.response.to.have.status(400);\r\n});\r\n\r\n// 2. Valida se a lista 'violations' existe e não está vazia\r\npm.test(\"Resposta deve conter a lista 'violations'\", function () {\r\n    pm.expect(responseData).to.have.property(\"violations\");\r\n    pm.expect(responseData.violations).to.be.an(\"array\").that.is.not.empty;\r\n});\r\n\r\n// Lista de mensagens esperadas nas violações\r\nconst expectedMessages = [\r\n    \"Valor unitário não pode ser negativo\",\r\n    \"Código é obrigatório\"\r\n];\r\n\r\n// 3. Validações isoladas para cada mensagem de erro\r\nif (Array.isArray(responseData.violations)) {\r\n    expectedMessages.forEach((expectedMsg) => {\r\n        pm.test(`Retorna violação com a mensagem '${expectedMsg}'`, function () {\r\n            const hasError = responseData.violations.some(\r\n                (violation) => violation.message === expectedMsg\r\n            );\r\n\r\n            pm.expect(hasError, `A mensagem '${expectedMsg}' não foi encontrada em 'violations'`).to.be.true;\r\n        });\r\n    });\r\n}"
+                ]
               }
             }
           ],
@@ -2849,7 +2649,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"codigo\": \"\",\n  \"descricao\": \"Peça sem código\",\n  \"valorUnitario\": -1\n}"
+              "raw": "{\n  \"codigo\": \"\",\n  \"descricao\": \"Peça sem código\",\n  \"valorUnitario\": -1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/pecas",
@@ -2874,6 +2679,15 @@
                   "const responseData = pm.response.json();\nconst uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;\n\n// 1. Valida HTTP Status 201 Created\npm.test(\"Status code é 201 Created\", function () {\n    pm.response.to.have.status(201);\n});\n\n// 2. Valida se o campo 'id' existe e está no formato UUID\npm.test(\"Campo 'id' deve existir e ser um UUID válido\", function () {\n    pm.expect(responseData).to.have.property(\"id\");\n    pm.expect(responseData.id, \"O campo 'id' não deve ser nulo/vazio\").to.be.a(\"string\").that.is.not.empty;\n    pm.expect(responseData.id).to.match(uuidRegex);\n});\n\nif (pm.response.code === 201) {\n    var jsonData = pm.response.json();\n    pm.collectionVariables.set('pecaUuid', jsonData.id);\n    console.log('Peça criada: ' + jsonData.id + ' - ' + jsonData.codigo);\n}"
                 ]
               }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Gera um identificador único usando os últimos dígitos do timestamp atual\r\nconst sufixoUnico = Date.now().toString().slice(-6);\r\n\r\n\r\npm.collectionVariables.set(\"pecaCodigo\", sufixoUnico);\r\n"
+                ]
+              }
             }
           ],
           "request": {
@@ -2890,7 +2704,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"codigo\": \"OLEO-5W30\",\n  \"descricao\": \"Óleo do Motor 5W30 Sintético - 1L\",\n  \"valorUnitario\": 45.90,\n  \"estoqueMinimo\": 5\n}",
+              "raw": "{\n  \"codigo\": \"OLEO-{{pecaCodigo}}\",\n  \"descricao\": \"Óleo do Motor {{pecaCodigo}} Sintético - 1L\",\n  \"valorUnitario\": 45.90,\n  \"estoqueMinimo\": 5\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2936,7 +2750,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"codigo\": \"FIL-OLEO-AP\",\n    \"descricao\": \"Filtro de Óleo do Motor - Linha VW/GM\",\n    \"valorUnitario\": 28.50,\n    \"estoqueMinimo\": 10\n}",
+              "raw": "{\n    \"codigo\": \"FIL-OLEO-AP-{{pecaCodigo}}\",\n    \"descricao\": \"Filtro de Óleo do Motor - Linha VW/GM-{{pecaCodigo}}\",\n    \"valorUnitario\": 28.50,\n    \"estoqueMinimo\": 10\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2982,7 +2796,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"codigo\": \"PAS-TRA-DIAN\",\n    \"descricao\": \"Jogo de Pastilhas de Freio Dianteira\",\n    \"valorUnitario\": 129.90,\n    \"estoqueMinimo\": 4\n}",
+              "raw": "{\n    \"codigo\": \"PAS-TRA-DIAN-{{pecaCodigo}}\",\n    \"descricao\": \"Jogo de Pastilhas de Freio Dianteira - {{pecaCodigo}}\",\n    \"valorUnitario\": 129.90,\n    \"estoqueMinimo\": 4\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3207,6 +3021,15 @@
                   "const responseData = pm.response.json();\nconst uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;\n\n// 1. Valida HTTP Status 200 OK\npm.test(\"Status code é 200 OK\", function () {\n    pm.response.to.have.status(200);\n});\n\n// 2. Valida se o campo 'id' existe e está no formato UUID\npm.test(\"Campo 'id' deve existir e ser um UUID válido\", function () {\n    pm.expect(responseData).to.have.property(\"id\");\n    pm.expect(responseData.id, \"O campo 'id' não deve ser nulo/vazio\").to.be.a(\"string\").that.is.not.empty;\n    pm.expect(responseData.id).to.match(uuidRegex);\n});\n\n"
                 ]
               }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  ""
+                ]
+              }
             }
           ],
           "request": {
@@ -3223,10 +3046,10 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"codigo\": \"OLEO-5W30\",\n  \"descricao\": \"Óleo do Motor 5W30 Sintético - 1L\",\n  \"valorUnitario\": 30.90,\n  \"estoqueMinimo\": 10\n}",
+              "raw": "{\n  \"codigo\": \"OLEO-{{pecaCodigo}}\",\n  \"descricao\": \"Óleo do Motor {{pecaCodigo}} Sintético - 1L\",\n  \"valorUnitario\": 30.90,\n  \"estoqueMinimo\": 10\n}",
               "options": {
                 "raw": {
-                  "language": "text"
+                  "language": "json"
                 }
               }
             },
@@ -3751,6 +3574,15 @@
                   "pm.test(\"Status code é 201 Created\", function () {\n    pm.response.to.have.status(201);\n});\n\n\nif (pm.response.code === 201) {\n    var jsonData = pm.response.json();\n    pm.collectionVariables.set('nfEntradaUuid', jsonData.id);\n    console.log('NF Entrada registrada: ' + jsonData.id);\n}"
                 ]
               }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Função para calcular o Dígito Verificador (Módulo 11) da NF-e\r\nfunction calcularDV(chave43) {\r\n    let peso = 2;\r\n    let soma = 0;\r\n    \r\n    for (let i = chave43.length - 1; i >= 0; i--) {\r\n        soma += parseInt(chave43.charAt(i)) * peso;\r\n        peso = (peso === 9) ? 2 : peso + 1;\r\n    }\r\n    \r\n    let resto = soma % 11;\r\n    let dv = 11 - resto;\r\n    return (dv >= 10) ? 0 : dv;\r\n}\r\n\r\n// 1. Componentes da Chave de Acesso\r\nconst cUF = \"35\"; // São Paulo\r\nconst aamm = \"2609\"; // Ano/Mês atual (AA/MM)\r\n\r\n// Gera CNPJ aleatório (14 dígitos)\r\nconst cnpj = String(Math.floor(Math.random() * 89999999) + 10000000) + \"0001\" + String(Math.floor(Math.random() * 89) + 10);\r\n\r\nconst mod = \"55\"; // Modelo (55 = NF-e)\r\nconst serie = \"001\"; // Série\r\n\r\n// Gera número da NF-e único (9 dígitos) baseado no Timestamp\r\nconst nNF = String(Date.now()).slice(-9); \r\n\r\nconst tpEmis = \"1\"; // Emissão normal\r\n\r\n// Gera código numérico aleatório (8 dígitos)\r\nconst cNF = String(Math.floor(Math.random() * 89999999) + 10000000); \r\n\r\n// 2. Monta os primeiros 43 dígitos\r\nconst chave43 = `${cUF}${aamm}${cnpj}${mod}${serie}${nNF}${tpEmis}${cNF}`;\r\n\r\n// 3. Calcula o dígito verificador e gera a chave final (44 dígitos)\r\nconst dv = calcularDV(chave43);\r\nconst chaveAcessoFinal = `${chave43}${dv}`;\r\n\r\n// 4. Salva a chave gerada como variável dinâmica da requisição\r\npm.collectionVariables.set(\"chaveAcessoDinamica\", chaveAcessoFinal);"
+                ]
+              }
             }
           ],
           "request": {
@@ -3767,7 +3599,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"chaveAcesso\": \"35200612345678000190550000001234567890123456\",\n  \"valorTotal\": 450.00,\n  \"requisicaoCompraId\": \"{{requisicaoCompraUuid}}\"\n}",
+              "raw": "{\n  \"chaveAcesso\": \"{{chaveAcessoDinamica}}\",\n  \"valorTotal\": 450.00,\n  \"requisicaoCompraId\": \"{{requisicaoCompraUuid}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3792,35 +3624,10 @@
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "const responseData = pm.response.json();",
-                  "",
-                  "// 1. Valida HTTP Status 409 Conflict",
-                  "pm.test(\"Status code é 409 Conflict\", function () {",
-                  "    pm.response.to.have.status(409);",
-                  "});",
-                  "",
-                  "// 2. Valida o campo 'title'",
-                  "pm.test(\"Campo 'title' deve ser 'Conflict'\", function () {",
-                  "    pm.expect(responseData).to.have.property(\"title\");",
-                  "    pm.expect(responseData.title).to.eql(\"Conflict\");",
-                  "});",
-                  "",
-                  "// 3. Valida o campo 'status' no JSON",
-                  "pm.test(\"Campo 'status' no corpo do JSON deve ser 409\", function () {",
-                  "    pm.expect(responseData).to.have.property(\"status\");",
-                  "    pm.expect(responseData.status).to.eql(409);",
-                  "});",
-                  "",
-                  "// 4. Valida o campo 'detail'",
-                  "pm.test(\"Campo 'detail' deve conter a mensagem 'Essa nota fiscal já foi registrada'\", function () {",
-                  "    pm.expect(responseData).to.have.property(\"detail\");",
-                  "    pm.expect(responseData.detail).to.eql(\"Essa nota fiscal já foi registrada\");",
-                  "});"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "const responseData = pm.response.json();\n\n// 1. Valida HTTP Status 409 Conflict\npm.test(\"Status code é 409 Conflict\", function () {\n    pm.response.to.have.status(409);\n});\n\n// 2. Valida o campo 'title'\npm.test(\"Campo 'title' deve ser 'Conflict'\", function () {\n    pm.expect(responseData).to.have.property(\"title\");\n    pm.expect(responseData.title).to.eql(\"Conflict\");\n});\n\n// 3. Valida o campo 'status' no JSON\npm.test(\"Campo 'status' no corpo do JSON deve ser 409\", function () {\n    pm.expect(responseData).to.have.property(\"status\");\n    pm.expect(responseData.status).to.eql(409);\n});\n\n// 4. Valida o campo 'detail'\npm.test(\"Campo 'detail' deve conter a mensagem 'Essa nota fiscal já foi registrada'\", function () {\n    pm.expect(responseData).to.have.property(\"detail\");\n    pm.expect(responseData.detail).to.eql(\"Essa nota fiscal já foi registrada\");\n});"
+                ]
               }
             }
           ],
@@ -3838,7 +3645,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"chaveAcesso\": \"35200612345678000190550000001234567890123456\",\n  \"valorTotal\": 459.00,\n  \"requisicaoCompraId\": \"{{requisicaoCompraUuid}}\"\n}"
+              "raw": "{\n  \"chaveAcesso\": \"{{chaveAcessoDinamica}}\",\n  \"valorTotal\": 459.00,\n  \"requisicaoCompraId\": \"{{requisicaoCompraUuid}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/nf-entrada",
@@ -3921,32 +3733,19 @@
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "const responseData = pm.response.json();\r",
-                  "\r",
-                  "// 1. Valida HTTP Status 409 Conflict\r",
-                  "pm.test(\"Status code é 409 Conflict\", function () {\r",
-                  "    pm.response.to.have.status(409);\r",
-                  "});\r",
-                  "\r",
-                  "// 2. Valida o título do erro\r",
-                  "pm.test(\"Campo 'title' deve ser 'Conflict'\", function () {\r",
-                  "    pm.expect(responseData).to.have.property(\"title\");\r",
-                  "    pm.expect(responseData.title).to.eql(\"Conflict\");\r",
-                  "});\r",
-                  "\r",
-                  "// 3. Valida se 'detail' contém a mensagem de recurso não encontrado\r",
-                  "pm.test(\"Campo 'detail' deve conter a mensagem de: requisições no status PRODUTO_RECEBIDO\", function () {\r",
-                  "    pm.expect(responseData).to.have.property(\"detail\");\r",
-                  "    pm.expect(responseData.detail).to.be.a(\"string\");\r",
-                  "    \r",
-                  "    // Verifica se a mensagem contém o texto base (independente do UUID consultado)\r",
-                  "    pm.expect(responseData.detail).to.include(\"requisições no status PRODUTO_RECEBIDO\");\r",
-                  "});"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "const responseData = pm.response.json();\r\n\r\n// 1. Valida HTTP Status 409 Conflict\r\npm.test(\"Status code é 409 Conflict\", function () {\r\n    pm.response.to.have.status(409);\r\n});\r\n\r\n// 2. Valida o título do erro\r\npm.test(\"Campo 'title' deve ser 'Conflict'\", function () {\r\n    pm.expect(responseData).to.have.property(\"title\");\r\n    pm.expect(responseData.title).to.eql(\"Conflict\");\r\n});\r\n\r\n// 3. Valida se 'detail' contém a mensagem de recurso não encontrado\r\npm.test(\"Campo 'detail' deve conter a mensagem de: requisições no status PRODUTO_RECEBIDO\", function () {\r\n    pm.expect(responseData).to.have.property(\"detail\");\r\n    pm.expect(responseData.detail).to.be.a(\"string\");\r\n    \r\n    // Verifica se a mensagem contém o texto base (independente do UUID consultado)\r\n    pm.expect(responseData.detail).to.include(\"requisições no status PRODUTO_RECEBIDO\");\r\n});"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Função para calcular o Dígito Verificador (Módulo 11) da NF-e\r\nfunction calcularDV(chave43) {\r\n    let peso = 2;\r\n    let soma = 0;\r\n    \r\n    for (let i = chave43.length - 1; i >= 0; i--) {\r\n        soma += parseInt(chave43.charAt(i)) * peso;\r\n        peso = (peso === 9) ? 2 : peso + 1;\r\n    }\r\n    \r\n    let resto = soma % 11;\r\n    let dv = 11 - resto;\r\n    return (dv >= 10) ? 0 : dv;\r\n}\r\n\r\n// 1. Componentes da Chave de Acesso\r\nconst cUF = \"35\"; // São Paulo\r\nconst aamm = \"2609\"; // Ano/Mês atual (AA/MM)\r\n\r\n// Gera CNPJ aleatório (14 dígitos)\r\nconst cnpj = String(Math.floor(Math.random() * 89999999) + 10000000) + \"0001\" + String(Math.floor(Math.random() * 89) + 10);\r\n\r\nconst mod = \"55\"; // Modelo (55 = NF-e)\r\nconst serie = \"001\"; // Série\r\n\r\n// Gera número da NF-e único (9 dígitos) baseado no Timestamp\r\nconst nNF = String(Date.now()).slice(-9); \r\n\r\nconst tpEmis = \"1\"; // Emissão normal\r\n\r\n// Gera código numérico aleatório (8 dígitos)\r\nconst cNF = String(Math.floor(Math.random() * 89999999) + 10000000); \r\n\r\n// 2. Monta os primeiros 43 dígitos\r\nconst chave43 = `${cUF}${aamm}${cnpj}${mod}${serie}${nNF}${tpEmis}${cNF}`;\r\n\r\n// 3. Calcula o dígito verificador e gera a chave final (44 dígitos)\r\nconst dv = calcularDV(chave43);\r\nconst chaveAcessoFinal = `${chave43}${dv}`;\r\n\r\n// 4. Salva a chave gerada como variável dinâmica da requisição\r\npm.collectionVariables.set(\"chaveAcessoDinamica\", chaveAcessoFinal);"
+                ]
               }
             }
           ],
@@ -3964,7 +3763,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"chaveAcesso\": \"35200612345678000190550000009999999999999999\",\n  \"valorTotal\": 100.00,\n  \"requisicaoCompraId\": \"{{requisicaoCompraCanceladaUuid}}\"\n}"
+              "raw": "{\n  \"chaveAcesso\": \"35200612345678000190550000009999999999999999\",\n  \"valorTotal\": 100.00,\n  \"requisicaoCompraId\": \"{{requisicaoCompraCanceladaUuid}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/nf-entrada",
@@ -4121,53 +3925,10 @@
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "const responseData = pm.response.json();",
-                  "const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
-                  "",
-                  "pm.test(\"Status code é 201 Created\", function () {",
-                  "    pm.response.to.have.status(201);",
-                  "});",
-                  "",
-                  "pm.test(\"Campo 'id' deve existir e ser um UUID válido\", function () {",
-                  "    pm.expect(responseData).to.have.property(\"id\");",
-                  "    pm.expect(responseData.id).to.match(uuidRegex);",
-                  "});",
-                  "",
-                  "pm.test(\"Campo 'status' deve ser RECEBIDA\", function () {",
-                  "    pm.expect(responseData).to.have.property(\"status\");",
-                  "    pm.expect(responseData.status).to.eql(\"RECEBIDA\");",
-                  "});",
-                  "",
-                  "pm.test(\"Campo 'descricaoProblema' deve estar preenchido\", function () {",
-                  "    pm.expect(responseData).to.have.property(\"descricaoProblema\");",
-                  "    pm.expect(responseData.descricaoProblema).to.eql(\"Barulho no motor ao acelerar\");",
-                  "});",
-                  "",
-                  "pm.test(\"Campo 'itens' deve ser uma lista vazia\", function () {",
-                  "    pm.expect(responseData).to.have.property(\"itens\");",
-                  "    pm.expect(responseData.itens).to.be.an(\"array\");",
-                  "    pm.expect(responseData.itens.length).to.eql(0);",
-                  "});",
-                  "",
-                  "pm.test(\"Campo 'clienteId' deve ser UUID válido\", function () {",
-                  "    pm.expect(responseData).to.have.property(\"clienteId\");",
-                  "    pm.expect(responseData.clienteId).to.match(uuidRegex);",
-                  "});",
-                  "",
-                  "pm.test(\"Campo 'veiculoId' deve ser UUID válido\", function () {",
-                  "    pm.expect(responseData).to.have.property(\"veiculoId\");",
-                  "    pm.expect(responseData.veiculoId).to.match(uuidRegex);",
-                  "});",
-                  "",
-                  "if (pm.response.code === 201) {",
-                  "    var jsonData = pm.response.json();",
-                  "    pm.collectionVariables.set('osUuid', jsonData.id);",
-                  "}"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "const responseData = pm.response.json();\nconst uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;\n\npm.test(\"Status code é 201 Created\", function () {\n    pm.response.to.have.status(201);\n});\n\npm.test(\"Campo 'id' deve existir e ser um UUID válido\", function () {\n    pm.expect(responseData).to.have.property(\"id\");\n    pm.expect(responseData.id).to.match(uuidRegex);\n});\n\npm.test(\"Campo 'status' deve ser RECEBIDA\", function () {\n    pm.expect(responseData).to.have.property(\"status\");\n    pm.expect(responseData.status).to.eql(\"RECEBIDA\");\n});\n\npm.test(\"Campo 'descricaoProblema' deve estar preenchido\", function () {\n    pm.expect(responseData).to.have.property(\"descricaoProblema\");\n    pm.expect(responseData.descricaoProblema).to.eql(\"Barulho no motor ao acelerar\");\n});\n\npm.test(\"Campo 'itens' deve ser uma lista vazia\", function () {\n    pm.expect(responseData).to.have.property(\"itens\");\n    pm.expect(responseData.itens).to.be.an(\"array\");\n    pm.expect(responseData.itens.length).to.eql(0);\n});\n\npm.test(\"Campo 'clienteId' deve ser UUID válido\", function () {\n    pm.expect(responseData).to.have.property(\"clienteId\");\n    pm.expect(responseData.clienteId).to.match(uuidRegex);\n});\n\npm.test(\"Campo 'veiculoId' deve ser UUID válido\", function () {\n    pm.expect(responseData).to.have.property(\"veiculoId\");\n    pm.expect(responseData.veiculoId).to.match(uuidRegex);\n});\n\nif (pm.response.code === 201) {\n    var jsonData = pm.response.json();\n    pm.collectionVariables.set('osUuid', jsonData.id);\n}"
+                ]
               }
             }
           ],
@@ -4185,7 +3946,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"clienteId\": \"{{clienteUuid}}\",\n  \"veiculoId\": \"{{veiculoUuid}}\",\n  \"descricaoProblema\": \"Barulho no motor ao acelerar\"\n}"
+              "raw": "{\n  \"clienteId\": \"{{clienteUuid}}\",\n  \"veiculoId\": \"{{veiculoUuid}}\",\n  \"descricaoProblema\": \"Barulho no motor ao acelerar\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/os",
@@ -4229,7 +3995,7 @@
               "raw": "{\n  \"clienteId\": \"{{clienteUuid}}\",\n  \"veiculoId\": \"{{veiculoUuid}}\",\n  \"descricaoProblema\": \"Trocar filtro de óleo e verificar alinhamento\",\n  \"itens\": [\n    {\n      \"referenciaUuid\": \"{{pecaUuid}}\",\n      \"tipo\": \"PECA\",\n      \"quantidade\": 2\n    },\n    {\n      \"referenciaUuid\": \"{{servicoUuid}}\",\n      \"tipo\": \"SERVICO\",\n      \"quantidade\": 1\n    }\n  ]\n}",
               "options": {
                 "raw": {
-                  "language": "text"
+                  "language": "json"
                 }
               }
             },
@@ -4443,19 +4209,10 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code é 200 OK\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "if (pm.response.code === 200) {",
-                  "    var jsonData = pm.response.json();",
-                  "    pm.test(\"Deve retornar detalhamento completo da OS\", function () {",
-                  "        pm.expect(jsonData).to.have.property(\"itensOrcados\");",
-                  "    });",
-                  "}"
-                ],
-                "type": "text/javascript"
+                  "pm.test(\"Status code é 200 OK\", function () {\n    pm.response.to.have.status(200);\n});\n\nif (pm.response.code === 200) {\n    var jsonData = pm.response.json();\n    pm.test(\"Deve retornar detalhamento completo da OS\", function () {\n        pm.expect(jsonData).to.have.property(\"itensOrcados\");\n    });\n}"
+                ]
               }
             }
           ],
@@ -4468,13 +4225,13 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/os/{{osUuid}}/detalhamento",
+              "raw": "{{baseUrl}}/os/{{osUuid2}}/detalhamento",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "os",
-                "{{osUuid}}",
+                "{{osUuid2}}",
                 "detalhamento"
               ]
             }
@@ -4856,7 +4613,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code é 200 OK\", function () {\n    pm.response.to.have.status(200);\n});\n\nif (pm.response.code === 200) {\n    var jsonData = pm.response.json();\n    \n    pm.test(\"Contém requisição com motivo ORDEM_SERVICO\", function () {\n        pm.expect(jsonData.content).to.be.an(\"array\");\n\n        // Encontra o primeiro objeto com o motivo desejado\n        var requisicaoOS = jsonData.content.find(function (item) {\n            return item.motivo === \"ORDEM_SERVICO\";\n        });\n\n        // Valida se o objeto foi encontrado\n        pm.expect(requisicaoOS, \"Nenhuma requisição com motivo ORDEM_SERVICO foi encontrada\").to.not.be.undefined;\n\n        // Salva o id na variável de coleção se o objeto existir\n        if (requisicaoOS) {\n            pm.collectionVariables.set(\"requisicaoCompraUuidOS\", requisicaoOS.id);\n            console.log(\"Variável 'requisicaoCompraUuidOS' salva com o valor: \" + requisicaoOS.id);\n        }\n    });\n}"
+                  "pm.test(\"Status code é 200 OK\", function () {\n    pm.response.to.have.status(200);\n});\n\nif (pm.response.code === 200) {\n    var jsonData = pm.response.json();\n    \n    pm.test(\"Contém requisição ABERTA com motivo ORDEM_SERVICO\", function () {\n        pm.expect(jsonData.content).to.be.an(\"array\");\n\n        // Encontra o primeiro objeto com motivo 'ORDEM_SERVICO' E status 'ABERTA'\n        var requisicaoOS = jsonData.content.find(function (item) {\n            return item.motivo === \"ORDEM_SERVICO\" && item.status === \"ABERTA\";\n        });\n\n        // Valida se o objeto foi encontrado\n        pm.expect(requisicaoOS, \"Nenhuma requisição ABERTA com motivo ORDEM_SERVICO foi encontrada\").to.not.be.undefined;\n\n        // Salva o id na variável de coleção se o objeto existir\n        if (requisicaoOS) {\n            pm.collectionVariables.set(\"requisicaoCompraUuidOS\", requisicaoOS.id);\n            console.log(\"Variável 'requisicaoCompraUuidOS' salva com o valor: \" + requisicaoOS.id);\n        }\n    });\n}"
                 ]
               }
             }
@@ -4977,6 +4734,15 @@
                   "pm.test(\"Status code é 201 Created\", function () {\n    pm.response.to.have.status(201);\n});\n\n\nif (pm.response.code === 201) {\n    var jsonData = pm.response.json();\n    pm.collectionVariables.set('nfEntradaUuid', jsonData.id);\n    console.log('NF Entrada registrada: ' + jsonData.id);\n}"
                 ]
               }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Função para calcular o Dígito Verificador (Módulo 11) da NF-e\r\nfunction calcularDV(chave43) {\r\n    let peso = 2;\r\n    let soma = 0;\r\n    \r\n    for (let i = chave43.length - 1; i >= 0; i--) {\r\n        soma += parseInt(chave43.charAt(i)) * peso;\r\n        peso = (peso === 9) ? 2 : peso + 1;\r\n    }\r\n    \r\n    let resto = soma % 11;\r\n    let dv = 11 - resto;\r\n    return (dv >= 10) ? 0 : dv;\r\n}\r\n\r\n// 1. Componentes da Chave de Acesso\r\nconst cUF = \"35\"; // São Paulo\r\nconst aamm = \"2609\"; // Ano/Mês atual (AA/MM)\r\n\r\n// Gera CNPJ aleatório (14 dígitos)\r\nconst cnpj = String(Math.floor(Math.random() * 89999999) + 10000000) + \"0001\" + String(Math.floor(Math.random() * 89) + 10);\r\n\r\nconst mod = \"55\"; // Modelo (55 = NF-e)\r\nconst serie = \"001\"; // Série\r\n\r\n// Gera número da NF-e único (9 dígitos) baseado no Timestamp\r\nconst nNF = String(Date.now()).slice(-9); \r\n\r\nconst tpEmis = \"1\"; // Emissão normal\r\n\r\n// Gera código numérico aleatório (8 dígitos)\r\nconst cNF = String(Math.floor(Math.random() * 89999999) + 10000000); \r\n\r\n// 2. Monta os primeiros 43 dígitos\r\nconst chave43 = `${cUF}${aamm}${cnpj}${mod}${serie}${nNF}${tpEmis}${cNF}`;\r\n\r\n// 3. Calcula o dígito verificador e gera a chave final (44 dígitos)\r\nconst dv = calcularDV(chave43);\r\nconst chaveAcessoFinal = `${chave43}${dv}`;\r\n\r\n// 4. Salva a chave gerada como variável dinâmica da requisição\r\npm.collectionVariables.set(\"chaveAcessoDinamica\", chaveAcessoFinal);"
+                ]
+              }
             }
           ],
           "request": {
@@ -4993,7 +4759,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"chaveAcesso\": \"35260812345678000195550010000000011234567890\",\n  \"valorTotal\": 200.00,\n  \"requisicaoCompraId\": \"{{requisicaoCompraUuidOS}}\"\n}",
+              "raw": "{\n  \"chaveAcesso\": \"{{chaveAcessoDinamica}}\",\n  \"valorTotal\": 200.00,\n  \"requisicaoCompraId\": \"{{requisicaoCompraUuidOS}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5258,7 +5024,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n  \"recebidoPor\": \"Cliente válido\"\r\n}",
+              "raw": "{\r\n  \"recebidoPor\": \"Cliente Exato - {{sequencia}}\"\r\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5285,15 +5051,15 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:8080/api/v1"
+      "value": ""
     },
     {
       "key": "adminEmail",
-      "value": "admin@mekano.com.br"
+      "value": ""
     },
     {
       "key": "adminPassword",
-      "value": "Mekano@2024"
+      "value": ""
     },
     {
       "key": "wrongPassword",
@@ -5465,6 +5231,30 @@
     },
     {
       "key": "requisicaoCompraUuidOS",
+      "value": ""
+    },
+    {
+      "key": "cpfGerado",
+      "value": ""
+    },
+    {
+      "key": "placaGerada",
+      "value": ""
+    },
+    {
+      "key": "marcaVeiculo",
+      "value": ""
+    },
+    {
+      "key": "modeloVeiculo",
+      "value": ""
+    },
+    {
+      "key": "servicoCodigo",
+      "value": ""
+    },
+    {
+      "key": "chaveAcessoDinamica",
       "value": ""
     }
   ]

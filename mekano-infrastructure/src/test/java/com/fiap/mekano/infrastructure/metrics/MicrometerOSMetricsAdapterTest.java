@@ -90,7 +90,7 @@ class MicrometerOSMetricsAdapterTest {
         adapter.registrarTempoFase("DIAGNOSTICO", duracao);
         adapter.registrarTempoFase("DIAGNOSTICO", Duration.ofMinutes(10));
 
-        Timer timer = registry.find("os.duracao.fase").tag("fase", "DIAGNOSTICO").timer();
+        Timer timer = registry.find("os.fase.duracao").tag("fase", "DIAGNOSTICO").timer();
         assertThat(timer).isNotNull();
         assertThat(timer.count()).isEqualTo(2);
         assertThat(timer.totalTime(java.util.concurrent.TimeUnit.MILLISECONDS)).isGreaterThanOrEqualTo(40.0 * 60 * 1000);
@@ -102,7 +102,7 @@ class MicrometerOSMetricsAdapterTest {
         adapter.registrarTempoFase("TOTAL", Duration.ofMillis(-1));
         adapter.registrarTempoFase("TOTAL", null);
 
-        Timer timer = registry.find("os.duracao.fase").tag("fase", "TOTAL").timer();
+        Timer timer = registry.find("os.fase.duracao").tag("fase", "TOTAL").timer();
         assertThat(timer).isNull();
     }
 
@@ -113,10 +113,42 @@ class MicrometerOSMetricsAdapterTest {
         adapter.registrarTransicaoStatus(StatusOS.RECEBIDA, StatusOS.EM_DIAGNOSTICO);
         adapter.registrarFalhaTransicao(StatusOS.RECEBIDA, StatusOS.FINALIZADA);
         adapter.registrarTempoFase("TOTAL", Duration.ofSeconds(60));
+        adapter.registrarOSPorStatus("EM_DIAGNOSTICO");
 
         assertThat(registry.find("os.criadas.total").counter()).isNotNull();
         assertThat(registry.find("os.status.alterado").counter()).isNotNull();
         assertThat(registry.find("os.transicao.falha").counter()).isNotNull();
-        assertThat(registry.find("os.duracao.fase").timer()).isNotNull();
+        assertThat(registry.find("os.fase.duracao").timer()).isNotNull();
+        assertThat(registry.find("os.status.atual").counter()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("registrarOSPorStatus deve incrementar counter com tag status")
+    void registrarOSPorStatus_deveIncrementarCounterComTag() {
+        adapter.registrarOSPorStatus("EM_DIAGNOSTICO");
+        adapter.registrarOSPorStatus("EM_DIAGNOSTICO");
+        adapter.registrarOSPorStatus("FINALIZADA");
+
+        Counter counterDiagnostico = registry.find("os.status.atual")
+                .tag("status", "EM_DIAGNOSTICO")
+                .counter();
+        assertThat(counterDiagnostico).isNotNull();
+        assertThat(counterDiagnostico.count()).isEqualTo(2.0);
+
+        Counter counterFinalizada = registry.find("os.status.atual")
+                .tag("status", "FINALIZADA")
+                .counter();
+        assertThat(counterFinalizada).isNotNull();
+        assertThat(counterFinalizada.count()).isEqualTo(1.0);
+    }
+
+    @Test
+    @DisplayName("registrarOSPorStatus com status null ou vazio nao deve registrar")
+    void registrarOSPorStatus_statusInvalido_naoRegistra() {
+        adapter.registrarOSPorStatus(null);
+        adapter.registrarOSPorStatus("");
+
+        Counter counter = registry.find("os.status.atual").counter();
+        assertThat(counter).isNull();
     }
 }

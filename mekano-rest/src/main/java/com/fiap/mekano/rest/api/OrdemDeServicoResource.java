@@ -15,7 +15,6 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import com.fiap.mekano.application.service.MockPaymentService;
 import com.fiap.mekano.domain.model.ItemOs;
 import com.fiap.mekano.domain.model.OrdemDeServico;
-import com.fiap.mekano.domain.model.Peca;
 import com.fiap.mekano.domain.model.StatusOrcamento;
 import com.fiap.mekano.domain.port.in.CreateItemOsCommand;
 import com.fiap.mekano.domain.port.in.CreateOrdemDeServicoCommand;
@@ -296,6 +295,10 @@ public class OrdemDeServicoResource {
                 os.getRecebidoPor(),
                 os.getPagamentoConfirmadoEm(),
                 os.getEntregueEm(),
+                os.getDataAprovacao(),
+                os.getDataInicioDiagnostico(),
+                os.getDataFimDiagnostico(),
+                os.getDataCancelamento(),
                 itensResponse,
                 itensOrcados,
                 Collections.emptyList(),
@@ -368,6 +371,10 @@ public class OrdemDeServicoResource {
                 os.getPagamentoConfirmadoEm(),
                 os.getEntregueEm(),
                 os.getCreatedAt(),
+                os.getDataAprovacao(),
+                os.getDataInicioDiagnostico(),
+                os.getDataFimDiagnostico(),
+                os.getDataCancelamento(),
                 itens,
                 liberadoParaExecucao);
     }
