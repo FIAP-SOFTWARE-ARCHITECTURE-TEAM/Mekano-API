@@ -11,8 +11,17 @@ import jakarta.inject.Inject;
 import java.time.Duration;
 
 /**
- * Adapter Micrometer para métricas de negócio de Ordens de Serviço.
+ * Adapter Micrometer para metricas de negocio de Ordens de Servico.
  * Registra counters e timers expostos via Prometheus em /q/metrics.
+ *
+ * <p>Metrias por fase da OS:
+ * <ul>
+ *   <li>{@code os.fase.duracao} (Timer, tag: fase) — duracao de cada fase</li>
+ *   <li>{@code os.criadas.total} (Counter) — total de OS criadas</li>
+ *   <li>{@code os.status.alterado} (Counter, tags: status_origem, status_destino)</li>
+ *   <li>{@code os.transicao.falha} (Counter, tags: status_atual, status_tentado)</li>
+ *   <li>{@code os.status.atual} (Counter, tag: status) — OS por status atual</li>
+ * </ul>
  */
 @ApplicationScoped
 public class MicrometerOSMetricsAdapter implements OSMetricsPort {
@@ -56,11 +65,23 @@ public class MicrometerOSMetricsAdapter implements OSMetricsPort {
     @Override
     public void registrarTempoFase(String fase, Duration duracao) {
         if (duracao != null && !duracao.isNegative()) {
-            Timer.builder("os.duracao.fase")
+            Timer.builder("os.fase.duracao")
                     .description("Duracao da fase da OS em milissegundos")
                     .tag("fase", fase)
+                    .publishPercentiles(0.5, 0.95, 0.99)
                     .register(registry)
                     .record(duracao);
+        }
+    }
+
+    @Override
+    public void registrarOSPorStatus(String status) {
+        if (status != null && !status.isBlank()) {
+            Counter.builder("os.status.atual")
+                    .description("Total de OS por status atual")
+                    .tag("status", status)
+                    .register(registry)
+                    .increment();
         }
     }
 }

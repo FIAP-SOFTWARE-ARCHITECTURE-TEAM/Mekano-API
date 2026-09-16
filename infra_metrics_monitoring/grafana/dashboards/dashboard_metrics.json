@@ -4,12 +4,12 @@
   "metadata": {
     "name": "adh9rj5",
     "namespace": "default",
-    "uid": "f443bbac-6993-4e0a-ab3b-5f907c1874b4",
-    "resourceVersion": "1789343089777980",
-    "generation": 7,
-    "creationTimestamp": "2026-09-13T22:45:15Z",
+    "uid": "2c1b712e-ebf5-442e-9ec0-6956acf6ccf7",
+    "resourceVersion": "1789518875580011",
+    "generation": 10,
+    "creationTimestamp": "2026-09-15T21:26:15Z",
     "labels": {
-      "grafana.app/deprecatedInternalID": "590772354011136"
+      "grafana.app/deprecatedInternalID": "1295665183682560"
     },
     "annotations": {
       "grafana.app/createdBy": "access-policy:service",
@@ -17,11 +17,11 @@
       "grafana.app/managerAllowsEdits": "true",
       "grafana.app/managerId": "Mekano Dashboards",
       "grafana.app/saved-from-ui": "Grafana v13.2.1 (56cd3e9288)",
-      "grafana.app/sourceChecksum": "a5020ebdca4b8ed44e9209a39f83062c",
+      "grafana.app/sourceChecksum": "472a659b4a27171042b6ede376a718a5",
       "grafana.app/sourcePath": "/var/lib/grafana/dashboards/dashboard_metrics.json",
-      "grafana.app/sourceTimestamp": "1789338854000",
-      "grafana.app/updatedBy": "user:efy68gkge5szka",
-      "grafana.app/updatedTimestamp": "2026-09-13T23:44:49Z"
+      "grafana.app/sourceTimestamp": "1789410819000",
+      "grafana.app/updatedBy": "user:bfyd6befnvuo0d",
+      "grafana.app/updatedTimestamp": "2026-09-16T00:34:35Z"
     }
   },
   "spec": {
@@ -169,6 +169,209 @@
           "transparent": true
         }
       },
+      "panel-10": {
+        "kind": "Panel",
+        "spec": {
+          "id": 10,
+          "title": "SLA de Disponibilidade nos últimos dias",
+          "description": "",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PBFA97CFB590B2093"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "avg_over_time(up[$__range]) * 100",
+                        "legendFormat": "Mekano API",
+                        "range": true
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {
+                "timeFrom": "3d"
+              }
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.2.1",
+            "spec": {
+              "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "center",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "/^Mekano API$/",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "value_and_name",
+                "wideLayout": false
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "percent",
+                  "decimals": 2,
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      },
+                      {
+                        "value": 0,
+                        "color": "dark-red"
+                      },
+                      {
+                        "value": 20,
+                        "color": "semi-dark-red"
+                      },
+                      {
+                        "value": 50,
+                        "color": "orange"
+                      },
+                      {
+                        "value": 80,
+                        "color": "blue"
+                      },
+                      {
+                        "value": 100,
+                        "color": "dark-green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds",
+                    "fixedColor": "#ad46ff"
+                  }
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-11": {
+        "kind": "Panel",
+        "spec": {
+          "id": 11,
+          "title": "Nº Quedas Servidor",
+          "description": "Conta quantas vezes nos ultimos dias o servidor MEKANO API falhou.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PBFA97CFB590B2093"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "changes(up[$__range])",
+                        "legendFormat": "__auto",
+                        "range": true
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {
+                "timeFrom": "3d"
+              }
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "gauge",
+            "version": "13.2.1",
+            "spec": {
+              "options": {
+                "barShape": "rounded",
+                "barWidthFactor": 0.25,
+                "effects": {
+                  "barGlow": true,
+                  "centerGlow": true,
+                  "gradient": true
+                },
+                "endpointMarker": "glow",
+                "minVizHeight": 75,
+                "minVizWidth": 75,
+                "orientation": "auto",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "segmentCount": 1,
+                "segmentSpacing": 0.3,
+                "shape": "circle",
+                "showThresholdLabels": false,
+                "showThresholdMarkers": false,
+                "sizing": "auto",
+                "sparkline": true,
+                "textMode": "auto"
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      },
+                      {
+                        "value": 80,
+                        "color": "red"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "fixed",
+                    "fixedColor": "red"
+                  }
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
       "panel-3": {
         "kind": "Panel",
         "spec": {
@@ -273,8 +476,7 @@
                 "overrides": []
               }
             }
-          },
-          "transparent": true
+          }
         }
       },
       "panel-4": {
@@ -963,6 +1165,87 @@
           },
           "transparent": true
         }
+      },
+      "panel-9": {
+        "kind": "Panel",
+        "spec": {
+          "id": 9,
+          "title": "Tempo de Atividade em Horas",
+          "description": "",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PBFA97CFB590B2093"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "process_uptime_seconds / 3600",
+                        "legendFormat": "{{job}}",
+                        "range": true
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.2.1",
+            "spec": {
+              "options": {
+                "colorMode": "none",
+                "graphMode": "area",
+                "justifyMode": "center",
+                "orientation": "horizontal",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "value_and_name",
+                "wideLayout": false
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "fixed",
+                    "fixedColor": "blue"
+                  }
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
       }
     },
     "layout": {
@@ -974,8 +1257,8 @@
             "spec": {
               "x": 0,
               "y": 0,
-              "width": 24,
-              "height": 3,
+              "width": 6,
+              "height": 5,
               "element": {
                 "kind": "ElementReference",
                 "name": "panel-3"
@@ -985,8 +1268,47 @@
           {
             "kind": "GridLayoutItem",
             "spec": {
+              "x": 6,
+              "y": 0,
+              "width": 5,
+              "height": 5,
+              "element": {
+                "kind": "ElementReference",
+                "name": "panel-9"
+              }
+            }
+          },
+          {
+            "kind": "GridLayoutItem",
+            "spec": {
+              "x": 11,
+              "y": 0,
+              "width": 7,
+              "height": 5,
+              "element": {
+                "kind": "ElementReference",
+                "name": "panel-10"
+              }
+            }
+          },
+          {
+            "kind": "GridLayoutItem",
+            "spec": {
+              "x": 18,
+              "y": 0,
+              "width": 6,
+              "height": 5,
+              "element": {
+                "kind": "ElementReference",
+                "name": "panel-11"
+              }
+            }
+          },
+          {
+            "kind": "GridLayoutItem",
+            "spec": {
               "x": 0,
-              "y": 3,
+              "y": 5,
               "width": 24,
               "height": 8,
               "element": {
@@ -999,7 +1321,7 @@
             "kind": "GridLayoutItem",
             "spec": {
               "x": 0,
-              "y": 11,
+              "y": 13,
               "width": 24,
               "height": 6,
               "element": {
@@ -1012,7 +1334,7 @@
             "kind": "GridLayoutItem",
             "spec": {
               "x": 0,
-              "y": 17,
+              "y": 19,
               "width": 24,
               "height": 5,
               "element": {
@@ -1025,7 +1347,7 @@
             "kind": "GridLayoutItem",
             "spec": {
               "x": 0,
-              "y": 22,
+              "y": 24,
               "width": 24,
               "height": 6,
               "element": {
@@ -1038,7 +1360,7 @@
             "kind": "GridLayoutItem",
             "spec": {
               "x": 0,
-              "y": 28,
+              "y": 30,
               "width": 24,
               "height": 9,
               "element": {
@@ -1056,7 +1378,7 @@
     "tags": [],
     "timeSettings": {
       "timezone": "browser",
-      "from": "now-1h",
+      "from": "now-3h",
       "to": "now",
       "autoRefresh": "",
       "autoRefreshIntervals": [

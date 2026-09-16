@@ -58,12 +58,6 @@ public class OrdemDeServicoEntity extends BaseEntity {
     @Column(name = "status_pagamento", nullable = false, length = 50)
     String statusPagamento;
 
-    @Column(name = "data_pagamento")
-    LocalDateTime dataPagamento;
-
-    @Column(name = "forma_pagamento", length = 50)
-    String formaPagamento;
-
     @Column(name = "valor_pago")
     java.math.BigDecimal valorPago;
 
@@ -72,9 +66,6 @@ public class OrdemDeServicoEntity extends BaseEntity {
 
     @Column(name = "data_entrega")
     LocalDateTime dataEntrega;
-
-    @Column(name = "endereco_entrega", length = 500)
-    String enderecoEntrega;
 
     @Version
     @Column(nullable = false)
@@ -97,6 +88,9 @@ public class OrdemDeServicoEntity extends BaseEntity {
 
     @Column(name = "data_inicio_diagnostico")
     private LocalDateTime dataInicioDiagnostico;
+
+    @Column(name = "data_fim_diagnostico")
+    private LocalDateTime dataFimDiagnostico;
 
     @Column(name = "data_cancelamento")
     private LocalDateTime dataCancelamento;

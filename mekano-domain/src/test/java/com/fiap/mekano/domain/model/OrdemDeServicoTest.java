@@ -1,6 +1,7 @@
 package com.fiap.mekano.domain.model;
 
 import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.exception.TransicaoInvalidaException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -105,12 +106,15 @@ class OrdemDeServicoTest {
     }
 
     @Test
-    @DisplayName("finalizarDiagnostico() transiciona EM_DIAGNOSTICO → AGUARDANDO_APROVACAO")
-    void finalizarDiagnosticoDeveTransicionar() {
+    @DisplayName("finalizarDiagnostico() transiciona EM_DIAGNOSTICO → AGUARDANDO_APROVACAO e seta dataFimDiagnostico")
+    void finalizarDiagnosticoDeveTransicionarESetarDataFim() {
         OrdemDeServico os = criarOS();
         os.iniciarDiagnostico();
+        assertNotNull(os.getDataInicioDiagnostico());
+
         os.finalizarDiagnostico();
         assertEquals(StatusOS.AGUARDANDO_APROVACAO, os.getStatus());
+        assertNotNull(os.getDataFimDiagnostico());
     }
 
     @Test
@@ -201,8 +205,8 @@ class OrdemDeServicoTest {
         os.confirmarPagamento("PIX-123");
         os.entregar("Cliente");
 
-        assertThrows(AppException.class, os::iniciarDiagnostico);
-        assertThrows(AppException.class, () -> os.cancelar("motivo"));
+        assertThrows(TransicaoInvalidaException.class, os::iniciarDiagnostico);
+        assertThrows(TransicaoInvalidaException.class, () -> os.cancelar("motivo"));
     }
 
     @Test
@@ -211,19 +215,20 @@ class OrdemDeServicoTest {
         OrdemDeServico os = criarOS();
         os.cancelar("motivo");
 
-        assertThrows(AppException.class, os::iniciarDiagnostico);
-        assertThrows(AppException.class, () -> os.finalizarExecucao(null));
+        assertThrows(TransicaoInvalidaException.class, os::iniciarDiagnostico);
+        assertThrows(TransicaoInvalidaException.class, () -> os.finalizarExecucao(null));
 
         os.entregar("Cliente");
         assertEquals(StatusOS.ENTREGUE, os.getStatus());
     }
 
     @Test
-    @DisplayName("transição inválida RECEBIDA → FINALIZADA lança 422")
-    void transicaoInvalidaDeveLancar422() {
+    @DisplayName("transição inválida RECEBIDA → FINALIZADA lança TransicaoInvalidaException")
+    void transicaoInvalidaDeveLancarExcecao() {
         OrdemDeServico os = criarOS();
-        AppException ex = assertThrows(AppException.class, () -> os.finalizarExecucao(null));
-        assertEquals(422, ex.getStatus());
+        TransicaoInvalidaException ex = assertThrows(TransicaoInvalidaException.class, () -> os.finalizarExecucao(null));
+        assertEquals(StatusOS.RECEBIDA, ex.getStatusAtual());
+        assertEquals(StatusOS.FINALIZADA, ex.getStatusTentado());
     }
 
     @Test
@@ -238,10 +243,10 @@ class OrdemDeServicoTest {
                 id, clienteId, veiculoId,
                 "Barulho no motor",
                 StatusOS.EM_EXECUCAO, null, null, null,
-                null, null, null, null, null, null, null,
+                null, null, null, null, null, null,
                 null, null, null, null, null,
                 null, null, null, null, null,
-                createdAt, 3L
+                null, createdAt, 3L
         );
 
         assertEquals(id, os.getId());

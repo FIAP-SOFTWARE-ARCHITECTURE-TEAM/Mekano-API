@@ -64,11 +64,11 @@ public class OrdemDeServicoRepositoryImpl implements OrdemDeServicoRepositoryPor
                 managed.setDataAprovacao(entity.getDataAprovacao());
                 managed.setStatusPagamento(entity.getStatusPagamento());
                 managed.setStatusEntrega(entity.getStatusEntrega());
-                managed.setDataPagamento(entity.getDataPagamento());
-                managed.setFormaPagamento(entity.getFormaPagamento());
                 managed.setValorPago(entity.getValorPago());
                 managed.setDataEntrega(entity.getDataEntrega());
-                managed.setEnderecoEntrega(entity.getEnderecoEntrega());
+                managed.setDataInicioDiagnostico(entity.getDataInicioDiagnostico());
+                managed.setDataFimDiagnostico(entity.getDataFimDiagnostico());
+                managed.setDataCancelamento(entity.getDataCancelamento());
                 managed.setCobrancaGeradaEm(entity.getCobrancaGeradaEm());
                 managed.setPagamentoConfirmadoEm(entity.getPagamentoConfirmadoEm());
                 managed.setReferenciaPagamento(entity.getReferenciaPagamento());

@@ -49,9 +49,9 @@ public class OrdemDeServicoEntityMapperImpl implements OrdemDeServicoEntityMappe
         entity.setEntregueEm(os.getEntregueEm());
         entity.setRecebidoPor(os.getRecebidoPor());
         entity.setValorPago(os.getValorCobrado());
-        entity.setDataPagamento(os.getDataPagamento());
         entity.setDataEntrega(os.getDataEntrega());
         entity.setDataInicioDiagnostico(os.getDataInicioDiagnostico());
+        entity.setDataFimDiagnostico(os.getDataFimDiagnostico());
         entity.setDataCancelamento(os.getDataCancelamento());
 
         return entity;
@@ -77,7 +77,6 @@ public class OrdemDeServicoEntityMapperImpl implements OrdemDeServicoEntityMappe
                 entity.getDataAprovacao(),
                 parseStatusPagamento(entity.getStatusPagamento()),
                 entity.getValorPago(),
-                entity.getDataPagamento(),
                 entity.getDataEntrega(),
                 null, // TODO(#33): observacaoEntrega da entity
                 parseStatusEntrega(entity.getStatusEntrega()),
@@ -87,6 +86,7 @@ public class OrdemDeServicoEntityMapperImpl implements OrdemDeServicoEntityMappe
                 entity.getEntregueEm(),
                 entity.getRecebidoPor(),
                 entity.getDataInicioDiagnostico(),
+                entity.getDataFimDiagnostico(),
                 entity.getDataCancelamento(),
                 entity.getCreatedAt(),
                 entity.getVersion()
