@@ -13,6 +13,7 @@ import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.NfEntradaRepositoryPort;
 import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
 import com.fiap.mekano.domain.port.out.RequisicaoCompraRepositoryPort;
+import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
@@ -38,11 +39,17 @@ public class NfEntradaService {
 
     @Transactional
     public CreateNfEntradaResponse registrar(CreateNfEntradaCommand command) {
+        Log.infof("Registrando NFe de entrada: requisicaoCompraId=%s", command.requisicaoCompraId());
         RequisicaoCompra requisicao = requisicaoRepository.findById(command.requisicaoCompraId())
-                .orElseThrow(() -> new AppException(404,
-                        Messages.get("requisicao_compra.not.found", command.requisicaoCompraId())));
+                .orElseThrow(() -> {
+                    Log.warnf("Validação falhou: requisicaoCompraId=%s não encontrada", command.requisicaoCompraId());
+                    return new AppException(404,
+                            Messages.get("requisicao_compra.not.found", command.requisicaoCompraId()));
+                });
 
         if (!StatusRequisicao.PRODUTO_RECEBIDO.equals(requisicao.getStatus())) {
+            Log.warnf("Validação falhou: requisicaoCompraId=%s não está em PRODUTO_RECEBIDO (status atual=%s)",
+                    command.requisicaoCompraId(), requisicao.getStatus());
             throw new AppException(409, "NFe de entrada só pode ser registrada para requisições no status "
                     + StatusRequisicao.PRODUTO_RECEBIDO);
         }
@@ -50,8 +57,12 @@ public class NfEntradaService {
         Optional<NfEntrada> existente = nfRepository.buscarPorChaveAcesso(command.chaveAcesso());
         if (existente.isPresent()) {
             if (command.requisicaoCompraId().equals(existente.get().getRequisicaoCompraId())) {
+                Log.warnf("Validação falhou: chave de acesso da NFe já registrada para requisicaoCompraId=%s",
+                        command.requisicaoCompraId());
                 throw new AppException(409, Messages.get("nf_entrada.chave_acesso.duplicada.mesma_requisicao"));
             }
+            Log.warnf("Validação falhou: chave de acesso da NFe já registrada para outra requisição (requisicaoCompraId=%s)",
+                    command.requisicaoCompraId());
             throw new AppException(409, Messages.get("nf_entrada.chave_acesso.duplicada.outra_requisicao"));
         }
 
@@ -59,13 +70,18 @@ public class NfEntradaService {
                 command.chaveAcesso(), command.valorTotal(),
                 command.requisicaoCompraId());
         var saved = nfRepository.save(nfEntrada);
+        Log.infof("NFe registrada: nfId=%s, requisicaoCompraId=%s, valorTotal=%.2f",
+                saved.getId(), saved.getRequisicaoCompraId(), saved.getValorTotal());
 
         for (ItemRequisicaoCompra item : requisicao.getItens()) {
             pecaRepository.creditarSaldo(item.getPecaId(), item.getQuantidade().intValue());
+            Log.infof("Saldo creditado: pecaId=%s, quantidade=%d", item.getPecaId(), item.getQuantidade());
 
             Optional<Peca> pecaOpt = pecaRepository.findById(item.getPecaId());
             pecaOpt.ifPresent(peca -> {
                 if (peca.isEstoqueMinimoAtingido()) {
+                    Log.infof("Estoque mínimo atingido: pecaId=%s, disponivel=%d, minimo=%d",
+                            peca.getId(), peca.disponivel().intValue(), peca.getEstoqueMinimo().intValue());
                     eventPublisher.publish(new EstoqueMinimoAtingidoEvent(
                             peca.getId(), peca.disponivel().intValue(), peca.getEstoqueMinimo().intValue()));
                 }
@@ -79,7 +95,10 @@ public class NfEntradaService {
 
     public NfEntrada buscarPorId(UUID id) {
         return nfRepository.findById(id)
-                .orElseThrow(() -> new AppException(404, Messages.get("nf_entrada.not.found", id)));
+                .orElseThrow(() -> {
+                    Log.warnf("NFe de entrada não encontrada: nfId=%s", id);
+                    return new AppException(404, Messages.get("nf_entrada.not.found", id));
+                });
     }
 
     public List<NfEntrada> findAll(int page, int size) {

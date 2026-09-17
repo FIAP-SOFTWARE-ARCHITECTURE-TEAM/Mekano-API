@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 import com.fiap.mekano.application.service.os.OsAuditEventPublisher;
 import com.fiap.mekano.domain.event.DiagnosticoFinalizadoEvent;
@@ -15,6 +16,7 @@ import com.fiap.mekano.domain.event.OSCanceladaEvent;
 import com.fiap.mekano.domain.event.OSFinalizadaEvent;
 import com.fiap.mekano.domain.event.OrdemDeServicoCriadaEvent;
 import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.exception.DomainException;
 import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.domain.model.ItemOs;
 import com.fiap.mekano.domain.model.OrdemDeServico;
@@ -81,28 +83,36 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
     @Override
     @Transactional
     public OrdemDeServico create(CreateOrdemDeServicoCommand command) {
-        Log.info("Criando Ordem de Serviço");
+        Log.infof("Criando Ordem de Serviço: clienteId=%s, veiculoId=%s", command.clienteId(), command.veiculoId());
 
         // OS-07: validar existência e atividade de clienteId e veiculoId antes de criar
         var cliente = clienteRepository.findById(command.clienteId())
-                .orElseThrow(() -> new AppException(404, Messages.get("cliente.not.found", command.clienteId())));
+                .orElseThrow(() -> {
+                    Log.warnf("Validação falhou: clienteId=%s não encontrado", command.clienteId());
+                    return new AppException(404, Messages.get("cliente.not.found", command.clienteId()));
+                });
         if (!Boolean.TRUE.equals(cliente.getIsActive())) {
+            Log.warnf("Validação falhou: clienteId=%s está inativo", command.clienteId());
             throw new AppException(422, Messages.get("cliente.inactive", command.clienteId()));
         }
         Log.infof("Cliente validado: clientId=%s", cliente.getId());
         var veiculo = veiculoRepository.findById(command.veiculoId())
-                .orElseThrow(() -> new AppException(404, Messages.get("veiculo.not.found", command.veiculoId())));
+                .orElseThrow(() -> {
+                    Log.warnf("Validação falhou: veiculoId=%s não encontrado", command.veiculoId());
+                    return new AppException(404, Messages.get("veiculo.not.found", command.veiculoId()));
+                });
         if (!Boolean.TRUE.equals(veiculo.getIsActive())) {
+            Log.warnf("Validação falhou: veiculoId=%s está inativo", command.veiculoId());
             throw new AppException(422, Messages.get("veiculo.inactive", command.veiculoId()));
         }
         Log.infof("Veículo validado: veiculoId=%s", veiculo.getId());
         OrdemDeServico os = OrdemDeServico.create(command.clienteId(), command.veiculoId(),
                 command.descricaoProblema());
         OrdemDeServico saved = repository.save(os);
-        Log.info("OS salva");
+        Log.infof("OS criada: osId=%s, status=%s", saved.getId(), saved.getStatus());
         // Persistir itens na junction table
         if (command.itens() != null) {
-            Log.info("Persistindo itens da OS na junction table");
+            Log.infof("Persistindo itens da OS: osId=%s, itens=%d", saved.getId(), command.itens().size());
             for (var itemCmd : command.itens()) {
                 String descricao = resolveItemDescricao(itemCmd.referenciaUuid(), itemCmd.tipo());
                 ItemOs itemOs = ItemOs.create(saved.getId(), itemCmd.referenciaUuid(),
@@ -122,25 +132,37 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
     @Override
     public OrdemDeServico findById(UUID id) {
         return repository.findById(id)
-                .orElseThrow(() -> new AppException(404, Messages.get("os.not.found", id)));
+                .orElseThrow(() -> {
+                    Log.warnf("Ordem de Serviço não encontrada: osId=%s", id);
+                    return new AppException(404, Messages.get("os.not.found", id));
+                });
     }
 
     @Override
     @Transactional
     public OrdemDeServico update(UUID id, CreateOrdemDeServicoCommand command) {
+        Log.infof("Atualizando OS: osId=%s", id);
         OrdemDeServico os = findById(id);
         var cliente = clienteRepository.findById(command.clienteId())
-                .orElseThrow(() -> new AppException(404, Messages.get("cliente.not.found", command.clienteId())));
+                .orElseThrow(() -> {
+                    Log.warnf("Validação falhou: clienteId=%s não encontrado", command.clienteId());
+                    return new AppException(404, Messages.get("cliente.not.found", command.clienteId()));
+                });
         if (!Boolean.TRUE.equals(cliente.getIsActive())) {
+            Log.warnf("Validação falhou: clienteId=%s está inativo", command.clienteId());
             throw new AppException(422, Messages.get("cliente.inactive", command.clienteId()));
         }
         var veiculo = veiculoRepository.findById(command.veiculoId())
-                .orElseThrow(() -> new AppException(404, Messages.get("veiculo.not.found", command.veiculoId())));
+                .orElseThrow(() -> {
+                    Log.warnf("Validação falhou: veiculoId=%s não encontrado", command.veiculoId());
+                    return new AppException(404, Messages.get("veiculo.not.found", command.veiculoId()));
+                });
         if (!Boolean.TRUE.equals(veiculo.getIsActive())) {
+            Log.warnf("Validação falhou: veiculoId=%s está inativo", command.veiculoId());
             throw new AppException(422, Messages.get("veiculo.inactive", command.veiculoId()));
         }
 
-        os.atualizar(command.clienteId(), command.veiculoId(), command.descricaoProblema());
+        executarTransicao("atualizar", id, () -> os.atualizar(command.clienteId(), command.veiculoId(), command.descricaoProblema()));
         OrdemDeServico saved = repository.save(os);
 
         // Substituir itens na junction table
@@ -153,7 +175,7 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
                 itemOsRepository.save(itemOs);
             }
         }
-
+        Log.infof("OS atualizada: osId=%s", saved.getId());
         return saved;
     }
 
@@ -170,8 +192,9 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
     @Override
     @Transactional
     public OrdemDeServico iniciarDiagnostico(UUID id) {
+        Log.infof("Iniciando diagnóstico: osId=%s", id);
         OrdemDeServico os = findById(id);
-        os.iniciarDiagnostico();
+        executarTransicao("iniciarDiagnostico", id, () -> os.iniciarDiagnostico());
         OrdemDeServico saved = repository.save(os);
         osMetrics.registrarTransicaoStatus(com.fiap.mekano.domain.model.StatusOS.RECEBIDA, saved.getStatus());
         osMetrics.registrarTempoFase("RECEBIDA", Duration.between(saved.getCreatedAt(), LocalDateTime.now()));
@@ -179,12 +202,14 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
         osMetrics.registrarOSPorStatus(saved.getStatus().name());
         osAuditEventPublisher.publish(saved.getId(), OsAuditAction.DIAGNOSTICAR, null,
                 OsAuditAction.DIAGNOSTICAR.getObservacaoDefault(), Map.of());
+        Log.infof("Diagnóstico iniciado: osId=%s, status=%s", saved.getId(), saved.getStatus());
         return saved;
     }
 
     @Override
     @Transactional
     public OrdemDeServico finalizarDiagnostico(FinalizarDiagnosticoCommand command) {
+        Log.infof("Finalizando diagnóstico: osId=%s", command.osId());
         OrdemDeServico os = findById(command.osId());
 
         // Adicionar novos itens do mecânico à junction table
@@ -204,17 +229,24 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
         for (ItemOs itemOs : todosItens) {
             if (itemOs.isPeca()) {
                 Peca peca = pecaRepository.buscarPorId(itemOs.getReferenciaUuid())
-                        .orElseThrow(() -> new AppException(404, "Peça não encontrada: " + itemOs.getReferenciaUuid()));
+                        .orElseThrow(() -> {
+                            Log.warnf("Validação falhou: pecaId=%s não encontrada (itensOrcamento)", itemOs.getReferenciaUuid());
+                            return new AppException(404, "Peça não encontrada: " + itemOs.getReferenciaUuid());
+                        });
                 if (!Boolean.TRUE.equals(peca.getIsActive())) {
+                    Log.warnf("Validação falhou: pecaId=%s está inativa (itensOrcamento)", itemOs.getReferenciaUuid());
                     throw new AppException(422, Messages.get("peca.inactive", itemOs.getReferenciaUuid()));
                 }
                 itensOrcamento.add(new ItemOrcamento(peca.getDescricao(), itemOs.getQuantidade(),
                         peca.getValorUnitario(), peca.getId()));
             } else if (itemOs.isServico()) {
                 Servico servico = servicoRepository.findById(itemOs.getReferenciaUuid())
-                        .orElseThrow(
-                                () -> new AppException(404, "Serviço não encontrado: " + itemOs.getReferenciaUuid()));
+                        .orElseThrow(() -> {
+                            Log.warnf("Validação falhou: servicoId=%s não encontrado (itensOrcamento)", itemOs.getReferenciaUuid());
+                            return new AppException(404, "Serviço não encontrado: " + itemOs.getReferenciaUuid());
+                        });
                 if (!Boolean.TRUE.equals(servico.getIsActive())) {
+                    Log.warnf("Validação falhou: servicoId=%s está inativo (itensOrcamento)", itemOs.getReferenciaUuid());
                     throw new AppException(422, Messages.get("servico.inactive", itemOs.getReferenciaUuid()));
                 }
                 itensOrcamento.add(new ItemOrcamento(servico.getNome(), itemOs.getQuantidade(),
@@ -222,7 +254,7 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
             }
         }
 
-        os.finalizarDiagnostico();
+        executarTransicao("finalizarDiagnostico", os.getId(), () -> os.finalizarDiagnostico());
         OrdemDeServico saved = repository.save(os);
         osMetrics.registrarTransicaoStatus(
                 com.fiap.mekano.domain.model.StatusOS.EM_DIAGNOSTICO,
@@ -236,6 +268,7 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
         eventPublisher.publish(DiagnosticoFinalizadoEvent.of(os.getId(), command.descricao(), itensOrcamento));
         osAuditEventPublisher.publish(os.getId(), OsAuditAction.ORCAR, null,
                 OsAuditAction.ORCAR.getObservacaoDefault(), Map.of("itens", itensOrcamento.size()));
+        Log.infof("Diagnóstico finalizado: osId=%s, itensOrcamento=%d, status=%s", os.getId(), itensOrcamento.size(), saved.getStatus());
         return os;
     }
 
@@ -244,27 +277,37 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
             return pecaRepository.findById(referenciaUuid)
                     .map(peca -> {
                         if (!Boolean.TRUE.equals(peca.getIsActive())) {
+                            Log.warnf("Validação falhou: pecaId=%s está inativa", referenciaUuid);
                             throw new AppException(422, Messages.get("peca.inactive", referenciaUuid));
                         }
                         return peca.getDescricao();
                     })
-                    .orElseThrow(() -> new AppException(404, Messages.get("os.peca.not.found", referenciaUuid)));
+                    .orElseThrow(() -> {
+                        Log.warnf("Validação falhou: pecaId=%s não encontrada", referenciaUuid);
+                        return new AppException(404, Messages.get("os.peca.not.found", referenciaUuid));
+                    });
         } else if ("SERVICO".equalsIgnoreCase(tipo)) {
             return servicoRepository.findById(referenciaUuid)
                     .map(servico -> {
                         if (!Boolean.TRUE.equals(servico.getIsActive())) {
+                            Log.warnf("Validação falhou: servicoId=%s está inativo", referenciaUuid);
                             throw new AppException(422, Messages.get("servico.inactive", referenciaUuid));
                         }
                         return servico.getNome();
                     })
-                    .orElseThrow(() -> new AppException(404, Messages.get("os.servico.not.found", referenciaUuid)));
+                    .orElseThrow(() -> {
+                        Log.warnf("Validação falhou: servicoId=%s não encontrado", referenciaUuid);
+                        return new AppException(404, Messages.get("os.servico.not.found", referenciaUuid));
+                    });
         }
+        Log.warnf("Validação falhou: tipo de item inválido=%s", tipo);
         throw new AppException(400, Messages.get("itemos.tipo.invalido", tipo));
     }
 
     @Override
     @Transactional
     public OrdemDeServico cancelar(UUID id, String motivo) {
+        Log.infof("Cancelando OS: osId=%s", id);
         OrdemDeServico os = findById(id);
         // D-08: cancelamento libera reserva (não credita saldo — peças nunca saíram do
         // físico)
@@ -278,22 +321,24 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
             });
         }
         var statusAnterior = os.getStatus();
-        os.cancelar(motivo);
+        executarTransicao("cancelar", id, () -> os.cancelar(motivo));
         OrdemDeServico saved = repository.save(os);
         osMetrics.registrarTransicaoStatus(statusAnterior, saved.getStatus());
         osMetrics.registrarTempoFase("TOTAL", Duration.between(saved.getCreatedAt(), LocalDateTime.now()));
         osMetrics.registrarOSPorStatus(saved.getStatus().name());
         osAuditEventPublisher.publish(saved.getId(), OsAuditAction.CANCELAR, null, motivo, Map.of());
         eventPublisher.publish(OSCanceladaEvent.of(saved.getId(), motivo));
+        Log.infof("OS cancelada: osId=%s, motivo=%s", saved.getId(), motivo);
         return saved;
     }
 
     @Override
     @Transactional
     public OrdemDeServico entregar(UUID id, String recebidoPor) {
+        Log.infof("Confirmando entrega da OS: osId=%s", id);
         OrdemDeServico os = findById(id);
         var statusAnterior = os.getStatus();
-        var event = os.entregar(recebidoPor);
+        var event = executarTransicaoComResultado("entregar", id, () -> os.entregar(recebidoPor));
         OrdemDeServico saved = repository.save(os);
         osMetrics.registrarTransicaoStatus(statusAnterior, saved.getStatus());
         if (saved.getCobrancaGeradaEm() != null && saved.getPagamentoConfirmadoEm() != null) {
@@ -308,12 +353,14 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
         osMetrics.registrarOSPorStatus(saved.getStatus().name());
         eventPublisher.publish(event);
         osAuditEventPublisher.publish(saved.getId(), OsAuditAction.ENTREGAR, null, recebidoPor, Map.of());
+        Log.infof("OS entregue: osId=%s, status=%s", saved.getId(), saved.getStatus());
         return saved;
     }
 
     @Override
     @Transactional
     public OrdemDeServico iniciarExecucao(UUID id, UUID mecanicoUuid, String observacao) {
+        Log.infof("Iniciando execução da OS: osId=%s, mecanicoUuid=%s", id, mecanicoUuid);
         OrdemDeServico os = findById(id);
 
         // D-04: debitar reserva dos itens de peça do orçamento antes de iniciar
@@ -326,8 +373,11 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
                                 item.getPecaId(), item.getQuantidade().intValue());
                         if (!ok) {
                             Peca peca = pecaRepository.findById(item.getPecaId())
-                                    .orElseThrow(() -> new AppException(404,
-                                            Messages.get("peca.not.found", item.getPecaId())));
+                                    .orElseThrow(() -> {
+                                        Log.warnf("Validação falhou: pecaId=%s não encontrada (debito reserva)", item.getPecaId());
+                                        return new AppException(404, Messages.get("peca.not.found", item.getPecaId()));
+                                    });
+                            Log.warnf("Validação falhou: pecaId=%s saldo insuficiente=%d, solicitado=%d", item.getPecaId(), peca.getSaldoAtual(), item.getQuantidade());
                             throw new AppException(409, Messages.get("peca.saldo.insuficiente",
                                     item.getDescricao(), peca.getSaldoAtual(), item.getQuantidade()));
                         }
@@ -336,7 +386,7 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
             });
         }
 
-        os.iniciarExecucao(mecanicoUuid, observacao);
+        executarTransicao("iniciarExecucao", id, () -> os.iniciarExecucao(mecanicoUuid, observacao));
         OrdemDeServico saved = repository.save(os);
         osMetrics.registrarTransicaoStatus(
                 com.fiap.mekano.domain.model.StatusOS.AGUARDANDO_EXECUCAO,
@@ -349,14 +399,16 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
         osAuditEventPublisher.publish(saved.getId(), OsAuditAction.EXECUTAR, null,
                 OsAuditAction.EXECUTAR.getObservacaoDefault(),
                 Map.of("mecanico", mecanicoUuid.toString()));
+        Log.infof("Execução iniciada: osId=%s, status=%s", saved.getId(), saved.getStatus());
         return saved;
     }
 
     @Override
     @Transactional
     public OrdemDeServico finalizarExecucao(UUID id, String observacao) {
+        Log.infof("Finalizando execução da OS: osId=%s", id);
         OrdemDeServico os = findById(id);
-        os.finalizarExecucao(observacao);
+        executarTransicao("finalizarExecucao", id, () -> os.finalizarExecucao(observacao));
         OrdemDeServico saved = repository.save(os);
         osMetrics.registrarTransicaoStatus(
                 com.fiap.mekano.domain.model.StatusOS.EM_EXECUCAO,
@@ -370,6 +422,7 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
         eventPublisher.publish(OSFinalizadaEvent.of(saved.getId()));
         osAuditEventPublisher.publish(saved.getId(), OsAuditAction.FINALIZAR, null,
                 OsAuditAction.FINALIZAR.getObservacaoDefault(), Map.of());
+        Log.infof("Execução finalizada: osId=%s, status=%s", saved.getId(), saved.getStatus());
         return saved;
     }
 
@@ -420,5 +473,28 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
                         })
                         .toList())
                 .orElse(Collections.emptyList());
+    }
+
+    /**
+     * Executa uma transição de estado da entidade OrdemDeServico.
+     * Regras de negócio violadas (DomainException/TransicaoInvalidaException → HTTP 422)
+     * são registradas como WARN e relançadas — erros de usuário não são ERROR.
+     */
+    private void executarTransicao(String acao, UUID osId, Runnable transicao) {
+        try {
+            transicao.run();
+        } catch (DomainException ex) {
+            Log.warnf("Transição rejeitada: acao=%s, osId=%s, detalhe=%s", acao, osId, ex.getMessage());
+            throw ex;
+        }
+    }
+
+    private <T> T executarTransicaoComResultado(String acao, UUID osId, Supplier<T> transicao) {
+        try {
+            return transicao.get();
+        } catch (DomainException ex) {
+            Log.warnf("Transição rejeitada: acao=%s, osId=%s, detalhe=%s", acao, osId, ex.getMessage());
+            throw ex;
+        }
     }
 }

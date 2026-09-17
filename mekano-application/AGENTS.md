@@ -69,6 +69,13 @@ com.fiap.mekano.application
 5. Flow: validate → check duplicates → hash (if password) → create entity → save → publish event
 6. Response records never expose `passwordHash` or domain entities directly
 
+## Logging (in Services)
+- `io.quarkus.logging.Log` estático — NUNCA SLF4J `LoggerFactory`
+- INFO=fluxo normal de escrita, WARN=erro de cliente/negócio (4xx, incl. transições 422), ERROR=NUNCA (só no `ApiExceptionMapper`)
+- Com parâmetros usar `Log.infof`/`Log.warnf` com `%s`; formato `chave=valor` em PT-BR; nunca logar PII
+- Transições 422: helper `executarTransicao(...)`/`executarTransicaoComResultado(...)` (try/catch `DomainException` → `Log.warnf` → rethrow)
+- Detalhes completos em `AGENTS.md` raiz → "Logging Conventions"
+
 ## Stub Services — What NOT to Do
 The 2 stub services (`PecaService`, `NfEntradaService`) violate conventions:
 - No port implementation
