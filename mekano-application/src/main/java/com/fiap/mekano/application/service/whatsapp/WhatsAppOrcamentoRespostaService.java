@@ -9,9 +9,8 @@ import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;
 import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
 import com.fiap.mekano.domain.port.out.WhatsAppNotifierPort;
+import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.text.Normalizer;
 import java.util.List;
@@ -34,7 +33,6 @@ import java.util.UUID;
 @ApplicationScoped
 public class WhatsAppOrcamentoRespostaService {
 
-    private static final Logger log = LoggerFactory.getLogger(WhatsAppOrcamentoRespostaService.class);
     private static final String STATUS_AGUARDANDO_APROVACAO = "AGUARDANDO_APROVACAO";
 
     private final ClienteRepositoryPort clienteRepository;
@@ -62,6 +60,7 @@ public class WhatsAppOrcamentoRespostaService {
      * @param texto    texto bruto da mensagem recebida
      */
     public boolean processarResposta(String telefone, String texto) {
+        Log.info("Processando resposta WhatsApp de orçamento");
         String resposta = normalizar(texto);
         String[] tokens = resposta.split("\\s+");
         String palavra = tokens.length == 0 ? "" : tokens[0];
@@ -72,13 +71,13 @@ public class WhatsAppOrcamentoRespostaService {
                 && !palavra.equals("confirmar") && !palavra.equals("1")
                 && !palavra.equals("nao") && !palavra.equals("não") && !palavra.equals("n")
                 && !palavra.equals("recusar") && !palavra.equals("2")) {
-            log.info("Resposta WhatsApp não reconhecida — ignorando");
+            Log.info("Resposta WhatsApp não reconhecida — ignorando");
             return false;
         }
 
         Optional<Cliente> clienteOpt = clienteRepository.findByTelefone(normalizarTelefone(telefone));
         if (clienteOpt.isEmpty()) {
-            log.info("Telefone WhatsApp sem cliente cadastrado — ignorando");
+            Log.info("Telefone WhatsApp sem cliente cadastrado — ignorando");
             return false;
         }
         Cliente cliente = clienteOpt.get();
@@ -87,14 +86,14 @@ public class WhatsAppOrcamentoRespostaService {
                 STATUS_AGUARDANDO_APROVACAO, cliente.getId(), null, null, null, 0, 1);
 
         if (osList.isEmpty()) {
-            log.info("Cliente {} sem OS aguardando aprovação — ignorando", cliente.getId());
+            Log.infof("Cliente %s sem OS aguardando aprovação — ignorando", cliente.getId());
             return false;
         }
 
         OrdemDeServico os = osList.get(0);
         var orcamento = orcamentoRepository.findByOrdemServicoUuid(os.getId());
         if (orcamento.isEmpty()) {
-            log.warn("Cliente {} com OS {} sem orçamento — ignorando", cliente.getId(), os.getId());
+            Log.warnf("Cliente %s com OS %s sem orçamento — ignorando", cliente.getId(), os.getId());
             return false;
         }
 
@@ -104,11 +103,11 @@ public class WhatsAppOrcamentoRespostaService {
         if (aprovado) {
             notifier.notificarRespostaOrcamento(cliente.getTelefone().getValue(), true);
             orcamentoService.aprovar(new AprovarOrcamentoCommand(orcamentoUuid));
-            log.info("Orçamento {} aprovado via WhatsApp pelo cliente {}", orcamentoUuid, cliente.getId());
+            Log.infof("Orçamento %s aprovado via WhatsApp pelo cliente %s", orcamentoUuid, cliente.getId());
         } else {
             notifier.notificarRespostaOrcamento(cliente.getTelefone().getValue(), false);
             orcamentoService.reprovar(new ReprovarOrcamentoCommand(orcamentoUuid, "Reprovado via WhatsApp"));
-            log.info("Orçamento {} reprovado via WhatsApp pelo cliente {}", orcamentoUuid, cliente.getId());
+            Log.infof("Orçamento %s reprovado via WhatsApp pelo cliente %s", orcamentoUuid, cliente.getId());
         }
 
         return true;
