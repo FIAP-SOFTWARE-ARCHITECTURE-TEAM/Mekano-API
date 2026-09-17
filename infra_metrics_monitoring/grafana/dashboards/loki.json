@@ -1,0 +1,747 @@
+{
+    "apiVersion": "dashboard.grafana.app/v2",
+    "kind": "Dashboard",
+    "metadata": {
+        "name": "ad4zfzg",
+        "namespace": "default",
+        "uid": "d54c87b9-104b-4f8d-b4dd-96134209c9c7",
+        "resourceVersion": "1789595440326981",
+        "generation": 12,
+        "creationTimestamp": "2026-09-16T19:26:24Z",
+        "labels": {
+            "grafana.app/deprecatedInternalID": "1627893788188672"
+        },
+        "annotations": {
+            "grafana.app/createdBy": "user:bfygf9msdyccga",
+            "grafana.app/saved-from-ui": "Grafana v13.2.2 (1bea008f7e)",
+            "grafana.app/updatedBy": "user:bfygf9msdyccga",
+            "grafana.app/updatedTimestamp": "2026-09-16T21:50:40Z"
+        }
+    },
+    "spec": {
+        "annotations": [
+            {
+                "kind": "AnnotationQuery",
+                "spec": {
+                    "query": {
+                        "kind": "DataQuery",
+                        "group": "grafana",
+                        "version": "v0",
+                        "datasource": {
+                            "name": "-- Grafana --"
+                        },
+                        "spec": {}
+                    },
+                    "enable": true,
+                    "hide": true,
+                    "iconColor": "rgba(0, 211, 255, 1)",
+                    "name": "Annotations & Alerts",
+                    "builtIn": true
+                }
+            }
+        ],
+        "cursorSync": "Off",
+        "editable": true,
+        "elements": {
+            "panel-1": {
+                "kind": "Panel",
+                "spec": {
+                    "id": 1,
+                    "title": "Logs Mekano API",
+                    "description": "Apresenta todos os logs da aplicação",
+                    "links": [],
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "query": {
+                                            "kind": "DataQuery",
+                                            "group": "loki",
+                                            "version": "v0",
+                                            "datasource": {
+                                                "name": "P8E80F9AEF21F6940"
+                                            },
+                                            "spec": {
+                                                "direction": "backward",
+                                                "editorMode": "code",
+                                                "expr": "{service_name=\"mekano-api\"}",
+                                                "queryType": "range"
+                                            }
+                                        },
+                                        "refId": "A",
+                                        "hidden": false
+                                    }
+                                }
+                            ],
+                            "transformations": [],
+                            "queryOptions": {}
+                        }
+                    },
+                    "vizConfig": {
+                        "kind": "VizConfig",
+                        "group": "logs",
+                        "version": "13.2.2",
+                        "spec": {
+                            "options": {
+                                "dedupStrategy": "none",
+                                "enableInfiniteScrolling": false,
+                                "enableLogDetails": true,
+                                "prettifyLogMessage": true,
+                                "showControls": true,
+                                "showFieldSelector": false,
+                                "showLabels": false,
+                                "showLevel": true,
+                                "showTime": false,
+                                "sortOrder": "Descending",
+                                "syntaxHighlighting": true,
+                                "timestampResolution": "ms",
+                                "unwrappedColumns": false,
+                                "wrapLogMessage": true
+                            },
+                            "fieldConfig": {
+                                "defaults": {},
+                                "overrides": []
+                            }
+                        }
+                    },
+                    "transparent": true
+                }
+            },
+            "panel-10": {
+                "kind": "Panel",
+                "spec": {
+                    "id": 10,
+                    "title": "Eventos WhatsApp",
+                    "description": "Logs relacionados a eventos do WhatsApp",
+                    "links": [],
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "query": {
+                                            "kind": "DataQuery",
+                                            "group": "loki",
+                                            "version": "v0",
+                                            "datasource": {
+                                                "name": "P8E80F9AEF21F6940"
+                                            },
+                                            "spec": {
+                                                "direction": "backward",
+                                                "editorMode": "code",
+                                                "expr": "{service_name=\"mekano-api\"}\r\n| json\r\n| loggerName=~\".*(WhatsAppOrcamentoRespostaService).*\"",
+                                                "queryType": "range"
+                                            }
+                                        },
+                                        "refId": "A",
+                                        "hidden": false
+                                    }
+                                }
+                            ],
+                            "transformations": [],
+                            "queryOptions": {}
+                        }
+                    },
+                    "vizConfig": {
+                        "kind": "VizConfig",
+                        "group": "logs",
+                        "version": "13.2.2",
+                        "spec": {
+                            "options": {
+                                "dedupStrategy": "none",
+                                "enableInfiniteScrolling": false,
+                                "enableLogDetails": true,
+                                "prettifyLogMessage": true,
+                                "showControls": true,
+                                "showFieldSelector": false,
+                                "showLabels": false,
+                                "showLevel": true,
+                                "showTime": false,
+                                "sortOrder": "Descending",
+                                "syntaxHighlighting": true,
+                                "timestampResolution": "ms",
+                                "unwrappedColumns": false,
+                                "wrapLogMessage": false
+                            },
+                            "fieldConfig": {
+                                "defaults": {},
+                                "overrides": []
+                            }
+                        }
+                    }
+                }
+            },
+            "panel-2": {
+                "kind": "Panel",
+                "spec": {
+                    "id": 2,
+                    "title": "Total Logs por Level",
+                    "description": "",
+                    "links": [],
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "query": {
+                                            "kind": "DataQuery",
+                                            "group": "loki",
+                                            "version": "v0",
+                                            "datasource": {
+                                                "name": "P8E80F9AEF21F6940"
+                                            },
+                                            "spec": {
+                                                "direction": "backward",
+                                                "editorMode": "code",
+                                                "expr": "sum(\r\n  count_over_time(\r\n    {service_name=\"mekano-api\"} | json | level=\"INFO\" [5m]\r\n  )\r\n)",
+                                                "legendFormat": "INFO",
+                                                "queryType": "range"
+                                            }
+                                        },
+                                        "refId": "A",
+                                        "hidden": false
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "query": {
+                                            "kind": "DataQuery",
+                                            "group": "loki",
+                                            "version": "v0",
+                                            "datasource": {
+                                                "name": "P8E80F9AEF21F6940"
+                                            },
+                                            "spec": {
+                                                "direction": "backward",
+                                                "editorMode": "code",
+                                                "expr": "sum(\r\n  count_over_time(\r\n    {service_name=\"mekano-api\"} | json | level=\"WARN\" [5m]\r\n  )\r\n)",
+                                                "legendFormat": "WARN",
+                                                "queryType": "range"
+                                            }
+                                        },
+                                        "refId": "B",
+                                        "hidden": false
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "query": {
+                                            "kind": "DataQuery",
+                                            "group": "loki",
+                                            "version": "v0",
+                                            "datasource": {
+                                                "name": "P8E80F9AEF21F6940"
+                                            },
+                                            "spec": {
+                                                "direction": "backward",
+                                                "editorMode": "code",
+                                                "expr": "sum(\r\n  count_over_time(\r\n    {service_name=\"mekano-api\"} | json | level=\"ERROR\" [5m]\r\n  )\r\n)",
+                                                "legendFormat": "ERROR",
+                                                "queryType": "range"
+                                            }
+                                        },
+                                        "refId": "C",
+                                        "hidden": false
+                                    }
+                                }
+                            ],
+                            "transformations": [],
+                            "queryOptions": {
+                                "timeFrom": "now/d"
+                            }
+                        }
+                    },
+                    "vizConfig": {
+                        "kind": "VizConfig",
+                        "group": "gauge",
+                        "version": "13.2.2",
+                        "spec": {
+                            "options": {
+                                "barShape": "rounded",
+                                "barWidthFactor": 0.25,
+                                "effects": {
+                                    "barGlow": true,
+                                    "centerGlow": true,
+                                    "gradient": true
+                                },
+                                "endpointMarker": "glow",
+                                "minVizHeight": 75,
+                                "minVizWidth": 75,
+                                "orientation": "auto",
+                                "reduceOptions": {
+                                    "calcs": [],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "segmentCount": 10,
+                                "segmentSpacing": 0.15,
+                                "shape": "circle",
+                                "showThresholdLabels": false,
+                                "showThresholdMarkers": false,
+                                "sizing": "auto",
+                                "sparkline": true,
+                                "textMode": "auto"
+                            },
+                            "fieldConfig": {
+                                "defaults": {
+                                    "decimals": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "value": 0,
+                                                "color": "green"
+                                            }
+                                        ]
+                                    },
+                                    "color": {
+                                        "mode": "fixed",
+                                        "fixedColor": "blue"
+                                    },
+                                    "fieldMinMax": false
+                                },
+                                "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "scope": "series",
+                                            "options": "WARN"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "color",
+                                                "value": {
+                                                    "fixedColor": "dark-yellow",
+                                                    "mode": "fixed"
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "scope": "series",
+                                            "options": "WARN"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "color",
+                                                "value": {
+                                                    "fixedColor": "dark-red",
+                                                    "mode": "fixed"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+            "panel-7": {
+                "kind": "Panel",
+                "spec": {
+                    "id": 7,
+                    "title": "Eventos Ordem de Serviço (OS)",
+                    "description": "Apresenta todos os logs da aplicação relacionados a OS",
+                    "links": [],
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "query": {
+                                            "kind": "DataQuery",
+                                            "group": "loki",
+                                            "version": "v0",
+                                            "datasource": {
+                                                "name": "P8E80F9AEF21F6940"
+                                            },
+                                            "spec": {
+                                                "direction": "backward",
+                                                "editorMode": "code",
+                                                "expr": "{service_name=\"mekano-api\"}\r\n| json\r\n| loggerName=~\".*(OrdemDeServicoService).*\"",
+                                                "queryType": "range"
+                                            }
+                                        },
+                                        "refId": "A",
+                                        "hidden": false
+                                    }
+                                }
+                            ],
+                            "transformations": [],
+                            "queryOptions": {}
+                        }
+                    },
+                    "vizConfig": {
+                        "kind": "VizConfig",
+                        "group": "logs",
+                        "version": "13.2.2",
+                        "spec": {
+                            "options": {
+                                "dedupStrategy": "none",
+                                "enableInfiniteScrolling": false,
+                                "enableLogDetails": true,
+                                "prettifyLogMessage": true,
+                                "showControls": true,
+                                "showFieldSelector": false,
+                                "showLabels": false,
+                                "showLevel": true,
+                                "showTime": false,
+                                "sortOrder": "Descending",
+                                "syntaxHighlighting": true,
+                                "timestampResolution": "ms",
+                                "unwrappedColumns": false,
+                                "wrapLogMessage": false
+                            },
+                            "fieldConfig": {
+                                "defaults": {},
+                                "overrides": []
+                            }
+                        }
+                    }
+                }
+            },
+            "panel-8": {
+                "kind": "Panel",
+                "spec": {
+                    "id": 8,
+                    "title": "Eventos Orçamento",
+                    "description": "Apresenta todos os logs da aplicação relacionados a Orçamento",
+                    "links": [],
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "query": {
+                                            "kind": "DataQuery",
+                                            "group": "loki",
+                                            "version": "v0",
+                                            "datasource": {
+                                                "name": "P8E80F9AEF21F6940"
+                                            },
+                                            "spec": {
+                                                "direction": "backward",
+                                                "editorMode": "code",
+                                                "expr": "{service_name=\"mekano-api\"}\r\n| json\r\n| loggerName=~\".*(OrcamentoService).*\"",
+                                                "queryType": "range"
+                                            }
+                                        },
+                                        "refId": "A",
+                                        "hidden": false
+                                    }
+                                }
+                            ],
+                            "transformations": [],
+                            "queryOptions": {}
+                        }
+                    },
+                    "vizConfig": {
+                        "kind": "VizConfig",
+                        "group": "logs",
+                        "version": "13.2.2",
+                        "spec": {
+                            "options": {
+                                "dedupStrategy": "none",
+                                "enableInfiniteScrolling": false,
+                                "enableLogDetails": true,
+                                "prettifyLogMessage": true,
+                                "showControls": true,
+                                "showFieldSelector": false,
+                                "showLabels": false,
+                                "showLevel": true,
+                                "showTime": false,
+                                "sortOrder": "Descending",
+                                "syntaxHighlighting": true,
+                                "timestampResolution": "ms",
+                                "unwrappedColumns": false,
+                                "wrapLogMessage": false
+                            },
+                            "fieldConfig": {
+                                "defaults": {},
+                                "overrides": []
+                            }
+                        }
+                    }
+                }
+            },
+            "panel-9": {
+                "kind": "Panel",
+                "spec": {
+                    "id": 9,
+                    "title": "Eventos Requisições de Compra e NFe",
+                    "description": "Logs relacionados a Requisições de compra e Nota Fiscal (NFe)",
+                    "links": [],
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "query": {
+                                            "kind": "DataQuery",
+                                            "group": "loki",
+                                            "version": "v0",
+                                            "datasource": {
+                                                "name": "P8E80F9AEF21F6940"
+                                            },
+                                            "spec": {
+                                                "direction": "backward",
+                                                "editorMode": "code",
+                                                "expr": "{service_name=\"mekano-api\"}\r\n| json\r\n| loggerName=~\".*(NfEntradaService|RequisicaoCompraService).*\"",
+                                                "queryType": "range"
+                                            }
+                                        },
+                                        "refId": "A",
+                                        "hidden": false
+                                    }
+                                }
+                            ],
+                            "transformations": [],
+                            "queryOptions": {}
+                        }
+                    },
+                    "vizConfig": {
+                        "kind": "VizConfig",
+                        "group": "logs",
+                        "version": "13.2.2",
+                        "spec": {
+                            "options": {
+                                "dedupStrategy": "none",
+                                "enableInfiniteScrolling": false,
+                                "enableLogDetails": true,
+                                "prettifyLogMessage": true,
+                                "showControls": true,
+                                "showFieldSelector": false,
+                                "showLabels": false,
+                                "showLevel": true,
+                                "showTime": false,
+                                "sortOrder": "Descending",
+                                "syntaxHighlighting": true,
+                                "timestampResolution": "ms",
+                                "unwrappedColumns": false,
+                                "wrapLogMessage": false
+                            },
+                            "fieldConfig": {
+                                "defaults": {},
+                                "overrides": []
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "layout": {
+            "kind": "TabsLayout",
+            "spec": {
+                "tabs": [
+                    {
+                        "kind": "TabsLayoutTab",
+                        "spec": {
+                            "title": "Logs Estruturados",
+                            "layout": {
+                                "kind": "GridLayout",
+                                "spec": {
+                                    "items": [
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "x": 0,
+                                                "y": 0,
+                                                "width": 24,
+                                                "height": 23,
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-1"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "kind": "TabsLayoutTab",
+                        "spec": {
+                            "title": "Metricas",
+                            "layout": {
+                                "kind": "AutoGridLayout",
+                                "spec": {
+                                    "maxColumnCount": 1,
+                                    "columnWidthMode": "standard",
+                                    "rowHeightMode": "standard",
+                                    "items": [
+                                        {
+                                            "kind": "AutoGridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-2"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "kind": "TabsLayoutTab",
+                        "spec": {
+                            "title": "Logs OS",
+                            "layout": {
+                                "kind": "AutoGridLayout",
+                                "spec": {
+                                    "maxColumnCount": 1,
+                                    "columnWidthMode": "standard",
+                                    "rowHeightMode": "standard",
+                                    "fillScreen": true,
+                                    "items": [
+                                        {
+                                            "kind": "AutoGridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-7"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "kind": "TabsLayoutTab",
+                        "spec": {
+                            "title": "Logs Orçamento",
+                            "layout": {
+                                "kind": "AutoGridLayout",
+                                "spec": {
+                                    "maxColumnCount": 1,
+                                    "columnWidthMode": "standard",
+                                    "rowHeightMode": "standard",
+                                    "fillScreen": true,
+                                    "items": [
+                                        {
+                                            "kind": "AutoGridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-8"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "kind": "TabsLayoutTab",
+                        "spec": {
+                            "title": "Logs Req.Compra e NFe",
+                            "layout": {
+                                "kind": "AutoGridLayout",
+                                "spec": {
+                                    "maxColumnCount": 1,
+                                    "columnWidthMode": "standard",
+                                    "rowHeightMode": "standard",
+                                    "fillScreen": true,
+                                    "items": [
+                                        {
+                                            "kind": "AutoGridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-9"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "kind": "TabsLayoutTab",
+                        "spec": {
+                            "title": "Logs WhatsApp",
+                            "layout": {
+                                "kind": "AutoGridLayout",
+                                "spec": {
+                                    "maxColumnCount": 1,
+                                    "columnWidthMode": "standard",
+                                    "rowHeightMode": "standard",
+                                    "fillScreen": true,
+                                    "items": [
+                                        {
+                                            "kind": "AutoGridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-10"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "links": [],
+        "liveNow": false,
+        "preload": false,
+        "tags": [],
+        "timeSettings": {
+            "timezone": "browser",
+            "from": "now-15m",
+            "to": "now",
+            "autoRefresh": "",
+            "autoRefreshIntervals": [
+                "5s",
+                "10s",
+                "30s",
+                "1m",
+                "5m",
+                "15m",
+                "30m",
+                "1h",
+                "2h",
+                "1d"
+            ],
+            "hideTimepicker": false,
+            "fiscalYearStartMonth": 0
+        },
+        "title": "LOKI",
+        "variables": [],
+        "preferences": {
+            "layout": {
+                "kind": "GridLayout",
+                "spec": {
+                    "items": []
+                }
+            }
+        }
+    }
+}
