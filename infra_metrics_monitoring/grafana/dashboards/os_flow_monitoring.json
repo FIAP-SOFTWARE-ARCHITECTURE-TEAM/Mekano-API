@@ -4,24 +4,24 @@
     "metadata": {
         "name": "adt8n6q",
         "namespace": "default",
-        "uid": "f2377c89-e046-4f08-92fc-ade530073e7d",
-        "resourceVersion": "1789516540681994",
-        "generation": 22,
-        "creationTimestamp": "2026-09-15T21:26:15Z",
+        "uid": "b1c31444-9117-4bf2-8bf4-d56dc7f8724a",
+        "resourceVersion": "1789769094530998",
+        "generation": 6,
+        "creationTimestamp": "2026-09-18T18:46:47Z",
         "labels": {
-            "grafana.app/deprecatedInternalID": "1295665485672448"
+            "grafana.app/deprecatedInternalID": "2342698143854592"
         },
         "annotations": {
             "grafana.app/createdBy": "access-policy:service",
             "grafana.app/managedBy": "classic-file-provisioning",
             "grafana.app/managerAllowsEdits": "true",
             "grafana.app/managerId": "Mekano Dashboards",
-            "grafana.app/saved-from-ui": "Grafana v13.2.1 (56cd3e9288)",
-            "grafana.app/sourceChecksum": "fdae98379de28e72f176882ca35a0498",
+            "grafana.app/saved-from-ui": "Grafana v13.2.2 (1bea008f7e)",
+            "grafana.app/sourceChecksum": "e6b9cdf7245ed7e2cb9bfcabcfac2e81",
             "grafana.app/sourcePath": "/var/lib/grafana/dashboards/os_flow_monitoring.json",
-            "grafana.app/sourceTimestamp": "1789507541000",
-            "grafana.app/updatedBy": "user:bfyd6befnvuo0d",
-            "grafana.app/updatedTimestamp": "2026-09-15T23:55:40Z"
+            "grafana.app/sourceTimestamp": "1789516659000",
+            "grafana.app/updatedBy": "user:ffynhgrb90bnke",
+            "grafana.app/updatedTimestamp": "2026-09-18T22:04:54Z"
         }
     },
     "spec": {
@@ -89,7 +89,7 @@
                     "vizConfig": {
                         "kind": "VizConfig",
                         "group": "timeseries",
-                        "version": "13.2.1",
+                        "version": "13.2.2",
                         "spec": {
                             "options": {
                                 "legend": {
@@ -210,7 +210,7 @@
                     "vizConfig": {
                         "kind": "VizConfig",
                         "group": "stat",
-                        "version": "13.2.1",
+                        "version": "13.2.2",
                         "spec": {
                             "options": {
                                 "colorMode": "value",
@@ -298,7 +298,7 @@
                     "vizConfig": {
                         "kind": "VizConfig",
                         "group": "bargauge",
-                        "version": "13.2.1",
+                        "version": "13.2.2",
                         "spec": {
                             "options": {
                                 "displayMode": "basic",
@@ -397,7 +397,7 @@
                     "vizConfig": {
                         "kind": "VizConfig",
                         "group": "bargauge",
-                        "version": "13.2.1",
+                        "version": "13.2.2",
                         "spec": {
                             "options": {
                                 "displayMode": "basic",
@@ -524,7 +524,7 @@
                     "vizConfig": {
                         "kind": "VizConfig",
                         "group": "gauge",
-                        "version": "13.2.1",
+                        "version": "13.2.2",
                         "spec": {
                             "options": {
                                 "barShape": "rounded",
@@ -616,7 +616,7 @@
                     "vizConfig": {
                         "kind": "VizConfig",
                         "group": "barchart",
-                        "version": "13.2.1",
+                        "version": "13.2.2",
                         "spec": {
                             "options": {
                                 "barRadius": 0,
@@ -727,7 +727,7 @@
                     "vizConfig": {
                         "kind": "VizConfig",
                         "group": "timeseries",
-                        "version": "13.2.1",
+                        "version": "13.2.2",
                         "spec": {
                             "options": {
                                 "legend": {
@@ -870,7 +870,7 @@
                     "vizConfig": {
                         "kind": "VizConfig",
                         "group": "stat",
-                        "version": "13.2.1",
+                        "version": "13.2.2",
                         "spec": {
                             "options": {
                                 "colorMode": "value",
@@ -1016,7 +1016,7 @@
                     "vizConfig": {
                         "kind": "VizConfig",
                         "group": "piechart",
-                        "version": "13.2.1",
+                        "version": "13.2.2",
                         "spec": {
                             "options": {
                                 "displayLabels": [
@@ -1033,9 +1033,7 @@
                                 },
                                 "pieType": "pie",
                                 "reduceOptions": {
-                                    "calcs": [
-                                        "sum"
-                                    ],
+                                    "calcs": [],
                                     "fields": "",
                                     "values": false
                                 },
@@ -1183,7 +1181,7 @@
                     "vizConfig": {
                         "kind": "VizConfig",
                         "group": "gauge",
-                        "version": "13.2.1",
+                        "version": "13.2.2",
                         "spec": {
                             "options": {
                                 "barShape": "rounded",
@@ -1290,14 +1288,14 @@
                             ],
                             "transformations": [],
                             "queryOptions": {
-                                "timeFrom": "7d"
+                                "timeFrom": "now/d"
                             }
                         }
                     },
                     "vizConfig": {
                         "kind": "VizConfig",
                         "group": "bargauge",
-                        "version": "13.2.1",
+                        "version": "13.2.2",
                         "spec": {
                             "options": {
                                 "displayMode": "gradient",
@@ -1385,7 +1383,7 @@
                     "vizConfig": {
                         "kind": "VizConfig",
                         "group": "timeseries",
-                        "version": "13.2.1",
+                        "version": "13.2.2",
                         "spec": {
                             "options": {
                                 "legend": {
@@ -1506,7 +1504,7 @@
                     "vizConfig": {
                         "kind": "VizConfig",
                         "group": "gauge",
-                        "version": "13.2.1",
+                        "version": "13.2.2",
                         "spec": {
                             "options": {
                                 "barShape": "rounded",

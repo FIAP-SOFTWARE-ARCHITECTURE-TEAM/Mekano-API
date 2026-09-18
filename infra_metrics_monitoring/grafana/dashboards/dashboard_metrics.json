@@ -4,24 +4,24 @@
   "metadata": {
     "name": "adh9rj5",
     "namespace": "default",
-    "uid": "2c1b712e-ebf5-442e-9ec0-6956acf6ccf7",
-    "resourceVersion": "1789518875580011",
-    "generation": 10,
-    "creationTimestamp": "2026-09-15T21:26:15Z",
+    "uid": "45a95f74-cae0-436a-8564-3aa32d6af6ad",
+    "resourceVersion": "1789757558910003",
+    "generation": 3,
+    "creationTimestamp": "2026-09-18T18:46:47Z",
     "labels": {
-      "grafana.app/deprecatedInternalID": "1295665183682560"
+      "grafana.app/deprecatedInternalID": "2342697665703936"
     },
     "annotations": {
       "grafana.app/createdBy": "access-policy:service",
       "grafana.app/managedBy": "classic-file-provisioning",
       "grafana.app/managerAllowsEdits": "true",
       "grafana.app/managerId": "Mekano Dashboards",
-      "grafana.app/saved-from-ui": "Grafana v13.2.1 (56cd3e9288)",
-      "grafana.app/sourceChecksum": "472a659b4a27171042b6ede376a718a5",
+      "grafana.app/saved-from-ui": "Grafana v13.2.2 (1bea008f7e)",
+      "grafana.app/sourceChecksum": "26be4fb86aa5b0f6483810620e4982f4",
       "grafana.app/sourcePath": "/var/lib/grafana/dashboards/dashboard_metrics.json",
-      "grafana.app/sourceTimestamp": "1789410819000",
-      "grafana.app/updatedBy": "user:bfyd6befnvuo0d",
-      "grafana.app/updatedTimestamp": "2026-09-16T00:34:35Z"
+      "grafana.app/sourceTimestamp": "1789518890000",
+      "grafana.app/updatedBy": "user:ffynhgrb90bnke",
+      "grafana.app/updatedTimestamp": "2026-09-18T18:52:38Z"
     }
   },
   "spec": {
@@ -89,7 +89,7 @@
           "vizConfig": {
             "kind": "VizConfig",
             "group": "timeseries",
-            "version": "13.2.1",
+            "version": "13.2.2",
             "spec": {
               "options": {
                 "legend": {
@@ -204,14 +204,14 @@
               ],
               "transformations": [],
               "queryOptions": {
-                "timeFrom": "3d"
+                "timeFrom": "now/d"
               }
             }
           },
           "vizConfig": {
             "kind": "VizConfig",
             "group": "stat",
-            "version": "13.2.1",
+            "version": "13.2.2",
             "spec": {
               "options": {
                 "colorMode": "value",
@@ -297,7 +297,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "changes(up[$__range])",
+                        "expr": "floor(changes(up[$__range]) / 2)",
                         "legendFormat": "__auto",
                         "range": true
                       }
@@ -309,14 +309,14 @@
               ],
               "transformations": [],
               "queryOptions": {
-                "timeFrom": "3d"
+                "timeFrom": "now/d"
               }
             }
           },
           "vizConfig": {
             "kind": "VizConfig",
             "group": "gauge",
-            "version": "13.2.1",
+            "version": "13.2.2",
             "spec": {
               "options": {
                 "barShape": "rounded",
@@ -412,7 +412,7 @@
           "vizConfig": {
             "kind": "VizConfig",
             "group": "stat",
-            "version": "13.2.1",
+            "version": "13.2.2",
             "spec": {
               "options": {
                 "colorMode": "value",
@@ -541,7 +541,7 @@
           "vizConfig": {
             "kind": "VizConfig",
             "group": "stat",
-            "version": "13.2.1",
+            "version": "13.2.2",
             "spec": {
               "options": {
                 "colorMode": "value",
@@ -749,7 +749,7 @@
           "vizConfig": {
             "kind": "VizConfig",
             "group": "stat",
-            "version": "13.2.1",
+            "version": "13.2.2",
             "spec": {
               "options": {
                 "colorMode": "background_solid",
@@ -928,7 +928,7 @@
           "vizConfig": {
             "kind": "VizConfig",
             "group": "gauge",
-            "version": "13.2.1",
+            "version": "13.2.2",
             "spec": {
               "options": {
                 "barShape": "rounded",
@@ -1072,7 +1072,7 @@
           "vizConfig": {
             "kind": "VizConfig",
             "group": "barchart",
-            "version": "13.2.1",
+            "version": "13.2.2",
             "spec": {
               "options": {
                 "barRadius": 0.05,
@@ -1206,7 +1206,7 @@
           "vizConfig": {
             "kind": "VizConfig",
             "group": "stat",
-            "version": "13.2.1",
+            "version": "13.2.2",
             "spec": {
               "options": {
                 "colorMode": "none",

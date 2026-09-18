@@ -22,22 +22,63 @@ public class ApiExceptionMapper implements ExceptionMapper<Exception> {
 
     @Override
     public Response toResponse(Exception exception) {
-        if (exception instanceof AppException ex) {
-            return build(ex.getStatus(), ex.getMessage());
-        }
-        if (exception instanceof WebApplicationException ex) {
-            int status = ex.getResponse() != null ? ex.getResponse().getStatus() : 500;
-            String detail = ex.getMessage();
-            if (detail == null || detail.isBlank()) {
-                detail = ex.getResponse() != null && ex.getResponse().getStatusInfo() != null
-                        ? ex.getResponse().getStatusInfo().getReasonPhrase()
-                        : "Erro interno do servidor";
-            }
-            return build(status, detail);
+        // 1. Extrai o primeiro frame relevante da exceção
+        StackTraceElement sourceElement = extractSourceElement(exception);
+
+        // 2. Adiciona o contexto da classe/domínio no MDC do log
+        if (sourceElement != null) {
+            org.jboss.logging.MDC.put("targetClass", sourceElement.getClassName());
+            org.jboss.logging.MDC.put("targetMethod", sourceElement.getMethodName());
+            // Extrai a simples string da classe (ex: NfEntradaResource) para fácil
+            // identificação
+            String simpleName = sourceElement.getClassName()
+                    .substring(sourceElement.getClassName().lastIndexOf('.') + 1);
+            org.jboss.logging.MDC.put("domainClass", simpleName);
         }
 
-        Log.errorf(exception, "Unhandled exception: %s", exception.getMessage());
-        return build(500, "Erro interno do servidor");
+        if (uriInfo != null) {
+            org.jboss.logging.MDC.put("path", uriInfo.getPath());
+        }
+
+        try {
+            if (exception instanceof AppException ex) {
+                return build(ex.getStatus(), ex.getMessage());
+            }
+            if (exception instanceof WebApplicationException ex) {
+                int status = ex.getResponse() != null ? ex.getResponse().getStatus() : 500;
+                String detail = ex.getMessage();
+                if (detail == null || detail.isBlank()) {
+                    detail = ex.getResponse() != null && ex.getResponse().getStatusInfo() != null
+                            ? ex.getResponse().getStatusInfo().getReasonPhrase()
+                            : "Erro interno do servidor";
+                }
+                return build(status, detail);
+            }
+
+            Log.errorf(exception, "Unhandled exception: %s", exception.getMessage());
+            return build(500, "Erro interno do servidor");
+
+        } finally {
+            // 3. Limpa o MDC para não poluir outras requisições da mesma thread
+            org.jboss.logging.MDC.remove("targetClass");
+            org.jboss.logging.MDC.remove("targetMethod");
+            org.jboss.logging.MDC.remove("domainClass");
+            org.jboss.logging.MDC.remove("path");
+        }
+    }
+
+    private StackTraceElement extractSourceElement(Throwable throwable) {
+        if (throwable == null || throwable.getStackTrace() == null)
+            return null;
+        for (StackTraceElement element : throwable.getStackTrace()) {
+            // Filtra pacotes do seu projeto eliminando bibliotecas externas e o próprio
+            // mapper
+            if (element.getClassName().startsWith("com.fiap.mekano")
+                    && !element.getClassName().equals(this.getClass().getName())) {
+                return element;
+            }
+        }
+        return throwable.getStackTrace().length > 0 ? throwable.getStackTrace()[0] : null;
     }
 
     private Response build(int status, String detail) {

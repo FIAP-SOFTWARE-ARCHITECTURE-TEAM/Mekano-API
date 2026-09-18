@@ -155,11 +155,19 @@ services:
     container_name: mekano-grafana
     ports:
       - "3000:3000"
+    environment:
+      - GF_SMTP_ENABLED=${GF_SMTP_ENABLED:-true}
+      - GF_SMTP_HOST=${GF_SMTP_HOST:-smtp.gmail.com:587}
+      - GF_SMTP_USER=${GF_SMTP_USER}
+      - GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD}
+      - GF_SMTP_FROM_ADDRESS=${GF_SMTP_FROM_ADDRESS}
+      - GF_SMTP_FROM_NAME=${GF_SMTP_FROM_NAME:-Alertas do Grafana}
 
     volumes:
       - ./infra_metrics_monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
       - ./infra_metrics_monitoring/grafana/provisioning/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
       - ./infra_metrics_monitoring/grafana/provisioning/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
+      - ./infra_metrics_monitoring/grafana/provisioning/alerting.yml:/etc/grafana/provisioning/alerting/alerting.yml:ro
     networks:
       - mekano-net
 
