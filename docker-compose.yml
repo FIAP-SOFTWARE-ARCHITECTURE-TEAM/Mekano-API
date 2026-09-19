@@ -167,7 +167,8 @@ services:
       - ./infra_metrics_monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
       - ./infra_metrics_monitoring/grafana/provisioning/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
       - ./infra_metrics_monitoring/grafana/provisioning/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
-      - ./infra_metrics_monitoring/grafana/provisioning/alerting.yml:/etc/grafana/provisioning/alerting/alerting.yml:ro
+      - ./infra_metrics_monitoring/grafana/provisioning/alerts/alerting.yml:/etc/grafana/provisioning/alerting/alerting.yml:ro
+      - ./infra_metrics_monitoring/grafana/provisioning/alerts/contact-points.yml:/etc/grafana/provisioning/alerting/contact-points.yml:ro
     networks:
       - mekano-net
 
