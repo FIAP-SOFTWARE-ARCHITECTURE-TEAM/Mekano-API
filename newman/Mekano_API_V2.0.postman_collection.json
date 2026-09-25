@@ -5051,15 +5051,15 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": ""
+      "value": "http://localhost:8080/api/v1"
     },
     {
       "key": "adminEmail",
-      "value": ""
+      "value": "admin@mekano.com.br"
     },
     {
       "key": "adminPassword",
-      "value": ""
+      "value": "Mekano@2024"
     },
     {
       "key": "wrongPassword",
