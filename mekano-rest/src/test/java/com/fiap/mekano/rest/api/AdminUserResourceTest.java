@@ -5,7 +5,7 @@ import com.fiap.mekano.domain.port.in.AdminCreatedUser;
 import com.fiap.mekano.domain.port.in.AdminUserServicePort;
 import com.fiap.mekano.domain.port.in.AdminUserSummary;
 import com.fiap.mekano.domain.port.in.CreateAdminUserCommand;
-import com.fiap.mekano.shared.exception.AppException;
+import com.fiap.mekano.domain.exception.AppException;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;

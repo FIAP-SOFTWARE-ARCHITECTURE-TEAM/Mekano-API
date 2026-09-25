@@ -60,6 +60,7 @@ For detailed per-module conventions, read these instead of old CLAUDE.md:
 | `@Transactional` | In use case (NOT in resource, NOT in repository) |
 | Soft delete | `isActive` + `deletedAt` |  |  |
 | Audit auto-fill | `createdBy`/`updatedBy` filled by `AuditoriaListener` (`@EntityListeners` in `BaseEntity`); user → subject JWT, anônimo → `PUBLICO`, sem request → `SISTEMA` |
+| Logging | `io.quarkus.logging.Log` estático (nunca SLF4J `LoggerFactory` nos services). INFO=fluxo normal, WARN=erro de cliente/negócio (4xx, incl. transições 422), ERROR=falha de sistema (centralizado no `ApiExceptionMapper`) |
 
 ### What is FALSE (Old CLAUDE.md was WRONG)
 | Old Doc Claim | Reality |
@@ -74,6 +75,19 @@ For detailed per-module conventions, read these instead of old CLAUDE.md:
 | `JwtTestProfile` | DOES NOT EXIST |
 | 10 deprecated `*ExceptionMapper` files | DO NOT EXIST |
 | `publicKey.pem` in rest resources | NOT FOUND |
+
+## Logging Conventions (VERIFIED)
+Logs estruturados para Alloy/Loki via `io.quarkus.logging.Log` estático (D-12/D-19). Aplicado nos Services do mekano-application (OrdemDeServico, RequisicaoCompra, WhatsAppOrcamentoResposta, NfEntrada, Orcamento).
+
+| Regra | Detalhe |
+|-------|---------|
+| Níveis | INFO=fluxo normal (entrada/saída de operações de escrita), WARN=erro de cliente/negócio (4xx, incl. transições 422), ERROR=falha de sistema — **só** no `ApiExceptionMapper` (fallback) |
+| API | Usar `Log.info`/`Log.warn` sem args; com parâmetros **sempre** `Log.infof`/`Log.warnf` com placeholders `%s` (NÃO existe `info(String, Object...)` e NÃO usar `{}`) |
+| Formato | PT-BR, `chave=valor` separado por vírgula (ex.: `osId=`, `orcamentoUuid=`, `requisicaoId=`) — nunca logar PII (telefone, CPF, chaveAcesso completa) |
+| Transições 422 | Helper `executarTransicao(...)`/`executarTransicaoComResultado(...)` faz try/catch de `DomainException` → `Log.warnf` → rethrow |
+| Onde logar | Só na camada application (Services) — NUNCA em resources (JWT loga no mapper), repositories, mappers, listeners |
+| Onde NÃO logar | Métodos de leitura pura (`findAll`, `countAll`) não emitem log |
+| Import | `io.quarkus.logging.Log` (nunca SLF4J `LoggerFactory` nos services — WhatsAppOrcamentoResposta foi migrado para Log) |
 
 ## Key Inconsistencies (Tech Debt — Avoid Repeating)
 1. **Naming**: ~~`PecaRepositoryPort`/`NfEntradaRepositoryPort`/`RequisicaoCompraRepositoryPort` use PT-BR~~ **RESOLVED**: all 3 ports now use EN (`save`, `findById`) — remaining PT-BR names (`buscarPorDescricao`, `buscarPorChaveAcesso`, `remover`, `reativar`, `atualizar`, `listarAbaixoEstoqueMinimo`, `debitarSaldo`, `creditarSaldo`, `reservarSaldo`, `debitarSaldoReservado`, `liberarReserva`) are intentional (business operations or deferred)
@@ -105,6 +119,7 @@ For detailed per-module conventions, read these instead of old CLAUDE.md:
 - D-16: Audit fields exclusivos de infrastructure — `AuditoriaListener` (`@EntityListeners` em `BaseEntity`) preenche `createdBy` no `@PrePersist` e `updatedBy` no `@PreUpdate`; resolve via `SecurityIdentity` (subject JWT) com fallbacks `PUBLICO`/`SISTEMA`; sem backfill
 - D-17: OS ↔ Peça/Serviço é many-to-many via tabela pivô `os_itens` (não FK columns na OS). Itens adicionados na criação (atendente) e no `finalizarDiagnostico` (mecânico). Orçamento gerado automaticamente a partir de TODOS os itens da tabela pivô.
 - D-18: Requisição de Compra `criar()` valida existência da Peça via `PecaRepositoryPort.findById()` (AppException 404). `cancelar()` bloqueia quando `motivo=ORDEM_SERVICO` (AppException 409) — a requisição faz parte do fluxo de execução da OS e não pode ser cancelada livremente.
+- D-19: Logging estruturado nos 5 Services de negócio (OrdemDeServico, RequisicaoCompra, WhatsAppOrcamentoResposta, NfEntrada, Orcamento) via `io.quarkus.logging.Log` estático. INFO=fluxo normal, WARN=erro de cliente/negócio (4xx, incl. transições 422 via try/catch + rethrow), ERROR=falha de sistema centralizado no `ApiExceptionMapper` (Services nunca logam ERROR). Sem PII; apenas `chave=valor` + UUIDs.
 
 ## Commands (VERIFIED)
 ```bash

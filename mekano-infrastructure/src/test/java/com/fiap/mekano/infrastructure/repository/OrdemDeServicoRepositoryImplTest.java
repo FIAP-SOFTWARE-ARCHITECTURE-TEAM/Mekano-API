@@ -282,9 +282,9 @@ class OrdemDeServicoRepositoryImplTest {
                 UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
                 "Problema", StatusOS.AGUARDANDO_APROVACAO, null,
                 orcamentoUuid, null, null, null, null, null,
-                StatusPagamento.NAO_COBRADO, null, null, null, null,
+                StatusPagamento.NAO_COBRADO, null, null, null,
                 StatusEntrega.NAO_LIBERADA, null, null, null, null, null,
-                LocalDateTime.now(), 0L);
+                null, null, null, LocalDateTime.now(), 0L);
         var saved = repository.save(os);
 
         var resultado = repository.findOrcamentoUuidByOsId(saved.getId());
@@ -365,8 +365,8 @@ class OrdemDeServicoRepositoryImplTest {
                 UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
                 descricao, status, null,
                 null, null, null, null, null, null,
-                StatusPagamento.NAO_COBRADO, null, null, null, null,
+                StatusPagamento.NAO_COBRADO, null, null, null,
                 StatusEntrega.NAO_LIBERADA, null, null, null, null, null,
-                createdAt, 0L);
+                null, null, null, createdAt, 0L);
     }
 }

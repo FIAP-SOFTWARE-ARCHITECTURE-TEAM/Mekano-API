@@ -56,6 +56,13 @@ services:
     restart: unless-stopped
     ports:
       - "8080:8080"
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
     environment:
       QUARKUS_PROFILE: prod
       DB_URL: jdbc:postgresql://postgres:5432/mekano
@@ -122,6 +129,66 @@ services:
     networks:
       - mekano-net
 
+  prometheus:
+    image: prom/prometheus:v3.13.3
+    container_name: mekano-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra_metrics_monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - mekano-net
+
+  loki:
+    image: grafana/loki:3.5.0
+    container_name: mekano-loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki_data:/loki
+    networks:
+      - mekano-net
+
+  grafana:
+    image: grafana/grafana:13.2.2
+    container_name: mekano-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SMTP_ENABLED=${GF_SMTP_ENABLED:-true}
+      - GF_SMTP_HOST=${GF_SMTP_HOST:-smtp.gmail.com:587}
+      - GF_SMTP_USER=${GF_SMTP_USER}
+      - GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD}
+      - GF_SMTP_FROM_ADDRESS=${GF_SMTP_FROM_ADDRESS}
+      - GF_SMTP_FROM_NAME=${GF_SMTP_FROM_NAME:-Alertas do Grafana}
+
+    volumes:
+      - ./infra_metrics_monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./infra_metrics_monitoring/grafana/provisioning/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+      - ./infra_metrics_monitoring/grafana/provisioning/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
+      - ./infra_metrics_monitoring/grafana/provisioning/alerts/alerting.yml:/etc/grafana/provisioning/alerting/alerting.yml:ro
+      - ./infra_metrics_monitoring/grafana/provisioning/alerts/contact-points.yml:/etc/grafana/provisioning/alerting/contact-points.yml:ro
+    networks:
+      - mekano-net
+
+  alloy:
+    image: grafana/alloy:v1.19.2
+    container_name: mekano-alloy
+    ports:
+      - "12345:12345"
+    volumes:
+      - ./infra_metrics_monitoring/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --server.http.listen-addr=0.0.0.0:12345
+    depends_on:
+      - loki
+    networks:
+      - mekano-net
+
 networks:
   mekano-net:
     driver: bridge
@@ -130,4 +197,8 @@ volumes:
   postgres_data:
     driver: local
   mekano_secrets:
+    driver: local
+  prometheus_data:
+    driver: local
+  loki_data:
     driver: local

@@ -3,6 +3,7 @@ package com.fiap.mekano.application.service.orcamento;
 import com.fiap.mekano.application.service.os.OsAuditEventPublisher;
 import com.fiap.mekano.domain.event.OrcamentoAprovadoEvent;
 import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.exception.DomainException;
 import com.fiap.mekano.domain.valueobject.ItemOrcamento;
 import com.fiap.mekano.domain.model.Orcamento;
 import com.fiap.mekano.domain.model.OrdemDeServico;
@@ -12,6 +13,7 @@ import com.fiap.mekano.domain.os.OsAuditAction;
 import com.fiap.mekano.domain.port.in.AprovarOrcamentoCommand;
 import com.fiap.mekano.domain.port.in.ReprovarOrcamentoCommand;
 import com.fiap.mekano.domain.port.out.EventPublisher;
+import com.fiap.mekano.domain.port.out.OSMetricsPort;
 import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
 import org.junit.jupiter.api.DisplayName;
@@ -47,6 +49,9 @@ class OrcamentoServiceTest {
 
     @Mock
     OsAuditEventPublisher osAuditEventPublisher;
+
+    @Mock
+    OSMetricsPort osMetrics;
 
     @InjectMocks
     OrcamentoService orcamentoService;
@@ -132,9 +137,8 @@ class OrcamentoServiceTest {
 
         when(orcamentoRepository.findByUuid(orcamento.getId())).thenReturn(Optional.of(orcamento));
 
-        var ex = assertThrows(AppException.class,
+        var ex = assertThrows(DomainException.class,
                 () -> orcamentoService.aprovar(new AprovarOrcamentoCommand(orcamento.getId())));
-        assertEquals(422, ex.getStatus());
     }
 
     @Test
@@ -169,9 +173,8 @@ class OrcamentoServiceTest {
 
         when(orcamentoRepository.findByUuid(orcamento.getId())).thenReturn(Optional.of(orcamento));
 
-        var ex = assertThrows(AppException.class,
+        var ex = assertThrows(DomainException.class,
                 () -> orcamentoService.reprovar(new ReprovarOrcamentoCommand(orcamento.getId(), "motivo")));
-        assertEquals(422, ex.getStatus());
     }
 
     @Test

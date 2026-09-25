@@ -4,7 +4,9 @@ import com.fiap.mekano.domain.event.CobrancaGeradaEvent;
 import com.fiap.mekano.domain.event.EntregaConfirmadaEvent;
 import com.fiap.mekano.domain.event.PagamentoConfirmadoEvent;
 import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.exception.DomainException;
 import com.fiap.mekano.domain.exception.Messages;
+import com.fiap.mekano.domain.exception.TransicaoInvalidaException;
 import com.fiap.mekano.domain.os.StatusEntrega;
 import com.fiap.mekano.domain.os.StatusPagamento;
 import lombok.AccessLevel;
@@ -54,7 +56,6 @@ public class OrdemDeServico {
     private StatusPagamento statusPagamento;
     private StatusEntrega statusEntrega;
     private BigDecimal valorCobrado;
-    private LocalDateTime dataPagamento;
     private LocalDateTime dataEntrega;
     private String observacaoEntrega;
     private LocalDateTime cobrancaGeradaEm;
@@ -62,6 +63,9 @@ public class OrdemDeServico {
     private String referenciaPagamento;
     private LocalDateTime entregueEm;
     private String recebidoPor;
+    private LocalDateTime dataInicioDiagnostico;
+    private LocalDateTime dataFimDiagnostico;
+    private LocalDateTime dataCancelamento;
     private final LocalDateTime createdAt;
     private final Long version;
 
@@ -135,7 +139,6 @@ public class OrdemDeServico {
                                               LocalDateTime dataAprovacao,
                                               StatusPagamento statusPagamento,
                                               BigDecimal valorCobrado,
-                                              LocalDateTime dataPagamento,
                                               LocalDateTime dataEntrega,
                                               String observacaoEntrega,
                                               StatusEntrega statusEntrega,
@@ -144,6 +147,9 @@ public class OrdemDeServico {
                                               String referenciaPagamento,
                                               LocalDateTime entregueEm,
                                               String recebidoPor,
+                                              LocalDateTime dataInicioDiagnostico,
+                                              LocalDateTime dataFimDiagnostico,
+                                              LocalDateTime dataCancelamento,
                                               LocalDateTime createdAt, Long version) {
         return OrdemDeServico.builder()
                 .id(id)
@@ -160,7 +166,6 @@ public class OrdemDeServico {
                 .dataAprovacao(dataAprovacao)
                 .statusPagamento(statusPagamento == null ? StatusPagamento.NAO_COBRADO : statusPagamento)
                 .valorCobrado(valorCobrado)
-                .dataPagamento(dataPagamento)
                 .dataEntrega(dataEntrega)
                 .observacaoEntrega(observacaoEntrega)
                 .statusEntrega(statusEntrega == null ? StatusEntrega.NAO_LIBERADA : statusEntrega)
@@ -169,6 +174,9 @@ public class OrdemDeServico {
                 .referenciaPagamento(referenciaPagamento)
                 .entregueEm(entregueEm)
                 .recebidoPor(recebidoPor)
+                .dataInicioDiagnostico(dataInicioDiagnostico)
+                .dataFimDiagnostico(dataFimDiagnostico)
+                .dataCancelamento(dataCancelamento)
                 .createdAt(createdAt)
                 .version(version)
                 .build();
@@ -181,7 +189,7 @@ public class OrdemDeServico {
      */
     public void atualizar(UUID clienteId, UUID veiculoId, String descricaoProblema) {
         if (status != StatusOS.RECEBIDA) {
-            throw new AppException(422, Messages.get("os.transicao.invalida", status, "ATUALIZAR"));
+            throw new DomainException(Messages.get("os.transicao.invalida", status, "ATUALIZAR"));
         }
         if (clienteId == null) {
             throw new AppException(400, Messages.get("os.cliente.required"));
@@ -205,6 +213,7 @@ public class OrdemDeServico {
      */
     public void iniciarDiagnostico() {
         transicionar(StatusOS.EM_DIAGNOSTICO);
+        this.dataInicioDiagnostico = LocalDateTime.now();
     }
 
     /**
@@ -212,6 +221,7 @@ public class OrdemDeServico {
      */
     public void finalizarDiagnostico() {
         transicionar(StatusOS.AGUARDANDO_APROVACAO);
+        this.dataFimDiagnostico = LocalDateTime.now();
     }
 
     /**
@@ -250,6 +260,7 @@ public class OrdemDeServico {
 
         transicionar(StatusOS.CANCELADA);
         this.motivoCancelamento = motivo.strip();
+        this.dataCancelamento = LocalDateTime.now();
         cancelarPagamentoEEntrega();
     }
 
@@ -263,6 +274,7 @@ public class OrdemDeServico {
 
         transicionar(StatusOS.CANCELADA);
         this.motivoCancelamento = motivo.strip();
+        this.dataCancelamento = LocalDateTime.now();
         cancelarPagamentoEEntrega();
     }
 
@@ -272,6 +284,7 @@ public class OrdemDeServico {
     public void cancelarPorSLA() {
         transicionar(StatusOS.CANCELADA);
         this.motivoCancelamento = "SLA expirado";
+        this.dataCancelamento = LocalDateTime.now();
         cancelarPagamentoEEntrega();
     }
 
@@ -312,11 +325,11 @@ public class OrdemDeServico {
      */
     public CobrancaGeradaEvent gerarCobranca() {
         if (status != StatusOS.FINALIZADA) {
-            throw new AppException(422, Messages.get("os.cobranca.status.invalido", status));
+            throw new DomainException(Messages.get("os.cobranca.status.invalido", status));
         }
 
         if (!statusPagamento.podeTransicionarPara(StatusPagamento.AGUARDANDO_PAGAMENTO)) {
-            throw new AppException(422, Messages.get("os.cobranca.ja.gerada", statusPagamento));
+            throw new DomainException(Messages.get("os.cobranca.ja.gerada", statusPagamento));
         }
 
         this.statusPagamento = StatusPagamento.AGUARDANDO_PAGAMENTO;
@@ -351,7 +364,7 @@ public class OrdemDeServico {
         }
 
         if (!statusPagamento.podeTransicionarPara(StatusPagamento.CONFIRMADO)) {
-            throw new AppException(422, Messages.get("os.pagamento.status.invalido", statusPagamento));
+            throw new DomainException(Messages.get("os.pagamento.status.invalido", statusPagamento));
         }
 
         this.statusPagamento = StatusPagamento.CONFIRMADO;
@@ -373,16 +386,16 @@ public class OrdemDeServico {
         }
 
         if (status != StatusOS.FINALIZADA && status != StatusOS.CANCELADA) {
-            throw new AppException(422, Messages.get("os.transicao.invalida", status, StatusOS.ENTREGUE));
+            throw new TransicaoInvalidaException(status, StatusOS.ENTREGUE);
         }
 
         if (status == StatusOS.FINALIZADA) {
             if (statusPagamento != StatusPagamento.CONFIRMADO) {
-                throw new AppException(422, Messages.get("os.entrega.pagamento.pendente", statusPagamento));
+                throw new DomainException(Messages.get("os.entrega.pagamento.pendente", statusPagamento));
             }
 
             if (!statusEntrega.podeTransicionarPara(StatusEntrega.ENTREGUE)) {
-                throw new AppException(422, Messages.get("os.entrega.status.invalido", statusEntrega));
+                throw new DomainException(Messages.get("os.entrega.status.invalido", statusEntrega));
             }
         } else {
             this.statusEntrega = StatusEntrega.LIBERADA_PARA_ENTREGA;
@@ -400,7 +413,7 @@ public class OrdemDeServico {
 
     private void transicionar(StatusOS destino) {
         if (!status.podeTransicionarPara(destino)) {
-            throw new AppException(422, Messages.get("os.transicao.invalida", status, destino));
+            throw new TransicaoInvalidaException(status, destino);
         }
 
         this.status = destino;

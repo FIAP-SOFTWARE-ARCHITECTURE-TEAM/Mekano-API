@@ -52,13 +52,15 @@ class OrdemDeServicoEntityMapperImplTest {
                 null,
                 null,
                 null,
-                null,
                 StatusEntrega.ENTREGUE,
                 cobrancaGeradaEm,
                 pagamentoConfirmadoEm,
                 "PIX-123",
                 entregueEm,
                 "João Cliente",
+                null,
+                null,
+                null,
                 createdAt,
                 7L
         );

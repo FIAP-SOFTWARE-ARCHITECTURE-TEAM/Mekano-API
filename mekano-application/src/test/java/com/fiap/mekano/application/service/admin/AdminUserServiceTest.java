@@ -6,7 +6,7 @@ import com.fiap.mekano.domain.port.in.CreateAdminUserCommand;
 import com.fiap.mekano.domain.port.out.PasswordHasherPort;
 import com.fiap.mekano.domain.port.out.UserRepositoryPort;
 import com.fiap.mekano.domain.port.out.UserRoleRepositoryPort;
-import com.fiap.mekano.shared.exception.AppException;
+import com.fiap.mekano.domain.exception.AppException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

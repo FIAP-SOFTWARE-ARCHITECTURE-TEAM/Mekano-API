@@ -1,6 +1,7 @@
 package com.fiap.mekano.domain.model;
 
 import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.exception.DomainException;
 import com.fiap.mekano.domain.valueobject.ItemOrcamento;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -86,7 +87,7 @@ class OrcamentoTest {
         orcamento.reprovar();
 
         assertThatThrownBy(orcamento::aprovar)
-                .isInstanceOf(AppException.class)
+                .isInstanceOf(DomainException.class)
                 .hasMessageContaining("aprovar");
     }
 
@@ -109,7 +110,7 @@ class OrcamentoTest {
         orcamento.aprovar();
 
         assertThatThrownBy(orcamento::reprovar)
-                .isInstanceOf(AppException.class)
+                .isInstanceOf(DomainException.class)
                 .hasMessageContaining("reprovar");
     }
 
@@ -132,7 +133,7 @@ class OrcamentoTest {
         orcamento.aprovar();
 
         assertThatThrownBy(orcamento::expirar)
-                .isInstanceOf(AppException.class)
+                .isInstanceOf(DomainException.class)
                 .hasMessageContaining("expirar");
     }
 

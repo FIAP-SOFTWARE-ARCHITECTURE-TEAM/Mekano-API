@@ -1,0 +1,12 @@
+apiVersion: 1
+
+providers:
+  - name: 'Mekano Dashboards'
+    orgId: 1
+    folder: 'MEKANO API'
+    type: file
+    disableDeletion: true
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
