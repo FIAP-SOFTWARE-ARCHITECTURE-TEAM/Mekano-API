@@ -1,7 +1,7 @@
 package com.fiap.mekano.rest.api;
 
-import com.fiap.mekano.application.service.peca.PecaService;
-import com.fiap.mekano.application.service.requisicao.RequisicaoCompraService;
+import com.fiap.mekano.domain.port.in.PecaServicePort;
+import com.fiap.mekano.domain.port.in.RequisicaoCompraServicePort;
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.model.ItemRequisicaoCompra;
 import com.fiap.mekano.rest.api.dto.CreateRequisicaoCompraRequest;
@@ -45,10 +45,10 @@ import java.util.UUID;
 public class RequisicaoCompraResource {
 
         @Inject
-        RequisicaoCompraService requisicaoService;
+        RequisicaoCompraServicePort requisicaoService;
 
         @Inject
-        PecaService pecaService;
+        PecaServicePort pecaService;
 
         @Inject
         RequisicaoCompraDtoMapper requisicaoDtoMapper;
@@ -61,13 +61,9 @@ public class RequisicaoCompraResource {
         @APIResponse(responseCode = "400", description = "Dados de entrada inválidos", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = ProblemDetail.class)))
         public Response create(@Valid CreateRequisicaoCompraRequest request, @Context UriInfo uriInfo) {
                 var command = requisicaoDtoMapper.toCreateCommand(request);
-                var result = requisicaoService.criar(command);
-                URI location = uriInfo.getAbsolutePathBuilder().path(result.id().toString()).build();
-                var itensResponse = buildItensResponse(result.itens());
-                var response = new RequisicaoCompraResponse(
-                                result.id(), itensResponse,
-                                result.status(), result.motivo(), result.createdAt());
-                return Response.created(location).entity(response).build();
+                var requisicao = requisicaoService.criar(command);
+                URI location = uriInfo.getAbsolutePathBuilder().path(requisicao.getId().toString()).build();
+                return Response.created(location).entity(toResponse(requisicao)).build();
         }
 
         @GET
@@ -152,16 +148,6 @@ public class RequisicaoCompraResource {
                                 requisicao.getId(), itensResponse,
                                 requisicao.getStatus().name(), requisicao.getMotivo().name(),
                                 requisicao.getCreatedAt());
-        }
-
-        private List<ItemRequisicaoCompraResponse> buildItensResponse(
-                        List<com.fiap.mekano.application.service.requisicao.CreateRequisicaoCompraResponse.ItemRequisicaoCompraItemResponse> itens) {
-                return itens.stream()
-                                .map(item -> new ItemRequisicaoCompraResponse(
-                                                item.pecaId(),
-                                                lookupPeca(item.pecaId()),
-                                                item.quantidade()))
-                                .toList();
         }
 
         private PecaResumidaResponse lookupPeca(UUID pecaId) {

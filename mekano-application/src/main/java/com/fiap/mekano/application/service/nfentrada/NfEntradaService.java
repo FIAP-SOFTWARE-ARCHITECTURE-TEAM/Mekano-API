@@ -9,6 +9,7 @@ import com.fiap.mekano.domain.model.Peca;
 import com.fiap.mekano.domain.model.RequisicaoCompra;
 import com.fiap.mekano.domain.model.StatusRequisicao;
 import com.fiap.mekano.domain.port.in.CreateNfEntradaCommand;
+import com.fiap.mekano.domain.port.in.NfEntradaServicePort;
 import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.NfEntradaRepositoryPort;
 import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
@@ -21,7 +22,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @ApplicationScoped
-public class NfEntradaService {
+public class NfEntradaService implements NfEntradaServicePort {
 
     private final NfEntradaRepositoryPort nfRepository;
     private final PecaRepositoryPort pecaRepository;
@@ -36,8 +37,9 @@ public class NfEntradaService {
         this.eventPublisher = eventPublisher;
     }
 
+    @Override
     @Transactional
-    public CreateNfEntradaResponse registrar(CreateNfEntradaCommand command) {
+    public NfEntrada registrar(CreateNfEntradaCommand command) {
         RequisicaoCompra requisicao = requisicaoRepository.findById(command.requisicaoCompraId())
                 .orElseThrow(() -> new AppException(404,
                         Messages.get("requisicao_compra.not.found", command.requisicaoCompraId())));
@@ -72,9 +74,7 @@ public class NfEntradaService {
             });
         }
 
-        return new CreateNfEntradaResponse(
-                saved.getId(), saved.getChaveAcesso(), saved.getValorTotal(),
-                saved.getRequisicaoCompraId(), saved.getCreatedAt());
+        return saved;
     }
 
     public NfEntrada buscarPorId(UUID id) {

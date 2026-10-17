@@ -1,9 +1,8 @@
 package com.fiap.mekano.rest.api;
 
-import com.fiap.mekano.application.service.peca.CreatePecaResponse;
-import com.fiap.mekano.application.service.peca.PecaService;
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.model.Peca;
+import com.fiap.mekano.domain.port.in.PecaServicePort;
 import com.fiap.mekano.domain.port.in.UpdatePecaCommand;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
@@ -40,7 +39,7 @@ class PecaResourceTest {
     private static Peca mockPeca;
 
     @InjectMock
-    PecaService pecaService;
+    PecaServicePort pecaService;
 
     @BeforeEach
     void setUp() {
@@ -50,8 +49,7 @@ class PecaResourceTest {
                 50L, 10L, LocalDateTime.now(), 0L);
 
         Mockito.when(pecaService.criar(Mockito.any()))
-                .thenReturn(new CreatePecaResponse(PECA_UUID, "PEA-001", "Óleo do Motor 5W30",
-                        new BigDecimal("45.90"), 50L, 10L, LocalDateTime.now()));
+                .thenReturn(mockPeca);
 
         Mockito.when(pecaService.buscarPorId(PECA_UUID))
                 .thenReturn(mockPeca);

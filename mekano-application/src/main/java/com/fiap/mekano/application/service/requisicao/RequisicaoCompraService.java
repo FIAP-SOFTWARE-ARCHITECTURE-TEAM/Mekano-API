@@ -8,6 +8,7 @@ import com.fiap.mekano.domain.model.RequisicaoCompra;
 import com.fiap.mekano.domain.model.StatusRequisicao;
 import com.fiap.mekano.domain.port.in.CreateRequisicaoCompraCommand;
 import com.fiap.mekano.domain.port.in.ItemRequisicaoCompraCommand;
+import com.fiap.mekano.domain.port.in.RequisicaoCompraServicePort;
 import com.fiap.mekano.domain.port.out.ItemRequisicaoCompraRepositoryPort;
 import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
 import com.fiap.mekano.domain.port.out.RequisicaoCompraRepositoryPort;
@@ -19,7 +20,7 @@ import java.util.List;
 import java.util.UUID;
 
 @ApplicationScoped
-public class RequisicaoCompraService {
+public class RequisicaoCompraService implements RequisicaoCompraServicePort {
 
     private final RequisicaoCompraRepositoryPort requisicaoRepository;
     private final PecaRepositoryPort pecaRepository;
@@ -33,8 +34,9 @@ public class RequisicaoCompraService {
         this.itemRepository = itemRepository;
     }
 
+    @Override
     @Transactional
-    public CreateRequisicaoCompraResponse criar(CreateRequisicaoCompraCommand command) {
+    public RequisicaoCompra criar(CreateRequisicaoCompraCommand command) {
         List<ItemRequisicaoCompra> itens = new ArrayList<>();
         for (ItemRequisicaoCompraCommand itemCmd : command.itens()) {
             if (pecaRepository.findById(itemCmd.pecaId()).isEmpty()) {
@@ -49,14 +51,7 @@ public class RequisicaoCompraService {
 
         itemRepository.saveAll(saved.getId(), saved.getItens());
 
-        List<CreateRequisicaoCompraResponse.ItemRequisicaoCompraItemResponse> itensResponse = saved.getItens().stream()
-                .map(item -> new CreateRequisicaoCompraResponse.ItemRequisicaoCompraItemResponse(
-                        item.getPecaId(), item.getQuantidade()))
-                .toList();
-
-        return new CreateRequisicaoCompraResponse(
-                saved.getId(), itensResponse,
-                saved.getStatus().name(), saved.getMotivo().name(), saved.getCreatedAt());
+        return saved;
     }
 
     public RequisicaoCompra buscarPorId(UUID id) {
@@ -69,7 +64,7 @@ public class RequisicaoCompraService {
         var requisicao = buscarPorId(id);
         if (!requisicao.podeSerEnviada()) {
             throw new AppException(409,
-                    "Requisição não pode ser marcada como compra aprovada no status " + requisicao.getStatus());
+                    Messages.get("requisicao_compra.status.invalido.compra_aprovada", requisicao.getStatus()));
         }
         var atualizada = RequisicaoCompra.reconstitute(
                 requisicao.getId(), requisicao.getItens(),
@@ -82,7 +77,7 @@ public class RequisicaoCompraService {
         var requisicao = buscarPorId(id);
         if (!requisicao.podeSerRecebida()) {
             throw new AppException(409,
-                    "Requisição não pode ser marcada como produto recebido no status " + requisicao.getStatus());
+                    Messages.get("requisicao_compra.status.invalido.recebida", requisicao.getStatus()));
         }
         var atualizada = RequisicaoCompra.reconstitute(
                 requisicao.getId(), requisicao.getItens(),
