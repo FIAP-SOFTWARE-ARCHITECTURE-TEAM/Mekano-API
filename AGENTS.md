@@ -61,30 +61,32 @@ For detailed per-module conventions, read these instead of old CLAUDE.md:
 | Soft delete | `isActive` + `deletedAt` |  |  |
 | Audit auto-fill | `createdBy`/`updatedBy` filled by `AuditoriaListener` (`@EntityListeners` in `BaseEntity`); user → subject JWT, anônimo → `PUBLICO`, sem request → `SISTEMA` |
 
-### What is FALSE (Old CLAUDE.md was WRONG)
-| Old Doc Claim | Reality |
+### What is TRUE (old CLAUDE.md was WRONG — re-verified 2026-10-17)
+| Claim | Reality |
 |---------------|---------|
 | `DomainException`/`BusinessException` hierarchy | SINGLE `AppException(RuntimeException)` with `int status` |
 | 9 specific exception classes (InvalidEmailException, etc.) | Only `AppException` + `Messages` exist |
-| `AuthenticateUserInputPort`, `AuthenticateUserCommand` | DO NOT EXIST |
-| `RefreshTokenRepositoryPort`, `RefreshTokenData` | DO NOT EXIST |
-| `RefreshTokenEntity`, `TokenBucketRateLimiter`, `RefreshTokenService` | DO NOT EXIST |
-| `AuthResource`, `LoginRequest/Response`, `LoginRateLimiterFilter` | DO NOT EXIST |
-| `@Authenticated` annotation on UserResource | NOT PRESENT — uses `@RolesAllowed("user")` |
+| ~~`AuthenticateUserInputPort`, `AuthenticateUserCommand`~~ | N/A — auth usa `AuthServicePort` + `LoginCommand` |
+| `RefreshTokenRepositoryPort`, `RefreshTokenData` | EXIST in domain (`port/out`) — auth flow implemented |
+| ~~`RefreshTokenEntity`, `TokenBucketRateLimiter`, `RefreshTokenService`~~ | `RefreshTokenEntity` + `RefreshTokenRepositoryImpl` + `RefreshTokenService` EXIST |
+| ~~`AuthResource`, `LoginRequest/Response`~~ | `AuthResource` EXISTS at `rest/api/infrastructure/rest/auth/` (`/auth/login`, `/auth/refresh`, `/auth/logout`) — the old path listed here was wrong |
+| `@Authenticated` annotation on UserResource | NOT PRESENT — uses `@RolesAllowed(...)` |
 | `JwtTestProfile` | DOES NOT EXIST |
 | 10 deprecated `*ExceptionMapper` files | DO NOT EXIST |
-| `publicKey.pem` in rest resources | NOT FOUND |
+| `publicKey.pem` in rest resources | NOT FOUND (dev key at `${user.home}/.mekano/secrets/`) |
 
-## Key Inconsistencies (Tech Debt — Avoid Repeating)
-1. **Naming**: ~~`PecaRepositoryPort`/`NfEntradaRepositoryPort`/`RequisicaoCompraRepositoryPort` use PT-BR~~ **RESOLVED**: all 3 ports now use EN (`save`, `findById`) — remaining PT-BR names (`buscarPorDescricao`, `buscarPorChaveAcesso`, `remover`, `reativar`, `atualizar`, `listarAbaixoEstoqueMinimo`, `debitarSaldo`, `creditarSaldo`, `reservarSaldo`, `debitarSaldoReservado`, `liberarReserva`) are intentional (business operations or deferred)
-2. **Injection**: 2 stub services use field injection (`@Inject`) — real services use constructor injection
-3. **Entity style**: Newer entities use `@Data` (public fields) — older ones use `@Getter/@Setter` (private)
-4. **FT/Cache**: Only User/Veiculo/Servico repos have `@Retry`+`@Timeout`+`@CacheResult` — Cliente/Peca/RequisicaoCompra/NfEntrada do NOT
-5. **Duplicate VOs**: `Placa.java` and `PlacaVeiculo.java` overlap with different regex patterns
+## Key Inconsistencies (Tech Debt — re-verified 2026-10-17)
+1. **Naming**: ports use EN (`save`, `findById`); remaining PT-BR names (`buscarPorDescricao`, `creditarSaldo`, etc.) are intentional business operations
+2. ~~2 stub services with field injection~~ **RESOLVED** — `PecaService`/`NfEntradaService` are real implementations with constructor injection and tests
+3. **Entity style**: newer entities (Peca, RequisicaoCompra, NfEntrada) use `@Data` (public fields) — older ones use `@Getter/@Setter` (private)
+4. **FT/Cache**: Only User/Veiculo/Servico/OS repos have `@Retry`+`@Timeout`+`@CacheResult` — Cliente/Peca/RequisicaoCompra/NfEntrada do NOT
+5. ~~Duplicate VOs `Placa`/`PlacaVeiculo`~~ **RESOLVED** — only `PlacaVeiculo` exists
 6. **Misplaced VO**: `ItemOrcamento` is a Value Object but lives in `model/` not `valueobject/`
-7. **Empty mappers**: `PecaEntityMapper`, `RequisicaoCompraEntityMapper`, `NfEntradaEntityMapper` are dead code (no methods)
-8. **Bug in NfEntradaRepositoryImpl**: `pecaId` and `requisicaoCompraId` both set to `nfEntrada.getId()` (copy-paste error)
-9. **Bug in ClienteService.updateCliente**: finds entity but does NOT apply updates
+7. ~~Empty mappers~~ **RESOLVED** — deleted from repo
+8. ~~NfEntradaRepositoryImpl bug~~ **RESOLVED/NA** — model é enxuto por design (chaveAcesso, valorTotal, requisicaoCompraId, dataRecebimento); itens derivados da RequisicaoCompra (sem peca_id)
+9. ~~ClienteService.updateCliente não aplica updates~~ **RESOLVED** — chama `cliente.atualizar(...)` + save
+10. **Dead code**: `OrdemDeServico3.java` (bloco comentado 100%) e `reconstitute()` antigo comentado em `OrdemDeServico.java`
+11. **Roles**: `OrcamentoResource` class-level `@RolesAllowed` inclui `mecanico` e mutações aprovar/reprovar são `@PermitAll` — revisar (ver docs/ARCHITECTURE-REVIEW-2026-10-17.md)
 
 ## Decision Records (VERIFIED)
 - D-01: `@Transactional` no use case, não no resource nem no repository
@@ -147,8 +149,8 @@ docker-compose up -d
 ## API Prefix
 `quarkus.rest.path=/api/v1` → endpoints em `/api/v1/users`, `/api/v1/veiculos`, `/api/v1/servicos`
 
-## Missing / Planned Items (do NOT assume they exist)
-- Auth endpoints (`/auth/login`, `/auth/refresh`) — NOT IMPLEMENTED
-- Cliente controller (`/clientes`) — DTOs/mapper exist, NO resource
-- Rate limiting filter — NOT IMPLEMENTED
-- JwtTestProfile — NOT IMPLEMENTED
+## Missing / Planned Items (re-verified 2026-10-17)
+- ~~Auth endpoints~~ **IMPLEMENTED** — `/auth/login`, `/auth/refresh`, `/auth/logout` (`AuthResource` + `AuthServicePort` + `RefreshTokenService`)
+- ~~Cliente controller~~ **IMPLEMENTED** — `ClienteResource` existe com DTOs, mapper e testes
+- Rate limiting filter (`/auth/*` e webhook) — **NOT IMPLEMENTED** (prioridade P1, ver docs/ARCHITECTURE-REVIEW-2026-10-17.md)
+- JwtTestProfile — NOT IMPLEMENTED (testes usam `@TestSecurity`)

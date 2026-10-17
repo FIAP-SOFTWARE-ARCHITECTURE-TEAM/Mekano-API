@@ -43,14 +43,16 @@ com.fiap.mekano.application
     ├── pagamento/               ## FULLY IMPLEMENTED
     │   └── PagamentoService.java      — @ApplicationScoped
     │                                    confirmacao with status validation
-    ├── peca/                    ## STUB (incomplete)
-    │   ├── PecaService.java           — @ApplicationScoped, does NOT implement any port
-    │   │                                ⚠ field injection (@Inject) — violates constructor injection convention
-    │   │                                ⚠ criar() returns hardcoded values — not real implementation
+    ├── peca/                    ## FULLY IMPLEMENTED (re-verified 2026-10-17)
+    │   ├── PecaService.java           — @ApplicationScoped, constructor injection
+    │   │                                (PecaRepositoryPort + EventPublisher + ...); usado por
+    │   │                                PecaResource, AlertaResource, RequisicaoCompraResource e PecaOrcamentoObserver
     │   └── CreatePecaResponse.java    — record
-    ├── nfentrada/               ## STUB (incomplete)
-    │   ├── NfEntradaService.java      — @ApplicationScoped, does NOT implement any port
-    │   │                                ⚠ field injection, hardcoded response
+    ├── nfentrada/               ## FULLY IMPLEMENTED (re-verified 2026-10-17)
+    │   ├── NfEntradaService.java      — @ApplicationScoped, constructor injection, @Transactional
+    │   │                                em registrar(); valida status PRODUTO_RECEBIDO da requisição (409),
+    │   │                                bloqueia chave de acesso duplicada (409), credita saldo por item da
+    │   │                                requisição e publica EstoqueMinimoAtingidoEvent
     │   └── CreateNfEntradaResponse.java — record
     └── requisicao/              ## FULLY IMPLEMENTED
         ├── RequisicaoCompraService.java — @ApplicationScoped, does NOT implement any port
@@ -63,20 +65,15 @@ com.fiap.mekano.application
 
 ## Service Pattern (For IMPLEMENTED services)
 1. `@ApplicationScoped` — CDI bean
-2. Implements domain `port/in/*Port.java` interface
+2. Implements domain `port/in/*Port.java` interface (exceção documentada: Peca, NfEntrada e RequisicaoCompra não têm port de entrada — resources chamam a service direto; extrair ports é melhoria planejada)
 3. **Constructor injection** (required for `@InjectMocks` in Mockito tests)
 4. `@Transactional` on ALL write methods (execute, create, update, delete)
 5. Flow: validate → check duplicates → hash (if password) → create entity → save → publish event
 6. Response records never expose `passwordHash` or domain entities directly
 
-## Stub Services — What NOT to Do
-The 2 stub services (`PecaService`, `NfEntradaService`) violate conventions:
-- No port implementation
-- Field injection instead of constructor injection
-- No `@Transactional`
-- Return hardcoded values
-
-These are placeholders awaiting real implementation.
+## Known Deviations (re-verified 2026-10-17)
+- `PecaService`/`NfEntradaService`/`RequisicaoCompraService` não implementam port de entrada — dívida documentada em docs/ARCHITECTURE-REVIEW-2026-10-17.md
+- Alguns erros hardcoded fora do `Messages` bundle (ex.: "E-mail é obrigatório" em ClienteService; 409 de status em NfEntradaService)
 
 ## Dependencies
 - **compile**: mekano-domain, quarkus-arc

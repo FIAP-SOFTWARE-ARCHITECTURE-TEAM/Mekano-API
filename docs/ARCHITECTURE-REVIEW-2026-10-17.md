@@ -21,31 +21,33 @@ A fundação está **sólida**: Clean Architecture real (domínio zero-dependên
 
 ### P0 — Corrigir antes de qualquer feature nova
 
-**1. Perda de dados em `NfEntradaRepositoryImpl.save`** (`mekano-infrastructure/.../NfEntradaRepositoryImpl.java:26-48`)
-- `pecaId` **nunca é setado** na entity — toda NF entrada grava `peca_id = NULL`
-- Campos da NF (`numero`, `serie`, `cnpjFornecedor`, `nomeFornecedor`, quantidade, valorUnitário) não são persistidos
-- Efeito: relatórios e vínculos NF→Peça silenciosamente quebrados
+**1. ~~Perda de dados em `NfEntradaRepositoryImpl.save`~~ CORREÇÃO (mesma data):** **NÃO é bug.** Verificação adicional mostrou que a cadeia request→domain→entity→response é **consistentemente enxuta** (`CreateNfEntradaRequest` tem só chaveAcesso/valorTotal/requisicaoCompraId; itens derivados da RequisicaoCompra). Quem mentia era o AGENTS.md, que descrevia DTOs com numero/serie/cnpj/pecaId que não existem mais. Ação real: sincronizar documentação (feito no mesmo dia).
 
-**2. AGENTS.md desatualizados (drift grave)** — risco direto para desenvolvimento assistido por IA:
+**2. AGENTS.md desatualizados (drift grave) — CONFIRMADO E PIOR DO QUE O INICIAL** — risco direto para desenvolvimento assistido por IA:
 
 | Doc diz | Realidade verificada |
 |---|---|
 | `AuthResource` NÃO existe | Existe — `login/refresh/logout` + `AuthServicePort` + `RefreshTokenRepositoryPort` no domínio |
 | Bug em `ClienteService.updateCliente` | **Corrigido** — `cliente.atualizar(...)` + save presentes |
+| `PecaService`/`NfEntradaService` são stubs com field injection | **Implementações reais** — constructor injection, `@Transactional`, validações, testes |
+| 3 mappers vazios (dead code) | **Já deletados** do repositório |
+| `Placa`/`PlacaVeiculo` duplicados | **Resolvido** — só `PlacaVeiculo` existe |
+| `ClienteResource` não existe | **Existe** com resource + testes |
 | 35 migrations V1–V35 | 33 arquivos no diretório |
-| `RefreshToken*` deletados | Ports e service existem e são usados |
+| Campos NF-e no request/response | Modelo enxuto por design (3 campos de negócio) |
 
 ### P1 — Segurança e superfície de API
 
-**3. Mutação de estado anônima**: `POST /orcamentos/{uuid}/aprovar|reprovar` são `@PermitAll`. Exigir role `cliente`; manter rota pública **apenas de leitura** (`GET /os/{id}/status`)
-**4. Roles inconsistentes**: `OrcamentoResource` classe-level `@RolesAllowed({"admin","atendente","mecanico","cliente"})` — mecanico aprovar orçamento de cliente?
-**5. Sem rate limiting** no `AuthResource` (brute force) nem no webhook
-**6. `ClienteResource` inexistente** enquanto DTOs/mapper/testes existem
+**3. Mutação de estado anônima**: `POST /orcamentos/{uuid}/aprovar|reprovar` são `@PermitAll`. A defesa é "UUID como capacete" (D-02), mas UUID em log/URL vaza e a operação tem efeitos colaterais sérios (transição de OS, estoque, eventos). A idempotência da issue #146 reduziu o dano de replay, mas não substitui autorização. Exigir role `cliente`; manter rota pública **apenas de leitura** (`GET /os/{id}/status`)
+**4. Roles inconsistentes**: `OrcamentoResource` classe-level `@RolesAllowed({"admin","atendente","mecanico","cliente"})` — mecanico aprovar orçamento de cliente? Restrito a `admin`+`cliente`
+**5. Sem rate limiting** no `AuthResource` (brute force) nem no webhook — com auth em produção virou prioridade
+**6. ~~`ClienteResource` inexistente~~ CORREÇÃO:** existe (resource + testes). Residual: confirmar `@RolesAllowed` correto no controller
 
 ### P2 — Consistência interna
 
-**7. Código morto**: `OrdemDeServico3.java` (239 linhas 100% comentadas), 3 mappers vazios (`Peca/RequisicaoCompra/NfEntradaEntityMapper`), `Placa` vs `PlacaVeiculo` duplicados, `reconstitute()` antigo comentado em `OrdemDeServico.java:106-123`
-**8. Stubs `PecaService`/`NfEntradaService`** com field injection e resposta hardcoded — implementar ou deletar
+**7. Código morto (inventário revisado)**: `OrdemDeServico3.java` (239 linhas 100% comentadas) e `reconstitute()` antigo comentado em `OrdemDeServico.java:106-123`. ~~Mappers vazios~~ e ~~VO duplicado~~ já foram resolvidos no repo. Regra sugerida: **proibido bloco comentado > 5 linhas — deleta** (git guarda)
+
+**8. ~~Stubs `PecaService`/`NfEntradaService`~~ CORREÇÃO:** não são stubs — são implementações reais com constructor injection e testes. Dívida real: **não implementam port de entrada** (resources chamam a service direto) — extrair `PecaServicePort`/`NfEntradaServicePort` para consistência com os demais contextos
 **9. FT/cache assimétrico**: só User/Veiculo/Servico têm `@Retry`+`@Timeout`+`@CacheResult`
 **10. Mensagens fora do bundle**: `"E-mail é obrigatório"` (ClienteService:77), `"Conflito de versão..."` (OrdemDeServicoRepositoryImpl:85)
 
@@ -60,15 +62,16 @@ A fundação está **sólida**: Clean Architecture real (domínio zero-dependên
 
 | Ação | Impacto | Esforço | Ordem |
 |---|---|---|---|
-| Corrigir `NfEntradaRepositoryImpl` (+teste que reprovava) | Alto | S | **Agora** |
+| ~~Corrigir `NfEntradaRepositoryImpl`~~ (corrigido — não era bug) | — | — | — |
 | Atualizar os 4 AGENTS.md contra o código | Alto | M | **Agora** |
-| Deletar código morto | Médio | S | **Agora** |
+| Deletar código morto (`OrdemDeServico3`, bloco comentado) | Médio | S | **Agora** |
 | Exigir auth em aprovar/reprovar + roles corretas | Alto | S | Sprint 1 |
 | Rate limit em `/auth/*` e webhook | Alto | M | Sprint 1 |
-| Decidir stubs Peca/NfEntrada | Médio | M | Sprint 1 |
-| Publicar ou remover `ClienteResource` | Médio | M | Sprint 2 |
+| Extrair ports de entrada para Peca/NfEntrada/Requisicao | Médio | M | Sprint 1 |
+| Confirmar `@RolesAllowed` do `ClienteResource` | Baixo | S | Sprint 1 |
 | Padronizar FT/cache | Médio | M | Sprint 2 |
 | Testcontainers PostgreSQL | Médio | M | Sprint 2 |
+| Completar `Messages` bundle (mensagens hardcoded) | Baixo | S | Sprint 2 |
 | Correlation-id / tracing | Médio | M | Sprint 3 |
 | Extrair contexto Faturamento | Alto | G | Backlog |
 
