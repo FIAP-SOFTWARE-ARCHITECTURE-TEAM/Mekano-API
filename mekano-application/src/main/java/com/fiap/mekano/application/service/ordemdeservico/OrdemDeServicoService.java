@@ -325,6 +325,12 @@ private final OrdemDeServicoRepositoryPort repository;
     }
 
     @Override
+    public long countWithFilters(String status, UUID clienteUuid, UUID veiculoUuid,
+                                 LocalDateTime dataInicio, LocalDateTime dataFim) {
+        return repository.countWithFilters(status, clienteUuid, veiculoUuid, dataInicio, dataFim);
+    }
+
+    @Override
     public Optional<OrdemDeServico> findByIdWithItems(UUID id) {
         return repository.findByIdWithItems(id);
     }
