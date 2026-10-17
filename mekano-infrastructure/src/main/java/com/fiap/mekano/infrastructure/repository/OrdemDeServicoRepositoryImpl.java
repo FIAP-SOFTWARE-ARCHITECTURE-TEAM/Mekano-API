@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 import org.eclipse.microprofile.faulttolerance.Retry;
 
 import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.domain.model.OrdemDeServico;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
 import com.fiap.mekano.infrastructure.cache.CacheNames;
@@ -82,7 +83,7 @@ public class OrdemDeServicoRepositoryImpl implements OrdemDeServicoRepositoryPor
             panacheRepository.flush();
             return mapper.toDomain(entity);
         } catch (OptimisticLockException e) {
-            throw new AppException(409, "Conflito de versão — a OS foi atualizada por outro usuário");
+            throw new AppException(409, Messages.get("os.conflito.versao"));
         }
     }
 

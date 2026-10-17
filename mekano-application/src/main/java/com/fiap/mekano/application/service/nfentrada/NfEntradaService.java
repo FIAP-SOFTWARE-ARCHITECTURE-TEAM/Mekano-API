@@ -43,8 +43,8 @@ public class NfEntradaService {
                         Messages.get("requisicao_compra.not.found", command.requisicaoCompraId())));
 
         if (!StatusRequisicao.PRODUTO_RECEBIDO.equals(requisicao.getStatus())) {
-            throw new AppException(409, "NFe de entrada só pode ser registrada para requisições no status "
-                    + StatusRequisicao.PRODUTO_RECEBIDO);
+            throw new AppException(409, Messages.get("nf_entrada.status.requisicao.invalido",
+                    StatusRequisicao.PRODUTO_RECEBIDO));
         }
 
         Optional<NfEntrada> existente = nfRepository.buscarPorChaveAcesso(command.chaveAcesso());

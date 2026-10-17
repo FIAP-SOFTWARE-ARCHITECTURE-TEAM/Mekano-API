@@ -94,7 +94,7 @@ public class RequisicaoCompraService {
     public void cancelar(UUID id) {
         var requisicao = buscarPorId(id);
         if (requisicao.getStatus() != StatusRequisicao.ABERTA) {
-            throw new AppException(409, "Requisição não pode ser cancelada no status " + requisicao.getStatus());
+            throw new AppException(409, Messages.get("requisicao_compra.status.invalido.cancelar", requisicao.getStatus()));
         }
         if (requisicao.getMotivo() == MotivoRequisicao.ORDEM_SERVICO) {
             throw new AppException(409, Messages.get("requisicao_compra.cancelamento.bloqueado.ordem_servico"));
@@ -109,7 +109,7 @@ public class RequisicaoCompraService {
     public void enviar(UUID id) {
         var requisicao = buscarPorId(id);
         if (!requisicao.podeSerEnviada()) {
-            throw new AppException(409, "Requisição não pode ser enviada no status " + requisicao.getStatus());
+            throw new AppException(409, Messages.get("requisicao_compra.status.invalido.enviar", requisicao.getStatus()));
         }
         var atualizada = RequisicaoCompra.reconstitute(
                 requisicao.getId(), requisicao.getItens(),

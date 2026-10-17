@@ -9,6 +9,7 @@ import com.fiap.mekano.domain.port.in.CreateAdminUserCommand;
 import com.fiap.mekano.domain.port.out.PasswordHasherPort;
 import com.fiap.mekano.domain.port.out.UserRepositoryPort;
 import com.fiap.mekano.domain.port.out.UserRoleRepositoryPort;
+import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.shared.exception.AppException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -37,7 +38,7 @@ public class AdminUserService implements AdminUserServicePort {
         String email = command.email().trim().toLowerCase();
 
         if (userRepository.findByEmail(email).isPresent()) {
-            throw new AppException(409, "Usuário já existe com o email: " + email);
+            throw new AppException(409, Messages.get("user.already.exists", email));
         }
 
         String generatedPassword = PasswordGenerator.generate(12);
@@ -85,7 +86,7 @@ public class AdminUserService implements AdminUserServicePort {
     @Transactional
     public void deletar(UUID uuid) {
         if (uuid == null) {
-            throw new AppException(400, "UUID é obrigatório");
+            throw new AppException(400, Messages.get("admin.uuid.required"));
         }
 
         userRepository.softDelete(uuid);
@@ -93,19 +94,19 @@ public class AdminUserService implements AdminUserServicePort {
 
     private void validar(CreateAdminUserCommand command) {
         if (command == null) {
-            throw new AppException(400, "Requisição inválida");
+            throw new AppException(400, Messages.get("admin.requisicao.invalida"));
         }
 
         if (command.name() == null || command.name().isBlank()) {
-            throw new AppException(400, "Nome é obrigatório");
+            throw new AppException(400, Messages.get("admin.nome.required"));
         }
 
         if (command.email() == null || command.email().isBlank()) {
-            throw new AppException(400, "E-mail é obrigatório");
+            throw new AppException(400, Messages.get("admin.email.required"));
         }
 
         if (command.role() == null) {
-            throw new AppException(400, "Role é obrigatória");
+            throw new AppException(400, Messages.get("admin.role.required"));
         }
     }
 }

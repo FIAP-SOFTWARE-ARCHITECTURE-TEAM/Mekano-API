@@ -2,6 +2,7 @@ package com.fiap.mekano.application.service;
 
 import com.fiap.mekano.domain.event.PagamentoConfirmadoEvent;
 import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.domain.os.StatusPagamento;
 import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
@@ -29,7 +30,7 @@ public class MockPaymentService {
     @Transactional
     public void confirmarPagamento(UUID osUuid) {
         var os = ordemDeServicoRepository.findById(osUuid)
-                .orElseThrow(() -> new AppException(404, "OS não encontrada: " + osUuid));
+                .orElseThrow(() -> new AppException(404, Messages.get("os.not.found", osUuid)));
 
         // D-06: idempotência — se já processado, retorna silenciosamente (200, não 409)
         if (processedEventsRepository.existsFor("PAGAMENTO_CONFIRMADO", osUuid)) {
@@ -37,7 +38,7 @@ public class MockPaymentService {
         }
 
         if (os.getStatusPagamento() != StatusPagamento.AGUARDANDO_PAGAMENTO) {
-            throw new AppException(409, "Pagamento não está pendente");
+            throw new AppException(409, Messages.get("pagamento.nao.pendente"));
         }
 
         try {

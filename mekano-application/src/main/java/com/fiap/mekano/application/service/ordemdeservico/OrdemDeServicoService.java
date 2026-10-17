@@ -187,7 +187,7 @@ private final OrdemDeServicoRepositoryPort repository;
         for (ItemOs itemOs : todosItens) {
             if (itemOs.isPeca()) {
                 Peca peca = pecaRepository.buscarPorId(itemOs.getReferenciaUuid())
-                        .orElseThrow(() -> new AppException(404, "Peça não encontrada: " + itemOs.getReferenciaUuid()));
+                        .orElseThrow(() -> new AppException(404, Messages.get("os.peca.not.found", itemOs.getReferenciaUuid())));
                 if (!Boolean.TRUE.equals(peca.getIsActive())) {
                     throw new AppException(422, Messages.get("peca.inactive", itemOs.getReferenciaUuid()));
                 }
@@ -195,7 +195,7 @@ private final OrdemDeServicoRepositoryPort repository;
                         peca.getValorUnitario(), peca.getId()));
             } else if (itemOs.isServico()) {
                 Servico servico = servicoRepository.findById(itemOs.getReferenciaUuid())
-                        .orElseThrow(() -> new AppException(404, "Serviço não encontrado: " + itemOs.getReferenciaUuid()));
+                        .orElseThrow(() -> new AppException(404, Messages.get("os.servico.not.found", itemOs.getReferenciaUuid())));
                 if (!Boolean.TRUE.equals(servico.getIsActive())) {
                     throw new AppException(422, Messages.get("servico.inactive", itemOs.getReferenciaUuid()));
                 }

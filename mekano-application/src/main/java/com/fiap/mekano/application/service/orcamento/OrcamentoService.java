@@ -110,6 +110,6 @@ public class OrcamentoService implements OrcamentoServicePort {
     @Override
     public Orcamento buscarPorOrdemServico(UUID osUuid) {
         return orcamentoRepository.findByOrdemServicoUuid(osUuid)
-                .orElseThrow(() -> new AppException(404, "Nenhum orçamento encontrado para a OS: " + osUuid));
+                .orElseThrow(() -> new AppException(404, Messages.get("orcamento.not.found.os", osUuid)));
     }
 }
