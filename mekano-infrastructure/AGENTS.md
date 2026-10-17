@@ -127,16 +127,21 @@ com.fiap.mekano.infrastructure
 1. `*PanacheRepository` — extends `PanacheRepositoryBase<Entity, Long>` or `PanacheRepository<Entity>`
 2. `*RepositoryImpl` — implements domain port, delegates to PanacheRepository
 
-### Fault Tolerance & Cache Coverage (INCONSISTENT)
+### Fault Tolerance & Cache Coverage (padronizado — re-verified 2026-10-17)
 | Repository | @Retry | @Timeout | @CacheResult | @CacheInvalidate |
 |------------|--------|----------|--------------|------------------|
-| User       | ✓      | ✓        | ✓            | ✓                |
-| Veiculo    | ✓      | ✓        | ✓            | ✓                |
-| Servico    | ✓      | ✓        | ✓            | ✓                |
-| Cliente    | ✗      | ✗        | ✗            | ✗                |
-| Peca       | ✗      | ✗        | ✗            | ✗                |
-| Requisicao | ✗      | ✗        | ✗            | ✗                |
-| NfEntrada  | ✗      | ✗        | ✗            | ✗                |
+| User       | ✓ reads | ✓ | ✓ | ✓ |
+| Veiculo    | ✓ reads | ✓ | ✓ | ✓ |
+| Servico    | ✓ reads | ✓ | ✓ | ✓ |
+| Cliente    | ✓ reads | ✓ | findById | ✓ (writes) |
+| Peca       | ✓ reads | ✓ | findById | ✓ (todas as mutações, incl. saldo) |
+| Requisicao | ✓ reads | ✓ | findById | ✓ (save/atualizar) |
+| NfEntrada  | ✓ reads | ✓ | findById | ✓ (save) |
+
+Regras do padrão: @Retry SOMENTE em leituras (retry em write de saldo/estoque
+risca débito duplo); @Timeout(5s) em tudo; @CacheResult só em findById de dados
+estáveis — NUNCA em métodos usados como check de duplicidade
+(ex.: `buscarPorChaveAcesso`, `existsByCpf` — 60s de staleness permitiria duplicar).
 
 ### Cache Configuration (`cache-config.yml`)
 All caches: `expire-after-write=60s` (except servicos: 120s), max-size 100-200.

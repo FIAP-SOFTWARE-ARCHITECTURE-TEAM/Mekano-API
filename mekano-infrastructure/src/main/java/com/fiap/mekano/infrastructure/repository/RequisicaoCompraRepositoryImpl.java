@@ -12,11 +12,18 @@ import com.fiap.mekano.domain.model.RequisicaoCompra;
 import com.fiap.mekano.domain.model.StatusRequisicao;
 import com.fiap.mekano.domain.port.out.ItemRequisicaoCompraRepositoryPort;
 import com.fiap.mekano.domain.port.out.RequisicaoCompraRepositoryPort;
+import com.fiap.mekano.infrastructure.cache.CacheNames;
 import com.fiap.mekano.infrastructure.entity.RequisicaoCompraEntity;
 
+import io.quarkus.cache.CacheInvalidate;
+import io.quarkus.cache.CacheResult;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
+import org.eclipse.microprofile.faulttolerance.Retry;
+import org.eclipse.microprofile.faulttolerance.Timeout;
+
+import java.time.temporal.ChronoUnit;
 
 @ApplicationScoped
 public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositoryPort {
@@ -31,6 +38,8 @@ public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositor
     }
 
     @Override
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
+    @CacheInvalidate(cacheName = CacheNames.REQUISICOES)
     public RequisicaoCompra save(RequisicaoCompra requisicao) {
         RequisicaoCompraEntity entity = panacheRepository.find("uuid = ?1", requisicao.getId()).firstResult();
         if (entity == null) {
@@ -54,6 +63,9 @@ public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositor
     }
 
     @Override
+    @Retry(maxRetries = 3)
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
+    @CacheResult(cacheName = CacheNames.REQUISICOES)
     public Optional<RequisicaoCompra> findById(UUID id) {
         return panacheRepository.find("uuid = ?1 and isActive = ?2", id, true)
                 .firstResultOptional()
@@ -64,6 +76,8 @@ public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositor
     }
 
     @Override
+    @Retry(maxRetries = 3)
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     public List<RequisicaoCompra> findAll(int page, int size) {
         return panacheRepository.find("isActive = ?1", Sort.by("id"), true)
                 .page(Page.of(page, size))
@@ -77,11 +91,15 @@ public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositor
     }
 
     @Override
+    @Retry(maxRetries = 3)
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     public long countAll() {
         return panacheRepository.count("isActive", true);
     }
 
     @Override
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
+    @CacheInvalidate(cacheName = CacheNames.REQUISICOES)
     public RequisicaoCompra atualizar(RequisicaoCompra requisicao) {
         return save(requisicao);
     }
