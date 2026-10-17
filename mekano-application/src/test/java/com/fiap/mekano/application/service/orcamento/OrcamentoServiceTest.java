@@ -124,11 +124,44 @@ class OrcamentoServiceTest {
     }
 
     @Test
-    @DisplayName("aprovar() deve lançar 422 se orçamento já está APROVADO")
-    void deveLancar422SeOrcamentoJaAprovado() {
+    @DisplayName("aprovar() em replay (já APROVADO) deve ser idempotente — sem eventos, audit ou save duplicados")
+    void deveSerIdempotenteSeOrcamentoJaAprovado() {
         var orcamento = Orcamento.create("Teste",
                 List.of(new ItemOrcamento("Item", 1L, BigDecimal.TEN)));
         orcamento.aprovar();
+
+        when(orcamentoRepository.findByUuid(orcamento.getId())).thenReturn(Optional.of(orcamento));
+
+        var result = orcamentoService.aprovar(new AprovarOrcamentoCommand(orcamento.getId()));
+        orcamentoService.aprovar(new AprovarOrcamentoCommand(orcamento.getId())); // replay
+
+        assertEquals(StatusOrcamento.APROVADO, result.getStatus());
+        verify(orcamentoRepository, never()).save(any(Orcamento.class));
+        verify(ordemDeServicoRepository, never()).save(any(OrdemDeServico.class));
+        verify(eventPublisher, never()).publish(any(OrcamentoAprovadoEvent.class));
+        verify(osAuditEventPublisher, never()).publish(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("aprovar() deve lançar 422 em conflito de estado (orçamento REPROVADO)")
+    void deveLancar422AoAprovarOrcamentoReprovado() {
+        var orcamento = Orcamento.create("Teste",
+                List.of(new ItemOrcamento("Item", 1L, BigDecimal.TEN)));
+        orcamento.reprovar();
+
+        when(orcamentoRepository.findByUuid(orcamento.getId())).thenReturn(Optional.of(orcamento));
+
+        var ex = assertThrows(AppException.class,
+                () -> orcamentoService.aprovar(new AprovarOrcamentoCommand(orcamento.getId())));
+        assertEquals(422, ex.getStatus());
+    }
+
+    @Test
+    @DisplayName("aprovar() deve lançar 422 em conflito de estado (orçamento EXPIRADO)")
+    void deveLancar422AoAprovarOrcamentoExpirado() {
+        var orcamento = Orcamento.create("Teste",
+                List.of(new ItemOrcamento("Item", 1L, BigDecimal.TEN)));
+        orcamento.expirar();
 
         when(orcamentoRepository.findByUuid(orcamento.getId())).thenReturn(Optional.of(orcamento));
 
@@ -161,17 +194,71 @@ class OrcamentoServiceTest {
     }
 
     @Test
-    @DisplayName("reprovar() deve lançar 422 se orçamento já está REPROVADO")
-    void deveLancar422SeOrcamentoJaReprovado() {
+    @DisplayName("reprovar() em replay (já REPROVADO) deve ser idempotente — sem eventos, audit ou save duplicados")
+    void deveSerIdempotenteSeOrcamentoJaReprovado() {
         var orcamento = Orcamento.create("Teste",
                 List.of(new ItemOrcamento("Item", 1L, BigDecimal.TEN)));
         orcamento.reprovar();
 
         when(orcamentoRepository.findByUuid(orcamento.getId())).thenReturn(Optional.of(orcamento));
 
+        var result = orcamentoService.reprovar(new ReprovarOrcamentoCommand(orcamento.getId(), "motivo"));
+        orcamentoService.reprovar(new ReprovarOrcamentoCommand(orcamento.getId(), "motivo")); // replay
+
+        assertEquals(StatusOrcamento.REPROVADO, result.getStatus());
+        verify(orcamentoRepository, never()).save(any(Orcamento.class));
+        verify(ordemDeServicoRepository, never()).save(any(OrdemDeServico.class));
+        verify(eventPublisher, never()).publish(any(com.fiap.mekano.domain.event.OSCanceladaEvent.class));
+        verify(osAuditEventPublisher, never()).publish(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("reprovar() deve lançar 422 em conflito de estado (orçamento APROVADO)")
+    void deveLancar422AoReprovarOrcamentoAprovado() {
+        var orcamento = Orcamento.create("Teste",
+                List.of(new ItemOrcamento("Item", 1L, BigDecimal.TEN)));
+        orcamento.aprovar();
+
+        when(orcamentoRepository.findByUuid(orcamento.getId())).thenReturn(Optional.of(orcamento));
+
         var ex = assertThrows(AppException.class,
                 () -> orcamentoService.reprovar(new ReprovarOrcamentoCommand(orcamento.getId(), "motivo")));
         assertEquals(422, ex.getStatus());
+    }
+
+    @Test
+    @DisplayName("aprovar() em replay com OS associada não re-executa transição da OS (times(1) no evento)")
+    void replayAprovacaoComOSNaoDuplicaEfeitos() {
+        var os = OrdemDeServico.create(UUID.randomUUID(), UUID.randomUUID(), "Problema");
+        os.iniciarDiagnostico();
+        os.finalizarDiagnostico();
+        var osUuid = os.getId();
+        UUID pecaId = UUID.randomUUID();
+        var orcamento = Orcamento.create("Teste",
+                List.of(new ItemOrcamento("Peça", 1L, BigDecimal.TEN, pecaId)), osUuid);
+
+        when(orcamentoRepository.findByUuid(orcamento.getId()))
+                .thenReturn(Optional.of(orcamento))
+                .thenAnswer(inv -> {
+                    // segunda busca: serviço real devolveria o estado persistido (APROVADO)
+                    if (orcamento.getStatus() == StatusOrcamento.PENDENTE) {
+                        orcamento.aprovar();
+                    }
+                    return Optional.of(orcamento);
+                });
+        when(ordemDeServicoRepository.findById(osUuid)).thenReturn(Optional.of(os));
+        when(orcamentoRepository.save(any(Orcamento.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(ordemDeServicoRepository.save(any(OrdemDeServico.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        orcamentoService.aprovar(new AprovarOrcamentoCommand(orcamento.getId()));
+
+        // simula retry do webhook: orçamento recarregado já vem APROVADO do banco
+        var resultadoReplay = orcamentoService.aprovar(new AprovarOrcamentoCommand(orcamento.getId()));
+
+        assertEquals(StatusOrcamento.APROVADO, resultadoReplay.getStatus());
+        verify(eventPublisher, times(1)).publish(any(OrcamentoAprovadoEvent.class));
+        verify(osAuditEventPublisher, times(1)).publish(any(), any(), any(), any(), any());
+        verify(ordemDeServicoRepository, times(1)).save(any(OrdemDeServico.class));
     }
 
     @Test
