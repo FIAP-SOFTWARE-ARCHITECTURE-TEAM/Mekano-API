@@ -29,6 +29,14 @@ evolution:
 # App public URL — usado em links de acompanhamento em mensagens WhatsApp
 mekano:
   public-url: ${MEKANO_PUBLIC_URL:https://mekano.app}
+  # Rate limiting por IP, janela fixa (docs/ARCHITECTURE-REVIEW-2026-10-17.md item 5)
+  rate-limit:
+    auth:
+      limit: 10
+      window-seconds: 60
+    webhook:
+      limit: 120
+      window-seconds: 60
 
 "%test":
   evolution:
