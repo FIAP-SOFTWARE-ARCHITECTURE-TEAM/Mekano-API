@@ -18,11 +18,16 @@ com.fiap.mekano.rest
 │   ├── AlertaResource.java               — @Path("/alertas") @RequestScoped @RolesAllowed({"admin","atendente"})
 │   ├── OrdemDeServicoResource.java       — @Path("/os") @RequestScoped @RolesAllowed({"admin","atendente","mecanico"})
 │   ├── PagamentoResource.java            — @Path("/pagamentos") @RequestScoped @RolesAllowed({"admin","financeiro"})
-│   ├── OrcamentoResource.java            — @Path("/orcamentos") @RequestScoped @RolesAllowed({"admin","atendente","mecanico","cliente"})
-│   │                                       (aprovar/reprovar são @PermitAll — revisar, ver docs/ARCHITECTURE-REVIEW-2026-10-17.md)
-│   ├── WebhookEvolutionResource.java      — @Path("/evolution/webhook") @RequestScoped @PermitAll + token header
+│   ├── OrcamentoResource.java            — @Path("/orcamentos") @RequestScoped @RolesAllowed({"admin","cliente"})
+│   │                                       (aprovar/reprovar exigem autenticação — sprint 1 da revisão arquitetural)
+│   ├── WebhookEvolutionResource.java      — @Path("/webhooks/evolution") @RequestScoped @PermitAll + token header
 │   ├── infrastructure/rest/auth/
 │   │   └── AuthResource.java              — @Path("/auth") @RequestScoped @PermitAll (login/refresh/logout)
+│   ├── filter/
+│   │   ├── CorrelationIdRequestFilter.java — X-Request-ID → MDC (roda antes do rate limit)
+│   │   ├── CorrelationIdResponseFilter.java — ecoa X-Request-ID na resposta
+│   │   ├── RateLimitFilter.java           — janela fixa por IP em /auth e webhooks/evolution (429)
+│   │   └── FixedWindowRateLimiter.java    — contador em memória (sem dependência externa)
 │   ├── dto/
 │   │   ├── CreateUserRequest.java        — Input Lombok: @NotBlank name, @Email email, @Size(min=6) password
 │   │   ├── UserResponse.java             — Output record
@@ -95,7 +100,7 @@ com.fiap.mekano.rest
 | Login/Refresh/Logout request DTOs | ✓ EXISTEM no mesmo pacote do AuthResource |
 | AuthServicePort + RefreshTokenService | ✓ EXISTEM (domain port/in + application) |
 | LoginRateLimiterFilter | ✗ DOES NOT EXIST (rate limiting é dívida P1) |
-| filter/ package | ✗ DOES NOT EXIST |
+| filter/ package | ✓ EXISTS desde sprint 1 — `rest/filter/`: RateLimitFilter, FixedWindowRateLimiter, CorrelationIdRequest/ResponseFilter |
 | *ExceptionMapper (10 deprecated) | ✗ DO NOT EXIST |
 | JwtTestProfile | ✗ DOES NOT EXIST |
 | AuthResourceTest | ⚠ verificar na implementação de testes de auth |

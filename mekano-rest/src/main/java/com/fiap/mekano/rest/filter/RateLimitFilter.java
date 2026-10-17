@@ -6,11 +6,12 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.Priorities;
 import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.container.ContainerRequestFilter;
-import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.Provider;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+
+import com.fiap.mekano.rest.api.exception.ProblemDetail;
 
 import io.quarkus.vertx.http.runtime.CurrentVertxRequest;
 import io.vertx.ext.web.RoutingContext;
@@ -74,12 +75,10 @@ public class RateLimitFilter implements ContainerRequestFilter {
 
         ctx.abortWith(Response
                 .status(Response.Status.TOO_MANY_REQUESTS)
-                .type(MediaType.APPLICATION_JSON_TYPE) // ApiExceptionMapper usa problem+json; aqui abortamos antes do resource
+                .type("application/problem+json")
                 .header("Retry-After", windowSeconds)
-                .entity("""
-                        {"type":"https://httpstatuses.io/429","title":"Too Many Requests","status":429,\
-                        "detail":"Limite de requisicoes excedido. Tente novamente em %d segundos."}\
-                        """.formatted(windowSeconds))
+                .entity(ProblemDetail.of(429,
+                        "Limite de requisicoes excedido. Tente novamente em " + windowSeconds + " segundos."))
                 .build());
     }
 
