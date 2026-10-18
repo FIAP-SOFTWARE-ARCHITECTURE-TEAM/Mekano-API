@@ -34,7 +34,7 @@ mekano-domain (jar) — 16 models/enums, 6 VOs, 52 ports, 15 events
 | Lombok | 1.18.36 |
 | Jandex | 3.5.3 |
 | AssertJ | 3.27.3 |
-| PostgreSQL | 16-alpine (dev/prod), H2 (test) |
+| PostgreSQL | 16-alpine (dev/prod), 16-alpine via Testcontainers (test) |
 
 ## Module AGENTS.md Files (AUTHORITATIVE)
 
@@ -62,21 +62,21 @@ For detailed per-module conventions, read these instead of old CLAUDE.md:
 | Audit auto-fill | `createdBy`/`updatedBy` filled by `AuditoriaListener` (`@EntityListeners` in `BaseEntity`); user → subject JWT, anônimo → `PUBLICO`, sem request → `SISTEMA` |
 | Logging | `io.quarkus.logging.Log` estático (nunca SLF4J `LoggerFactory` nos services). INFO=fluxo normal, WARN=erro de cliente/negócio (4xx, incl. transições 422), ERROR=falha de sistema (centralizado no `ApiExceptionMapper`) |
 
-### What is FALSE (Old CLAUDE.md was WRONG)
-| Old Doc Claim | Reality |
+### What is TRUE (old CLAUDE.md was WRONG — re-verified 2026-10-17)
+| Claim | Reality |
 |---------------|---------|
 | `DomainException`/`BusinessException` hierarchy | SINGLE `AppException(RuntimeException)` with `int status` |
 | 9 specific exception classes (InvalidEmailException, etc.) | Only `AppException` + `Messages` exist |
-| `AuthenticateUserInputPort`, `AuthenticateUserCommand` | DO NOT EXIST |
-| `RefreshTokenRepositoryPort`, `RefreshTokenData` | DO NOT EXIST |
-| `RefreshTokenEntity`, `TokenBucketRateLimiter`, `RefreshTokenService` | DO NOT EXIST |
-| `AuthResource`, `LoginRequest/Response`, `LoginRateLimiterFilter` | DO NOT EXIST |
-| `@Authenticated` annotation on UserResource | NOT PRESENT — uses `@RolesAllowed("user")` |
+| ~~`AuthenticateUserInputPort`, `AuthenticateUserCommand`~~ | N/A — auth usa `AuthServicePort` + `LoginCommand` |
+| `RefreshTokenRepositoryPort`, `RefreshTokenData` | EXIST in domain (`port/out`) — auth flow implemented |
+| ~~`RefreshTokenEntity`, `TokenBucketRateLimiter`, `RefreshTokenService`~~ | `RefreshTokenEntity` + `RefreshTokenRepositoryImpl` + `RefreshTokenService` EXIST |
+| ~~`AuthResource`, `LoginRequest/Response`~~ | `AuthResource` EXISTS at `rest/api/infrastructure/rest/auth/` (`/auth/login`, `/auth/refresh`, `/auth/logout`) — the old path listed here was wrong |
+| `@Authenticated` annotation on UserResource | NOT PRESENT — uses `@RolesAllowed(...)` |
 | `JwtTestProfile` | DOES NOT EXIST |
 | 10 deprecated `*ExceptionMapper` files | DO NOT EXIST |
-| `publicKey.pem` in rest resources | NOT FOUND |
+| `publicKey.pem` in rest resources | NOT FOUND (dev key at `${user.home}/.mekano/secrets/`) |
 
-## Logging Conventions (VERIFIED)
+## Logging Conventions (VERIFIED — develop, D-19)
 Logs estruturados para Alloy/Loki via `io.quarkus.logging.Log` estático (D-12/D-19). Aplicado nos Services do mekano-application (OrdemDeServico, RequisicaoCompra, WhatsAppOrcamentoResposta, NfEntrada, Orcamento).
 
 | Regra | Detalhe |
@@ -84,21 +84,22 @@ Logs estruturados para Alloy/Loki via `io.quarkus.logging.Log` estático (D-12/D
 | Níveis | INFO=fluxo normal (entrada/saída de operações de escrita), WARN=erro de cliente/negócio (4xx, incl. transições 422), ERROR=falha de sistema — **só** no `ApiExceptionMapper` (fallback) |
 | API | Usar `Log.info`/`Log.warn` sem args; com parâmetros **sempre** `Log.infof`/`Log.warnf` com placeholders `%s` (NÃO existe `info(String, Object...)` e NÃO usar `{}`) |
 | Formato | PT-BR, `chave=valor` separado por vírgula (ex.: `osId=`, `orcamentoUuid=`, `requisicaoId=`) — nunca logar PII (telefone, CPF, chaveAcesso completa) |
-| Transições 422 | Helper `executarTransicao(...)`/`executarTransicaoComResultado(...)` faz try/catch de `DomainException` → `Log.warnf` → rethrow |
 | Onde logar | Só na camada application (Services) — NUNCA em resources (JWT loga no mapper), repositories, mappers, listeners |
 | Onde NÃO logar | Métodos de leitura pura (`findAll`, `countAll`) não emitem log |
 | Import | `io.quarkus.logging.Log` (nunca SLF4J `LoggerFactory` nos services — WhatsAppOrcamentoResposta foi migrado para Log) |
 
-## Key Inconsistencies (Tech Debt — Avoid Repeating)
-1. **Naming**: ~~`PecaRepositoryPort`/`NfEntradaRepositoryPort`/`RequisicaoCompraRepositoryPort` use PT-BR~~ **RESOLVED**: all 3 ports now use EN (`save`, `findById`) — remaining PT-BR names (`buscarPorDescricao`, `buscarPorChaveAcesso`, `remover`, `reativar`, `atualizar`, `listarAbaixoEstoqueMinimo`, `debitarSaldo`, `creditarSaldo`, `reservarSaldo`, `debitarSaldoReservado`, `liberarReserva`) are intentional (business operations or deferred)
-2. **Injection**: 2 stub services use field injection (`@Inject`) — real services use constructor injection
-3. **Entity style**: Newer entities use `@Data` (public fields) — older ones use `@Getter/@Setter` (private)
-4. **FT/Cache**: Only User/Veiculo/Servico repos have `@Retry`+`@Timeout`+`@CacheResult` — Cliente/Peca/RequisicaoCompra/NfEntrada do NOT
-5. **Duplicate VOs**: `Placa.java` and `PlacaVeiculo.java` overlap with different regex patterns
+## Key Inconsistencies (Tech Debt — re-verified 2026-10-17)
+1. **Naming**: ports use EN (`save`, `findById`); remaining PT-BR names (`buscarPorDescricao`, `creditarSaldo`, etc.) are intentional business operations
+2. ~~2 stub services with field injection~~ **RESOLVED** — `PecaService`/`NfEntradaService` are real implementations with constructor injection and tests
+3. **Entity style**: newer entities (Peca, RequisicaoCompra, NfEntrada) use `@Data` (public fields) — older ones use `@Getter/@Setter` (private)
+4. **FT/Cache**: User/Veiculo/Servico/OS/Cliente/Peca/Requisicao/NfEntrada repos padronizados — `@Retry` em reads, `@Timeout(5s)` em tudo, `@CacheResult` só findById estável (ver mekano-infrastructure/AGENTS.md)
+5. ~~Duplicate VOs `Placa`/`PlacaVeiculo`~~ **RESOLVED** — only `PlacaVeiculo` exists
 6. **Misplaced VO**: `ItemOrcamento` is a Value Object but lives in `model/` not `valueobject/`
-7. **Empty mappers**: `PecaEntityMapper`, `RequisicaoCompraEntityMapper`, `NfEntradaEntityMapper` are dead code (no methods)
-8. **Bug in NfEntradaRepositoryImpl**: `pecaId` and `requisicaoCompraId` both set to `nfEntrada.getId()` (copy-paste error)
-9. **Bug in ClienteService.updateCliente**: finds entity but does NOT apply updates
+7. ~~Empty mappers~~ **RESOLVED** — deleted from repo
+8. ~~NfEntradaRepositoryImpl bug~~ **RESOLVED/NA** — model é enxuto por design (chaveAcesso, valorTotal, requisicaoCompraId, dataRecebimento); itens derivados da RequisicaoCompra (sem peca_id)
+9. ~~ClienteService.updateCliente não aplica updates~~ **RESOLVED** — chama `cliente.atualizar(...)` + save
+10. **Dead code**: `OrdemDeServico3.java` (bloco comentado 100%) e `reconstitute()` antigo comentado em `OrdemDeServico.java`
+11. **Roles**: `OrcamentoResource` class-level `@RolesAllowed` inclui `mecanico` e mutações aprovar/reprovar são `@PermitAll` — revisar (ver docs/ARCHITECTURE-REVIEW-2026-10-17.md)
 
 ## Decision Records (VERIFIED)
 - D-01: `@Transactional` no use case, não no resource nem no repository
@@ -154,16 +155,18 @@ docker-compose up -d
 
 ## Database
 - PostgreSQL 16-alpine (dev/prod), docker-compose na raiz
-- H2 in-memory `MODE=PostgreSQL` (test) — no Docker needed
-- Flyway V1-V35 in `mekano-infrastructure/src/main/resources/db/migration/`
-- Flyway does NOT run in tests (Hibernate `drop-and-create`)
-- H2 compatibility: no `BIGSERIAL` (use `BIGINT GENERATED BY DEFAULT AS IDENTITY`), no multi-column `ADD COLUMN`
+- Testes de integração rodam em **PostgreSQL real** via DevServices/Testcontainers
+  (`postgres:16-alpine`) — requer Docker rodando na máquina
+- Flyway 33 migrations in `mekano-infrastructure/src/main/resources/db/migration/`
+- Flyway does NOT run in tests (Hibernate `drop-and-create`); migrations exercitadas
+  pelos testes funcionais Newman no CI (docker compose)
+- Migration compatibility: no `BIGSERIAL` (use `BIGINT GENERATED BY DEFAULT AS IDENTITY`), no multi-column `ADD COLUMN`
 
 ## API Prefix
 `quarkus.rest.path=/api/v1` → endpoints em `/api/v1/users`, `/api/v1/veiculos`, `/api/v1/servicos`
 
-## Missing / Planned Items (do NOT assume they exist)
-- Auth endpoints (`/auth/login`, `/auth/refresh`) — NOT IMPLEMENTED
-- Cliente controller (`/clientes`) — DTOs/mapper exist, NO resource
-- Rate limiting filter — NOT IMPLEMENTED
-- JwtTestProfile — NOT IMPLEMENTED
+## Missing / Planned Items (re-verified 2026-10-17)
+- ~~Auth endpoints~~ **IMPLEMENTED** — `/auth/login`, `/auth/refresh`, `/auth/logout` (`AuthResource` + `AuthServicePort` + `RefreshTokenService`)
+- ~~Cliente controller~~ **IMPLEMENTED** — `ClienteResource` existe com DTOs, mapper e testes
+- Rate limiting filter (`/auth/*` e webhook) — **NOT IMPLEMENTED** (prioridade P1, ver docs/ARCHITECTURE-REVIEW-2026-10-17.md)
+- JwtTestProfile — NOT IMPLEMENTED (testes usam `@TestSecurity`)

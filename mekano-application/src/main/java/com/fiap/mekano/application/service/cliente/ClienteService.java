@@ -74,25 +74,25 @@ public class ClienteService implements ClienteServicePort {
             throw new AppException(400, Messages.get("cliente.name.required"));
         }
         if (command.email() == null || command.email().isBlank()) {
-            throw new AppException(400, "E-mail é obrigatório");
+            throw new AppException(400, Messages.get("cliente.email.required"));
         }
         if (command.logradouro() == null || command.logradouro().isBlank()) {
-            throw new AppException(400, "Logradouro é obrigatório");
+            throw new AppException(400, Messages.get("cliente.logradouro.required"));
         }
         if (command.numero() == null || command.numero().isBlank()) {
-            throw new AppException(400, "Número é obrigatório");
+            throw new AppException(400, Messages.get("cliente.numero.required"));
         }
         if (command.bairro() == null || command.bairro().isBlank()) {
-            throw new AppException(400, "Bairro é obrigatório");
+            throw new AppException(400, Messages.get("cliente.bairro.required"));
         }
         if (command.cidade() == null || command.cidade().isBlank()) {
-            throw new AppException(400, "Cidade é obrigatória");
+            throw new AppException(400, Messages.get("cliente.cidade.required"));
         }
         if (command.uf() == null || command.uf().isBlank()) {
-            throw new AppException(400, "UF é obrigatória");
+            throw new AppException(400, Messages.get("cliente.uf.required"));
         }
         if (command.cep() == null || command.cep().isBlank()) {
-            throw new AppException(400, "CEP é obrigatório");
+            throw new AppException(400, Messages.get("cliente.cep.required"));
         }
     }
 

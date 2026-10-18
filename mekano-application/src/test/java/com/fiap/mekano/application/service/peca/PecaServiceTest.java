@@ -163,7 +163,7 @@ class PecaServiceTest {
         var response = pecaService.criar(command);
 
         assertNotNull(response);
-        assertEquals("PEA-001", response.codigo());
+        assertEquals("PEA-001", response.getCodigo());
         verify(pecaRepository, times(1)).save(any(Peca.class));
     }
 
