@@ -60,6 +60,7 @@ For detailed per-module conventions, read these instead of old CLAUDE.md:
 | `@Transactional` | In use case (NOT in resource, NOT in repository) |
 | Soft delete | `isActive` + `deletedAt` |  |  |
 | Audit auto-fill | `createdBy`/`updatedBy` filled by `AuditoriaListener` (`@EntityListeners` in `BaseEntity`); user → subject JWT, anônimo → `PUBLICO`, sem request → `SISTEMA` |
+| Logging | `io.quarkus.logging.Log` estático (nunca SLF4J `LoggerFactory` nos services). INFO=fluxo normal, WARN=erro de cliente/negócio (4xx, incl. transições 422), ERROR=falha de sistema (centralizado no `ApiExceptionMapper`) |
 
 ### What is TRUE (old CLAUDE.md was WRONG — re-verified 2026-10-17)
 | Claim | Reality |
@@ -75,11 +76,23 @@ For detailed per-module conventions, read these instead of old CLAUDE.md:
 | 10 deprecated `*ExceptionMapper` files | DO NOT EXIST |
 | `publicKey.pem` in rest resources | NOT FOUND (dev key at `${user.home}/.mekano/secrets/`) |
 
+## Logging Conventions (VERIFIED — develop, D-19)
+Logs estruturados para Alloy/Loki via `io.quarkus.logging.Log` estático (D-12/D-19). Aplicado nos Services do mekano-application (OrdemDeServico, RequisicaoCompra, WhatsAppOrcamentoResposta, NfEntrada, Orcamento).
+
+| Regra | Detalhe |
+|-------|---------|
+| Níveis | INFO=fluxo normal (entrada/saída de operações de escrita), WARN=erro de cliente/negócio (4xx, incl. transições 422), ERROR=falha de sistema — **só** no `ApiExceptionMapper` (fallback) |
+| API | Usar `Log.info`/`Log.warn` sem args; com parâmetros **sempre** `Log.infof`/`Log.warnf` com placeholders `%s` (NÃO existe `info(String, Object...)` e NÃO usar `{}`) |
+| Formato | PT-BR, `chave=valor` separado por vírgula (ex.: `osId=`, `orcamentoUuid=`, `requisicaoId=`) — nunca logar PII (telefone, CPF, chaveAcesso completa) |
+| Onde logar | Só na camada application (Services) — NUNCA em resources (JWT loga no mapper), repositories, mappers, listeners |
+| Onde NÃO logar | Métodos de leitura pura (`findAll`, `countAll`) não emitem log |
+| Import | `io.quarkus.logging.Log` (nunca SLF4J `LoggerFactory` nos services — WhatsAppOrcamentoResposta foi migrado para Log) |
+
 ## Key Inconsistencies (Tech Debt — re-verified 2026-10-17)
 1. **Naming**: ports use EN (`save`, `findById`); remaining PT-BR names (`buscarPorDescricao`, `creditarSaldo`, etc.) are intentional business operations
 2. ~~2 stub services with field injection~~ **RESOLVED** — `PecaService`/`NfEntradaService` are real implementations with constructor injection and tests
 3. **Entity style**: newer entities (Peca, RequisicaoCompra, NfEntrada) use `@Data` (public fields) — older ones use `@Getter/@Setter` (private)
-4. **FT/Cache**: Only User/Veiculo/Servico/OS repos have `@Retry`+`@Timeout`+`@CacheResult` — Cliente/Peca/RequisicaoCompra/NfEntrada do NOT
+4. **FT/Cache**: User/Veiculo/Servico/OS/Cliente/Peca/Requisicao/NfEntrada repos padronizados — `@Retry` em reads, `@Timeout(5s)` em tudo, `@CacheResult` só findById estável (ver mekano-infrastructure/AGENTS.md)
 5. ~~Duplicate VOs `Placa`/`PlacaVeiculo`~~ **RESOLVED** — only `PlacaVeiculo` exists
 6. **Misplaced VO**: `ItemOrcamento` is a Value Object but lives in `model/` not `valueobject/`
 7. ~~Empty mappers~~ **RESOLVED** — deleted from repo
@@ -107,6 +120,7 @@ For detailed per-module conventions, read these instead of old CLAUDE.md:
 - D-16: Audit fields exclusivos de infrastructure — `AuditoriaListener` (`@EntityListeners` em `BaseEntity`) preenche `createdBy` no `@PrePersist` e `updatedBy` no `@PreUpdate`; resolve via `SecurityIdentity` (subject JWT) com fallbacks `PUBLICO`/`SISTEMA`; sem backfill
 - D-17: OS ↔ Peça/Serviço é many-to-many via tabela pivô `os_itens` (não FK columns na OS). Itens adicionados na criação (atendente) e no `finalizarDiagnostico` (mecânico). Orçamento gerado automaticamente a partir de TODOS os itens da tabela pivô.
 - D-18: Requisição de Compra `criar()` valida existência da Peça via `PecaRepositoryPort.findById()` (AppException 404). `cancelar()` bloqueia quando `motivo=ORDEM_SERVICO` (AppException 409) — a requisição faz parte do fluxo de execução da OS e não pode ser cancelada livremente.
+- D-19: Logging estruturado nos 5 Services de negócio (OrdemDeServico, RequisicaoCompra, WhatsAppOrcamentoResposta, NfEntrada, Orcamento) via `io.quarkus.logging.Log` estático. INFO=fluxo normal, WARN=erro de cliente/negócio (4xx, incl. transições 422 via try/catch + rethrow), ERROR=falha de sistema centralizado no `ApiExceptionMapper` (Services nunca logam ERROR). Sem PII; apenas `chave=valor` + UUIDs.
 
 ## Commands (VERIFIED)
 ```bash
