@@ -5,6 +5,7 @@
 **Granularity:** standard
 **Total v1 Requirements:** 37 (Complete)
 **Total v2 Requirements:** 22
+**Total v3 Requirements:** 8 (Repository Split)
 **Timeline:** 10 days
 **Team:** 5 developers
 
@@ -14,6 +15,7 @@
 
 - ✅ **v1.0 MVP** — Phases 1-3.1 (shipped 2026-08-08)
 - 🚧 **v2.0 infra-docs-quality-whatsapp** — Phases 4-8 (in progress)
+- 📋 **v3.0 repository-split** — Phase 10 (assignment: 4 repos + CI/CD + auto-deploy)
 
 ---
 
@@ -24,6 +26,7 @@
 - [ ] **Phase 6: Quality & Bug Fixes** — 80% cobertura JaCoCo, refactoring Clean Code + SOLID
 - [ ] **Phase 7: API Improvements** — Listagem ordenada de OS por prioridade, verificação de endpoints
 - [ ] **Phase 8: Documentation & Polish** — README completo, diagramas, Swagger, Miro, vídeo demonstrativo
+- [ ] **Phase 10: Repository Split — 4 repos with CI/CD** — Mekano-API, Mekano-Lambda, Mekano-Infra, Mekano-DB com deploy automático
 
 ---
 
@@ -36,90 +39,138 @@
 ---
 
 ### Phase 4: Infrastructure Foundation
+
 **Goal**: Infraestrutura de produção validada: Docker revisado, cluster K8s com manifests, Terraform para provisionamento, pipeline CD funcional
 **Depends on**: Nothing (infra foundation — paralelizável com Phase 5)
 **Requirements**: INF-01, INF-02, INF-03, INF-04, INF-05
 **Success Criteria** (what must be TRUE):
+
   1. Dockerfile e docker-compose revisados funcionam em produção (JVM e Native builds)
   2. Manifestos K8s (Deployment, Service, ConfigMap, Secret, HPA, Ingress) aplicáveis em cluster Kind, com health probes configuradas
   3. Scripts Terraform provisionam cluster EKS e banco RDS com backend S3 e state locking
   4. Pipeline CD no GitHub Actions faz build, push para registry e deploy automático no cluster
   5. Pipeline CI/CD documentada com diagrama Mermaid no repositório
+
 **Plans**: 2 plans
 **Plan list**:
+
   - [ ] 04-01-PLAN.md — Docker compose refinement (restart policies, .dockerignore, .env.example, troubleshooting README)
   - [ ] 04-02-PLAN.md — Azure DevOps task descriptions for Elias (K8s, Terraform, CD pipeline, Mermaid)
+
 **UI hint**: no
 
 ---
 
 ### Phase 5: WhatsApp Integration
+
 **Goal**: Clientes notificados via WhatsApp sobre aprovação/recusa de orçamento e finalização de OS
 **Depends on**: Nothing (port/adapter pattern — paralelizável com Phase 4)
 **Requirements**: WPP-01, WPP-02, API-05
 **Success Criteria** (what must be TRUE):
+
   1. Cliente recebe notificação WhatsApp com link para aprovar/recusar orçamento quando orçamento é gerado
   2. Cliente recebe notificação WhatsApp informando que veículo está pronto para retirada quando OS é finalizada
   3. Escopo de atualização de status via ferramenta externa verificado e documentado (aplicável somente a aprovar/recusar orçamento)
+
 **Plans**: 3 plans
 **Plan list**:
+
   - [ ] 05-01-PLAN.md — WhatsApp notifier port + Evolution API REST Client + docker-compose + orçamento observer (Wave 1)
   - [ ] 05-02-PLAN.md — WhatsApp retirada notification + webhook endpoint for interactive approve/reject (Wave 2)
   - [ ] 05-03-PLAN.md — Verify and document scope of external status update via WhatsApp (Wave 3)
+
 **UI hint**: no
 
 ---
 
 ### Phase 6: Quality & Bug Fixes
+
 **Goal**: Código com 80% de cobertura de testes (JaCoCo LINE) e aderente a princípios Clean Code e SOLID
 **Depends on**: Phase 4 (infra CI para gate de qualidade), Phase 5 (testes do adapter WhatsApp)
 **Requirements**: QLD-01, QLD-02
 **Success Criteria** (what must be TRUE):
+
   1. Relatório JaCoCo `report-aggregate` mostra ≥80% LINE coverage no projeto completo (excluindo DTOs, Entities, Mappers gerados, REST Client proxies)
   2. Pipeline CI falha se cobertura ficar abaixo de 80%
   3. Revisão geral de código concluída: inconsistências de naming (PT-BR vs EN), field injection, estilo de entidades, mappers vazios, VOs duplicados e packages incorretos endereçados sem introduzir regressões
+
 **Plans**: 5 plans
 **Plan list**:
+
   - [ ] 06-01-PLAN.md — JaCoCo aggregated coverage gating (report-aggregate + exclusions) — Wave 1
   - [ ] 06-02-PLAN.md — PT-BR→EN port rename (Peca, NfEntrada, RequisicaoCompra) — Wave 2
   - [ ] 06-03-PLAN.md — Dead code removal, entity style, VO unification — Wave 2
   - [ ] 06-04-PLAN.md — FT/Cache additions to remaining repos — Wave 3
   - [ ] 06-05-PLAN.md — Open-ended findings + ItemOrcamento move — Wave 4
+
 **UI hint**: no
 
 ---
 
 ### Phase 7: API Improvements
+
 **Goal**: API de listagem de OS ordenada por prioridade de status; verificação de endpoints existentes concluída
 **Depends on**: Phase 6 (testes garantem que refatoração não quebrou endpoints existentes)
 **Requirements**: API-01, API-02, API-03, API-04
 **Success Criteria** (what must be TRUE):
+
   1. Verificação documentada se "APIs" refere-se a endpoints ou múltiplas APIs (API-01)
   2. Existência de endpoint de abertura de OS verificada e documentada (API-02)
   3. Existência de endpoint de consulta de status da OS verificada e documentada (API-03)
   4. Listagem de OS retorna ordenada por prioridade: Em Execução > Aguardando Aprovação > Diagnóstico > Recebida, mais antigas primeiro, omitindo finalizadas/entregues
+
 **Plans**: 2 plans
 **Plan list**:
+
   - [ ] 07-01-PLAN.md — Document endpoint verification (API-01 pending, API-02 verified, API-03 verified)
   - [ ] 07-02-PLAN.md — Implement status priority ordering + terminal exclusion in findAllWithFilters (API-04)
+
 **UI hint**: no
 
 ---
 
 ### Phase 8: Documentation & Polish
+
 **Goal**: Documentação completa e profissional: README, diagramas, Swagger, Miro, vídeo demonstrativo
 **Depends on**: Phase 4 (infra para docs de deploy), Phase 5 (WhatsApp para diagramas de sequência), Phase 7 (API final para Swagger)
 **Requirements**: DOC-04, DOC-05, DOC-06, DOC-07, DOC-08, DOC-09, DOC-10, DOC-11
 **Success Criteria** (what must be TRUE):
+
   1. README.md contém descrição da solução, objetivos da v2, instruções de execução local, deploy K8s e Terraform
   2. Diagrama de sequência do fluxo de consumo de endpoints e Mermaid do fluxo de CI/CD estão no README
   3. Collection Postman/Swagger revisada e link disponível; Miro atualizado em relação à API
   4. Documentação da API com componentes, infraestrutura provisionada e fluxo de deploy; explicação de HPA e simulação de carga
   5. Vídeo demonstrativo (até 15 min) gravado e disponibilizado mostrando ambiente em execução
+
 **Plans**: 2 plans
 **Plan list**:
+
   - [ ] 08-01-PLAN.md — README restructure, Mermaid diagrams, Swagger bump, Postman update, Miro, component docs, HPA, video task (Wave 1)
   - [ ] 08-02-PLAN.md — CI/CD Mermaid (deferred — depends on INF-04) (Wave 2)
+
+**UI hint**: no
+
+---
+
+### Phase 10: Repository Split — 4 repos with CI/CD
+
+**Goal**: Projeto organizado em 4 repositórios separados sob TechMinds-Group, cada um com CI/CD e deploy automático para a nuvem comprovado (API→EKS, Lambda→AWS Lambda, Infra/DB→terraform apply); repositório FIAP antigo neutralizado
+**Depends on**: Nothing (exercício da disciplina — paralelizável com Phases 4-8; usa terraform/k8s/cd.yml já existentes no monorepo)
+**Requirements**: SPLIT-01, SPLIT-02, SPLIT-03, SPLIT-04, SPLIT-05, SPLIT-06, SPLIT-07, SPLIT-08
+**Success Criteria** (what must be TRUE):
+
+  1. 4 repositórios privados em TechMinds-Group (Mekano-API, Mekano-Lambda, Mekano-Infra, Mekano-DB), default branch main, CI verde
+  2. Deploy automático comprovado por repo: push em main → pipeline → checagem pós-deploy (rollout Ready / LastUpdate / terraform plan sem drift)
+  3. State Terraform dividido: mekano/infra (VPC+EKS) e mekano/db (RDS) no mesmo bucket+lock; RDS vivo sem recreate (ARN/CreateTime estáveis)
+  4. Zero segredos reais nos 4 repositórios (histórico incluído); .gitignore case-robust para *.pem
+  5. Repositório FIAP antigo arquivado/redirect; credencial OIDC antiga revogada
+  6. DQ1-DQ8 registradas em 10-CONTEXT.md antes de qualquer execução (gate de decisão bloqueante)
+
+**Plans**: 0 plans
+**Plan list**:
+
+  - [ ] TBD (run /gsd-plan-phase 10 to break down)
+
 **UI hint**: no
 
 ---
@@ -133,6 +184,7 @@
 | 6. Quality & Bug Fixes | 0/5 | Plans created | - |
 | 7. API Improvements | 0/2 | Plans created | - |
 | 8. Documentation & Polish | 0/0 | Not started | - |
+| 10. Repository Split — 4 repos with CI/CD | 0/0 | Not started | - |
 
 ---
 
@@ -145,9 +197,15 @@
 | Infraestrutura | 5 | 5 | 0 | 0 | 0 | 0 |
 | WhatsApp | 2 | 0 | 2 | 0 | 0 | 0 |
 | API | 5 | 0 | 1 | 0 | 4 | 0 |
-| **Total** | **22** | **5** | **3** | **2** | **4** | **8** |
+| **Total v2** | **22** | **5** | **3** | **2** | **4** | **8** |
+
+| Category | Total | Phase 10 |
+|----------|-------|----------|
+| Repository Split | 8 | 8 |
+| **Total v3** | **8** | **8** |
 
 ✓ **22/22 v2 requirements mapped to phases**
+✓ **8/8 v3 requirements mapped to Phase 10**
 ✓ **No orphaned requirements**
 
 ---

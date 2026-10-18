@@ -34,7 +34,7 @@ class WhatsAppCancelamentoObserverTest {
         return OrdemDeServico.reconstitute(osUuid, clienteUuid, veiculoUuid,
                 "Problema no motor", null, null, null, null, null, null,
                 null, null, null, null, null, null, null, null, null, null, null, null,
-                null, LocalDateTime.now(), 0L);
+                null, null, null, LocalDateTime.now(), 0L);
     }
 
     @Test

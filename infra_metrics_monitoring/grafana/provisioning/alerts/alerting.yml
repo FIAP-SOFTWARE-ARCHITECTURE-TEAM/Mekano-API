@@ -1,0 +1,166 @@
+apiVersion: 1
+groups:
+    - orgId: 1
+      name: Evaluation group - 1 minute
+      folder: MEKANO API
+      interval: 1m
+      rules:
+        - uid: dfynqevjzb8qoc
+          title: MEKANO-API - TAXA HTTP 400
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 3600
+                to: 0
+              datasourceUid: PBFA97CFB590B2093
+              model:
+                editorMode: code
+                expr: (sum(increase(http_server_requests_seconds_count{status=~"4.."}[$__range])) / sum(increase(http_server_requests_seconds_count[$__range]))) * 100
+                instant: true
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: C
+              queryType: expression
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 20
+                        type: gte
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - C
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          noDataState: NoData
+          execErrState: Error
+          for: 1m
+          annotations:
+            description: A quantidade de erros http 400 atingiram 20% ou mais.
+            summary: Erros HTTP 400
+          isPaused: false
+          notification_settings:
+            receiver: Dev - Sistema de Alertas (email)
+        - uid: ffynr1pkvvlz4a
+          title: MEKANO-API - SYSTEM DOWN
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: PBFA97CFB590B2093
+              model:
+                editorMode: builder
+                expr: up
+                instant: true
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: C
+              queryType: expression
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 0
+                        type: eq
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - C
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          noDataState: NoData
+          execErrState: Error
+          annotations:
+            description: A query 'up' de 'q/mtrics' do prometheus está retornando zero (0), indicando possivelmente que o sistema mekano API está fora do ar.
+            summary: MEKANO API - SYSTEM DOWN
+          labels: {}
+          isPaused: false
+          notification_settings:
+            receiver: Dev - Sistema de Alertas (email)
+        - uid: ffynreyv2xjpce
+          title: MEKANO-API - TAXA HTTP 500
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 3600
+                to: 0
+              datasourceUid: PBFA97CFB590B2093
+              model:
+                editorMode: code
+                expr: (sum(increase(http_server_requests_seconds_count{status=~"5.."}[$__range])) / sum(increase(http_server_requests_seconds_count[$__range]))) * 100
+                instant: true
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: C
+              queryType: expression
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 5
+                        type: gte
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - C
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          noDataState: NoData
+          execErrState: Error
+          for: 1m
+          annotations:
+            description: A quantidade de erros http 500 atingiram 5% ou mais.
+            summary: Erros HTTP 500
+          isPaused: false
+          notification_settings:
+            receiver: Dev - Sistema de Alertas (email)

@@ -96,6 +96,21 @@
 - [ ] **API-04**: Modificar listagem de OS para ordenar por prioridade de status (Em Execução > Aguardando Aprovação > Diagnóstico > Recebida), mais antigas primeiro, omitindo finalizadas/entregues
 - [ ] **API-05**: Verificar escopo de atualização de status via ferramenta externa (WhatsApp/e-mail) — aplicar somente a aprovar/recusar orçamento?
 
+## v3 Requirements — Repository Split (Assignment)
+
+Definidas em 2026-09-22 a partir da exigência da disciplina: organizar o projeto em quatro repositórios separados, cada um com CI/CD e deploy automático para a nuvem.
+
+### Repositórios e CI/CD
+
+- [ ] **SPLIT-01**: Mekano-API (aplicação Quarkus) em repositório privado TechMinds-Group com CI verde e CD de deploy automático no EKS
+- [ ] **SPLIT-02**: Mekano-Lambda (function serverless) em repositório privado com CI verde e CD de deploy automático no AWS Lambda
+- [ ] **SPLIT-03**: Mekano-Infra (Terraform: EKS + VPC + Kubernetes + Observability) em repositório privado com CD `terraform apply` automático
+- [ ] **SPLIT-04**: Mekano-DB (Terraform: RDS PostgreSQL gerenciado) em repositório privado com CD `terraform apply` automático e state separado
+- [ ] **SPLIT-05**: Deploy automático comprovado por repositório: push em `main` → pipeline verde → checagem pós-deploy (rollout Ready / LastUpdate / plan sem drift)
+- [ ] **SPLIT-06**: Higiene de segredos: nenhum segredo real em nenhum repositório ou histórico novo; `.gitignore` guarda chaves (`*.pem`, `.env`)
+- [ ] **SPLIT-07**: Repositório FIAP antigo arquivado ou com redirect — sem servir como fonte-sombra de verdade
+- [ ] **SPLIT-08**: Reencanamento cross-repo: OIDC escopado por repositório, propagação do endpoint do banco, environments de proteção
+
 ## v2 Deferred
 
 Deferred to future release. Tracked but not in current roadmap.
@@ -185,13 +200,22 @@ Deferred to future release. Tracked but not in current roadmap.
 | API-03 | Phase 7 | Pending |
 | API-04 | Phase 7 | Pending |
 | API-05 | Phase 5 | Pending |
+| SPLIT-01 | Phase 10 | Pending |
+| SPLIT-02 | Phase 10 | Pending |
+| SPLIT-03 | Phase 10 | Pending |
+| SPLIT-04 | Phase 10 | Pending |
+| SPLIT-05 | Phase 10 | Pending |
+| SPLIT-06 | Phase 10 | Pending |
+| SPLIT-07 | Phase 10 | Pending |
+| SPLIT-08 | Phase 10 | Pending |
 
 **Coverage:**
 - v1 requirements: 37 total — All Complete ✓
 - v2 requirements: 22 total
-- Mapped to phases: 22 ✓
+- v3 requirements (Repository Split): 8 total — Mapped to Phase 10 ✓
+- Mapped to phases: 30 ✓
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-06-20*
-*Last updated: 2026-08-08 after milestone v2.0 initialization*
+*Last updated: 2026-09-22 after Phase 10 (Repository Split) registration*

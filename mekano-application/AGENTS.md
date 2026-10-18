@@ -71,9 +71,15 @@ com.fiap.mekano.application
 5. Flow: validate → check duplicates → hash (if password) → create entity → save → publish event
 6. Response records never expose `passwordHash` or domain entities directly
 
+## Logging (in Services) — develop, D-19
+- `io.quarkus.logging.Log` estático — NUNCA SLF4J `LoggerFactory`
+- INFO=fluxo normal de escrita, WARN=erro de cliente/negócio (4xx, incl. transições 422), ERROR=NUNCA (só no `ApiExceptionMapper`)
+- Com parâmetros usar `Log.infof`/`Log.warnf` com `%s`; formato `chave=valor` em PT-BR; nunca logar PII
+- Detalhes completos em `AGENTS.md` raiz → "Logging Conventions"
+
 ## Known Deviations (re-verified 2026-10-17)
-- `PecaService`/`NfEntradaService`/`RequisicaoCompraService` não implementam port de entrada — dívida documentada em docs/ARCHITECTURE-REVIEW-2026-10-17.md
-- Alguns erros hardcoded fora do `Messages` bundle (ex.: "E-mail é obrigatório" em ClienteService; 409 de status em NfEntradaService)
+- `PecaService`/`NfEntradaService`/`RequisicaoCompraService` não implementam port de entrada — dívida documentada em docs/ARCHITECTURE-REVIEW-2026-10-17.md (sprint 1 extraiu `PecaServicePort`/`NfEntradaServicePort`/`RequisicaoCompraServicePort`)
+- ~~Alguns erros hardcoded fora do `Messages` bundle~~ **RESOLVIDO** — todas as mensagens via `Messages.get` (sprint 2)
 
 ## Dependencies
 - **compile**: mekano-domain, quarkus-arc

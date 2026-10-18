@@ -1,6 +1,7 @@
 package com.fiap.mekano.domain.model;
 
 import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.exception.DomainException;
 import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.domain.valueobject.ItemOrcamento;
 import lombok.AccessLevel;
@@ -86,21 +87,21 @@ public class Orcamento {
 
     public void aprovar() {
         if (status != StatusOrcamento.PENDENTE) {
-            throw new AppException(422, Messages.get("orcamento.status.invalido.aprovar", status));
+            throw new DomainException(Messages.get("orcamento.status.invalido.aprovar", status));
         }
         this.status = StatusOrcamento.APROVADO;
     }
 
     public void reprovar() {
         if (status != StatusOrcamento.PENDENTE) {
-            throw new AppException(422, Messages.get("orcamento.status.invalido.reprovar", status));
+            throw new DomainException(Messages.get("orcamento.status.invalido.reprovar", status));
         }
         this.status = StatusOrcamento.REPROVADO;
     }
 
     public void expirar() {
         if (status != StatusOrcamento.PENDENTE) {
-            throw new AppException(422, Messages.get("orcamento.status.invalido.expirar", status));
+            throw new DomainException(Messages.get("orcamento.status.invalido.expirar", status));
         }
         this.status = StatusOrcamento.EXPIRADO;
     }
