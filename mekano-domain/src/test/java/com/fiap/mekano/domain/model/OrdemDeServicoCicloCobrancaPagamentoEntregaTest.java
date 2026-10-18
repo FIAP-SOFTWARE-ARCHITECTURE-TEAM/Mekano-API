@@ -4,6 +4,8 @@ import com.fiap.mekano.domain.event.CobrancaGeradaEvent;
 import com.fiap.mekano.domain.event.EntregaConfirmadaEvent;
 import com.fiap.mekano.domain.event.PagamentoConfirmadoEvent;
 import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.exception.DomainException;
+import com.fiap.mekano.domain.exception.TransicaoInvalidaException;
 import com.fiap.mekano.domain.os.StatusEntrega;
 import com.fiap.mekano.domain.os.StatusPagamento;
 import org.junit.jupiter.api.DisplayName;
@@ -78,8 +80,8 @@ class OrdemDeServicoCicloCobrancaPagamentoEntregaTest {
     void naoDeveGerarCobrancaAntesDaOsFinalizada() {
         OrdemDeServico os = novaOS();
 
-        AppException exception = assertThrows(
-                AppException.class,
+        DomainException exception = assertThrows(
+                DomainException.class,
                 os::gerarCobranca
         );
 
@@ -91,8 +93,8 @@ class OrdemDeServicoCicloCobrancaPagamentoEntregaTest {
     void naoDeveConfirmarPagamentoSemCobranca() {
         OrdemDeServico os = osFinalizada();
 
-        AppException exception = assertThrows(
-                AppException.class,
+        DomainException exception = assertThrows(
+                DomainException.class,
                 () -> os.confirmarPagamento("PIX-123")
         );
 
@@ -117,8 +119,8 @@ class OrdemDeServicoCicloCobrancaPagamentoEntregaTest {
         OrdemDeServico os = osFinalizada();
         os.gerarCobranca();
 
-        AppException exception = assertThrows(
-                AppException.class,
+        DomainException exception = assertThrows(
+                DomainException.class,
                 () -> os.entregar("João Cliente")
         );
 
@@ -145,8 +147,8 @@ class OrdemDeServicoCicloCobrancaPagamentoEntregaTest {
 
         os.gerarCobranca();
 
-        AppException exception = assertThrows(
-                AppException.class,
+        DomainException exception = assertThrows(
+                DomainException.class,
                 os::gerarCobranca
         );
 
@@ -161,8 +163,8 @@ class OrdemDeServicoCicloCobrancaPagamentoEntregaTest {
         os.gerarCobranca();
         os.confirmarPagamento("PIX-123");
 
-        AppException exception = assertThrows(
-                AppException.class,
+        DomainException exception = assertThrows(
+                DomainException.class,
                 () -> os.confirmarPagamento("PIX-456")
         );
 
@@ -178,8 +180,8 @@ class OrdemDeServicoCicloCobrancaPagamentoEntregaTest {
         os.confirmarPagamento("PIX-123");
         os.entregar("João Cliente");
 
-        AppException exception = assertThrows(
-                AppException.class,
+        TransicaoInvalidaException exception = assertThrows(
+                TransicaoInvalidaException.class,
                 () -> os.entregar("Maria Cliente")
         );
 
@@ -259,13 +261,15 @@ class OrdemDeServicoCicloCobrancaPagamentoEntregaTest {
                 null,
                 null,
                 null,
-                null,
                 StatusEntrega.ENTREGUE,
                 cobrancaGeradaEm,
                 pagamentoConfirmadoEm,
                 "PIX-999",
                 entregueEm,
                 "Maria Cliente",
+                null,
+                null,
+                null,
                 createdAt,
                 20L
         );
