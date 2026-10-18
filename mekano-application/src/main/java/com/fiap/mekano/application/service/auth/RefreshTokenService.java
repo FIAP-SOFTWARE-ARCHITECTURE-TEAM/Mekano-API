@@ -3,7 +3,7 @@ package com.fiap.mekano.application.service.auth;
 import com.fiap.mekano.domain.model.Role;
 import com.fiap.mekano.domain.port.out.RefreshTokenData;
 import com.fiap.mekano.domain.port.out.RefreshTokenRepositoryPort;
-import com.fiap.mekano.shared.exception.AppException;
+import com.fiap.mekano.domain.exception.AppException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
