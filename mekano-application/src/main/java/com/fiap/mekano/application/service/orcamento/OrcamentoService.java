@@ -6,6 +6,7 @@ import com.fiap.mekano.domain.event.OrcamentoAprovadoEvent;
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.exception.DomainException;
 import com.fiap.mekano.domain.exception.Messages;
+import com.fiap.mekano.domain.model.StatusOrcamento;
 import com.fiap.mekano.domain.valueobject.ItemOrcamento;
 import com.fiap.mekano.domain.model.Orcamento;
 import com.fiap.mekano.domain.model.OrdemDeServico;
@@ -72,6 +73,13 @@ public class OrcamentoService implements OrcamentoServicePort {
                     return new AppException(404, Messages.get("orcamento.not.found", command.orcamentoUuid()));
                 });
 
+        // Guarda de idempotência: replay da aprovação retorna o estado atual sem
+        // re-executar efeitos colaterais (transição de OS, save, eventos, auditoria).
+        if (orcamento.getStatus() == StatusOrcamento.APROVADO) {
+            Log.infof("Aprovação em replay (idempotente): orcamentoUuid=%s", command.orcamentoUuid());
+            return orcamento;
+        }
+
         executarTransicao("aprovar", orcamento.getId(), () -> orcamento.aprovar());
 
         if (orcamento.getOrdemServicoUuid() != null) {
@@ -115,6 +123,13 @@ public class OrcamentoService implements OrcamentoServicePort {
                     Log.warnf("Orçamento não encontrado: orcamentoUuid=%s", command.orcamentoUuid());
                     return new AppException(404, Messages.get("orcamento.not.found", command.orcamentoUuid()));
                 });
+
+        // Guarda de idempotência: replay da reprovação retorna o estado atual sem
+        // re-executar efeitos colaterais (transição de OS, save, eventos, auditoria).
+        if (orcamento.getStatus() == StatusOrcamento.REPROVADO) {
+            Log.infof("Reprovação em replay (idempotente): orcamentoUuid=%s", command.orcamentoUuid());
+            return orcamento;
+        }
 
         executarTransicao("reprovar", orcamento.getId(), () -> orcamento.reprovar());
 

@@ -48,8 +48,7 @@ public class OrcamentoResource {
     @APIResponse(responseCode = "404", description = "Orçamento não encontrado para a OS",
             content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = ProblemDetail.class)))
     public Response buscarPorOSPath(@PathParam("osUuid") UUID osUuid) {
-        Orcamento orcamento = orcamentoService.buscarPorOrdemServico(osUuid);
-        return Response.ok(OrcamentoResponse.from(orcamento)).build();
+        return buscarPorUuidOs(osUuid);
     }
 
     @GET
@@ -60,8 +59,7 @@ public class OrcamentoResource {
     @APIResponse(responseCode = "404", description = "Orçamento não encontrado para a OS",
             content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = ProblemDetail.class)))
     public Response buscarPorOSQuery(@QueryParam("osUuid") UUID osUuid) {
-        Orcamento orcamento = orcamentoService.buscarPorOrdemServico(osUuid);
-        return Response.ok(OrcamentoResponse.from(orcamento)).build();
+        return buscarPorUuidOs(osUuid);
     }
 
     @GET
@@ -81,10 +79,11 @@ public class OrcamentoResource {
     @Path("/{uuid}/aprovar")
     @Produces(MediaType.APPLICATION_JSON)
     @RolesAllowed({"admin", "cliente"})
-    @Operation(summary = "Aprovar orçamento", description = "Cliente aprova o orçamento — OS transiciona para EM_EXECUCAO")
-    @APIResponse(responseCode = "200", description = "Orçamento aprovado",
+    @Operation(summary = "Aprovar orçamento", description = "Cliente aprova o orçamento — OS transiciona para AGUARDANDO_EXECUCAO. "
+            + "Reenvio da aprovação quando já APROVADO é idempotente (retorna 200 sem duplicar efeitos).")
+    @APIResponse(responseCode = "200", description = "Orçamento aprovado (ou já aprovado — replay idempotente)",
             content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = OrcamentoResponse.class)))
-    @APIResponse(responseCode = "422", description = "Orçamento não está pendente",
+    @APIResponse(responseCode = "422", description = "Conflito de estado: orçamento REPROVADO ou EXPIRADO não pode ser aprovado",
             content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = ProblemDetail.class)))
     public Response aprovar(@PathParam("uuid") UUID uuid) {
         var orcamento = orcamentoService.aprovar(new AprovarOrcamentoCommand(uuid));
@@ -96,13 +95,22 @@ public class OrcamentoResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @RolesAllowed({"admin", "cliente"})
-    @Operation(summary = "Reprovar orçamento", description = "Cliente reprova o orçamento — OS transiciona para CANCELADA")
-    @APIResponse(responseCode = "200", description = "Orçamento reprovado",
+    @Operation(summary = "Reprovar orçamento", description = "Cliente reprova o orçamento — OS transiciona para CANCELADA. "
+            + "Reenvio da reprovação quando já REPROVADO é idempotente (retorna 200 sem duplicar efeitos).")
+    @APIResponse(responseCode = "200", description = "Orçamento reprovado (ou já reprovado — replay idempotente)",
             content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = OrcamentoResponse.class)))
-    @APIResponse(responseCode = "422", description = "Orçamento não está pendente",
+    @APIResponse(responseCode = "422", description = "Conflito de estado: orçamento APROVADO ou EXPIRADO não pode ser reprovado",
             content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = ProblemDetail.class)))
     public Response reprovar(@PathParam("uuid") UUID uuid, @Valid ReprovarMotivoRequest request) {
         var orcamento = orcamentoService.reprovar(new ReprovarOrcamentoCommand(uuid, request.motivo()));
+        return Response.ok(OrcamentoResponse.from(orcamento)).build();
+    }
+
+    // ─────────────── Helper ───────────────
+
+    /** Fonte única da busca de orçamento por OS (usada pelos endpoints path e query param). */
+    private Response buscarPorUuidOs(UUID osUuid) {
+        Orcamento orcamento = orcamentoService.buscarPorOrdemServico(osUuid);
         return Response.ok(OrcamentoResponse.from(orcamento)).build();
     }
 }
