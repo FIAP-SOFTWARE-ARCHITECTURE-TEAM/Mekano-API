@@ -12,11 +12,8 @@ import com.fiap.mekano.domain.model.RequisicaoCompra;
 import com.fiap.mekano.domain.model.StatusRequisicao;
 import com.fiap.mekano.domain.port.out.ItemRequisicaoCompraRepositoryPort;
 import com.fiap.mekano.domain.port.out.RequisicaoCompraRepositoryPort;
-import com.fiap.mekano.infrastructure.cache.CacheNames;
 import com.fiap.mekano.infrastructure.entity.RequisicaoCompraEntity;
 
-import io.quarkus.cache.CacheInvalidate;
-import io.quarkus.cache.CacheResult;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -39,7 +36,6 @@ public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositor
 
     @Override
     @Timeout(value = 5, unit = ChronoUnit.SECONDS)
-    @CacheInvalidate(cacheName = CacheNames.REQUISICOES)
     public RequisicaoCompra save(RequisicaoCompra requisicao) {
         RequisicaoCompraEntity entity = panacheRepository.find("uuid = ?1", requisicao.getId()).firstResult();
         if (entity == null) {
@@ -65,8 +61,10 @@ public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositor
     @Override
     @Retry(maxRetries = 3)
     @Timeout(value = 5, unit = ChronoUnit.SECONDS)
-    @CacheResult(cacheName = CacheNames.REQUISICOES)
     public Optional<RequisicaoCompra> findById(UUID id) {
+        // Sem @CacheResult: requisicao e maquina de estados volatil (ABERTA ->
+        // ENVIADA -> ...) — servir entidade stale de cache quebra as transicoes.
+        // Ver D-21 / mekano-infrastructure/AGENTS.md.
         return panacheRepository.find("uuid = ?1 and isActive = ?2", id, true)
                 .firstResultOptional()
                 .map(entity -> {
@@ -99,7 +97,6 @@ public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositor
 
     @Override
     @Timeout(value = 5, unit = ChronoUnit.SECONDS)
-    @CacheInvalidate(cacheName = CacheNames.REQUISICOES)
     public RequisicaoCompra atualizar(RequisicaoCompra requisicao) {
         return save(requisicao);
     }

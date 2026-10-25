@@ -1,4 +1,4 @@
-package com.fiap.mekano.infrastructure.repository;
+﻿package com.fiap.mekano.infrastructure.repository;
 
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.exception.Messages;
@@ -113,10 +113,10 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
             return exact.map(clienteEntityMapper::toDomain);
         }
 
-        // WR-04: fallback por sufixo incluindo o DDD (últimos 10 dígitos) com
-        // ORDER BY createdAt (determinístico) e retorno APENAS quando há uma
-        // única correspondência — múltiplos clientes com o mesmo número local
-        // em DDDs diferentes tornam o resultado ambíguo (retorna vazio).
+        // WR-04: fallback por sufixo incluindo o DDD (ÃƒÂºltimos 10 dÃƒÂ­gitos) com
+        // ORDER BY createdAt (determinÃƒÂ­stico) e retorno APENAS quando hÃƒÂ¡ uma
+        // ÃƒÂºnica correspondÃƒÂªncia Ã¢â‚¬â€ mÃƒÂºltiplos clientes com o mesmo nÃƒÂºmero local
+        // em DDDs diferentes tornam o resultado ambÃƒÂ­guo (retorna vazio).
         if (digits.length() >= 10) {
             String suffix = digits.substring(digits.length() - 10);
             List<ClienteEntity> matches = panacheRepository
@@ -171,8 +171,7 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
     @Transactional
     @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     @CacheInvalidate(cacheName = CacheNames.CLIENTES)
-    public void markAsDeleted(UUID id) {
-        ClienteEntity entity = panacheRepository.find("uuid = ?1", id)
+    public void markAsDeleted(UUID id) {        ClienteEntity entity = panacheRepository.find("uuid = ?1", id)
                 .firstResultOptional()
                 .orElseThrow(() -> new AppException(404, Messages.get("cliente.not.found", id)));
         entity.setIsActive(false);
