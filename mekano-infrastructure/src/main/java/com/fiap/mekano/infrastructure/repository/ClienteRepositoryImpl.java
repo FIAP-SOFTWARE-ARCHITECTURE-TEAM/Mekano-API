@@ -1,4 +1,4 @@
-﻿package com.fiap.mekano.infrastructure.repository;
+package com.fiap.mekano.infrastructure.repository;
 
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.exception.Messages;
