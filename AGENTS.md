@@ -99,7 +99,7 @@ Logs estruturados para Alloy/Loki via `io.quarkus.logging.Log` estático (D-12/D
 8. ~~NfEntradaRepositoryImpl bug~~ **RESOLVED/NA** — model é enxuto por design (chaveAcesso, valorTotal, requisicaoCompraId, dataRecebimento); itens derivados da RequisicaoCompra (sem peca_id)
 9. ~~ClienteService.updateCliente não aplica updates~~ **RESOLVED** — chama `cliente.atualizar(...)` + save
 10. **Dead code**: `OrdemDeServico3.java` (bloco comentado 100%) e `reconstitute()` antigo comentado em `OrdemDeServico.java`
-11. **Roles**: `OrcamentoResource` class-level `@RolesAllowed` inclui `mecanico` e mutações aprovar/reprovar são `@PermitAll` — revisar (ver docs/ARCHITECTURE-REVIEW-2026-10-17.md)
+11. ~~Roles: mutações aprovar/reprovar eram @PermitAll — revisar~~ **DECIDIDO (D-20)**: voltaram a ser públicas —UUID é a chave de acesso; auth obrigatória quebrou o fluxo cliente do Newman/CI
 
 ## Decision Records (VERIFIED)
 - D-01: `@Transactional` no use case, não no resource nem no repository
@@ -121,6 +121,7 @@ Logs estruturados para Alloy/Loki via `io.quarkus.logging.Log` estático (D-12/D
 - D-17: OS ↔ Peça/Serviço é many-to-many via tabela pivô `os_itens` (não FK columns na OS). Itens adicionados na criação (atendente) e no `finalizarDiagnostico` (mecânico). Orçamento gerado automaticamente a partir de TODOS os itens da tabela pivô.
 - D-18: Requisição de Compra `criar()` valida existência da Peça via `PecaRepositoryPort.findById()` (AppException 404). `cancelar()` bloqueia quando `motivo=ORDEM_SERVICO` (AppException 409) — a requisição faz parte do fluxo de execução da OS e não pode ser cancelada livremente.
 - D-19: Logging estruturado nos 5 Services de negócio (OrdemDeServico, RequisicaoCompra, WhatsAppOrcamentoResposta, NfEntrada, Orcamento) via `io.quarkus.logging.Log` estático. INFO=fluxo normal, WARN=erro de cliente/negócio (4xx, incl. transições 422 via try/catch + rethrow), ERROR=falha de sistema centralizado no `ApiExceptionMapper` (Services nunca logam ERROR). Sem PII; apenas `chave=valor` + UUIDs.
+- D-20: `POST /orcamentos/{uuid}/aprovar|reprovar` são **públicos** (`@PermitAll`) — o UUID do orçamento é a chave de acesso do cliente (mesmo modelo do `GET /os/{id}/status`). Idempotentes por design (replay = 200). Decisão de produto: exigir JWT quebrou o fluxo cliente do Newman/CI (2026-10). Rate limiting segue protegendo `/auth/*` e o webhook.
 
 ## Commands (VERIFIED)
 ```bash

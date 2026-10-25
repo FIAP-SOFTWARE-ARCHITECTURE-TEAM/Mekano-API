@@ -176,22 +176,24 @@ class OrcamentoResourceTest {
                 .contentType(containsString("application/problem+json"));
     }
 
-    // ─────────────── ANÔNIMOS (bloqueados) ───────────────
+    // ─────────────── ANÔNIMOS (públicos por decisão D-20 — UUID é a chave de acesso) ───────────────
 
     @Test
     @Order(8)
-    void aprovar_anonimo_retorna401() {
+    void aprovar_anonimo_retorna200() {
         given()
                 .contentType(ContentType.JSON)
                 .when()
                 .post(BASE_PATH + "/" + ORCAMENTO_UUID + "/aprovar")
                 .then()
-                .statusCode(401);
+                .statusCode(200)
+                .body("id", equalTo(ORCAMENTO_UUID.toString()))
+                .body("status", equalTo("APROVADO"));
     }
 
     @Test
     @Order(9)
-    void reprovar_anonimo_retorna401() {
+    void reprovar_anonimo_retorna200() {
         given()
                 .contentType(ContentType.JSON)
                 .body("""
@@ -200,7 +202,9 @@ class OrcamentoResourceTest {
                 .when()
                 .post(BASE_PATH + "/" + ORCAMENTO_UUID + "/reprovar")
                 .then()
-                .statusCode(401);
+                .statusCode(200)
+                .body("id", equalTo(ORCAMENTO_UUID.toString()))
+                .body("status", equalTo("REPROVADO"));
     }
 
     @Test

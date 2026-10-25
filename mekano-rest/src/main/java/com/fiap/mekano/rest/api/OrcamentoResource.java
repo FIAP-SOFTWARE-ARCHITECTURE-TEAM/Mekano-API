@@ -16,6 +16,7 @@ import com.fiap.mekano.rest.api.dto.OrcamentoResponse;
 import com.fiap.mekano.rest.api.dto.ReprovarMotivoRequest;
 import com.fiap.mekano.rest.api.exception.ProblemDetail;
 
+import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
@@ -32,7 +33,7 @@ import jakarta.ws.rs.core.Response;
 
 @Path("/orcamentos")
 @RequestScoped
-@RolesAllowed({"admin", "cliente"})
+@RolesAllowed({"admin", "atendente", "mecanico", "cliente"})
 @Tag(name = "Orçamentos", description = "Consulta, aprovação e reprovação de orçamentos")
 public class OrcamentoResource {
 
@@ -78,9 +79,9 @@ public class OrcamentoResource {
     @POST
     @Path("/{uuid}/aprovar")
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({"admin", "cliente"})
+    @PermitAll
     @Operation(summary = "Aprovar orçamento", description = "Cliente aprova o orçamento — OS transiciona para AGUARDANDO_EXECUCAO. "
-            + "Reenvio da aprovação quando já APROVADO é idempotente (retorna 200 sem duplicar efeitos).")
+            + "Endpoint público (UUID é a chave de acesso) e idempotente: reenvio quando já APROVADO retorna 200 sem duplicar efeitos.")
     @APIResponse(responseCode = "200", description = "Orçamento aprovado (ou já aprovado — replay idempotente)",
             content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = OrcamentoResponse.class)))
     @APIResponse(responseCode = "422", description = "Conflito de estado: orçamento REPROVADO ou EXPIRADO não pode ser aprovado",
@@ -94,9 +95,9 @@ public class OrcamentoResource {
     @Path("/{uuid}/reprovar")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({"admin", "cliente"})
+    @PermitAll
     @Operation(summary = "Reprovar orçamento", description = "Cliente reprova o orçamento — OS transiciona para CANCELADA. "
-            + "Reenvio da reprovação quando já REPROVADO é idempotente (retorna 200 sem duplicar efeitos).")
+            + "Endpoint público (UUID é a chave de acesso) e idempotente: reenvio quando já REPROVADO retorna 200 sem duplicar efeitos.")
     @APIResponse(responseCode = "200", description = "Orçamento reprovado (ou já reprovado — replay idempotente)",
             content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = OrcamentoResponse.class)))
     @APIResponse(responseCode = "422", description = "Conflito de estado: orçamento APROVADO ou EXPIRADO não pode ser reprovado",
