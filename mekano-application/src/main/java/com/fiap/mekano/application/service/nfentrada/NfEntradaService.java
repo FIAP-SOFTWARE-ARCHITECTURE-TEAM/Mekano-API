@@ -9,6 +9,7 @@ import com.fiap.mekano.domain.model.Peca;
 import com.fiap.mekano.domain.model.RequisicaoCompra;
 import com.fiap.mekano.domain.model.StatusRequisicao;
 import com.fiap.mekano.domain.port.in.CreateNfEntradaCommand;
+import com.fiap.mekano.domain.port.in.NfEntradaServicePort;
 import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.NfEntradaRepositoryPort;
 import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
@@ -22,7 +23,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @ApplicationScoped
-public class NfEntradaService {
+public class NfEntradaService implements NfEntradaServicePort {
 
     private final NfEntradaRepositoryPort nfRepository;
     private final PecaRepositoryPort pecaRepository;
@@ -37,8 +38,9 @@ public class NfEntradaService {
         this.eventPublisher = eventPublisher;
     }
 
+    @Override
     @Transactional
-    public CreateNfEntradaResponse registrar(CreateNfEntradaCommand command) {
+    public NfEntrada registrar(CreateNfEntradaCommand command) {
         Log.infof("Registrando NFe de entrada: requisicaoCompraId=%s", command.requisicaoCompraId());
         RequisicaoCompra requisicao = requisicaoRepository.findById(command.requisicaoCompraId())
                 .orElseThrow(() -> {
@@ -50,8 +52,8 @@ public class NfEntradaService {
         if (!StatusRequisicao.PRODUTO_RECEBIDO.equals(requisicao.getStatus())) {
             Log.warnf("Validação falhou: requisicaoCompraId=%s não está em PRODUTO_RECEBIDO (status atual=%s)",
                     command.requisicaoCompraId(), requisicao.getStatus());
-            throw new AppException(409, "NFe de entrada só pode ser registrada para requisições no status "
-                    + StatusRequisicao.PRODUTO_RECEBIDO);
+            throw new AppException(409, Messages.get("nf_entrada.status.requisicao.invalido",
+                    StatusRequisicao.PRODUTO_RECEBIDO));
         }
 
         Optional<NfEntrada> existente = nfRepository.buscarPorChaveAcesso(command.chaveAcesso());
@@ -88,9 +90,7 @@ public class NfEntradaService {
             });
         }
 
-        return new CreateNfEntradaResponse(
-                saved.getId(), saved.getChaveAcesso(), saved.getValorTotal(),
-                saved.getRequisicaoCompraId(), saved.getCreatedAt());
+        return saved;
     }
 
     public NfEntrada buscarPorId(UUID id) {

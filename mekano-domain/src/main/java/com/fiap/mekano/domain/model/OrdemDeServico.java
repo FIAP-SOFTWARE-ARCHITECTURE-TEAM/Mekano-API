@@ -102,31 +102,6 @@ public class OrdemDeServico {
     }
 
     /**
-     * Factory method para reconstrução a partir de dados persistidos.
-     * NÃO gera novo UUID nem timestamp.
-     *
-     * Mantém a assinatura antiga para não quebrar adapters/repositórios existentes.
-     */
-	/*
-	 * public static OrdemDeServico reconstitute(UUID id, UUID clienteId, UUID
-	 * veiculoId, String descricaoProblema, StatusOS status, String
-	 * motivoCancelamento, UUID orcamentoUuid, UUID mecanicoUuid, LocalDateTime
-	 * execucaoIniciadaEm, LocalDateTime execucaoFinalizadaEm, String
-	 * observacaoExecucao, LocalDateTime dataAprovacao, LocalDateTime createdAt,
-	 * Long version) {
-	 * 
-	 * return OrdemDeServico.builder() .id(id) .clienteId(clienteId)
-	 * .veiculoId(veiculoId) .descricaoProblema(descricaoProblema) .status(status)
-	 * .motivoCancelamento(motivoCancelamento) .orcamentoUuid(orcamentoUuid)
-	 * .mecanicoUuid(mecanicoUuid) .execucaoIniciadaEm(execucaoIniciadaEm)
-	 * .execucaoFinalizadaEm(execucaoFinalizadaEm)
-	 * .observacaoExecucao(observacaoExecucao) .dataAprovacao(dataAprovacao)
-	 * .createdAt(createdAt) .version(version)
-	 * .statusPagamento(StatusPagamento.NAO_COBRADO)
-	 * .statusEntrega(StatusEntrega.NAO_LIBERADA) .build(); }
-	 */
-
-    /**
      * Factory method completo para reconstrução incluindo cobrança, pagamento e entrega.
      */
     public static OrdemDeServico reconstitute(UUID id, UUID clienteId, UUID veiculoId,

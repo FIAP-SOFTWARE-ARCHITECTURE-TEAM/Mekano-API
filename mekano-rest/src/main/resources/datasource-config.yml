@@ -1,17 +1,20 @@
 # --- Datasource, Hibernate, Flyway ---
 # Credenciais via ${VAR:default}: resolvem de (1) System props, (2) env vars reais,
 # (3) .env na raiz do projeto, ou (4) o default abaixo. Nunca quebra se ausentes.
-# Em prod use variáveis de ambiente reais (DB_USER/DB_PASSWORD/DB_URL).
+#
+# jdbc.url é POR PERFIL — nunca na base:
+#   %dev  → compose local (DB_URL sobrepõe)
+#   %prod → RDS/EKS via DB_URL (compose define QUARKUS_PROFILE=prod)
+#   %test → SEM url: DevServices sobe PostgreSQL via Testcontainers
+# Base sem url é o que permite o DevServices injetar a URL do container.
 quarkus:
   datasource:
     db-kind: postgresql
     username: ${DB_USER:mekano}
     password: ${DB_PASSWORD:mekano}
-    jdbc:
-      url: ${DB_URL:jdbc:postgresql://localhost:5432/mekano}
   flyway:
-    migrate-at-start: true
-    repair-at-start: true
+    migrate-at-start: false
+    repair-at-start: false
     out-of-order: true
     connect-retries: 5
   hibernate-orm:
@@ -20,12 +23,24 @@ quarkus:
 
 "%dev":
   quarkus:
+    datasource:
+      jdbc:
+        url: ${DB_URL:jdbc:postgresql://localhost:5432/mekano}
+    flyway:
+      migrate-at-start: true
+      repair-at-start: true
     hibernate-orm:
       log:
         sql: true
 
 "%prod":
   quarkus:
+    datasource:
+      jdbc:
+        url: ${DB_URL:jdbc:postgresql://localhost:5432/mekano}
+    flyway:
+      migrate-at-start: true
+      repair-at-start: true
     hibernate-orm:
       log:
         sql: false
@@ -33,11 +48,12 @@ quarkus:
 "%test":
   quarkus:
     datasource:
-      db-kind: h2
-      jdbc:
-        url: jdbc:h2:mem:mekano;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+      db-kind: postgresql
+      devservices:
+        image-name: postgres:16-alpine
     flyway:
       migrate-at-start: false
+      repair-at-start: false
     hibernate-orm:
-      database:
-        generation: drop-and-create
+      schema-management:
+        strategy: drop-and-create

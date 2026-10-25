@@ -6,6 +6,7 @@ import com.fiap.mekano.domain.event.OrcamentoAprovadoEvent;
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.exception.DomainException;
 import com.fiap.mekano.domain.exception.Messages;
+import com.fiap.mekano.domain.model.StatusOrcamento;
 import com.fiap.mekano.domain.valueobject.ItemOrcamento;
 import com.fiap.mekano.domain.model.Orcamento;
 import com.fiap.mekano.domain.model.OrdemDeServico;
@@ -48,6 +49,20 @@ public class OrcamentoService implements OrcamentoServicePort {
         this.osMetrics = osMetrics;
     }
 
+    /**
+     * Executa uma transição de estado de Orçamento/OrdemDeServico.
+     * Regras de negócio violadas (DomainException → HTTP 422) são registradas como
+     * WARN e relançadas — erros de usuário não são ERROR.
+     */
+    private void executarTransicao(String acao, UUID idContexto, Runnable transicao) {
+        try {
+            transicao.run();
+        } catch (DomainException ex) {
+            Log.warnf("Transição rejeitada: acao=%s, id=%s, detalhe=%s", acao, idContexto, ex.getMessage());
+            throw ex;
+        }
+    }
+
     @Override
     @Transactional
     public Orcamento aprovar(AprovarOrcamentoCommand command) {
@@ -57,6 +72,13 @@ public class OrcamentoService implements OrcamentoServicePort {
                     Log.warnf("Orçamento não encontrado: orcamentoUuid=%s", command.orcamentoUuid());
                     return new AppException(404, Messages.get("orcamento.not.found", command.orcamentoUuid()));
                 });
+
+        // Guarda de idempotência: replay da aprovação retorna o estado atual sem
+        // re-executar efeitos colaterais (transição de OS, save, eventos, auditoria).
+        if (orcamento.getStatus() == StatusOrcamento.APROVADO) {
+            Log.infof("Aprovação em replay (idempotente): orcamentoUuid=%s", command.orcamentoUuid());
+            return orcamento;
+        }
 
         executarTransicao("aprovar", orcamento.getId(), () -> orcamento.aprovar());
 
@@ -102,6 +124,13 @@ public class OrcamentoService implements OrcamentoServicePort {
                     return new AppException(404, Messages.get("orcamento.not.found", command.orcamentoUuid()));
                 });
 
+        // Guarda de idempotência: replay da reprovação retorna o estado atual sem
+        // re-executar efeitos colaterais (transição de OS, save, eventos, auditoria).
+        if (orcamento.getStatus() == StatusOrcamento.REPROVADO) {
+            Log.infof("Reprovação em replay (idempotente): orcamentoUuid=%s", command.orcamentoUuid());
+            return orcamento;
+        }
+
         executarTransicao("reprovar", orcamento.getId(), () -> orcamento.reprovar());
 
         UUID osUuid = orcamento.getOrdemServicoUuid();
@@ -146,21 +175,7 @@ public class OrcamentoService implements OrcamentoServicePort {
         return orcamentoRepository.findByOrdemServicoUuid(osUuid)
                 .orElseThrow(() -> {
                     Log.warnf("Nenhum orçamento encontrado para a OS: osId=%s", osUuid);
-                    return new AppException(404, "Nenhum orçamento encontrado para a OS: " + osUuid);
+                    return new AppException(404, Messages.get("orcamento.not.found.os", osUuid));
                 });
-    }
-
-    /**
-     * Executa uma transição de estado de Orçamento/OrdemDeServico.
-     * Regras de negócio violadas (DomainException → HTTP 422) são registradas como
-     * WARN e relançadas — erros de usuário não são ERROR.
-     */
-    private void executarTransicao(String acao, UUID idContexto, Runnable transicao) {
-        try {
-            transicao.run();
-        } catch (DomainException ex) {
-            Log.warnf("Transição rejeitada: acao=%s, id=%s, detalhe=%s", acao, idContexto, ex.getMessage());
-            throw ex;
-        }
     }
 }

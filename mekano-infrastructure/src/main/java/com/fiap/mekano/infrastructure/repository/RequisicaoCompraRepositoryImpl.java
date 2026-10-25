@@ -17,6 +17,10 @@ import com.fiap.mekano.infrastructure.entity.RequisicaoCompraEntity;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
+import org.eclipse.microprofile.faulttolerance.Retry;
+import org.eclipse.microprofile.faulttolerance.Timeout;
+
+import java.time.temporal.ChronoUnit;
 
 @ApplicationScoped
 public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositoryPort {
@@ -31,6 +35,7 @@ public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositor
     }
 
     @Override
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     public RequisicaoCompra save(RequisicaoCompra requisicao) {
         RequisicaoCompraEntity entity = panacheRepository.find("uuid = ?1", requisicao.getId()).firstResult();
         if (entity == null) {
@@ -54,7 +59,12 @@ public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositor
     }
 
     @Override
+    @Retry(maxRetries = 3)
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     public Optional<RequisicaoCompra> findById(UUID id) {
+        // Sem @CacheResult: requisicao e maquina de estados volatil (ABERTA ->
+        // ENVIADA -> ...) — servir entidade stale de cache quebra as transicoes.
+        // Ver D-21 / mekano-infrastructure/AGENTS.md.
         return panacheRepository.find("uuid = ?1 and isActive = ?2", id, true)
                 .firstResultOptional()
                 .map(entity -> {
@@ -64,6 +74,8 @@ public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositor
     }
 
     @Override
+    @Retry(maxRetries = 3)
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     public List<RequisicaoCompra> findAll(int page, int size) {
         return panacheRepository.find("isActive = ?1", Sort.by("id"), true)
                 .page(Page.of(page, size))
@@ -77,11 +89,14 @@ public class RequisicaoCompraRepositoryImpl implements RequisicaoCompraRepositor
     }
 
     @Override
+    @Retry(maxRetries = 3)
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     public long countAll() {
         return panacheRepository.count("isActive", true);
     }
 
     @Override
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     public RequisicaoCompra atualizar(RequisicaoCompra requisicao) {
         return save(requisicao);
     }

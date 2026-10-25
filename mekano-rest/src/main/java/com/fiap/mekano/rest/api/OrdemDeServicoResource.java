@@ -23,6 +23,7 @@ import com.fiap.mekano.domain.port.in.OrdemDeServicoServicePort;
 import com.fiap.mekano.domain.port.out.ItemOsRepositoryPort;
 import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
 import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
+import com.fiap.mekano.rest.api.dto.CreateItemOsRequest;
 import com.fiap.mekano.rest.api.dto.CreateOrdemDeServicoRequest;
 import com.fiap.mekano.rest.api.dto.FinalizarDiagnosticoRequest;
 import com.fiap.mekano.rest.api.dto.FinalizarExecucaoRequest;
@@ -93,12 +94,7 @@ public class OrdemDeServicoResource {
     @Operation(summary = "Criar nova OS")
     @APIResponse(responseCode = "201", description = "OS criada com sucesso")
     public Response create(@Valid CreateOrdemDeServicoRequest request, @Context UriInfo uriInfo) {
-        List<CreateItemOsCommand> itensCmd = request.getItens() != null
-                ? request.getItens().stream()
-                        .map(i -> new CreateItemOsCommand(i.getReferenciaUuid(), i.getTipo(),
-                                i.getQuantidade() != null ? i.getQuantidade() : 1L))
-                        .toList()
-                : List.of();
+        List<CreateItemOsCommand> itensCmd = toItensCommands(request.getItens());
         var command = new CreateOrdemDeServicoCommand(
                 request.getClienteId(), request.getVeiculoId(),
                 request.getDescricaoProblema(), itensCmd);
@@ -157,12 +153,7 @@ public class OrdemDeServicoResource {
     @Operation(summary = "Atualizar dados da OS", description = "Atualiza cliente, veículo e descrição. Permitido apenas em RECEBIDA.")
     public Response update(@PathParam("id") UUID id, @Valid CreateOrdemDeServicoRequest request,
             @Context UriInfo uriInfo) {
-        List<CreateItemOsCommand> itensCmd = request.getItens() != null
-                ? request.getItens().stream()
-                        .map(i -> new CreateItemOsCommand(i.getReferenciaUuid(), i.getTipo(),
-                                i.getQuantidade() != null ? i.getQuantidade() : 1L))
-                        .toList()
-                : List.of();
+        List<CreateItemOsCommand> itensCmd = toItensCommands(request.getItens());
         var command = new CreateOrdemDeServicoCommand(
                 request.getClienteId(), request.getVeiculoId(),
                 request.getDescricaoProblema(), itensCmd);
@@ -342,10 +333,22 @@ public class OrdemDeServicoResource {
                 .stream().map(os -> toResponse(os, fetchItensOs(os.getId()),
                         calcularLiberadoParaExecucao(os)))
                 .toList();
-        return Response.ok(new OrdemDeServicoPageResponse(content, page, size, content.size(), 1)).build();
+        long total = osService.countWithFilters(status, clienteId, veiculoId, inicio, fim);
+        int totalPages = (int) Math.ceil((double) total / size);
+        return Response.ok(new OrdemDeServicoPageResponse(content, page, size, total, totalPages)).build();
     }
 
     // ─────────────── Helper ───────────────
+
+    /** Fonte única do mapeamento request → command de itens (usado por create e update). */
+    private List<CreateItemOsCommand> toItensCommands(List<CreateItemOsRequest> itens) {
+        return itens != null
+                ? itens.stream()
+                        .map(i -> new CreateItemOsCommand(i.getReferenciaUuid(), i.getTipo(),
+                                i.getQuantidade() != null ? i.getQuantidade() : 1L))
+                        .toList()
+                : List.of();
+    }
 
     private List<ItemOsResponse> fetchItensOs(UUID osUuid) {
         return itemOsRepository.findByOsUuid(osUuid).stream()
