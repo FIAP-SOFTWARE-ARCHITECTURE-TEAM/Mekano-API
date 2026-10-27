@@ -1,4 +1,4 @@
--- V1__demo_data.sql — dados de demonstração
+-- V37__demo_data.sql — dados de demonstração
 -- Executado APENAS nos ambientes com QUARKUS_FLYWAY_LOCATIONS incluindo db/seed
 -- (produção/EKS). Os testes usam apenas db/migration e não são afetados.
 -- Idempotente por construção (ON CONFLICT DO NOTHING).
@@ -15,9 +15,14 @@ INSERT INTO user_roles (uuid, user_uuid, role) VALUES
     ('aaaa2222-0000-4000-8000-000000000002', '22222222-2222-4222-8222-222222222222', 'mecanico')
 ON CONFLICT (user_uuid, role) DO NOTHING;
 
-INSERT INTO clientes (uuid, nome, cpf, email, telefone, created_at) VALUES
-    ('33333333-3333-4333-8333-333333333333', 'Cliente Demo', '11122233344',
-     'cliente.demo@mekano.com', '11999990000', now())
+INSERT INTO clientes (
+    uuid, nome, cpf, email, telefone,
+    endereco_logradouro, endereco_numero, endereco_bairro,
+    endereco_cidade, endereco_uf, endereco_cep, created_at
+) VALUES
+    ('33333333-3333-4333-8333-333333333333', 'Cliente Demo', '52998224725',
+     'cliente.demo@mekano.com', '11999990000',
+     'Rua Demo', '100', 'Centro', 'São Paulo', 'SP', '01001000', now())
 ON CONFLICT (cpf) DO NOTHING;
 
 INSERT INTO veiculos (uuid, cliente_uuid, placa, marca, modelo, ano, created_at) VALUES
