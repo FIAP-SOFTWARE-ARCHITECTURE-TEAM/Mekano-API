@@ -3,7 +3,7 @@
 -- (produção/EKS). Os testes usam apenas db/migration e não são afetados.
 -- Idempotente por construção (ON CONFLICT DO NOTHING).
 
-INSERT INTO users (id, name, email, password_hash, created_at) VALUES
+INSERT INTO users (uuid, name, email, password_hash, created_at) VALUES
     ('11111111-1111-4111-8111-111111111111', 'Admin Demo', 'admin@mekano.com',
      '$2y$10$B6bZnPXc2QaSMRj2KsdMGekGdZVfMMcRzKr1yjhMbTlTY7qxGoPRq', now()),
     ('22222222-2222-4222-8222-222222222222', 'Mecanico Demo', 'mecanico@mekano.com',
