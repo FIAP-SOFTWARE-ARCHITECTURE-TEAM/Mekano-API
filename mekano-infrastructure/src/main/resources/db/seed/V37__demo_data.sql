@@ -28,8 +28,8 @@ ON CONFLICT (placa) DO NOTHING;
 INSERT INTO pecas (uuid, codigo, descricao, valor_unitario, saldo, estoque_minimo, created_at) VALUES
     ('55555555-5555-4555-8555-555555555555', 'PNEU-16', 'Pneu 16 polegadas', 350.00, 10, 2, now()),
     ('66666666-6666-4666-8666-666666666666', 'FILTRO-AR', 'Filtro de ar esportivo', 80.00, 5, 2, now())
-ON CONFLICT (codigo) DO NOTHING;
+ON CONFLICT DO NOTHING;
 
 INSERT INTO servicos (uuid, nome, descricao, valor, created_at) VALUES
     ('77777777-7777-4777-8777-777777777777', 'TROCA_OLEO', 'Troca de oleo e filtro', 150.00, now())
-ON CONFLICT (nome) WHERE is_active = TRUE DO NOTHING;
+ON CONFLICT DO NOTHING;
