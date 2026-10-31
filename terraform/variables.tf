@@ -29,9 +29,9 @@ variable "vpc_cidr" {
 }
 
 variable "node_instance_types" {
-  description = "EC2 instance types for the EKS managed node group"
+  description = "EC2 instance types for the EKS managed node group (Free Tier friendly by default)"
   type        = list(string)
-  default     = ["t3.medium"]
+  default     = ["t3.micro"]
 }
 
 # ============================================================
