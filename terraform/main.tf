@@ -162,11 +162,11 @@ module "eks" {
 
       instance_types = var.node_instance_types
 
-      min_size = 2
+      min_size = 1
 
-      max_size = 6
+      max_size = 2
 
-      desired_size = 2
+      desired_size = 1
 
       capacity_type = "ON_DEMAND"
 
