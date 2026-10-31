@@ -65,6 +65,12 @@ jobs:
       # 8. Executa a collection do Postman via Newman contra a API já no ar.
       #    Variáveis obrigatórias são fornecidas explicitamente no CI.
       - name: Run functional tests with Newman
+        if: >
+          github.event_name != 'pull_request' ||
+          (
+            github.event.pull_request.head.repo.full_name == github.repository &&
+            github.actor != 'dependabot[bot]'
+          )
         env:
           NEWMAN_ADMIN_PASSWORD: ${{ secrets.NEWMAN_ADMIN_PASSWORD }}
         run: |
@@ -82,7 +88,7 @@ jobs:
       #    permitindo consultar o resultado detalhado dos testes funcionais
       #    mesmo depois que o job terminar.
       - name: Upload Newman report
-        if: always()
+        if: always() && hashFiles('newman/report.xml') != ''
         uses: actions/upload-artifact@v4
         with:
           name: newman-report
