@@ -4,7 +4,7 @@
 CREATE OR REPLACE VIEW auth_customer_view AS
 SELECT
     c.uuid                                        AS customer_id,
-    regexp_replace(c.cpf, '\D', '', 'g')         AS cpf,
+    c.cpf                                         AS cpf,
     c.nome                                        AS display_name,
     CASE
         WHEN c.is_active = TRUE
