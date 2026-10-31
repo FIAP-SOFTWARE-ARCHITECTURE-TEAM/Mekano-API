@@ -3,7 +3,7 @@ environment        = "dev"
 cluster_name       = "mekano-eks"
 kubernetes_version = "1.34"
 
-node_instance_types = ["t3.medium"]
+node_instance_types = ["t3.micro"]
 
 db_name              = "mekano"
 db_username          = "mekano"
