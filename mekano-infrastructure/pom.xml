@@ -58,14 +58,6 @@
 			<artifactId>quarkus-smallrye-fault-tolerance</artifactId>
 		</dependency>
 
-		<!-- Micrometer — métricas da integração Evolution API (#162). A extensão
-		quarkus-micrometer-registry-prometheus já está em mekano-rest; aqui só
-		precisamos da API MeterRegistry no compile classpath. -->
-		<dependency>
-			<groupId>io.quarkus</groupId>
-			<artifactId>quarkus-micrometer</artifactId>
-		</dependency>
-
 		<!-- Quarkus Elytron Security Common — BcryptUtil usado por
 		BcryptPasswordHasher
              (Plan 10-01: interface PasswordHasher no domínio, impl no infrastructure). -->
