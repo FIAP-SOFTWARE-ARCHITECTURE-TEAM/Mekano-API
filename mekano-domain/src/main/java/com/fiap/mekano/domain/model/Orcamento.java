@@ -1,6 +1,7 @@
 package com.fiap.mekano.domain.model;
 
 import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.exception.DomainException;
 import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.domain.valueobject.ItemOrcamento;
 import lombok.AccessLevel;
@@ -84,23 +85,39 @@ public class Orcamento {
                 .build();
     }
 
+    /**
+     * Transiciona PENDENTE → APROVADO.
+     * Idempotente: reenvio da aprovação quando já APROVADO é no-op (retry não duplica efeitos).
+     * Estados conflitantes (REPROVADO/EXPIRADO) continuam rejeitados com 422.
+     */
     public void aprovar() {
+        if (status == StatusOrcamento.APROVADO) {
+            return;
+        }
         if (status != StatusOrcamento.PENDENTE) {
-            throw new AppException(422, Messages.get("orcamento.status.invalido.aprovar", status));
+            throw new DomainException(Messages.get("orcamento.status.invalido.aprovar", status));
         }
         this.status = StatusOrcamento.APROVADO;
     }
 
+    /**
+     * Transiciona PENDENTE → REPROVADO.
+     * Idempotente: reenvio da reprovação quando já REPROVADO é no-op (retry não duplica efeitos).
+     * Estados conflitantes (APROVADO/EXPIRADO) continuam rejeitados com 422.
+     */
     public void reprovar() {
+        if (status == StatusOrcamento.REPROVADO) {
+            return;
+        }
         if (status != StatusOrcamento.PENDENTE) {
-            throw new AppException(422, Messages.get("orcamento.status.invalido.reprovar", status));
+            throw new DomainException(Messages.get("orcamento.status.invalido.reprovar", status));
         }
         this.status = StatusOrcamento.REPROVADO;
     }
 
     public void expirar() {
         if (status != StatusOrcamento.PENDENTE) {
-            throw new AppException(422, Messages.get("orcamento.status.invalido.expirar", status));
+            throw new DomainException(Messages.get("orcamento.status.invalido.expirar", status));
         }
         this.status = StatusOrcamento.EXPIRADO;
     }

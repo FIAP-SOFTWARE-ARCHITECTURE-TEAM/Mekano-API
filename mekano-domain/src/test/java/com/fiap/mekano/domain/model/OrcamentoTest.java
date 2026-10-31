@@ -1,6 +1,7 @@
 package com.fiap.mekano.domain.model;
 
 import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.exception.DomainException;
 import com.fiap.mekano.domain.valueobject.ItemOrcamento;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -86,8 +87,44 @@ class OrcamentoTest {
         orcamento.reprovar();
 
         assertThatThrownBy(orcamento::aprovar)
-                .isInstanceOf(AppException.class)
+                .isInstanceOf(DomainException.class)
                 .hasMessageContaining("aprovar");
+    }
+
+    @Test
+    @DisplayName("aprovar() deve lançar exceção se orçamento está EXPIRADO")
+    void deveRejeitarAprovarOrcamentoExpirado() {
+        var orcamento = Orcamento.create("Teste", Arrays.asList(
+                new ItemOrcamento("Item", 1L, BigDecimal.TEN)));
+        orcamento.expirar();
+
+        assertThatThrownBy(orcamento::aprovar)
+                .isInstanceOf(DomainException.class)
+                .hasMessageContaining("aprovar");
+    }
+
+    @Test
+    @DisplayName("aprovar() duas vezes deve ser idempotente — segunda chamada é no-op")
+    void deveSerIdempotenteAoAprovarDuasVezes() {
+        var orcamento = Orcamento.create("Teste", Arrays.asList(
+                new ItemOrcamento("Item", 1L, BigDecimal.TEN)));
+
+        orcamento.aprovar();
+        orcamento.aprovar(); // replay — não deve lançar exceção
+
+        assertThat(orcamento.getStatus()).isEqualTo(StatusOrcamento.APROVADO);
+    }
+
+    @Test
+    @DisplayName("reprovar() duas vezes deve ser idempotente — segunda chamada é no-op")
+    void deveSerIdempotenteAoReprovarDuasVezes() {
+        var orcamento = Orcamento.create("Teste", Arrays.asList(
+                new ItemOrcamento("Item", 1L, BigDecimal.TEN)));
+
+        orcamento.reprovar();
+        orcamento.reprovar(); // replay — não deve lançar exceção
+
+        assertThat(orcamento.getStatus()).isEqualTo(StatusOrcamento.REPROVADO);
     }
 
     @Test
@@ -109,7 +146,7 @@ class OrcamentoTest {
         orcamento.aprovar();
 
         assertThatThrownBy(orcamento::reprovar)
-                .isInstanceOf(AppException.class)
+                .isInstanceOf(DomainException.class)
                 .hasMessageContaining("reprovar");
     }
 
@@ -132,7 +169,7 @@ class OrcamentoTest {
         orcamento.aprovar();
 
         assertThatThrownBy(orcamento::expirar)
-                .isInstanceOf(AppException.class)
+                .isInstanceOf(DomainException.class)
                 .hasMessageContaining("expirar");
     }
 

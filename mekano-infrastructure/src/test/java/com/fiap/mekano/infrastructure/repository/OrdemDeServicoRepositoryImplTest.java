@@ -282,9 +282,9 @@ class OrdemDeServicoRepositoryImplTest {
                 UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
                 "Problema", StatusOS.AGUARDANDO_APROVACAO, null,
                 orcamentoUuid, null, null, null, null, null,
-                StatusPagamento.NAO_COBRADO, null, null, null, null,
+                StatusPagamento.NAO_COBRADO, null, null, null,
                 StatusEntrega.NAO_LIBERADA, null, null, null, null, null,
-                LocalDateTime.now(), 0L);
+                null, null, null, LocalDateTime.now(), 0L);
         var saved = repository.save(os);
 
         var resultado = repository.findOrcamentoUuidByOsId(saved.getId());
@@ -336,6 +336,65 @@ class OrdemDeServicoRepositoryImplTest {
         assertThat(resultado).hasSizeGreaterThanOrEqualTo(2);
     }
 
+    @Test
+    @TestTransaction
+    void findAll_excluiStatusTerminais() {
+        var ativa = repository.save(criarOS("OS Ativa"));
+        repository.save(criarOSComStatus("OS Finalizada", StatusOS.FINALIZADA));
+        repository.save(criarOSComStatus("OS Entregue", StatusOS.ENTREGUE));
+        repository.save(criarOSComStatus("OS Cancelada", StatusOS.CANCELADA));
+
+        var resultado = repository.findAll(0, 100, "createdAt,desc");
+
+        assertThat(resultado).hasSize(1);
+        assertThat(resultado.get(0).getId()).isEqualTo(ativa.getId());
+    }
+
+    @Test
+    @TestTransaction
+    void findAll_sortDefault_ordenaPorPrioridadeDeStatus() {
+        var recebida = repository.save(criarOSComStatus("Recebida", StatusOS.RECEBIDA));
+        var emExecucao = repository.save(criarOSComStatus("Em Execução", StatusOS.EM_EXECUCAO));
+        var aguardandoExecucao = repository.save(criarOSComStatus("Aguardando Execução", StatusOS.AGUARDANDO_EXECUCAO));
+        var aguardandoAprovacao = repository.save(criarOSComStatus("Aguardando Aprovação", StatusOS.AGUARDANDO_APROVACAO));
+        var emDiagnostico = repository.save(criarOSComStatus("Em Diagnóstico", StatusOS.EM_DIAGNOSTICO));
+
+        var resultado = repository.findAll(0, 100, null);
+
+        assertThat(resultado).extracting(OrdemDeServico::getId)
+                .containsExactly(
+                        emExecucao.getId(),
+                        aguardandoAprovacao.getId(),
+                        emDiagnostico.getId(),
+                        recebida.getId(),
+                        aguardandoExecucao.getId());
+    }
+
+    @Test
+    @TestTransaction
+    void findAll_sortCustomAsc_respeitaOrdemEExcluiTerminais() {
+        var antiga = repository.save(criarOSComStatusECreatedAt("Antiga", StatusOS.RECEBIDA, LocalDateTime.now().minusDays(2)));
+        var nova = repository.save(criarOSComStatusECreatedAt("Nova", StatusOS.RECEBIDA, LocalDateTime.now().minusDays(1)));
+        repository.save(criarOSComStatusECreatedAt("Cancelada", StatusOS.CANCELADA, LocalDateTime.now().minusDays(3)));
+
+        var resultado = repository.findAll(0, 100, "createdAt,asc");
+
+        assertThat(resultado).extracting(OrdemDeServico::getId)
+                .containsExactly(antiga.getId(), nova.getId());
+    }
+
+    @Test
+    @TestTransaction
+    void countAll_excluiStatusTerminais() {
+        repository.save(criarOS("OS Ativa"));
+        repository.save(criarOSComStatus("OS Finalizada", StatusOS.FINALIZADA));
+        repository.save(criarOSComStatus("OS Cancelada", StatusOS.CANCELADA));
+
+        long count = repository.countAll();
+
+        assertThat(count).isEqualTo(1);
+    }
+
     // ─────────────── Helpers ───────────────
 
     private static OrdemDeServico criarOS(String descricao) {
@@ -365,8 +424,8 @@ class OrdemDeServicoRepositoryImplTest {
                 UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
                 descricao, status, null,
                 null, null, null, null, null, null,
-                StatusPagamento.NAO_COBRADO, null, null, null, null,
+                StatusPagamento.NAO_COBRADO, null, null, null,
                 StatusEntrega.NAO_LIBERADA, null, null, null, null, null,
-                createdAt, 0L);
+                null, null, null, createdAt, 0L);
     }
 }

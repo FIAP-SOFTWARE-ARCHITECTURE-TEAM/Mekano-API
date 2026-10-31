@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 import org.eclipse.microprofile.faulttolerance.Retry;
 
 import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.domain.model.OrdemDeServico;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
 import com.fiap.mekano.infrastructure.cache.CacheNames;
@@ -32,6 +33,11 @@ import jakarta.persistence.OptimisticLockException;
 public class OrdemDeServicoRepositoryImpl implements OrdemDeServicoRepositoryPort {
 
     private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("createdAt", "status", "descricaoProblema");
+
+    /** Status terminais — excluídos da listagem padrão (exclusão lógica, item 2 do feedback). */
+    private static final List<String> TERMINAL_STATUSES = List.of("FINALIZADA", "ENTREGUE", "CANCELADA");
+
+    private static final String LISTABLE_QUERY = "isActive = :active AND status NOT IN :terminalStatuses";
 
     @Inject
     OrdemDeServicoPanacheRepository panacheRepository;
@@ -64,11 +70,11 @@ public class OrdemDeServicoRepositoryImpl implements OrdemDeServicoRepositoryPor
                 managed.setDataAprovacao(entity.getDataAprovacao());
                 managed.setStatusPagamento(entity.getStatusPagamento());
                 managed.setStatusEntrega(entity.getStatusEntrega());
-                managed.setDataPagamento(entity.getDataPagamento());
-                managed.setFormaPagamento(entity.getFormaPagamento());
                 managed.setValorPago(entity.getValorPago());
                 managed.setDataEntrega(entity.getDataEntrega());
-                managed.setEnderecoEntrega(entity.getEnderecoEntrega());
+                managed.setDataInicioDiagnostico(entity.getDataInicioDiagnostico());
+                managed.setDataFimDiagnostico(entity.getDataFimDiagnostico());
+                managed.setDataCancelamento(entity.getDataCancelamento());
                 managed.setCobrancaGeradaEm(entity.getCobrancaGeradaEm());
                 managed.setPagamentoConfirmadoEm(entity.getPagamentoConfirmadoEm());
                 managed.setReferenciaPagamento(entity.getReferenciaPagamento());
@@ -82,7 +88,7 @@ public class OrdemDeServicoRepositoryImpl implements OrdemDeServicoRepositoryPor
             panacheRepository.flush();
             return mapper.toDomain(entity);
         } catch (OptimisticLockException e) {
-            throw new AppException(409, "Conflito de versão — a OS foi atualizada por outro usuário");
+            throw new AppException(409, Messages.get("os.conflito.versao"));
         }
     }
 
@@ -103,16 +109,31 @@ public class OrdemDeServicoRepositoryImpl implements OrdemDeServicoRepositoryPor
             sortField = "createdAt";
         }
         boolean ascending = sortParts.length < 2 || "asc".equalsIgnoreCase(sortParts[1].strip());
-        var direction = ascending ? Sort.Direction.Ascending : Sort.Direction.Descending;
 
-        return panacheRepository.find("isActive = ?1", Sort.by(sortField).direction(direction), true)
+        // Sort default (createdAt,desc ou em branco): prioridade de status (D-04/D-05) — execução primeiro
+        if ("createdAt".equals(sortField) && !ascending) {
+            String query = LISTABLE_QUERY + STATUS_PRIORITY_ORDER;
+            return panacheRepository.find(query, listableParams())
+                    .page(Page.of(page, size)).list()
+                    .stream().map(mapper::toDomain).toList();
+        }
+
+        var direction = ascending ? Sort.Direction.Ascending : Sort.Direction.Descending;
+        return panacheRepository.find(LISTABLE_QUERY, Sort.by(sortField).direction(direction), listableParams())
                 .page(Page.of(page, size)).list()
                 .stream().map(mapper::toDomain).toList();
     }
 
     @Override
     public long countAll() {
-        return panacheRepository.count("isActive = ?1", true);
+        return panacheRepository.count(LISTABLE_QUERY, listableParams());
+    }
+
+    private Map<String, Object> listableParams() {
+        Map<String, Object> params = new HashMap<>();
+        params.put("active", true);
+        params.put("terminalStatuses", TERMINAL_STATUSES);
+        return params;
     }
 
     private static final String STATUS_PRIORITY_ORDER =
@@ -128,10 +149,28 @@ public class OrdemDeServicoRepositoryImpl implements OrdemDeServicoRepositoryPor
     public List<OrdemDeServico> findAllWithFilters(String status, UUID clienteUuid, UUID veiculoUuid,
                                                     LocalDateTime dataInicio, LocalDateTime dataFim,
                                                     int page, int size) {
-        StringBuilder query = new StringBuilder(
-                "isActive = :active AND status NOT IN ('FINALIZADA', 'ENTREGUE', 'CANCELADA')");
-        Map<String, Object> params = new HashMap<>();
-        params.put("active", true);
+        FilterQuery filterQuery = buildFilterQuery(status, clienteUuid, veiculoUuid, dataInicio, dataFim);
+        String query = filterQuery.query() + STATUS_PRIORITY_ORDER;
+
+        return panacheRepository.find(query, filterQuery.params())
+                .page(Page.of(page, size)).list()
+                .stream().map(mapper::toDomain).toList();
+    }
+
+    @Override
+    public long countWithFilters(String status, UUID clienteUuid, UUID veiculoUuid,
+                                 LocalDateTime dataInicio, LocalDateTime dataFim) {
+        FilterQuery filterQuery = buildFilterQuery(status, clienteUuid, veiculoUuid, dataInicio, dataFim);
+        return panacheRepository.count(filterQuery.query(), filterQuery.params());
+    }
+
+    private record FilterQuery(String query, Map<String, Object> params) {
+    }
+
+    private FilterQuery buildFilterQuery(String status, UUID clienteUuid, UUID veiculoUuid,
+                                         LocalDateTime dataInicio, LocalDateTime dataFim) {
+        StringBuilder query = new StringBuilder(LISTABLE_QUERY);
+        Map<String, Object> params = listableParams();
 
         if (status != null && !status.isBlank()) {
             query.append(" AND status = :status");
@@ -154,11 +193,7 @@ public class OrdemDeServicoRepositoryImpl implements OrdemDeServicoRepositoryPor
             params.put("dataFim", dataFim);
         }
 
-        query.append(STATUS_PRIORITY_ORDER);
-
-        return panacheRepository.find(query.toString(), params)
-                .page(Page.of(page, size)).list()
-                .stream().map(mapper::toDomain).toList();
+        return new FilterQuery(query.toString(), params);
     }
 
     @Override

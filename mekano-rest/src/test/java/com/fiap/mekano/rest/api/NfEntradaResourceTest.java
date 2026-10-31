@@ -1,6 +1,6 @@
 package com.fiap.mekano.rest.api;
 
-import com.fiap.mekano.application.service.nfentrada.NfEntradaService;
+import com.fiap.mekano.domain.port.in.NfEntradaServicePort;
 import com.fiap.mekano.domain.model.MotivoRequisicao;
 import com.fiap.mekano.domain.model.NfEntrada;
 import com.fiap.mekano.domain.model.RequisicaoCompra;
@@ -44,7 +44,7 @@ class NfEntradaResourceTest {
     private static final UUID REQUISICAO_UUID = UUID.randomUUID();
 
     @Inject
-    NfEntradaService nfEntradaService;
+    NfEntradaServicePort nfEntradaService;
 
     @InjectMock
     NfEntradaRepositoryPort nfEntradaRepository;

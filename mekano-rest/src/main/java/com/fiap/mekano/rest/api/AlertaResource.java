@@ -1,6 +1,6 @@
 package com.fiap.mekano.rest.api;
 
-import com.fiap.mekano.application.service.peca.PecaService;
+import com.fiap.mekano.domain.port.in.PecaServicePort;
 import com.fiap.mekano.rest.api.dto.AlertaResponse;
 import com.fiap.mekano.rest.api.dto.PecaResponse;
 import jakarta.annotation.security.RolesAllowed;
@@ -26,7 +26,7 @@ import java.util.List;
 public class AlertaResource {
 
     @Inject
-    PecaService pecaService;
+    PecaServicePort pecaService;
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
