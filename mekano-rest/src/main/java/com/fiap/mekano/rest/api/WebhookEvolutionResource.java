@@ -2,6 +2,7 @@ package com.fiap.mekano.rest.api;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fiap.mekano.application.service.whatsapp.WhatsAppOrcamentoRespostaService;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.quarkus.logging.Log;
 import jakarta.annotation.security.PermitAll;
 import jakarta.enterprise.context.RequestScoped;
@@ -47,14 +48,19 @@ public class WebhookEvolutionResource {
     private static final String EVENT_MESSAGES_UPSERT = "MESSAGES_UPSERT";
     private static final String EVENT_MESSAGES_UPSERT_EVOLUTION = "messages.upsert";
     private static final String HEADER_WEBHOOK_TOKEN = "x-webhook-token";
+    // Counter por resultado: rejected | ignored | processed | error (#162)
+    private static final String METRIC_WEBHOOK = "mekano.evolution.webhook";
 
     private final WhatsAppOrcamentoRespostaService respostaService;
     private final Optional<String> webhookToken;
+    private final MeterRegistry meterRegistry;
 
     public WebhookEvolutionResource(WhatsAppOrcamentoRespostaService respostaService,
-                                    @ConfigProperty(name = "evolution.webhook-token") Optional<String> webhookToken) {
+                                    @ConfigProperty(name = "evolution.webhook-token") Optional<String> webhookToken,
+                                    MeterRegistry meterRegistry) {
         this.respostaService = respostaService;
         this.webhookToken = webhookToken;
+        this.meterRegistry = meterRegistry;
     }
 
     @POST
@@ -78,11 +84,13 @@ public Response receberEvento(JsonNode payload,
                                    @HeaderParam(HEADER_WEBHOOK_TOKEN) String token) {
         if (!tokenValido(token, payload)) {
             Log.warnf("Webhook Evolution rejeitado: token ausente ou inválido");
+            contar("rejected");
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
 
         try {
             if (!isRespostaOrcamento(payload)) {
+                contar("ignored");
                 return Response.ok().build();
             }
 
@@ -91,11 +99,17 @@ public Response receberEvento(JsonNode payload,
             String remoteJid = payload.path("data").path("key").path("remoteJid").asText();
             String texto = extrairTexto(payload.path("data").path("message"));
 
-            respostaService.processarResposta(remoteJid, texto);
+            boolean processado = respostaService.processarResposta(remoteJid, texto);
+            contar(processado ? "processed" : "ignored");
         } catch (Exception ex) {
+            contar("error");
             Log.warnf("Falha ao processar webhook Evolution: %s", ex.getMessage());
         }
         return Response.ok().build();
+    }
+
+    private void contar(String result) {
+        meterRegistry.counter(METRIC_WEBHOOK, "result", result).increment();
     }
 
     /**

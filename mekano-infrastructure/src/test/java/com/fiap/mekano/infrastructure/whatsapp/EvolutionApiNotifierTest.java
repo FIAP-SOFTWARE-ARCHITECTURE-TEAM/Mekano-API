@@ -2,6 +2,7 @@ package com.fiap.mekano.infrastructure.whatsapp;
 
 import com.fiap.mekano.domain.valueobject.ItemOrcamento;
 import com.fiap.mekano.infrastructure.whatsapp.dto.SendTextRequest;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -21,7 +22,29 @@ class EvolutionApiNotifierTest {
     private static final String PUBLIC_URL = "https://test.example.com";
 
     private final EvolutionApiRestClient restClient = mock(EvolutionApiRestClient.class);
-    private final EvolutionApiNotifier notifier = new EvolutionApiNotifier(restClient, API_KEY, INSTANCE, PUBLIC_URL);
+    private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+    private final EvolutionApiNotifier notifier = new EvolutionApiNotifier(restClient, API_KEY, INSTANCE, PUBLIC_URL, meterRegistry);
+
+    @Test
+    @DisplayName("sucesso registra latência com operation=retirada e outcome=success")
+    void enviar_sucesso_registraTimerComOutcomeSuccess() {
+        notifier.notificarRetirada("11988888888", "Maria", "ABC1D23", UUID.randomUUID());
+
+        assertEquals(1, meterRegistry.get(EvolutionApiNotifier.METRIC_REQUEST)
+                .tag("operation", "retirada").tag("outcome", "success").timer().count());
+    }
+
+    @Test
+    @DisplayName("erro da Evolution registra outcome=error e repropaga a exceção para o @Fallback")
+    void enviar_erro_registraTimerComOutcomeErrorERepropaga() {
+        when(restClient.sendText(any(), any(), any())).thenThrow(new RuntimeException("Evolution indisponível"));
+
+        assertThrows(RuntimeException.class, () ->
+                notifier.notificarRetirada("11988888888", "Maria", "ABC1D23", UUID.randomUUID()));
+
+        assertEquals(1, meterRegistry.get(EvolutionApiNotifier.METRIC_REQUEST)
+                .tag("operation", "retirada").tag("outcome", "error").timer().count());
+    }
 
     @Test
     @DisplayName("notificarOrcamento deve chamar sendText com veículo, valor e telefone 55+")
