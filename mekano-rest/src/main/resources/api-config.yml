@@ -31,5 +31,8 @@ mekano:
   public-url: ${MEKANO_PUBLIC_URL}
 
 "%test":
+  mekano:
+    public-url: http://localhost:8080
+
   evolution:
     webhook-token: test-webhook-token
