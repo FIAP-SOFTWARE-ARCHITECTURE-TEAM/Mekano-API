@@ -2,7 +2,10 @@ package com.fiap.mekano.infrastructure.whatsapp;
 
 import com.fiap.mekano.domain.port.out.WhatsAppNotifierPort;
 import com.fiap.mekano.domain.valueobject.ItemOrcamento;
+import com.fiap.mekano.infrastructure.whatsapp.dto.SendMessageResponse;
 import com.fiap.mekano.infrastructure.whatsapp.dto.SendTextRequest;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -33,21 +36,26 @@ public class EvolutionApiNotifier implements WhatsAppNotifierPort {
 
     private static final Logger log = LoggerFactory.getLogger(EvolutionApiNotifier.class);
     private static final String COUNTRY_CODE = "55";
+    // Timer por chamada HTTP à Evolution: _count = total, _sum = latência acumulada, tags operation/outcome.
+    static final String METRIC_REQUEST = "mekano.evolution.request";
 
     private final EvolutionApiRestClient restClient;
     private final String apiKey;
     private final String instanceName;
     private final String publicUrl;
+    private final MeterRegistry meterRegistry;
 
     @Inject
     public EvolutionApiNotifier(@RestClient EvolutionApiRestClient restClient,
                                 @ConfigProperty(name = "evolution.api-key", defaultValue = "dev-key") String apiKey,
                                 @ConfigProperty(name = "evolution.instance-name", defaultValue = "mekano") String instanceName,
-                                @ConfigProperty(name = "mekano.public-url", defaultValue = "https://mekano.app") String publicUrl) {
+                                @ConfigProperty(name = "mekano.public-url", defaultValue = "https://mekano.app") String publicUrl,
+                                MeterRegistry meterRegistry) {
         this.restClient = restClient;
         this.apiKey = apiKey;
         this.instanceName = instanceName;
         this.publicUrl = publicUrl;
+        this.meterRegistry = meterRegistry;
     }
 
     @Override
@@ -71,7 +79,7 @@ public class EvolutionApiNotifier implements WhatsAppNotifierPort {
                         + "2️⃣ Recusar");
         log.info("Enviando notificação de orçamento para {} (instance={})",
                 maskPhone(number), instanceName);
-        restClient.sendText(instanceName, apiKey, request);
+        enviar("orcamento", request);
     }
 
     @Override
@@ -85,7 +93,7 @@ public class EvolutionApiNotifier implements WhatsAppNotifierPort {
         var request = new SendTextRequest(number, mensagem);
         log.info("Enviando confirmação de {} de orçamento para {} (instance={})",
                 aprovado ? "aprovação" : "reprovação", maskPhone(number), instanceName);
-        restClient.sendText(instanceName, apiKey, request);
+        enviar("resposta_orcamento", request);
     }
 
     @Override
@@ -101,7 +109,34 @@ public class EvolutionApiNotifier implements WhatsAppNotifierPort {
                         + "Acompanhe o status: " + publicUrl + "/os/" + osUuid + "/status");
         log.info("Enviando notificação de retirada para {} (OS {})",
                 maskPhone(number), osUuid);
-        restClient.sendText(instanceName, apiKey, request);
+        enviar("retirada", request);
+    }
+
+    /**
+     * Ponto único de saída para a Evolution API: mede latência e resultado por operação.
+     * Com {@code @Retry}, cada tentativa conta como uma chamada — o total reflete tráfego real.
+     * Loga o {@code messageId} devolvido pela Evolution para correlacionar com o webhook.
+     */
+    private SendMessageResponse enviar(String operation, SendTextRequest request) {
+        Timer.Sample sample = Timer.start(meterRegistry);
+        String outcome = "success";
+        try {
+            SendMessageResponse response = restClient.sendText(instanceName, apiKey, request);
+            String messageId = response != null && response.key() != null
+                    ? response.key().path("id").asText("-")
+                    : "-";
+            log.info("Evolution API aceitou mensagem {} (operation={})", messageId, operation);
+            return response;
+        } catch (RuntimeException ex) {
+            outcome = "error";
+            throw ex;
+        } finally {
+            sample.stop(Timer.builder(METRIC_REQUEST)
+                    .description("Latência e resultado das chamadas sendText à Evolution API")
+                    .tag("operation", operation)
+                    .tag("outcome", outcome)
+                    .register(meterRegistry));
+        }
     }
 
     /**
