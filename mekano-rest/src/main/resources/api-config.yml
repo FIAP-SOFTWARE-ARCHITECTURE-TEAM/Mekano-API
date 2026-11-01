@@ -28,7 +28,7 @@ evolution:
 
 # App public URL — usado em links de acompanhamento em mensagens WhatsApp
 mekano:
-  public-url: ${MEKANO_PUBLIC_URL:https://mekano.app}
+  public-url: ${MEKANO_PUBLIC_URL}
 
 "%test":
   evolution:
