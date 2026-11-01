@@ -60,6 +60,8 @@ jobs:
       #    docker-compose.yml (postgres saudável, keygen concluído, mekano
       #    respondendo em /q/health/live) antes de seguir para o próximo passo.
       - name: Start application stack (docker compose)
+        env:
+          MEKANO_PUBLIC_URL: http://localhost:8080
         run: docker compose up -d --build --wait postgres keygen mekano
 
       # 8. Executa a collection do Postman via Newman contra a API já no ar.
@@ -98,10 +100,14 @@ jobs:
       #     diagnóstico direto no output do GitHub Actions.
       - name: Show application logs on failure
         if: failure()
+        env:
+          MEKANO_PUBLIC_URL: http://localhost:8080
         run: docker compose logs mekano
 
       # 11. Derruba os containers e remove os volumes, garantindo um ambiente
       #     limpo para a próxima execução (sempre roda, mesmo se algo falhar).
       - name: Stop application stack
         if: always()
+        env:
+          MEKANO_PUBLIC_URL: http://localhost:8080
         run: docker compose down -v

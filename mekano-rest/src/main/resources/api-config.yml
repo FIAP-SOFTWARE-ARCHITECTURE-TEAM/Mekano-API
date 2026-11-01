@@ -28,8 +28,11 @@ evolution:
 
 # App public URL — usado em links de acompanhamento em mensagens WhatsApp
 mekano:
-  public-url: ${MEKANO_PUBLIC_URL:https://mekano.app}
+  public-url: ${MEKANO_PUBLIC_URL}
 
 "%test":
+  mekano:
+    public-url: http://localhost:8080
+
   evolution:
     webhook-token: test-webhook-token
