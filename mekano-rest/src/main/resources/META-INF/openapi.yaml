@@ -1,0 +1,55 @@
+openapi: 3.0.3
+
+info:
+  title: Mekano API
+  version: 1.0.0
+
+paths:
+  /auth/token:
+    post:
+      tags:
+        - Autenticação Serverless
+      summary: Autenticar cliente por CPF
+      description: >
+        Autentica um cliente por CPF através do fluxo Serverless.
+        A chamada é atendida pelo API Gateway e encaminhada para a Lambda
+        mekano-auth-dev. Este path é documentado aqui para aparecer no Swagger
+        consolidado da Mekano, mas sua implementação não pertence ao Quarkus.
+      operationId: authenticateCustomerByCpf
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - cpf
+              properties:
+                cpf:
+                  type: string
+                  minLength: 11
+                  maxLength: 11
+                  example: "65309336036"
+      responses:
+        "200":
+          description: JWT gerado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  token_type:
+                    type: string
+                    example: Bearer
+                  expires_in:
+                    type: integer
+                    format: int32
+                    example: 900
+        "400":
+          description: Requisição inválida
+        "401":
+          description: CPF inexistente ou cliente inativo
+        "500":
+          description: Erro interno no fluxo de autenticação
