@@ -16,6 +16,11 @@ paths:
         mekano-auth-dev. Este path é documentado aqui para aparecer no Swagger
         consolidado da Mekano, mas sua implementação não pertence ao Quarkus.
       operationId: authenticateCustomerByCpf
+      # Usa a raiz do mesmo host onde o Swagger está aberto (API Gateway).
+      # Evita herdar o prefixo /api/v1 da Mekano API e não fixa o ApiId.
+      servers:
+        - url: /
+          description: API Gateway compartilhado do Mekano
       requestBody:
         required: true
         content:
