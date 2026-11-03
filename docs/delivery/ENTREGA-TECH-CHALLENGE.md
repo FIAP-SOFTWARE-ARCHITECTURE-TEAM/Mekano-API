@@ -35,10 +35,10 @@ Demonstrações cobertas: autenticação CPF · pipeline CI/CD · deploy automat
 
 | Serviço | URL |
 |---------|-----|
-| **API (Swagger)** | http://a76974e53d9b94e98ad3b8f2408294e5-334902849.us-east-1.elb.amazonaws.com/q/swagger-ui |
-| **Health check** | http://a76974e53d9b94e98ad3b8f2408294e5-334902849.us-east-1.elb.amazonaws.com/q/health |
-| **Grafana** (dashboards + alertas) | http://alb-observability-133760226.us-east-1.elb.amazonaws.com |
-| API Gateway HTTP (autenticação CPF) | `[PREENCHER após deploy da Lambda: https://<api-id>.execute-api.us-east-1.amazonaws.com/auth/token]` |
+| **API (Swagger)** | https://wa6758jsk8.execute-api.us-east-1.amazonaws.com/q/swagger-ui/ |
+| **Health check** | https://wa6758jsk8.execute-api.us-east-1.amazonaws.com/q/health |
+| **Grafana** (dashboards + alertas) | http://alb-observability-1113226723.us-east-1.elb.amazonaws.com |
+| API Gateway HTTP (autenticação CPF) | `https://wa6758jsk8.execute-api.us-east-1.amazonaws.com/auth/token` |
 
 ## 5. Documentação arquitetural
 

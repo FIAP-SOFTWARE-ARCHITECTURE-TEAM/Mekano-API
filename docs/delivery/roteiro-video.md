@@ -2,15 +2,15 @@
 
 > Gravação sugerida: OBS Studio ou Google Meet gravando tela.
 > Ordem pensada para contar uma história: **arquitetura → CI/CD → produto no ar → observabilidade → autenticação → encerramento**.
-> URLs vivas: API `http://a76974e53d9b94e98ad3b8f2408294e5-334902849.us-east-1.elb.amazonaws.com` · Grafana `http://alb-observability-133760226.us-east-1.elb.amazonaws.com`
+> URLs vivas: API/Swagger `https://wa6758jsk8.execute-api.us-east-1.amazonaws.com` · Grafana `http://alb-observability-1113226723.us-east-1.elb.amazonaws.com`
 
 ## Pré-gravação (checklist)
 
 - [ ] Aba 1: `docs/architecture/README.md` (diagrama de componentes)
 - [ ] Aba 2: GitHub Actions da Mekano-API (última run verde)
 - [ ] Aba 3: GitHub Actions do Mekano-Infrastructure-K8s (deploy verde)
-- [ ] Aba 4: Swagger público (`<ALB>/q/swagger-ui`) + terminal com curl/Postman
-- [ ] Aba 5: Grafana (`alb-observability…`) — dashboards `OS FLOW TRAFFIC`, `system_metrics`, `LOKI`, `Evolution API`
+- [ ] Aba 4: Swagger público (`https://wa6758jsk8.execute-api.us-east-1.amazonaws.com/q/swagger-ui/`) + terminal com curl/Postman
+- [ ] Aba 5: Grafana (`alb-observability-1113226723…`) — dashboards `OS FLOW TRAFFIC`, `system_metrics`, `LOKI`, `Evolution API`
 - [ ] Aba 6: repo Mekano-Serverless (código da Lambda) — se o merge já tiver acontecido, incluir a demo de `POST /auth/token`
 - [ ] Terminal pronto com `kubectl`/`aws` para evidências rápidas (opcional)
 
@@ -42,11 +42,11 @@
 
 **Tela:** Swagger + terminal
 
-> "A API está publicada atrás de um LoadBalancer com ingress-nginx. No Swagger vemos todos os endpoints. Health check:" `curl <ALB>/q/health` *(status UP, database UP — prova do peering)*.
+> "A API está publicada atrás do API Gateway, que chega ao ingress-nginx por VPC Link. No Swagger vemos todos os endpoints. Health check:" `curl <URL_DO_GATEWAY>/q/health` *(status UP, database UP — prova do peering)*.
 
 > "Rotas protegidas exigem JWT: chamando sem token → **401**; fazendo login → recebo o token; com o token no header → **200**." *(curl: `POST /api/v1/auth/login` → `Authorization: Bearer …` → `GET` de recurso protegido)*
 
-> "E a consulta pública de status de OS, usada pelo cliente final:" `curl <ALB>/api/v1/os/{uuid}/status` *(mostra máquina de estados sem expor dados)*
+> "E a consulta pública de status de OS, usada pelo cliente final:" `curl <URL_DO_GATEWAY>/api/v1/os/{uuid}/status` *(mostra máquina de estados sem expor dados)*
 
 ## 7:30–9:30 · Observabilidade ao vivo
 
@@ -86,5 +86,5 @@
 | CD da API (build + GHCR) | https://github.com/FIAP-SOFTWARE-ARCHITECTURE-TEAM/Mekano-API/actions/runs/40251544759 |
 | Apply do banco (RDS) | https://github.com/FIAP-SOFTWARE-ARCHITECTURE-TEAM/Mekano-Infrastructure-Database/actions/runs/40240987499 |
 | Apply da observabilidade | https://github.com/FIAP-SOFTWARE-ARCHITECTURE-TEAM/Mekano-infrastructure-Observability/actions/runs/40262989559 |
-| Health da API | `<ALB>/q/health` |
-| Grafana | `http://alb-observability-133760226.us-east-1.elb.amazonaws.com` |
+| Health da API | `https://wa6758jsk8.execute-api.us-east-1.amazonaws.com/q/health` |
+| Grafana | `http://alb-observability-1113226723.us-east-1.elb.amazonaws.com` |
