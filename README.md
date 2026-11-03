@@ -306,6 +306,26 @@ O projeto utiliza **JaCoCo** com gate de 80% de cobertura LINE. O relatorio agre
   - Memory: 70%;
   - CPU: 80%;
 
+## Observabilidade
+
+A API expõe métricas Micrometer/Prometheus em `/q/metrics` (scrape a cada 15s
+pelo Prometheus da stack de Observabilidade) e emite logs estruturados em JSON
+no `stdout` (`quarkus.log.console.json=true`).
+
+O agente Alloy do cluster envia esses logs ao Loki com o label
+`service_name=mekano-api` (derivado do label `app.kubernetes.io/name` do pod).
+Esse é o contrato usado pelos dashboards e alertas do repositório
+[Mekano-Infrastructure-Observability](https://github.com/FIAP-SOFTWARE-ARCHITECTURE-TEAM/Mekano-Infrastructure-Observability).
+
+| Item | Onde está versionado |
+| ---- | -------------------- |
+| Stack Prometheus/Loki/Grafana/Alloy gateway (ECS), dashboards e alertas | `Mekano-Infrastructure-Observability` |
+| Agente Alloy que coleta os logs do cluster (EKS) | `Mekano-Infrastructure-K8s` (`k8s/observability/alloy-logs.yaml`) |
+
+> Nenhuma mudança de código nesta API é necessária para observabilidade. A
+> instrumentação já é feita por `quarkus-micrometer-registry-prometheus` e pelo
+> logging JSON; a configuração de coleta fica nos repositórios de infraestrutura.
+
 ## Troubleshooting
 
 | Problema | solução |
