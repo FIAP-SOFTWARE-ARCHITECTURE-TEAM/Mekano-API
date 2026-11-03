@@ -53,6 +53,40 @@ O Mekano-API expõe métricas Micrometer em `/q/metrics` (via `quarkus-micromete
 - **Grafana dashboards** — `infra_metrics_monitoring/grafana/provisioning/dashboards.yml`: auto-provisioning na pasta **MEKANO API** a partir da pasta `grafana/dashboards/`.
 - **Grafana alertas** — `infra_metrics_monitoring/grafana/provisioning/alerts/alerting.yml` e `contact-points.yml`.
 
+## Pipeline em produção (EKS)
+
+No EKS (`mekano-eks`), os logs dos pods chegam ao Loki da stack de observabilidade
+(tasks Fargate: `loki`, `alloy`, `grafana`, `prometheus`) através de um **Alloy
+DaemonSet** (`k8s/alloy.yaml`) instalado no namespace `mekano-system`:
+
+```mermaid
+flowchart LR
+    P1["pods mekano / evolution-api<br/>(logs em /var/log/pods)"] --> DS["Alloy DaemonSet<br/>(DaemonSet k8s/alloy.yaml)"]
+    DS -->|"POST /loki/api/v1/push<br/>header authorization: Bearer"| ALB["ALB alb-observability<br/>rota /loki/*"]
+    ALB --> A2["Alloy (Fargate)<br/>loki.source.api :8080"]
+    A2 --> L2[("Loki (Fargate)")]
+    L2 --> G2["Grafana (Fargate)"]
+```
+
+Detalhes:
+
+- **Labels por log**: `namespace`, `pod`, `container`, `service_name` e `job`
+  (extraídos do caminho `/var/log/pods/<ns>_<pod>_<uid>/<container>/…`).
+  O container `mekano` recebe `service_name="mekano-api"` para manter os painéis
+  provisionados do Grafana funcionando sem alteração.
+- **Autenticação**: o push exige o header `authorization: Bearer <ALLOY_INGEST_TOKEN>`
+  validado por regra do ALB. O token é o mesmo do Secrets Manager
+  `mekano/observability/alloy-ingest-token` e é distribuído ao cluster pelo CD
+  como Secret `alloy-ingest-token` (GitHub Secret `ALLOY_INGEST_TOKEN`).
+- **`base64=false` nos logs**: o Mekano já loga JSON no stdout; o `stage.cri` do
+  pipeline remove o prefixo CRI do containerd para o `| json` funcionar no LogQL.
+- **Verificação de saúde**: métricas do pod do Alloy em `:12345/metrics` —
+  `loki_write_sent_entries_total` deve crescer e `loki_write_dropped_*_total`
+  deve permanecer em zero.
+- **Troubleshooting comum**: dashboard de logs vazio = DaemonSet do Alloy não
+  existe/atualizado no cluster (ex.: após rebuild do cluster, o agente precisa
+  ser recriado — o CD faz isso a partir de `k8s/alloy.yaml`).
+
 ## Dashboards
 
 Pasta: `infra_metrics_monitoring/grafana/dashboards/`

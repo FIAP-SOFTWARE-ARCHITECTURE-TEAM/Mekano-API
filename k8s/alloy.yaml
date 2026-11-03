@@ -1,0 +1,157 @@
+# Alloy DaemonSet — coleta os logs dos pods do EKS (via /var/log/pods) e
+# envia ao Loki da stack de observabilidade (Fargate) através do ALB
+# `alb-observability` (rota /loki/* protegida por bearer token).
+#
+# Pipeline:
+#   /var/log/pods/<ns>_<pod>_<uid>/<container>/*.log
+#     -> stage.cri (remove prefixo CRI do containerd)
+#     -> labels: namespace, pod, container, service_name, job
+#        (service_name mapeia "mekano" -> "mekano-api" para manter
+#         compatibilidade com os dashboards provisionados no Grafana)
+#     -> loki.write -> LOKI_PUSH_URL (ALB) com header de autorizacao
+#
+# O Secret `alloy-ingest-token` (token do ALB) e criado/atualizado pelo CD
+# a partir do GitHub Secret ALLOY_INGEST_TOKEN — mesmo valor do Secrets
+# Manager `mekano/observability/alloy-ingest-token`.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alloy-config
+  namespace: mekano-system
+  labels:
+    app: alloy
+data:
+  config.alloy: |
+    // Descobre os arquivos de log dos pods escritos pelo kubelet.
+    // Formato: /var/log/pods/<namespace>_<pod>_<uid>/<container>/*.log
+    local.file_match "pod_logs" {
+      path_targets = [{
+        "__path__" = "/var/log/pods/*/*/*.log",
+      }]
+    }
+
+    loki.source.file "pod_logs" {
+      targets    = local.file_match.pod_logs.targets
+      forward_to = [loki.process.pod_logs.receiver]
+
+      // Na primeira subida, le os arquivos desde o inicio para nao
+      // perder logs gerados antes do Alloy subir.
+      tail_from_end = false
+    }
+
+    loki.process "pod_logs" {
+      // Remove o prefixo CRI do containerd ("... stdout F <conteudo>")
+      // para que "| json" funcione nos logs do Mekano.
+      stage.cri { }
+
+      // Extrai labels do caminho do arquivo.
+      stage.regex {
+        expression = "/var/log/pods/(?P<namespace>[^_]+)_(?P<pod>[^_]+)_(?P<uid>[^/]+)/(?P<container>[^/]+)/"
+      }
+
+      // Compatibilidade com os dashboards provisionados: o container
+      // "mekano" era o container "mekano-api" na era docker-compose.
+      stage.template {
+        source   = "service_name"
+        template = "{{ if eq .Values.container \"mekano\" }}mekano-api{{ else }}{{ .Values.container }}{{ end }}"
+      }
+
+      stage.labels {
+        values = {
+          namespace    = "namespace",
+          pod          = "pod",
+          container    = "container",
+          service_name = "service_name",
+          job          = "service_name",
+        }
+      }
+
+      forward_to = [loki.write.gateway.receiver]
+    }
+
+    loki.write "gateway" {
+      endpoint {
+        url = env("LOKI_PUSH_URL")
+
+        headers = {
+          authorization = "Bearer " + env("ALLOY_INGEST_TOKEN"),
+        }
+      }
+    }
+
+    livedebugging {
+      enabled = true
+    }
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: alloy
+  namespace: mekano-system
+  labels:
+    app: alloy
+    app.kubernetes.io/name: alloy
+    app.kubernetes.io/component: log-shipper
+spec:
+  selector:
+    matchLabels:
+      app: alloy
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: alloy
+        app.kubernetes.io/name: alloy
+        app.kubernetes.io/component: log-shipper
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: alloy
+          image: grafana/alloy:v1.19.2
+          imagePullPolicy: IfNotPresent
+          args:
+            - run
+            - /etc/alloy/config.alloy
+            - --storage.path=/var/lib/alloy/data
+            - --server.http.listen-addr=0.0.0.0:12345
+          env:
+            - name: LOKI_PUSH_URL
+              value: "http://alb-observability-1113226723.us-east-1.elb.amazonaws.com/loki/api/v1/push"
+            - name: ALLOY_INGEST_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: alloy-ingest-token
+                  key: token
+          ports:
+            - name: http
+              containerPort: 12345
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /etc/alloy
+              readOnly: true
+            - name: varlogpods
+              mountPath: /var/log/pods
+              readOnly: true
+            - name: data
+              mountPath: /var/lib/alloy/data
+          resources:
+            # request baixo: os nodes sao t3.small (2GB) com ~96% de memoria
+            # alocada — 32Mi cabe no aperto; o limite continua confortavel.
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 192Mi
+      volumes:
+        - name: config
+          configMap:
+            name: alloy-config
+        - name: varlogpods
+          hostPath:
+            path: /var/log/pods
+            type: Directory
+        - name: data
+          emptyDir: { }

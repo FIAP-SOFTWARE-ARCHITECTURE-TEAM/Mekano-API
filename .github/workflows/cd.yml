@@ -341,6 +341,7 @@ jobs:
       EVOLUTION_API_KEY: ${{ secrets.EVOLUTION_API_KEY }}
       EVOLUTION_WEBHOOK_TOKEN: ${{ secrets.EVOLUTION_WEBHOOK_TOKEN }}
       EVOLUTION_INSTANCE_NAME: ${{ vars.EVOLUTION_INSTANCE_NAME || 'mekano' }}
+      ALLOY_INGEST_TOKEN: ${{ secrets.ALLOY_INGEST_TOKEN }}
       JWT_PRIVATE_KEY: ${{ secrets.JWT_PRIVATE_KEY }}
       JWT_PUBLIC_KEY: ${{ secrets.JWT_PUBLIC_KEY }}
       GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
@@ -468,6 +469,13 @@ jobs:
           kubectl apply -f k8s/service.yaml
           kubectl apply -f k8s/hpa.yaml
           kubectl apply -f k8s/ingress.yaml
+          echo "Applying Alloy log shipper DaemonSet"
+          test -n "$ALLOY_INGEST_TOKEN" || (echo "ALLOY_INGEST_TOKEN secret is required" && exit 1)
+          kubectl create secret generic alloy-ingest-token \
+            --namespace mekano-system \
+            --from-literal=token="$ALLOY_INGEST_TOKEN" \
+            --dry-run=client -o yaml | kubectl apply -f -
+          kubectl apply -f k8s/alloy.yaml
           echo "Applying Mekano Deployment with image: $IMAGE"
           sed "s|__MEKANO_IMAGE__|${IMAGE}|g" \
             k8s/deployment.yaml | kubectl apply -f -
