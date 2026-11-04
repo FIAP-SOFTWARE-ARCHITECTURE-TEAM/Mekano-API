@@ -18,16 +18,16 @@ O MEKANO-API e um Sistema Integrado de Atendimento e Execução de Servicos para
 
 A aplicação foi construida seguindo os principios de **Domain-Driven Design (DDD)** e **Clean Architecture**, separando responsabilidades em camadas isoladas e independentes de framework.
 
-## Objetivos da Fase 2
+## Objetivos da Fase 3
 
-A versão 2.0 do projeto evolui a solução MVP da Fase 1 incorporando:
+A versão 3.0 evolui a entrega da Fase 2 (infraestrutura em EKS, CI/CD e qualidade) incorporando:
 
-- **Infraestrutura escalavel**: containerização com Docker, orchestração com Kubernetes (EKS) e provisionamento via Terraform
-- **Automação de deploy**: pipeline CI/CD integrada com build, testes e publicação de imagem
-- **Qualidade assegurada**: cobertura de testes automatizados com gate de qualidade via JaCoCo
-- **Resiliencia**: health checks, politicas de restart e escalabilidade dinamica via HPA
+- **Integração WhatsApp em produção**: Evolution API self-hosted no cluster, com envio do orçamento e aprovação pelo cliente direto no WhatsApp — webhook autenticado (fail-closed), rate limiting e envio transacional com retry/fallback
+- **Observabilidade de ponta a ponta**: stack Prometheus + Loki + Grafana em produção, com dashboard da integração WhatsApp e coleta de logs dos pods via Alloy DaemonSet
+- **Documentação arquitetural completa**: diagrama de componentes, diagramas de sequência, RFCs/ADRs e modelo relacional com diagrama ER
+- **Operação e resiliência**: recuperação de sessão WhatsApp (pairing), correção do pipeline de webhooks e runbook de configuração da instância
 
-## Documentação Arquitetural (Entrega Fase 2)
+## Documentação Arquitetural (Entrega Fase 3)
 
 Documentação arquitetural completa, conforme requisitos da entrega:
 
