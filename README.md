@@ -27,11 +27,35 @@ A versão 2.0 do projeto evolui a solução MVP da Fase 1 incorporando:
 - **Qualidade assegurada**: cobertura de testes automatizados com gate de qualidade via JaCoCo
 - **Resiliencia**: health checks, politicas de restart e escalabilidade dinamica via HPA
 
+## Documentação Arquitetural (Entrega Fase 2)
+
+Documentação arquitetural completa, conforme requisitos da entrega:
+
+| Requisito | Documento |
+|-----------|-----------|
+| Diagrama de Componentes (nuvem, APIs, banco e monitoramento) | [01 - Arquitetura e Diagrama de Componentes](docs/01-arquitetura-componentes.md) |
+| Diagrama de Sequência (autenticação e abertura de OS) | [02 - Diagramas de Sequência](docs/02-diagramas-sequencia.md) |
+| RFCs (escolha da nuvem, do banco e da estratégia de autenticação) | [03 - RFCs e ADRs](docs/03-rfcs-adrs.md) |
+| ADRs (padrão de comunicação, uso de HPA, etc.) | [03 - RFCs e ADRs](docs/03-rfcs-adrs.md) |
+| Justificativa do banco + modelo relacional com diagramas ER | [04 - Banco de Dados, Modelo Relacional e Diagrama ER](docs/04-banco-modelo-er.md) |
+
+Documentação de apoio:
+
+| Tema | Documento |
+|------|-----------|
+| AWS — visão global (cliente → serviços externos) | [docs/aws-infrastructure/global-scope-architecture.md](docs/aws-infrastructure/global-scope-architecture.md) |
+| AWS — visão da VPC | [docs/aws-infrastructure/vpc-scope-architecture.md](docs/aws-infrastructure/vpc-scope-architecture.md) |
+| Configuração kubectl | [docs/aws-infrastructure/kubctl-config.md](docs/aws-infrastructure/kubctl-config.md) |
+| Diagramas de sequência complementares | [docs/sequence-diagrams/](docs/sequence-diagrams/) |
+| Event Storming | [docs/EventStorming_Mermaid.md](docs/EventStorming_Mermaid.md) |
+| Setup integração WhatsApp (Evolution API) | [docs/EVOLUTION-WHATSAPP-SETUP.md](docs/EVOLUTION-WHATSAPP-SETUP.md) |
+| Revisão arquitetural | [docs/ARCHITECTURE-REVIEW-2026-10-17.md](docs/ARCHITECTURE-REVIEW-2026-10-17.md) |
+
 ## Principais Funcionalidades
 
 - Gestao de clientes, veiculos, servicos e pecas
 - Ciclo de vida completo da Ordem de Servico: Recebida, Em Diagnostico, Aguardando Aprovação, Em Execução, Finalizada, Entregue
-- Geração automática de orçamento com aprovação via API
+- Geração automática de orçamento com aprovação via API ou pelo cliente direto no WhatsApp ou pelo cliente direto no WhatsApp
 - Controle de estoque com reservas, requisicoes de compra e notas fiscais
 - Cobrança automática e confirmação de pagamento
 - Consulta publica de status da OS pelo cliente
@@ -321,4 +345,4 @@ O projeto utiliza **JaCoCo** com gate de 80% de cobertura LINE. O relatorio agre
 
 > [Link do Vídeo](https://www.youtube.com/watch?v=D7l2XHGrpuY)
 > [Link do Miro](https://miro.com/app/board/uXjVHD4vUnU=/)
-> [Swagger de Produção na AWS](http://aaa4e3808aeee403b8da43e46d7e517a-1862017952.us-east-1.elb.amazonaws.com/q/swagger-ui)
+> [Swagger de Produção na AWS](https://wa6758jsk8.execute-api.us-east-1.amazonaws.com/q/swagger-ui)
