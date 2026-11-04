@@ -55,7 +55,7 @@ Documentação de apoio:
 
 - Gestao de clientes, veiculos, servicos e pecas
 - Ciclo de vida completo da Ordem de Servico: Recebida, Em Diagnostico, Aguardando Aprovação, Em Execução, Finalizada, Entregue
-- Geração automática de orçamento com aprovação via API ou pelo cliente direto no WhatsApp ou pelo cliente direto no WhatsApp
+- Geração automática de orçamento com aprovação via API ou pelo cliente direto no WhatsApp
 - Controle de estoque com reservas, requisicoes de compra e notas fiscais
 - Cobrança automática e confirmação de pagamento
 - Consulta publica de status da OS pelo cliente
