@@ -8,6 +8,7 @@ import com.fiap.mekano.domain.model.RequisicaoCompra;
 import com.fiap.mekano.domain.model.StatusRequisicao;
 import com.fiap.mekano.domain.port.in.CreateRequisicaoCompraCommand;
 import com.fiap.mekano.domain.port.in.ItemRequisicaoCompraCommand;
+import com.fiap.mekano.domain.port.in.RequisicaoCompraServicePort;
 import com.fiap.mekano.domain.port.out.ItemRequisicaoCompraRepositoryPort;
 import com.fiap.mekano.domain.port.out.PecaRepositoryPort;
 import com.fiap.mekano.domain.port.out.RequisicaoCompraRepositoryPort;
@@ -20,7 +21,7 @@ import java.util.List;
 import java.util.UUID;
 
 @ApplicationScoped
-public class RequisicaoCompraService {
+public class RequisicaoCompraService implements RequisicaoCompraServicePort {
 
     private final RequisicaoCompraRepositoryPort requisicaoRepository;
     private final PecaRepositoryPort pecaRepository;
@@ -34,8 +35,9 @@ public class RequisicaoCompraService {
         this.itemRepository = itemRepository;
     }
 
+    @Override
     @Transactional
-    public CreateRequisicaoCompraResponse criar(CreateRequisicaoCompraCommand command) {
+    public RequisicaoCompra criar(CreateRequisicaoCompraCommand command) {
         Log.infof("Criando requisição de compra: itens=%d, motivo=%s", command.itens().size(), command.motivo());
         List<ItemRequisicaoCompra> itens = new ArrayList<>();
         for (ItemRequisicaoCompraCommand itemCmd : command.itens()) {
@@ -52,16 +54,9 @@ public class RequisicaoCompraService {
 
         itemRepository.saveAll(saved.getId(), saved.getItens());
 
-        List<CreateRequisicaoCompraResponse.ItemRequisicaoCompraItemResponse> itensResponse = saved.getItens().stream()
-                .map(item -> new CreateRequisicaoCompraResponse.ItemRequisicaoCompraItemResponse(
-                        item.getPecaId(), item.getQuantidade()))
-                .toList();
-
         Log.infof("Requisição criada: requisicaoId=%s, itens=%d, status=%s, motivo=%s",
                 saved.getId(), saved.getItens().size(), saved.getStatus(), saved.getMotivo());
-        return new CreateRequisicaoCompraResponse(
-                saved.getId(), itensResponse,
-                saved.getStatus().name(), saved.getMotivo().name(), saved.getCreatedAt());
+        return saved;
     }
 
     public RequisicaoCompra buscarPorId(UUID id) {
@@ -80,7 +75,7 @@ public class RequisicaoCompraService {
             Log.warnf("Validação falhou: requisicaoId=%s não pode ser marcada como COMPRA_APROVADA no status %s",
                     id, requisicao.getStatus());
             throw new AppException(409,
-                    "Requisição não pode ser marcada como compra aprovada no status " + requisicao.getStatus());
+                    Messages.get("requisicao_compra.status.invalido.compra_aprovada", requisicao.getStatus()));
         }
         var atualizada = RequisicaoCompra.reconstitute(
                 requisicao.getId(), requisicao.getItens(),
@@ -97,7 +92,7 @@ public class RequisicaoCompraService {
             Log.warnf("Validação falhou: requisicaoId=%s não pode ser marcada como PRODUTO_RECEBIDO no status %s",
                     id, requisicao.getStatus());
             throw new AppException(409,
-                    "Requisição não pode ser marcada como produto recebido no status " + requisicao.getStatus());
+                    Messages.get("requisicao_compra.status.invalido.recebida", requisicao.getStatus()));
         }
         var atualizada = RequisicaoCompra.reconstitute(
                 requisicao.getId(), requisicao.getItens(),
@@ -113,7 +108,7 @@ public class RequisicaoCompraService {
         if (requisicao.getStatus() != StatusRequisicao.ABERTA) {
             Log.warnf("Validação falhou: requisicaoId=%s não pode ser cancelada no status %s",
                     id, requisicao.getStatus());
-            throw new AppException(409, "Requisição não pode ser cancelada no status " + requisicao.getStatus());
+            throw new AppException(409, Messages.get("requisicao_compra.status.invalido.cancelar", requisicao.getStatus()));
         }
         if (requisicao.getMotivo() == MotivoRequisicao.ORDEM_SERVICO) {
             Log.warnf("Validação falhou: requisicaoId=%s vinculada a Ordem de Serviço não pode ser cancelada", id);
@@ -133,7 +128,7 @@ public class RequisicaoCompraService {
         if (!requisicao.podeSerEnviada()) {
             Log.warnf("Validação falhou: requisicaoId=%s não pode ser enviada no status %s",
                     id, requisicao.getStatus());
-            throw new AppException(409, "Requisição não pode ser enviada no status " + requisicao.getStatus());
+            throw new AppException(409, Messages.get("requisicao_compra.status.invalido.enviar", requisicao.getStatus()));
         }
         var atualizada = RequisicaoCompra.reconstitute(
                 requisicao.getId(), requisicao.getItens(),

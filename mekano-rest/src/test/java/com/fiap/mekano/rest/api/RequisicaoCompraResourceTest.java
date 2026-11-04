@@ -1,14 +1,13 @@
 package com.fiap.mekano.rest.api;
 
-import com.fiap.mekano.application.service.peca.PecaService;
-import com.fiap.mekano.application.service.requisicao.CreateRequisicaoCompraResponse;
-import com.fiap.mekano.application.service.requisicao.RequisicaoCompraService;
 import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.model.ItemRequisicaoCompra;
 import com.fiap.mekano.domain.model.MotivoRequisicao;
 import com.fiap.mekano.domain.model.Peca;
 import com.fiap.mekano.domain.model.RequisicaoCompra;
 import com.fiap.mekano.domain.model.StatusRequisicao;
+import com.fiap.mekano.domain.port.in.PecaServicePort;
+import com.fiap.mekano.domain.port.in.RequisicaoCompraServicePort;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
@@ -41,10 +40,10 @@ class RequisicaoCompraResourceTest {
     private static final UUID PECA_UUID_2 = UUID.randomUUID();
 
     @InjectMock
-    RequisicaoCompraService requisicaoService;
+    RequisicaoCompraServicePort requisicaoService;
 
     @InjectMock
-    PecaService pecaService;
+    PecaServicePort pecaService;
 
     @BeforeEach
     void setUp() {
@@ -71,10 +70,10 @@ class RequisicaoCompraResourceTest {
                 .thenReturn(mockPeca1);
 
         Mockito.when(requisicaoService.criar(Mockito.any()))
-                .thenReturn(new CreateRequisicaoCompraResponse(REQUISICAO_UUID,
-                        List.of(new CreateRequisicaoCompraResponse.ItemRequisicaoCompraItemResponse(PECA_UUID_1, 10L),
-                                new CreateRequisicaoCompraResponse.ItemRequisicaoCompraItemResponse(PECA_UUID_2, 5L)),
-                        "ABERTA", "ESTOQUE_MINIMO", LocalDateTime.now()));
+                .thenReturn(RequisicaoCompra.reconstitute(REQUISICAO_UUID,
+                        List.of(new ItemRequisicaoCompra(PECA_UUID_1, 10L),
+                                new ItemRequisicaoCompra(PECA_UUID_2, 5L)),
+                        StatusRequisicao.ABERTA, MotivoRequisicao.ESTOQUE_MINIMO, LocalDateTime.now()));
 
         Mockito.when(requisicaoService.buscarPorId(REQUISICAO_UUID))
                 .thenReturn(mockRequisicao);

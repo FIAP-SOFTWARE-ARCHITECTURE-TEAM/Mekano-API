@@ -4,6 +4,7 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 
 import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.exception.Messages;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -20,13 +21,13 @@ public final class PlacaVeiculo {
 
     public PlacaVeiculo(String value) {
         if (value == null || value.isBlank()) {
-            throw new AppException(400, "Placa do veículo não pode ser nula ou vazia.");
+            throw new AppException(400, Messages.get("placa.required"));
         }
         
         String normalized = value .trim() .toUpperCase(Locale.ROOT) .replace("-", "");
 
         if (!PLACA_PATTERN.matcher(normalized).matches()) {
-            throw new AppException(400, "Placa do veículo inválida: " + value);
+            throw new AppException(400, Messages.get("placa.invalid.format", value));
         }
         this.value = normalized;
     }

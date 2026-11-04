@@ -24,6 +24,8 @@ public interface OrdemDeServicoServicePort {
     List<OrdemDeServico> findAllWithFilters(String status, UUID clienteUuid, UUID veiculoUuid,
                                             LocalDateTime dataInicio, LocalDateTime dataFim,
                                             int page, int size);
+    long countWithFilters(String status, UUID clienteUuid, UUID veiculoUuid,
+                          LocalDateTime dataInicio, LocalDateTime dataFim);
     Optional<OrdemDeServico> findByIdWithItems(UUID id);
     Optional<UUID> findOrcamentoUuidByOsId(UUID osId);
     Optional<Double> calcularTempoMedioExecucao(LocalDateTime dataInicio, LocalDateTime dataFim);

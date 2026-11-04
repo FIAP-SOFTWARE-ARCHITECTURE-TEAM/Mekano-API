@@ -9,7 +9,7 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
-import com.fiap.mekano.application.service.nfentrada.NfEntradaService;
+import com.fiap.mekano.domain.port.in.NfEntradaServicePort;
 import com.fiap.mekano.domain.port.in.CreateNfEntradaCommand;
 import com.fiap.mekano.rest.api.dto.CreateNfEntradaRequest;
 import com.fiap.mekano.rest.api.dto.NfEntradaPageResponse;
@@ -41,7 +41,7 @@ import jakarta.ws.rs.core.UriInfo;
 public class NfEntradaResource {
 
         @Inject
-        NfEntradaService nfEntradaService;
+        NfEntradaServicePort nfEntradaService;
 
         @Inject
         NfEntradaDtoMapper nfEntradaDtoMapper;
@@ -56,11 +56,11 @@ public class NfEntradaResource {
                 var command = new CreateNfEntradaCommand(
                                 request.getChaveAcesso(), request.getValorTotal(),
                                 request.getRequisicaoCompraId());
-                var response = nfEntradaService.registrar(command);
-                URI location = uriInfo.getAbsolutePathBuilder().path(response.id().toString()).build();
+                var nfEntrada = nfEntradaService.registrar(command);
+                URI location = uriInfo.getAbsolutePathBuilder().path(nfEntrada.getId().toString()).build();
                 var nfResponse = new NfEntradaResponse(
-                                response.id(), response.chaveAcesso(), response.valorTotal(),
-                                response.requisicaoCompraId(), response.createdAt());
+                                nfEntrada.getId(), nfEntrada.getChaveAcesso(), nfEntrada.getValorTotal(),
+                                nfEntrada.getRequisicaoCompraId(), nfEntrada.getCreatedAt());
                 return Response.created(location).entity(nfResponse).build();
         }
 

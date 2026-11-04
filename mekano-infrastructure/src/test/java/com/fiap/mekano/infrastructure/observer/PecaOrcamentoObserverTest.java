@@ -1,11 +1,11 @@
 package com.fiap.mekano.infrastructure.observer;
 
-import com.fiap.mekano.application.service.peca.PecaService;
-import com.fiap.mekano.application.service.requisicao.RequisicaoCompraService;
 import com.fiap.mekano.domain.event.OrcamentoAprovadoEvent;
 import com.fiap.mekano.domain.model.MotivoRequisicao;
 import com.fiap.mekano.domain.model.Peca;
 import com.fiap.mekano.domain.port.in.CreateRequisicaoCompraCommand;
+import com.fiap.mekano.domain.port.in.PecaServicePort;
+import com.fiap.mekano.domain.port.in.RequisicaoCompraServicePort;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -24,8 +24,8 @@ class PecaOrcamentoObserverTest {
     @Test
     @DisplayName("reserva com disponivel suficiente não deve criar requisição de compra")
     void reservaOkNaoCriaRequisicao() {
-        PecaService pecaService = mock(PecaService.class);
-        RequisicaoCompraService requisicaoService = mock(RequisicaoCompraService.class);
+        PecaServicePort pecaService = mock(PecaServicePort.class);
+        RequisicaoCompraServicePort requisicaoService = mock(RequisicaoCompraServicePort.class);
         PecaOrcamentoObserver observer = new PecaOrcamentoObserver(pecaService, requisicaoService);
 
         UUID pecaId = UUID.randomUUID();
@@ -50,8 +50,8 @@ class PecaOrcamentoObserverTest {
     @Test
     @DisplayName("reserva com disponivel insuficiente deve reservar e criar requisição com faltante")
     void reservaFalhaCriaRequisicaoComFaltante() {
-        PecaService pecaService = mock(PecaService.class);
-        RequisicaoCompraService requisicaoService = mock(RequisicaoCompraService.class);
+        PecaServicePort pecaService = mock(PecaServicePort.class);
+        RequisicaoCompraServicePort requisicaoService = mock(RequisicaoCompraServicePort.class);
         PecaOrcamentoObserver observer = new PecaOrcamentoObserver(pecaService, requisicaoService);
 
         UUID pecaId = UUID.randomUUID();
@@ -82,8 +82,8 @@ class PecaOrcamentoObserverTest {
     @Test
     @DisplayName("reserva com disponivel exatamente igual à quantidade não deve criar requisição")
     void reservaDisponivelExatoNaoCriaRequisicao() {
-        PecaService pecaService = mock(PecaService.class);
-        RequisicaoCompraService requisicaoService = mock(RequisicaoCompraService.class);
+        PecaServicePort pecaService = mock(PecaServicePort.class);
+        RequisicaoCompraServicePort requisicaoService = mock(RequisicaoCompraServicePort.class);
         PecaOrcamentoObserver observer = new PecaOrcamentoObserver(pecaService, requisicaoService);
 
         UUID pecaId = UUID.randomUUID();

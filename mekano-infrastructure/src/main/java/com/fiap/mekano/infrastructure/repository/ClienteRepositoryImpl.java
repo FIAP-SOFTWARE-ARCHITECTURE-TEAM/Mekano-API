@@ -4,15 +4,21 @@ import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.domain.model.Cliente;
 import com.fiap.mekano.domain.port.out.ClienteRepositoryPort;
+import com.fiap.mekano.infrastructure.cache.CacheNames;
 import com.fiap.mekano.infrastructure.entity.ClienteEntity;
 import com.fiap.mekano.infrastructure.mapper.ClienteEntityMapper;
+import io.quarkus.cache.CacheInvalidate;
+import io.quarkus.cache.CacheResult;
 import io.quarkus.panache.common.Page;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
+import org.eclipse.microprofile.faulttolerance.Retry;
+import org.eclipse.microprofile.faulttolerance.Timeout;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -29,6 +35,8 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
     }
 
     @Override
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
+    @CacheInvalidate(cacheName = CacheNames.CLIENTES)
     public Cliente create(Cliente cliente) {
         ClienteEntity entity = new ClienteEntity();
         entity.setUuid(cliente.getId());
@@ -52,6 +60,8 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
     }
 
     @Override
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
+    @CacheInvalidate(cacheName = CacheNames.CLIENTES)
     public Cliente update(Cliente cliente) {
         ClienteEntity entity = panacheRepository.find("uuid = ?1", cliente.getId())
                 .firstResultOptional()
@@ -63,6 +73,9 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
     }
 
     @Override
+    @Retry(maxRetries = 3)
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
+    @CacheResult(cacheName = CacheNames.CLIENTES)
     public Optional<Cliente> findById(UUID id) {
         return panacheRepository.find("uuid = ?1", id)
                 .firstResultOptional()
@@ -70,6 +83,8 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
     }
 
     @Override
+    @Retry(maxRetries = 3)
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     public Optional<Cliente> findByCpf(String cpf) {
         if (cpf == null || cpf.isBlank()) {
             return Optional.empty();
@@ -82,6 +97,8 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
     }
 
     @Override
+    @Retry(maxRetries = 3)
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     public Optional<Cliente> findByTelefone(String telefone) {
         if (telefone == null || telefone.isBlank()) {
             return Optional.empty();
@@ -96,10 +113,10 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
             return exact.map(clienteEntityMapper::toDomain);
         }
 
-        // WR-04: fallback por sufixo incluindo o DDD (últimos 10 dígitos) com
-        // ORDER BY createdAt (determinístico) e retorno APENAS quando há uma
-        // única correspondência — múltiplos clientes com o mesmo número local
-        // em DDDs diferentes tornam o resultado ambíguo (retorna vazio).
+        // WR-04: fallback por sufixo incluindo o DDD (ÃƒÂºltimos 10 dÃƒÂ­gitos) com
+        // ORDER BY createdAt (determinÃƒÂ­stico) e retorno APENAS quando hÃƒÂ¡ uma
+        // ÃƒÂºnica correspondÃƒÂªncia Ã¢â‚¬â€ mÃƒÂºltiplos clientes com o mesmo nÃƒÂºmero local
+        // em DDDs diferentes tornam o resultado ambÃƒÂ­guo (retorna vazio).
         if (digits.length() >= 10) {
             String suffix = digits.substring(digits.length() - 10);
             List<ClienteEntity> matches = panacheRepository
@@ -115,6 +132,8 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
     }
 
     @Override
+    @Retry(maxRetries = 3)
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     public boolean existsByCpf(String cpf) {
         if (cpf == null || cpf.isBlank()) {
             return false;
@@ -125,6 +144,8 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
     }
 
     @Override
+    @Retry(maxRetries = 3)
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     public List<Cliente> findAll(int page, int size, String sort, Boolean isActive) {
         Sort panacheSort = parseSort(sort);
         PanacheQuery<ClienteEntity> query = isActive == null
@@ -138,6 +159,8 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
     }
 
     @Override
+    @Retry(maxRetries = 3)
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     public long countAll(Boolean isActive) {
         return isActive == null
                 ? panacheRepository.count()
@@ -146,8 +169,9 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
 
     @Override
     @Transactional
-    public void markAsDeleted(UUID id) {
-        ClienteEntity entity = panacheRepository.find("uuid = ?1", id)
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
+    @CacheInvalidate(cacheName = CacheNames.CLIENTES)
+    public void markAsDeleted(UUID id) {        ClienteEntity entity = panacheRepository.find("uuid = ?1", id)
                 .firstResultOptional()
                 .orElseThrow(() -> new AppException(404, Messages.get("cliente.not.found", id)));
         entity.setIsActive(false);
@@ -156,6 +180,8 @@ public class ClienteRepositoryImpl implements ClienteRepositoryPort {
 
     @Override
     @Transactional
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
+    @CacheInvalidate(cacheName = CacheNames.CLIENTES)
     public void reactivate(UUID id) {
         ClienteEntity entity = panacheRepository.find("uuid = ?1", id)
                 .firstResultOptional()

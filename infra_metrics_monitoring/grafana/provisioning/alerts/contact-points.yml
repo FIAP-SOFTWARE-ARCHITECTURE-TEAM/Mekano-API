@@ -1,0 +1,11 @@
+apiVersion: 1
+contactPoints:
+    - orgId: 1
+      name: Dev - Sistema de Alertas (email)
+      receivers:
+        - uid: dfyr7xdmaumm8b
+          type: email
+          settings:
+            addresses: devsistemaalertas2026@gmail.com
+            singleEmail: true
+          disableResolveMessage: false

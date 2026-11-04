@@ -86,9 +86,6 @@ com.fiap.mekano.infrastructure
 │   ├── ServicoEntityMapper.java / Impl.java      — manual CDI impl
 │   ├── OrdemDeServicoEntityMapper.java / Impl.java — manual CDI impl
 │   ├── ItemOsEntityMapper.java                   — manual toDomain() and toEntity() methods
-│   ├── PecaEntityMapper.java                     — ⚠ EMPTY class (no methods, unused)
-│   ├── RequisicaoCompraEntityMapper.java         — ⚠ EMPTY class (no methods, unused)
-│   ├── NfEntradaEntityMapper.java                — ⚠ EMPTY class (no methods, unused)
 │   ├── EmailMapper.java                          — @ApplicationScoped @Named
 │   ├── CpfMapper.java                            — @ApplicationScoped @Named
 │   ├── EnderecoMapper.java                       — @ApplicationScoped @Named (6 flatten methods)
@@ -130,26 +127,32 @@ com.fiap.mekano.infrastructure
 1. `*PanacheRepository` — extends `PanacheRepositoryBase<Entity, Long>` or `PanacheRepository<Entity>`
 2. `*RepositoryImpl` — implements domain port, delegates to PanacheRepository
 
-### Fault Tolerance & Cache Coverage (INCONSISTENT)
+### Fault Tolerance & Cache Coverage (padronizado — re-verified 2026-10-17)
 | Repository | @Retry | @Timeout | @CacheResult | @CacheInvalidate |
 |------------|--------|----------|--------------|------------------|
-| User       | ✓      | ✓        | ✓            | ✓                |
-| Veiculo    | ✓      | ✓        | ✓            | ✓                |
-| Servico    | ✓      | ✓        | ✓            | ✓                |
-| Cliente    | ✗      | ✗        | ✗            | ✗                |
-| Peca       | ✗      | ✗        | ✗            | ✗                |
-| Requisicao | ✗      | ✗        | ✗            | ✗                |
-| NfEntrada  | ✗      | ✗        | ✗            | ✗                |
+| User       | ✓ reads | ✓ | ✓ | ✓ |
+| Veiculo    | ✓ reads | ✓ | ✓ | ✓ |
+| Servico    | ✓ reads | ✓ | ✓ | ✓ |
+| Cliente    | ✓ reads | ✓ | findById | ✓ (writes) |
+| Peca       | ✓ reads | ✓ | findById | ✓ (todas as mutações, incl. saldo) |
+| Requisicao | ✓ reads | ✓ | findById | ✓ (save/atualizar) |
+| NfEntrada  | ✓ reads | ✓ | findById | ✓ (save) |
+
+Regras do padrão: @Retry SOMENTE em leituras (retry em write de saldo/estoque
+risca débito duplo); @Timeout(5s) em tudo; @CacheResult só em findById de dados
+estáveis — NUNCA em métodos usados como check de duplicidade
+(ex.: `buscarPorChaveAcesso`, `existsByCpf` — 60s de staleness permitiria duplicar).
 
 ### Cache Configuration (`cache-config.yml`)
 All caches: `expire-after-write=60s` (except servicos: 120s), max-size 100-200.
 
 ### Mapper Notes
 - Mappers are manual CDI implementations (`@ApplicationScoped`), NOT MapStruct-generated
-- 3 mapper classes are EMPTY (Peca, RequisicaoCompra, NfEntrada) — unused dead code
+- ~~3 mapper classes are EMPTY (Peca, RequisicaoCompra, NfEntrada)~~ **RESOLVED** — deleted from repo
 - VO mappers (Email, Cpf, Endereco, Telefone, PlacaVeiculo) are `@ApplicationScoped @Named` with explicit methods
+- Peca/RequisicaoCompra/NfEntrada mapeiam direto entity↔domain nos `*RepositoryImpl` (sem mapper dedicado)
 
-## Flyway Migrations (V1-V35)
+## Flyway Migrations (33 arquivos — re-verified 2026-10-17)
 
 | Migration | Table(s) | Notes |
 |-----------|----------|-------|
@@ -190,13 +193,14 @@ All caches: `expire-after-write=60s` (except servicos: 120s), max-size 100-200.
 - All follow H2 compatibility rules (no BIGSERIAL, no multi-column ADD)
 - V35 `os_itens`: junction table with UNIQUE constraint `(os_uuid, referencia_uuid, tipo)`
 
-## Known Issues
-1. **Empty mapper stubs**: `PecaEntityMapper`, `RequisicaoCompraEntityMapper`, `NfEntradaEntityMapper` are dead code
-2. **NfEntradaRepositoryImpl bug**: `entity.pecaId` and `entity.requisicaoCompraId` both set to `nfEntrada.getId()` (copy-paste error)
+## Known Issues (re-verified 2026-10-17)
+1. ~~Empty mapper stubs~~ **RESOLVED** — deleted from repo
+2. ~~NfEntradaRepositoryImpl bug (copy-paste)~~ **RESOLVED/NA** — modelo NfEntrada é enxuto por design: (uuid, chave_acesso, valor_total, requisicao_compra_id, data_recebimento); itens derivados da RequisicaoCompra, sem peca_id
 3. **Inconsistent FT/cache**: Cliente, Peca, RequisicaoCompra, NfEntrada repos lack fault tolerance and caching
 4. **Entity style inconsistency**: Peca/RequisicaoCompra/NfEntrada use `@Data` (public fields) — others use `@Getter/@Setter` (private)
 5. **Panache interface inconsistency**: Some repos use `PanacheRepositoryBase<E, Long>`, others use `PanacheRepository<E>`
-6. **No `RefreshTokenEntity`, `RefreshTokenRepository`, `TokenBucketRateLimiter`, `RefreshTokenService`** — these were documented but deleted
+6. ~~No RefreshTokenEntity...~~ **STALE** — `RefreshTokenEntity`, `RefreshTokenPanacheRepository`, `RefreshTokenRepositoryImpl` e `RefreshTokenService` EXISTEM (fluxo de auth implementado)
+7. **Dead code**: `OrdemDeServico3.java` (100% comentado) — deletar (ver docs/ARCHITECTURE-REVIEW-2026-10-17.md)
 
 ## Dependencies (compile)
 mekano-domain, quarkus-hibernate-orm-panache, quarkus-arc, quarkus-jdbc-postgresql, quarkus-flyway, quarkus-smallrye-fault-tolerance, quarkus-elytron-security-common, quarkus-smallrye-jwt-build, quarkus-cache, quarkus-config-yaml, mapstruct, lombok (provided)

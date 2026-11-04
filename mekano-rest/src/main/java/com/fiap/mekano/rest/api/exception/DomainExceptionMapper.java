@@ -3,7 +3,9 @@ package com.fiap.mekano.rest.api.exception;
 import com.fiap.mekano.domain.exception.DomainException;
 import com.fiap.mekano.domain.exception.TransicaoInvalidaException;
 import com.fiap.mekano.domain.port.out.OSMetricsPort;
+import com.fiap.mekano.rest.filter.CorrelationIdRequestFilter;
 import io.quarkus.logging.Log;
+import org.jboss.logmanager.MDC;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -50,8 +52,9 @@ public class DomainExceptionMapper implements ExceptionMapper<DomainException> {
 
     private Response build(int status, String detail) {
         String instance = uriInfo != null ? uriInfo.getRequestUri().toString() : null;
+        String correlationId = MDC.get(CorrelationIdRequestFilter.MDC_KEY);
         return Response.status(status)
-                .entity(ProblemDetail.of(status, detail, instance))
+                .entity(ProblemDetail.of(status, detail, instance, correlationId))
                 .type(PROBLEM_JSON)
                 .build();
     }

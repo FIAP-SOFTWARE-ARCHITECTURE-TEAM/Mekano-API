@@ -21,6 +21,10 @@ import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
+import org.eclipse.microprofile.faulttolerance.Retry;
+import org.eclipse.microprofile.faulttolerance.Timeout;
+
+import java.time.temporal.ChronoUnit;
 
 @ApplicationScoped
 public class PecaRepositoryImpl implements PecaRepositoryPort {
@@ -37,6 +41,7 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
 
     @Override
     @Transactional
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     @CacheInvalidate(cacheName = CacheNames.PECAS)
     public Peca save(Peca peca) {
         PecaEntity entity = panacheRepository.find("uuid = ?1", peca.getId()).firstResult();
@@ -65,6 +70,7 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
     }
 
     @Override
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     @CacheResult(cacheName = CacheNames.PECAS)
     public Optional<Peca> findById(UUID id) {
         return panacheRepository.find("uuid = ?1", id)
@@ -73,6 +79,8 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
     }
 
     @Override
+    @Retry(maxRetries = 3)
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     public List<Peca> findAll(int page, int size, Boolean isActive) {
         PanacheQuery<PecaEntity> query = isActive == null
                 ? panacheRepository.findAll(Sort.by("id"))
@@ -85,6 +93,8 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
     }
 
     @Override
+    @Retry(maxRetries = 3)
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     public long countAll(Boolean isActive) {
         return isActive == null
                 ? panacheRepository.count()
@@ -92,6 +102,8 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
     }
 
     @Override
+    @Retry(maxRetries = 3)
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     public List<Peca> listarAbaixoEstoqueMinimo() {
         return panacheRepository.find("isActive = ?1", true).list()
                 .stream()
@@ -101,6 +113,8 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
     }
 
     @Override
+    @Retry(maxRetries = 3)
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     public Optional<Peca> buscarPorDescricao(String descricao) {
         if (descricao == null || descricao.isBlank()) {
             return Optional.empty();
@@ -113,6 +127,7 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
 
     @Override
     @Transactional
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     @CacheInvalidate(cacheName = CacheNames.PECAS)
     public boolean debitarSaldo(UUID uuid, Integer quantidade) {
         int rowsUpdated = em.createNativeQuery(
@@ -127,6 +142,7 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
 
     @Override
     @Transactional
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     @CacheInvalidate(cacheName = CacheNames.PECAS)
     public void creditarSaldo(UUID uuid, Integer quantidade) {
         em.createNativeQuery(
@@ -140,6 +156,7 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
 
     @Override
     @Transactional
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     @CacheInvalidate(cacheName = CacheNames.PECAS)
     public boolean reservarSaldo(UUID uuid, Integer quantidade) {
         int rowsUpdated = em.createNativeQuery(
@@ -154,6 +171,7 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
 
     @Override
     @Transactional
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     @CacheInvalidate(cacheName = CacheNames.PECAS)
     public boolean debitarSaldoReservado(UUID uuid, Integer quantidade) {
         int rowsUpdated = em.createNativeQuery(
@@ -168,6 +186,7 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
 
     @Override
     @Transactional
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     @CacheInvalidate(cacheName = CacheNames.PECAS)
     public boolean liberarReserva(UUID uuid, Integer quantidade) {
         int rowsUpdated = em.createNativeQuery(
@@ -182,6 +201,8 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
 
     @Override
     @Transactional
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
+    @CacheInvalidate(cacheName = CacheNames.PECAS)
     public void remover(UUID id) {
         panacheRepository.find("uuid = ?1", id).firstResultOptional().ifPresent(entity -> {
             entity.setIsActive(false);
@@ -192,6 +213,7 @@ public class PecaRepositoryImpl implements PecaRepositoryPort {
 
     @Override
     @Transactional
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
     @CacheInvalidate(cacheName = CacheNames.PECAS)
     public void reativar(UUID id) {
         PecaEntity entity = panacheRepository.find("uuid = ?1", id)

@@ -45,8 +45,7 @@ public class NfEntrada {
         validateRequisicaoCompraId(requisicaoCompraId);
 
         return NfEntrada.builder()
-                .id(UUID.randomUUID())
-                .chaveAcesso(chaveAcesso)
+                .id(UUID.randomUUID())                .chaveAcesso(chaveAcesso)
                 .valorTotal(valorTotal)
                 .requisicaoCompraId(requisicaoCompraId)
                 .createdAt(LocalDateTime.now())
@@ -90,7 +89,7 @@ public class NfEntrada {
 
     private static void validateRequisicaoCompraId(UUID requisicaoCompraId) {
         if (requisicaoCompraId == null) {
-            throw new AppException(400, "ID da requisição de compra é obrigatório");
+            throw new AppException(400, Messages.get("nf_entrada.requisicao.required"));
         }
     }
 

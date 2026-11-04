@@ -93,7 +93,7 @@ public class Peca {
 
         Long reservado = saldoReservado == null ? 0L : saldoReservado;
         if (reservado < 0) {
-            throw new AppException(400, "Saldo reservado não pode ser negativo: " + codigo);
+            throw new AppException(400, Messages.get("peca.saldo_reservado.negativo", codigo));
         }
 
         return Peca.builder()

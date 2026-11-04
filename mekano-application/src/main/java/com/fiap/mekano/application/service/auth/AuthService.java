@@ -10,6 +10,7 @@ import com.fiap.mekano.domain.port.out.PasswordHasherPort;
 import com.fiap.mekano.domain.port.out.UserRepositoryPort;
 import com.fiap.mekano.domain.port.out.UserRoleRepositoryPort;
 import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.exception.Messages;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -88,7 +89,7 @@ public class AuthService implements AuthServicePort {
     @Transactional
     public void logout(String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank()) {
-            throw new AppException(400, "refresh_token é obrigatório");
+            throw new AppException(400, Messages.get("auth.refresh_token.required"));
         }
         String tokenHash = RefreshTokenService.sha256(refreshToken);
         refreshTokenService.invalidateByUser(tokenHash);

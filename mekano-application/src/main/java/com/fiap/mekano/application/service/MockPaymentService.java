@@ -2,10 +2,12 @@ package com.fiap.mekano.application.service;
 
 import com.fiap.mekano.domain.event.PagamentoConfirmadoEvent;
 import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.domain.os.StatusPagamento;
 import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.OrdemDeServicoRepositoryPort;
 import com.fiap.mekano.domain.port.out.ProcessedEventsRepositoryPort;
+import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
@@ -28,22 +30,30 @@ public class MockPaymentService {
 
     @Transactional
     public void confirmarPagamento(UUID osUuid) {
+        Log.infof("Confirmando pagamento: osUuid=%s", osUuid);
         var os = ordemDeServicoRepository.findById(osUuid)
-                .orElseThrow(() -> new AppException(404, "OS não encontrada: " + osUuid));
+                .orElseThrow(() -> {
+                    Log.warnf("Pagamento não pôde ser confirmado: OS não encontrada, osUuid=%s", osUuid);
+                    return new AppException(404, Messages.get("os.not.found", osUuid));
+                });
 
         // D-06: idempotência — se já processado, retorna silenciosamente (200, não 409)
         if (processedEventsRepository.existsFor("PAGAMENTO_CONFIRMADO", osUuid)) {
+            Log.infof("Pagamento já processado anteriormente (idempotência): osUuid=%s", osUuid);
             return;
         }
 
         if (os.getStatusPagamento() != StatusPagamento.AGUARDANDO_PAGAMENTO) {
-            throw new AppException(409, "Pagamento não está pendente");
+            Log.warnf("Validação falhou: OS sem pagamento pendente, osUuid=%s, statusPagamento=%s",
+                    osUuid, os.getStatusPagamento());
+            throw new AppException(409, Messages.get("pagamento.nao.pendente"));
         }
 
         try {
             Thread.sleep(2000);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            Log.warnf("Pagamento indisponível: osUuid=%s, interrupção durante simulação", osUuid);
             throw new AppException(503, "Pagamento indisponível no momento, tente novamente mais tarde");
         }
 
@@ -52,5 +62,7 @@ public class MockPaymentService {
         ordemDeServicoRepository.save(os);
         processedEventsRepository.save("PAGAMENTO_CONFIRMADO", osUuid);
         eventPublisher.publish(pagamentoEvent);
+        Log.infof("Pagamento confirmado: osUuid=%s, statusPagamento=%s, referencia=%s",
+                osUuid, os.getStatusPagamento(), referencia);
     }
 }

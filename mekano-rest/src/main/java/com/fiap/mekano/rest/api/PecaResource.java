@@ -9,7 +9,7 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
-import com.fiap.mekano.application.service.peca.PecaService;
+import com.fiap.mekano.domain.port.in.PecaServicePort;
 import com.fiap.mekano.domain.port.in.UpdatePecaCommand;
 import com.fiap.mekano.rest.api.dto.CreatePecaRequest;
 import com.fiap.mekano.rest.api.dto.PecaPageResponse;
@@ -44,7 +44,7 @@ import jakarta.ws.rs.core.UriInfo;
 public class PecaResource {
 
         @Inject
-        PecaService pecaService;
+        PecaServicePort pecaService;
 
         @Inject
         PecaDtoMapper pecaDtoMapper;
@@ -57,12 +57,9 @@ public class PecaResource {
         @APIResponse(responseCode = "400", description = "Dados de entrada inválidos", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = ProblemDetail.class)))
         public Response create(@Valid CreatePecaRequest request, @Context UriInfo uriInfo) {
                 var command = pecaDtoMapper.toCreateCommand(request);
-                var response = pecaService.criar(command);
-                URI location = uriInfo.getAbsolutePathBuilder().path(response.id().toString()).build();
-                var pecaResponse = new PecaResponse(
-                                response.id(), response.codigo(), response.descricao(),
-                                response.valorUnitario(),
-                                response.saldoAtual(), response.estoqueMinimo(), response.createdAt(), true);
+                var peca = pecaService.criar(command);
+                URI location = uriInfo.getAbsolutePathBuilder().path(peca.getId().toString()).build();
+                PecaResponse pecaResponse = pecaDtoMapper.toResponse(peca);
                 return Response.created(location).entity(pecaResponse).build();
         }
 

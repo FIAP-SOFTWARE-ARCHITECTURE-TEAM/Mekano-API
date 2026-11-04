@@ -5,6 +5,7 @@ import com.fiap.mekano.domain.exception.AppException;
 import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.domain.model.Peca;
 import com.fiap.mekano.domain.port.in.CreatePecaCommand;
+import com.fiap.mekano.domain.port.in.PecaServicePort;
 import com.fiap.mekano.domain.port.in.UpdatePecaCommand;
 import com.fiap.mekano.domain.port.out.EventPublisher;
 import com.fiap.mekano.domain.port.out.OrcamentoRepositoryPort;
@@ -17,7 +18,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @ApplicationScoped
-public class PecaService {
+public class PecaService implements PecaServicePort {
 
     private final PecaRepositoryPort pecaRepository;
     private final EventPublisher eventPublisher;
@@ -30,20 +31,16 @@ public class PecaService {
         this.orcamentoRepository = orcamentoRepository;
     }
 
+    @Override
     @Transactional
-    public CreatePecaResponse criar(CreatePecaCommand command) {
+    public Peca criar(CreatePecaCommand command) {
         var peca = Peca.create(
                 command.codigo(),
                 command.descricao(),
                 command.valorUnitario(),
                 command.estoqueMinimo()
         );
-        var saved = pecaRepository.save(peca);
-        return new CreatePecaResponse(
-                saved.getId(), saved.getCodigo(), saved.getDescricao(),
-                saved.getValorUnitario(),
-                saved.getSaldoAtual(), saved.getEstoqueMinimo(), saved.getCreatedAt()
-        );
+        return pecaRepository.save(peca);
     }
 
     @Transactional

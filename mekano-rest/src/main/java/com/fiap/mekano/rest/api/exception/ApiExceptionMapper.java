@@ -1,7 +1,11 @@
+
+
 package com.fiap.mekano.rest.api.exception;
 
 import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.rest.filter.CorrelationIdRequestFilter;
 import io.quarkus.logging.Log;
+import org.jboss.logmanager.MDC;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.ws.rs.WebApplicationException;
@@ -22,15 +26,15 @@ public class ApiExceptionMapper implements ExceptionMapper<Exception> {
 
     @Override
     public Response toResponse(Exception exception) {
-        // 1. Extrai o primeiro frame relevante da excecao
+        // 1. Extrai o primeiro frame relevante da exceção
         StackTraceElement sourceElement = extractSourceElement(exception);
 
-        // 2. Adiciona o contexto da classe/dominio no MDC do log
+        // 2. Adiciona o contexto da classe/domínio no MDC do log
         if (sourceElement != null) {
             org.jboss.logging.MDC.put("targetClass", sourceElement.getClassName());
             org.jboss.logging.MDC.put("targetMethod", sourceElement.getMethodName());
-            // Extrai a simples string da classe (ex: NfEntradaResource) para facil
-            // identificacao
+            // Extrai a simples string da classe (ex: NfEntradaResource) para fácil
+            // identificação
             String simpleName = sourceElement.getClassName()
                     .substring(sourceElement.getClassName().lastIndexOf('.') + 1);
             org.jboss.logging.MDC.put("domainClass", simpleName);
@@ -59,7 +63,7 @@ public class ApiExceptionMapper implements ExceptionMapper<Exception> {
             return build(500, "Erro interno do servidor");
 
         } finally {
-            // 3. Limpa o MDC para nao poluir outras requisicoes da mesma thread
+            // 3. Limpa o MDC para não poluir outras requisições da mesma thread
             org.jboss.logging.MDC.remove("targetClass");
             org.jboss.logging.MDC.remove("targetMethod");
             org.jboss.logging.MDC.remove("domainClass");
@@ -71,7 +75,7 @@ public class ApiExceptionMapper implements ExceptionMapper<Exception> {
         if (throwable == null || throwable.getStackTrace() == null)
             return null;
         for (StackTraceElement element : throwable.getStackTrace()) {
-            // Filtra pacotes do projeto eliminando bibliotecas externas e o proprio
+            // Filtra pacotes do seu projeto eliminando bibliotecas externas e o próprio
             // mapper
             if (element.getClassName().startsWith("com.fiap.mekano")
                     && !element.getClassName().equals(this.getClass().getName())) {
@@ -83,8 +87,9 @@ public class ApiExceptionMapper implements ExceptionMapper<Exception> {
 
     private Response build(int status, String detail) {
         String instance = uriInfo != null ? uriInfo.getRequestUri().toString() : null;
+        String correlationId = MDC.get(CorrelationIdRequestFilter.MDC_KEY);
         return Response.status(status)
-                .entity(ProblemDetail.of(status, detail, instance))
+                .entity(ProblemDetail.of(status, detail, instance, correlationId))
                 .type(PROBLEM_JSON)
                 .build();
     }

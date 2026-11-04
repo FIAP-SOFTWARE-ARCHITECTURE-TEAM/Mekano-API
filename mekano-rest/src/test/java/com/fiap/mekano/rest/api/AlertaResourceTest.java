@@ -1,6 +1,6 @@
 package com.fiap.mekano.rest.api;
 
-import com.fiap.mekano.application.service.peca.PecaService;
+import com.fiap.mekano.domain.port.in.PecaServicePort;
 import com.fiap.mekano.domain.model.Peca;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
@@ -27,7 +27,7 @@ class AlertaResourceTest {
     private static final String BASE_PATH = "/api/v1/alertas";
 
     @InjectMock
-    PecaService pecaService;
+    PecaServicePort pecaService;
 
     @BeforeEach
     void setUp() {

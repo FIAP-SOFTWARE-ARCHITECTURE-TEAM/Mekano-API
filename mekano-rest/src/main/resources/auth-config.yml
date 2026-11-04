@@ -21,3 +21,14 @@ quarkus:
       proactive: false
   analytics:
     disabled: true
+
+# %dev: verifica com o MESMO par do keygen (~/.mekano/secrets) — o compose faz
+# isso via env MP_JWT_VERIFY_PUBLICKEY_LOCATION; sem este override o dev local
+# carregaria a publicKey.pem commitada em resources (par diferente) e todo
+# token emitido pelo proprio /auth/login falharia com InvalidJwtSignature.
+"%dev":
+  mp:
+    jwt:
+      verify:
+        publickey:
+          location: file:${user.home}/.mekano/secrets/publicKey.pem

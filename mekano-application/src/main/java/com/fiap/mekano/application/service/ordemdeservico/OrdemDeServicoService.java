@@ -231,7 +231,7 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
                 Peca peca = pecaRepository.buscarPorId(itemOs.getReferenciaUuid())
                         .orElseThrow(() -> {
                             Log.warnf("Validação falhou: pecaId=%s não encontrada (itensOrcamento)", itemOs.getReferenciaUuid());
-                            return new AppException(404, "Peça não encontrada: " + itemOs.getReferenciaUuid());
+                            return new AppException(404, Messages.get("os.peca.not.found", itemOs.getReferenciaUuid()));
                         });
                 if (!Boolean.TRUE.equals(peca.getIsActive())) {
                     Log.warnf("Validação falhou: pecaId=%s está inativa (itensOrcamento)", itemOs.getReferenciaUuid());
@@ -243,7 +243,7 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
                 Servico servico = servicoRepository.findById(itemOs.getReferenciaUuid())
                         .orElseThrow(() -> {
                             Log.warnf("Validação falhou: servicoId=%s não encontrado (itensOrcamento)", itemOs.getReferenciaUuid());
-                            return new AppException(404, "Serviço não encontrado: " + itemOs.getReferenciaUuid());
+                            return new AppException(404, Messages.get("os.servico.not.found", itemOs.getReferenciaUuid()));
                         });
                 if (!Boolean.TRUE.equals(servico.getIsActive())) {
                     Log.warnf("Validação falhou: servicoId=%s está inativo (itensOrcamento)", itemOs.getReferenciaUuid());
@@ -431,6 +431,12 @@ public class OrdemDeServicoService implements OrdemDeServicoServicePort {
             LocalDateTime dataInicio, LocalDateTime dataFim,
             int page, int size) {
         return repository.findAllWithFilters(status, clienteUuid, veiculoUuid, dataInicio, dataFim, page, size);
+    }
+
+    @Override
+    public long countWithFilters(String status, UUID clienteUuid, UUID veiculoUuid,
+                                 LocalDateTime dataInicio, LocalDateTime dataFim) {
+        return repository.countWithFilters(status, clienteUuid, veiculoUuid, dataInicio, dataFim);
     }
 
     @Override

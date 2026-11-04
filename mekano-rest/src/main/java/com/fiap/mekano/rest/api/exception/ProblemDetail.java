@@ -31,13 +31,20 @@ public record ProblemDetail(
 
         @Schema(description = "Explicação específica desta ocorrência", example = "Usuário não encontrado") String detail,
 
-        @Schema(description = "URI que identifica a ocorrência específica (opcional)", example = "/api/v1/users/123") String instance) {
+        @Schema(description = "URI que identifica a ocorrência específica (opcional)", example = "/api/v1/users/123") String instance,
+
+        @Schema(description = "Correlation-id da requisição (header X-Request-ID) — use ao reportar problemas", example = "550e8400-e29b-41d4-a716-446655440000") String correlationId) {
+
     public static ProblemDetail of(int status, String detail) {
-        return new ProblemDetail("about:blank", titleFor(status), status, detail, null);
+        return new ProblemDetail("about:blank", titleFor(status), status, detail, null, null);
     }
 
     public static ProblemDetail of(int status, String detail, String instance) {
-        return new ProblemDetail("about:blank", titleFor(status), status, detail, instance);
+        return new ProblemDetail("about:blank", titleFor(status), status, detail, instance, null);
+    }
+
+    public static ProblemDetail of(int status, String detail, String instance, String correlationId) {
+        return new ProblemDetail("about:blank", titleFor(status), status, detail, instance, correlationId);
     }
 
     private static String titleFor(int status) {

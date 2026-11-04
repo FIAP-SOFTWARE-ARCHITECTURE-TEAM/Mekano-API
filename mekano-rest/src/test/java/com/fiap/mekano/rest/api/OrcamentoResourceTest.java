@@ -176,7 +176,7 @@ class OrcamentoResourceTest {
                 .contentType(containsString("application/problem+json"));
     }
 
-    // ─────────────── ANÔNIMOS (públicos) ───────────────
+    // ─────────────── ANÔNIMOS (públicos por decisão D-20 — UUID é a chave de acesso) ───────────────
 
     @Test
     @Order(8)

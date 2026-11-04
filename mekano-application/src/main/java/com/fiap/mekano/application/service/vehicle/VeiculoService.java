@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import com.fiap.mekano.domain.event.VeiculoCriadoEvent;
 import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.domain.model.Veiculo;
 import com.fiap.mekano.domain.port.in.CreateVeiculoCommand;
 import com.fiap.mekano.domain.port.in.UpdateVeiculoCommand;
@@ -72,7 +73,7 @@ public class VeiculoService
     @Transactional
     public Veiculo update(UUID veiculoId, UpdateVeiculoCommand command) {
         Veiculo existingVehicle = veiculoRepository.findById(veiculoId)
-                .orElseThrow(() -> new AppException(404, "Veículo não encontrado"));
+                .orElseThrow(() -> new AppException(404, Messages.get("veiculo.not.found", veiculoId)));
 
         // A placa é imutável após a criação — qualquer valor enviado é ignorado
         Veiculo updatedVehicle = Veiculo.reconstitute(
@@ -92,7 +93,7 @@ public class VeiculoService
     @Override
     public Veiculo findById(UUID veiculoId) {
         return veiculoRepository.findById(veiculoId)
-                .orElseThrow(() -> new AppException(404, "Veículo não encontrado"));
+                .orElseThrow(() -> new AppException(404, Messages.get("veiculo.not.found", veiculoId)));
     }
 
     @Override

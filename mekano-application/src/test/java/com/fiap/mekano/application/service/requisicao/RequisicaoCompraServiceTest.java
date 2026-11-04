@@ -91,9 +91,9 @@ class RequisicaoCompraServiceTest {
         var response = requisicaoService.criar(command);
 
         assertNotNull(response);
-        assertEquals(2, response.itens().size());
-        assertEquals("ABERTA", response.status());
-        assertEquals("ESTOQUE_MINIMO", response.motivo());
+        assertEquals(2, response.getItens().size());
+        assertEquals(StatusRequisicao.ABERTA, response.getStatus());
+        assertEquals(MotivoRequisicao.ESTOQUE_MINIMO, response.getMotivo());
         verify(requisicaoRepository).save(any());
         verify(itemRepository).saveAll(any(), any());
     }

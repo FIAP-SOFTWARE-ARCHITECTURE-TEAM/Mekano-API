@@ -2,6 +2,7 @@ package com.fiap.mekano.application.listener;
 
 import com.fiap.mekano.domain.event.OSFinalizadaEvent;
 import com.fiap.mekano.domain.exception.AppException;
+import com.fiap.mekano.domain.exception.Messages;
 import com.fiap.mekano.domain.model.Orcamento;
 import com.fiap.mekano.domain.model.OrdemDeServico;
 import com.fiap.mekano.domain.port.out.EventPublisher;
@@ -39,10 +40,10 @@ public class CobrancaEmitidaListener {
         }
 
         OrdemDeServico os = ordemDeServicoRepository.findById(event.ordemServicoId())
-                .orElseThrow(() -> new AppException(404, "OS não encontrada: " + event.ordemServicoId()));
+                .orElseThrow(() -> new AppException(404, Messages.get("os.not.found", event.ordemServicoId())));
 
         Orcamento orcamento = orcamentoRepository.findByOrdemServicoUuid(event.ordemServicoId())
-                .orElseThrow(() -> new AppException(404, "Orçamento não encontrado para OS: " + event.ordemServicoId()));
+                .orElseThrow(() -> new AppException(404, Messages.get("orcamento.not.found.os", event.ordemServicoId())));
 
         var cobrancaEvent = os.gerarCobranca(orcamento.getId(), orcamento.getValorTotal());
         ordemDeServicoRepository.save(os);
