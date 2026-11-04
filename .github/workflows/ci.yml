@@ -60,14 +60,29 @@ jobs:
       #    docker-compose.yml (postgres saudável, keygen concluído, mekano
       #    respondendo em /q/health/live) antes de seguir para o próximo passo.
       - name: Start application stack (docker compose)
+        env:
+          MEKANO_PUBLIC_URL: http://localhost:8080
         run: docker compose up -d --build --wait postgres keygen mekano
 
       # 8. Executa a collection do Postman via Newman contra a API já no ar.
-      #    Como o JSON já contém as variáveis necessárias, não é preciso
-      #    passar --environment separadamente.
+      #    Variáveis obrigatórias são fornecidas explicitamente no CI.
       - name: Run functional tests with Newman
+        if: >
+          github.event_name != 'pull_request' ||
+          (
+            github.event.pull_request.head.repo.full_name == github.repository &&
+            github.actor != 'dependabot[bot]'
+          )
+        env:
+          NEWMAN_ADMIN_PASSWORD: ${{ secrets.NEWMAN_ADMIN_PASSWORD }}
         run: |
+          test -n "$NEWMAN_ADMIN_PASSWORD" || { echo "::error::Configure o secret NEWMAN_ADMIN_PASSWORD"; exit 1; }
+
           newman run newman/Mekano_API_V2.0.postman_collection.json \
+            --env-var "baseUrl=http://localhost:8080/api/v1" \
+            --env-var "adminEmail=admin@mekano.com.br" \
+            --env-var "adminPassword=$NEWMAN_ADMIN_PASSWORD" \
+            --env-var "wrongPassword=senha-invalida-newman" \
             --reporters cli,junit \
             --reporter-junit-export newman/report.xml
 
@@ -75,7 +90,7 @@ jobs:
       #    permitindo consultar o resultado detalhado dos testes funcionais
       #    mesmo depois que o job terminar.
       - name: Upload Newman report
-        if: always()
+        if: always() && hashFiles('newman/report.xml') != ''
         uses: actions/upload-artifact@v4
         with:
           name: newman-report
@@ -85,10 +100,14 @@ jobs:
       #     diagnóstico direto no output do GitHub Actions.
       - name: Show application logs on failure
         if: failure()
+        env:
+          MEKANO_PUBLIC_URL: http://localhost:8080
         run: docker compose logs mekano
 
       # 11. Derruba os containers e remove os volumes, garantindo um ambiente
       #     limpo para a próxima execução (sempre roda, mesmo se algo falhar).
       - name: Stop application stack
         if: always()
+        env:
+          MEKANO_PUBLIC_URL: http://localhost:8080
         run: docker compose down -v

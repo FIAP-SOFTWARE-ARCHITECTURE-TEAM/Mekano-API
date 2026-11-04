@@ -39,5 +39,8 @@ mekano:
       window-seconds: 60
 
 "%test":
+  mekano:
+    public-url: http://localhost:8080
+
   evolution:
     webhook-token: test-webhook-token

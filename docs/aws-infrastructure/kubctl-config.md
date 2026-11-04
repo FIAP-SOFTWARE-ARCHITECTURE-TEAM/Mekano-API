@@ -4,6 +4,8 @@ Após o provisionamento da infraestrutura AWS/EKS, é necessário configurar o a
 
 > **Execução:** todos os comandos desta seção devem ser executados no **AWS CloudShell**.
 
+> **Nota histórica (nov/2026):** este documento registra o provisionamento inicial do EKS. O entrypoint público atual é o API Gateway HTTP `https://wa6758jsk8.execute-api.us-east-1.amazonaws.com`; os ALBs/NLBs citados abaixo são históricos/internos. Para a URL vigente, consulte `aws ssm get-parameter --name /mekano/dev/gateway/url` e a seção **APIs** do README do `Mekano-Infrastructure-K8s`.
+
 ---
 
 ## 1.1. Validar a identidade AWS utilizada
