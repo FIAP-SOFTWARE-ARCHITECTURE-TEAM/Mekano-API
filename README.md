@@ -18,20 +18,45 @@ O MEKANO-API e um Sistema Integrado de Atendimento e Execução de Servicos para
 
 A aplicação foi construida seguindo os principios de **Domain-Driven Design (DDD)** e **Clean Architecture**, separando responsabilidades em camadas isoladas e independentes de framework.
 
-## Objetivos da Fase 2
+## Objetivos da Fase 3
 
-A versão 2.0 do projeto evolui a solução MVP da Fase 1 incorporando:
+Elevar a aplicação ao nível de operação corporativa — cloud, infraestrutura
+como código, segurança e observabilidade — conforme o desafio da fase:
 
-- **Infraestrutura escalavel**: containerização com Docker, orchestração com Kubernetes (EKS) e provisionamento via Terraform
-- **Automação de deploy**: pipeline CI/CD integrada com build, testes e publicação de imagem
-- **Qualidade assegurada**: cobertura de testes automatizados com gate de qualidade via JaCoCo
-- **Resiliencia**: health checks, politicas de restart e escalabilidade dinamica via HPA
+- **API Gateway**: AWS API Gateway na frente do cluster, com controle e roteamento das APIs
+- **Autenticação serverless via CPF**: Function que valida o CPF, consulta a existência e o status do cliente na base de dados e emite o JWT consumido pelas rotas protegidas
+- **Observabilidade de ponta a ponta**: Prometheus + Loki + Grafana em produção, logs JSON com correlação por requisição, alertas de falhas e coleta de logs dos pods via Alloy DaemonSet
+- **Documentação arquitetural completa**: diagrama de componentes, diagramas de sequência, RFCs/ADRs e modelo relacional com diagrama ER
+
+## Documentação Arquitetural (Entrega Fase 3)
+
+Documentação arquitetural completa, conforme requisitos da entrega:
+
+| Requisito | Documento |
+|-----------|-----------|
+| Diagrama de Componentes (nuvem, APIs, banco e monitoramento) | [01 - Arquitetura e Diagrama de Componentes](docs/01-arquitetura-componentes.md) |
+| Diagrama de Sequência (autenticação e abertura de OS) | [02 - Diagramas de Sequência](docs/02-diagramas-sequencia.md) |
+| RFCs (escolha da nuvem, do banco e da estratégia de autenticação) | [03 - RFCs e ADRs](docs/03-rfcs-adrs.md) |
+| ADRs (padrão de comunicação, uso de HPA, etc.) | [03 - RFCs e ADRs](docs/03-rfcs-adrs.md) |
+| Justificativa do banco + modelo relacional com diagramas ER | [04 - Banco de Dados, Modelo Relacional e Diagrama ER](docs/04-banco-modelo-er.md) |
+
+Documentação de apoio:
+
+| Tema | Documento |
+|------|-----------|
+| AWS — visão global (cliente → serviços externos) | [docs/aws-infrastructure/global-scope-architecture.md](docs/aws-infrastructure/global-scope-architecture.md) |
+| AWS — visão da VPC | [docs/aws-infrastructure/vpc-scope-architecture.md](docs/aws-infrastructure/vpc-scope-architecture.md) |
+| Configuração kubectl | [docs/aws-infrastructure/kubctl-config.md](docs/aws-infrastructure/kubctl-config.md) |
+| Diagramas de sequência complementares | [docs/sequence-diagrams/](docs/sequence-diagrams/) |
+| Event Storming | [docs/EventStorming_Mermaid.md](docs/EventStorming_Mermaid.md) |
+| Setup integração WhatsApp (Evolution API) | [docs/EVOLUTION-WHATSAPP-SETUP.md](docs/EVOLUTION-WHATSAPP-SETUP.md) |
+| Revisão arquitetural | [docs/ARCHITECTURE-REVIEW-2026-10-17.md](docs/ARCHITECTURE-REVIEW-2026-10-17.md) |
 
 ## Principais Funcionalidades
 
 - Gestao de clientes, veiculos, servicos e pecas
 - Ciclo de vida completo da Ordem de Servico: Recebida, Em Diagnostico, Aguardando Aprovação, Em Execução, Finalizada, Entregue
-- Geração automática de orçamento com aprovação via API
+- Geração automática de orçamento com aprovação via API ou pelo cliente direto no WhatsApp
 - Controle de estoque com reservas, requisicoes de compra e notas fiscais
 - Cobrança automática e confirmação de pagamento
 - Consulta publica de status da OS pelo cliente
@@ -321,4 +346,4 @@ O projeto utiliza **JaCoCo** com gate de 80% de cobertura LINE. O relatorio agre
 
 > [Link do Vídeo](https://www.youtube.com/watch?v=D7l2XHGrpuY)
 > [Link do Miro](https://miro.com/app/board/uXjVHD4vUnU=/)
-> [Swagger de Produção na AWS](http://aaa4e3808aeee403b8da43e46d7e517a-1862017952.us-east-1.elb.amazonaws.com/q/swagger-ui)
+> [Swagger de Produção na AWS](https://wa6758jsk8.execute-api.us-east-1.amazonaws.com/q/swagger-ui)
