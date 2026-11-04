@@ -1,22 +1,30 @@
+# CD — Mekano-API
+#
+# Pipeline de APLICACAO: build/testes + publicacao da imagem Docker no GHCR.
+# A infraestrutura (VPC/EKS/RDS/peering) e o deploy no cluster vivem nos repos:
+#   - Mekano-Infrastructure-K8s  (Terraform EKS/VPC + kubectl deploy, le a imagem daqui)
+#   - Mekano-Infrastructure-Database (Terraform RDS)
+#   - Mekano-Serverless (Lambda de autenticacao CPF/JWT)
 name: CD
+
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
 permissions:
   contents: read
   packages: write
-  id-token: write
+
 concurrency:
-  # Never cancel a Terraform apply/destroy in the middle.
-  group: mekano-terraform
+  group: mekano-api-cd
   cancel-in-progress: false
+
 env:
   AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
-  EKS_CLUSTER_NAME: ${{ vars.EKS_CLUSTER_NAME || 'mekano-eks' }}
-  TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
-  DB_USER: ${{ vars.DB_USER || 'mekano' }}
+
 jobs:
   # Reads terraform/.infra-action.
   # Accepted values:
@@ -63,6 +71,7 @@ jobs:
           cache: maven
       - name: Build and test
         run: ./mvnw -B -ntp verify -pl mekano-rest -am
+
   docker:
     name: Build and publish image
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main') && needs.infra-action.outputs.action == 'apply'

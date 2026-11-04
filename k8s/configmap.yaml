@@ -32,5 +32,6 @@ data:
   # Nome da instância WhatsApp cadastrada na Evolution API.
   EVOLUTION_INSTANCE_NAME: "mekano"
 
-  # URL pública da aplicação — usada em links de WhatsApp
-  MEKANO_PUBLIC_URL: "https://mekano.app"
+  # URL pública da aplicação. Em EKS é injetada pelo pipeline a partir do SSM
+  # /mekano/<environment>/api/url, publicado pelo Gateway Base.
+  MEKANO_PUBLIC_URL: ""

@@ -1,3 +1,5 @@
+
+
 package com.fiap.mekano.rest.api.exception;
 
 import com.fiap.mekano.domain.exception.AppException;

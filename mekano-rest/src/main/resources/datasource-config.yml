@@ -17,6 +17,7 @@ quarkus:
     repair-at-start: false
     out-of-order: true
     connect-retries: 5
+    locations: db/migration,db/seed
   hibernate-orm:
     schema-management:
       strategy: validate

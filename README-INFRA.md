@@ -55,12 +55,26 @@ kubectl create secret generic mekano-secret `
   --from-file=publicKey.pem="$HOME/.mekano/secrets/publicKey.pem"
 ```
 
+Antes de subir a aplicação localmente, crie o ConfigMap com uma URL pública explícita. Para testes locais com `port-forward`, use `http://localhost:8080`. Não use o fallback fictício `https://mekano.app`.
+
+```powershell
+kubectl create configmap mekano-config `
+  --namespace mekano-system `
+  --from-literal=QUARKUS_PROFILE=prod `
+  --from-literal=DB_URL="jdbc:postgresql://host.k3d.internal:5432/mekano" `
+  --from-literal=EVOLUTION_API_URL="http://evolution-api:5033" `
+  --from-literal=EVOLUTION_INSTANCE_NAME="mekano" `
+  --from-literal=MEKANO_PUBLIC_URL="http://localhost:8080" `
+  --dry-run=client -o yaml | kubectl apply -f -
+```
+
+Se precisar que links/callbacks sejam acessíveis externamente durante o desenvolvimento local, substitua `http://localhost:8080` por uma URL pública real do seu ambiente/túnel.
+
 Para testar a imagem local no k3d:
 
 ```powershell
 docker build -t mekano-api:local -f mekano-rest/src/main/docker/Dockerfile.jvm .
 k3d image import mekano-api:local -c mekano
-kubectl apply -f k8s/configmap.yaml
 kubectl apply -f k8s/service.yaml
 kubectl apply -f k8s/hpa.yaml
 kubectl apply -f k8s/deployment.yaml
@@ -78,6 +92,22 @@ kubectl get pods -n mekano-system
 kubectl get hpa -n mekano-system
 kubectl top pods -n mekano-system
 ```
+
+Para executar a stack local com Docker Compose, informe também `MEKANO_PUBLIC_URL` explicitamente:
+
+```powershell
+$env:MEKANO_PUBLIC_URL="http://localhost:8080"
+docker compose up -d
+```
+
+No Git Bash:
+
+```bash
+export MEKANO_PUBLIC_URL="http://localhost:8080"
+docker compose up -d
+```
+
+Em EKS, esse valor não é configurado manualmente: o pipeline resolve `/mekano/<environment>/api/url` no SSM, publicado pelo Gateway Base, e injeta o valor no ConfigMap de runtime.
 
 ## 3. Bootstrap do backend Terraform
 
