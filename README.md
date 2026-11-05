@@ -364,6 +364,6 @@ Esse é o contrato usado pelos dashboards e alertas do repositório
 
 ## Documentação EventStorming e Video Demonstrativo
 
-> [Link do Vídeo](https://www.youtube.com/watch?v=D7l2XHGrpuY)
+> [Link do Vídeo da Fase 3](https://youtu.be/e7NrUPzHsPs)
 > [Link do Miro](https://miro.com/app/board/uXjVHD4vUnU=/)
 > [Swagger de Produção na AWS](https://wa6758jsk8.execute-api.us-east-1.amazonaws.com/q/swagger-ui)
